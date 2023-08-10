@@ -2,9 +2,11 @@
   "name": "facto-loop-miner",
   "version": "1.0.0",
   "scripts": {
-    "buildrun": "tsc -p . && node dist/hello.js"
+    "build": "tsc -p .",
+    "buildrun": "tsc -p . && node --enable-source-maps dist/hello.js"
   },
   "dependencies": {
+    "big-json": "^3.2.0",
     "jimp": "^0.22.10"
   },
   "devDependencies": {
