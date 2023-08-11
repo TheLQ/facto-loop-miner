@@ -1,4 +1,5 @@
-import {readFileSync} from "fs";
+import {readFileSync, createReadStream} from "fs";
+import bigJson from "big-json";
 
 export interface DataFile {
     readonly resource: LuaResource[],
@@ -32,13 +33,26 @@ export interface EasyBox {
 
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
-export function openData(path: string): DataFile {
-    const data: Writeable<DataFile> = JSON.parse(readFileSync(path, "utf-8"));
-    data.resource_box = build_box(data.resource)
-    data.tile_box = build_box(data.tile)
+export async function openData(path: string): Promise<DataFile> {
+    return new Promise((resolve, reject) => {
+        const byteStream = createReadStream(path, 'utf-8')
+        const parseStream = bigJson.createParseStream();
 
-    return data;
+        parseStream.on('data', function(data: any) {
+            data.resource_box = build_box(data.resource)
+            resolve(data)
+        });
+        byteStream.pipe(parseStream);
+    })
 }
+
+// export function openData(path: string): DataFile {
+//     const data: Writeable<DataFile> = JSON.parse(readFileSync(path, "utf-8"));
+//     data.resource_box = build_box(data.resource)
+//     // data.tile_box = build_box(data.tile)
+//
+//     return data;
+// }
 
 function build_box(items: LuaTile[] | LuaResource[]): EasyBox {
     const box: Writeable<EasyBox> = {

@@ -7,7 +7,7 @@ import * as stream from "stream";
 
 
 async function main() {
-    let data = openData("./filtered-resources.json")
+    let data = await openData("./filtered-resources2.json")
     const color = Jimp.rgbaToInt(0, 0, 250, 0)
     let img = await createImage(data);
     for (let x = 0; x < 50; x++) {
@@ -24,7 +24,7 @@ async function createImage(data: DataFile) {
     let length = data.resource_box.max_x - data.resource_box.min_x;
     let height = data.resource_box.max_y - data.resource_box.min_y;
     console.log(`creatimg image ${length}x${height} from`, data.resource_box)
-    return await Jimp.create(length * 2, height, "#FF00FF");
+    return await Jimp.create(length, height, "#000000");
 }
 
 function fillImage(data: DataFile, img: Jimp) {
