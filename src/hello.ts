@@ -24,7 +24,7 @@ async function createImage(data: DataFile) {
     let length = data.resource_box.max_x - data.resource_box.min_x;
     let height = data.resource_box.max_y - data.resource_box.min_y;
     console.log(`creatimg image ${length}x${height} from`, data.resource_box)
-    return await Jimp.create(length, height, "#000000");
+    return await Jimp.create(length, height, "#FFFFFF");
 }
 
 function fillImage(data: DataFile, img: Jimp) {

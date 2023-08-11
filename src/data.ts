@@ -34,12 +34,15 @@ export interface EasyBox {
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
 export async function openData(path: string): Promise<DataFile> {
+    console.log("Loading data " + path)
     return new Promise((resolve, reject) => {
         const byteStream = createReadStream(path, 'utf-8')
         const parseStream = bigJson.createParseStream();
 
         parseStream.on('data', function(data: any) {
+            console.log("Got data JSON, building box")
             data.resource_box = build_box(data.resource)
+            console.log("Done loading data")
             resolve(data)
         });
         byteStream.pipe(parseStream);
