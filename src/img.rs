@@ -1,3 +1,5 @@
+use crate::LOCALE;
+use num_format::ToFormattedString;
 use std::path::Path;
 
 pub struct ImageArray {
@@ -7,13 +9,14 @@ pub struct ImageArray {
 }
 
 // const BACKGROUND_COLOR: u32 = 0x3B4F3CFF;
-const BACKGROUND_COLOR: u32 = 0xFF0000FF;
+const BACKGROUND_COLOR: u32 = 0x000000FF;
 
 impl ImageArray {
-    pub fn new(width: u32, height: u32) -> Self {
+    pub fn new(width: u32, mut height: u32) -> Self {
+        height = height + 1;
         let size = width * height;
         let buffer: Vec<u32> = (0..size).map(|_| BACKGROUND_COLOR).collect();
-        println!("expected {} got {}", size, buffer.len());
+        println!("Image buffer size {}", size.to_formatted_string(&LOCALE));
         ImageArray {
             buffer,
             width,

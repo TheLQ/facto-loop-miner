@@ -3,7 +3,13 @@ mod img;
 
 use crate::data::{open_data, DataFile, EasyBox, LuaEntity};
 use crate::img::{color_for_resource, ImageArray};
+use num_format::Locale;
 use std::path::Path;
+
+#[global_allocator]
+static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+pub const LOCALE: Locale = Locale::en;
 
 fn main() {
     println!("hello");
@@ -17,8 +23,6 @@ fn main() {
             return;
         }
     };
-    println!("pixels {}", data.resource.len());
-
     if 1 + 1 == 2 {
         create_image(data);
     } else {

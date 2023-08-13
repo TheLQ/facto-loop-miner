@@ -1,4 +1,5 @@
-use num_format::{Locale, ToFormattedString};
+use crate::LOCALE;
+use num_format::ToFormattedString;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
@@ -7,8 +8,6 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::time::Instant;
-
-const LOCALE: Locale = Locale::en;
 
 #[derive(Serialize, Deserialize)]
 pub struct DataFile {
@@ -92,6 +91,20 @@ impl EasyBox {
     pub fn absolute_y(&self, game_center_y: f32) -> u32 {
         (game_center_y.floor() as i32 - self.min_x) as u32
     }
+
+    fn expand_to<E>(&mut self, entities: &[E])
+    where
+        E: LuaEntity,
+    {
+        for entity in entities {
+            self.max_x = max(self.max_x, entity.position().x.floor() as i32);
+            self.max_y = max(self.max_y, entity.position().y.floor() as i32);
+            self.min_x = min(self.min_x, entity.position().x.floor() as i32);
+            self.min_y = min(self.min_y, entity.position().y.floor() as i32);
+        }
+        self.width = (self.max_x - self.min_x).try_into().unwrap();
+        self.height = (self.max_y - self.min_y).try_into().unwrap();
+    }
 }
 
 pub fn open_data(resource: &Path, tile: &Path) -> Result<DataFile, Box<dyn Error>> {
@@ -104,8 +117,8 @@ pub fn open_data(resource: &Path, tile: &Path) -> Result<DataFile, Box<dyn Error
     };
     println!("Reading Complete");
 
-    find_edge_box(&data.resource, &mut data.area_box);
-    find_edge_box(&data.tile, &mut data.area_box);
+    data.area_box.expand_to(&data.resource);
+    data.area_box.expand_to(&data.tile);
 
     let duration = Instant::now() - start_time;
     println!("-- Opened Data file in {} seconds", duration.as_secs());
@@ -127,18 +140,4 @@ where
     let buf_reader = BufReader::new(file);
     let result = simd_json::serde::from_reader(buf_reader).unwrap();
     result
-}
-
-fn find_edge_box<E>(entities: &[E], entity_box: &mut EasyBox)
-where
-    E: LuaEntity,
-{
-    for entity in entities {
-        entity_box.max_x = max(entity_box.max_x, entity.position().x.round() as i32);
-        entity_box.max_y = max(entity_box.max_y, entity.position().y.round() as i32);
-        entity_box.min_x = min(entity_box.min_x, entity.position().x.round() as i32);
-        entity_box.min_y = min(entity_box.min_y, entity.position().y.round() as i32);
-    }
-    entity_box.width = (entity_box.max_x - entity_box.min_x).try_into().unwrap();
-    entity_box.height = (entity_box.max_y - entity_box.min_y).try_into().unwrap();
 }
