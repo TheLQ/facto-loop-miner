@@ -15,8 +15,7 @@ pub struct DataFile {
     pub resource: Vec<LuaResource>,
     pub tile: Vec<LuaTile>,
     #[serde(default)]
-    pub resource_box: EasyBox,
-    pub tile_box: EasyBox,
+    pub area_box: EasyBox,
 }
 
 pub trait LuaEntity {
@@ -85,32 +84,37 @@ impl Default for EasyBox {
     }
 }
 
+impl EasyBox {
+    pub fn absolute_x(&self, game_center_x: f32) -> u32 {
+        (game_center_x.floor() as i32 - self.min_x) as u32
+    }
+
+    pub fn absolute_y(&self, game_center_y: f32) -> u32 {
+        (game_center_y.floor() as i32 - self.min_x) as u32
+    }
+}
+
 pub fn open_data(resource: &Path, tile: &Path) -> Result<DataFile, Box<dyn Error>> {
     let start_time = Instant::now();
 
     let mut data = DataFile {
+        area_box: EasyBox::default(),
         resource: open_data_file::<Vec<LuaResource>>(resource),
-        resource_box: EasyBox::default(),
         tile: open_data_file::<Vec<LuaTile>>(tile),
-        tile_box: EasyBox::default(),
     };
     println!("Reading Complete");
 
-    find_edge_box(&data.resource, &mut data.resource_box);
-    find_edge_box(&data.tile, &mut data.tile_box);
+    find_edge_box(&data.resource, &mut data.area_box);
+    find_edge_box(&data.tile, &mut data.area_box);
 
     let duration = Instant::now() - start_time;
     println!("-- Opened Data file in {} seconds", duration.as_secs());
+    println!("-- {} Tile", data.tile.len().to_formatted_string(&LOCALE),);
     println!(
-        "-- {} Tile {:?}",
-        data.tile.len().to_formatted_string(&LOCALE),
-        data.tile_box
-    );
-    println!(
-        "-- {} Resource {:?}",
+        "-- {} Resource",
         data.resource.len().to_formatted_string(&LOCALE),
-        data.resource_box
     );
+    println!("-- {:?}", data.area_box);
     Ok(data)
 }
 

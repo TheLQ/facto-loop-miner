@@ -27,24 +27,19 @@ fn main() {
 }
 
 fn create_image(data: DataFile) {
-    println!(
-        "resolution resource {}x{}",
-        data.resource_box.width, data.resource_box.height
-    );
-
-    let mut img = ImageArray::new(data.tile_box.width, data.tile_box.height);
+    let mut img = ImageArray::new(data.area_box.width, data.area_box.height);
     let mut printed_warnings = Vec::new();
 
     println!("Loading {} resources...", data.resource.len());
     translate_entities_to_image(
         &data.resource,
-        &data.resource_box,
+        &data.area_box,
         &mut img,
         &mut printed_warnings,
     );
 
     println!("Loading {} tiles...", data.tile.len());
-    translate_entities_to_image(&data.tile, &data.tile_box, &mut img, &mut printed_warnings);
+    translate_entities_to_image(&data.tile, &data.area_box, &mut img, &mut printed_warnings);
 
     img.save(Path::new("out2.png"));
 }
@@ -61,8 +56,8 @@ fn translate_entities_to_image<E>(
         match color_for_resource(&entity.name()) {
             Some(color) => img.set_color(
                 color,
-                (entity.position().x.floor() as i32 - entity_box.min_x) as u32,
-                (entity.position().y.floor() as i32 - entity_box.min_y) as u32,
+                entity_box.absolute_x(entity.position().x),
+                entity_box.absolute_y(entity.position().y),
             ),
             None => {
                 let name = entity.name().to_string();
