@@ -6,10 +6,13 @@ pub struct ImageArray {
     height: u32,
 }
 
+// const BACKGROUND_COLOR: u32 = 0x3B4F3CFF;
+const BACKGROUND_COLOR: u32 = 0xFF0000FF;
+
 impl ImageArray {
     pub fn new(width: u32, height: u32) -> Self {
         let size = width * height;
-        let buffer: Vec<u32> = (0..size).map(|_| 0x3B4F3CFF).collect();
+        let buffer: Vec<u32> = (0..size).map(|_| BACKGROUND_COLOR).collect();
         println!("expected {} got {}", size, buffer.len());
         ImageArray {
             buffer,
@@ -25,6 +28,7 @@ impl ImageArray {
     }
 
     pub fn save(self, path: &Path) {
+        println!("Saving image to {}", path.display());
         let converted = unsafe { self.buffer.align_to::<u8>().1 };
         // let raw = self.buffer.as_slice();
         // let converted = raw as &[u8];
@@ -37,22 +41,19 @@ impl ImageArray {
             image::ColorType::Rgba8,
         )
         .unwrap();
+        println!("Saved");
     }
 }
 
 pub fn color_for_resource(resource_name: &str) -> Option<u32> {
-    return if resource_name == "iron-ore" {
-        Some(color_from_hex("#688290ff"))
-    } else if resource_name == "copper-ore" {
-        Some(color_from_hex("#c86230ff"))
-    } else if resource_name == "stone" {
-        Some(color_from_hex("#b09868ff"))
-    } else if resource_name == "coal" {
-        Some(color_from_hex("#000000ff"))
-    } else if resource_name == "uranium-ore" {
-        Some(color_from_hex("#00b200ff"))
-    } else {
-        None
+    return match resource_name {
+        "iron-ore" => Some(color_from_hex("#688290ff")),
+        "copper-ore" => Some(color_from_hex("#c86230ff")),
+        "stone" => Some(color_from_hex("#b09868ff")),
+        "coal" => Some(color_from_hex("#000000ff")),
+        "uranium-ore" => Some(color_from_hex("#00b200ff")),
+        "water" => Some(color_from_hex("#0000FFFF")),
+        _ => None,
     };
 }
 

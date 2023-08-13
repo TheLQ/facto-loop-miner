@@ -7,3 +7,6 @@
 # Added by cargo
 
 /target
+/*.json
+/*.png
+/chunk500

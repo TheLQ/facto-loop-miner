@@ -1,17 +1,27 @@
+use num_format::{Locale, ToFormattedString};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+use std::time::Instant;
+
+const LOCALE: Locale = Locale::en;
 
 #[derive(Serialize, Deserialize)]
 pub struct DataFile {
     pub resource: Vec<LuaResource>,
-    // pub tile: Vec<LuaTile>,
+    pub tile: Vec<LuaTile>,
     #[serde(default)]
     pub resource_box: EasyBox,
-    // pub tile_box: EasyBox,
+    pub tile_box: EasyBox,
+}
+
+pub trait LuaEntity {
+    fn name(&self) -> &str;
+    fn position(&self) -> &Position;
 }
 
 #[derive(Serialize, Deserialize)]
@@ -22,10 +32,28 @@ pub struct LuaResource {
     pub position: Position,
 }
 
+impl LuaEntity for LuaResource {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn position(&self) -> &Position {
+        &self.position
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct LuaTile {
     pub name: String,
     pub position: Position,
+}
+
+impl LuaEntity for LuaTile {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn position(&self) -> &Position {
+        &self.position
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -34,12 +62,14 @@ pub struct Position {
     pub y: f32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct EasyBox {
-    pub max_x: u32,
-    pub max_y: u32,
-    pub min_x: u32,
-    pub min_y: u32,
+    pub max_x: i32,
+    pub max_y: i32,
+    pub min_x: i32,
+    pub min_y: i32,
+    pub width: u32,
+    pub height: u32,
 }
 
 impl Default for EasyBox {
@@ -49,21 +79,62 @@ impl Default for EasyBox {
             max_y: 0,
             min_x: 0,
             min_y: 0,
+            width: 0,
+            height: 0,
         }
     }
 }
 
-pub fn open_data(path: &Path) -> Result<DataFile, Box<dyn Error>> {
-    let file = File::open(path)?;
-    let buf_reader = BufReader::new(file);
-    let mut data: DataFile = serde_json::from_reader(buf_reader)?;
+pub fn open_data(resource: &Path, tile: &Path) -> Result<DataFile, Box<dyn Error>> {
+    let start_time = Instant::now();
 
-    for resource in &data.resource {
-        data.resource_box.max_x = max(data.resource_box.max_x, resource.position.x.round() as u32);
-        data.resource_box.max_y = max(data.resource_box.max_y, resource.position.y.round() as u32);
-        data.resource_box.min_x = min(data.resource_box.min_x, resource.position.x.round() as u32);
-        data.resource_box.min_y = min(data.resource_box.min_y, resource.position.y.round() as u32);
-    }
+    let mut data = DataFile {
+        resource: open_data_file::<Vec<LuaResource>>(resource),
+        resource_box: EasyBox::default(),
+        tile: open_data_file::<Vec<LuaTile>>(tile),
+        tile_box: EasyBox::default(),
+    };
+    println!("Reading Complete");
 
+    find_edge_box(&data.resource, &mut data.resource_box);
+    find_edge_box(&data.tile, &mut data.tile_box);
+
+    let duration = Instant::now() - start_time;
+    println!("-- Opened Data file in {} seconds", duration.as_secs());
+    println!(
+        "-- {} Tile {:?}",
+        data.tile.len().to_formatted_string(&LOCALE),
+        data.tile_box
+    );
+    println!(
+        "-- {} Resource {:?}",
+        data.resource.len().to_formatted_string(&LOCALE),
+        data.resource_box
+    );
     Ok(data)
+}
+
+fn open_data_file<T>(path: &Path) -> T
+where
+    T: DeserializeOwned,
+{
+    println!("Reading entity data {} ...", path.display());
+    let file = File::open(path).unwrap();
+    let buf_reader = BufReader::new(file);
+    let result = serde_json::from_reader(buf_reader).unwrap();
+    result
+}
+
+fn find_edge_box<E>(entities: &[E], entity_box: &mut EasyBox)
+where
+    E: LuaEntity,
+{
+    for entity in entities {
+        entity_box.max_x = max(entity_box.max_x, entity.position().x.round() as i32);
+        entity_box.max_y = max(entity_box.max_y, entity.position().y.round() as i32);
+        entity_box.min_x = min(entity_box.min_x, entity.position().x.round() as i32);
+        entity_box.min_y = min(entity_box.min_y, entity.position().y.round() as i32);
+    }
+    entity_box.width = (entity_box.max_x - entity_box.min_x).try_into().unwrap();
+    entity_box.height = (entity_box.max_y - entity_box.min_y).try_into().unwrap();
 }
