@@ -3,7 +3,8 @@ mod img;
 
 use crate::data::{open_data, DataFile, EasyBox, LuaEntity};
 use crate::img::{color_for_resource, ImageArray};
-use num_format::Locale;
+use num_format::{Locale, ToFormattedString};
+use std::collections::HashMap;
 use std::path::Path;
 
 #[global_allocator]
@@ -33,6 +34,7 @@ fn main() {
 fn create_image(data: DataFile) {
     let mut img = ImageArray::new(data.area_box.width, data.area_box.height);
     let mut printed_warnings = Vec::new();
+    let mut entity_metrics: HashMap<String, u32> = HashMap::new();
 
     println!("Loading {} resources...", data.resource.len());
     translate_entities_to_image(
@@ -40,10 +42,25 @@ fn create_image(data: DataFile) {
         &data.area_box,
         &mut img,
         &mut printed_warnings,
+        &mut entity_metrics,
     );
 
     println!("Loading {} tiles...", data.tile.len());
-    translate_entities_to_image(&data.tile, &data.area_box, &mut img, &mut printed_warnings);
+    translate_entities_to_image(
+        &data.tile,
+        &data.area_box,
+        &mut img,
+        &mut printed_warnings,
+        &mut entity_metrics,
+    );
+
+    for (name, count) in &entity_metrics {
+        println!(
+            "-- Added {}\t\t{} ",
+            name,
+            count.to_formatted_string(&LOCALE)
+        );
+    }
 
     img.save(Path::new("out2.png"));
 }
@@ -53,6 +70,7 @@ fn translate_entities_to_image<E>(
     entity_box: &EasyBox,
     img: &mut ImageArray,
     printed_warnings: &mut Vec<String>,
+    entity_metrics: &mut HashMap<String, u32>,
 ) where
     E: LuaEntity,
 {
@@ -71,6 +89,10 @@ fn translate_entities_to_image<E>(
                 }
             }
         }
+        entity_metrics
+            .entry(entity.name().to_string())
+            .and_modify(|v| *v += 1)
+            .or_insert(1);
     }
 }
 
