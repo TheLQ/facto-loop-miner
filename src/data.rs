@@ -125,7 +125,7 @@ where
     println!("Reading entity data {} ...", path.display());
     let file = File::open(path).unwrap();
     let buf_reader = BufReader::new(file);
-    let result = serde_json::from_reader(buf_reader).unwrap();
+    let result = simd_json::serde::from_reader(buf_reader).unwrap();
     result
 }
 
