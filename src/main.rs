@@ -1,8 +1,10 @@
+#![feature(convert_float_to_int)]
+
 mod data;
 mod img;
 
 use crate::data::{open_data, DataFile, EasyBox, LuaEntity};
-use crate::img::{color_for_resource, ImageArray};
+use crate::img::{ImageArray, Pixel};
 use num_format::{Locale, ToFormattedString};
 use std::collections::HashMap;
 use std::path::Path;
@@ -11,6 +13,7 @@ use std::path::Path;
 static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 pub const LOCALE: Locale = Locale::en;
+pub const TILES_PER_CHUNK: usize = 32;
 
 fn main() {
     println!("hello");
@@ -62,7 +65,9 @@ fn create_image(data: DataFile) {
         );
     }
 
-    img.save(Path::new("out2.png"));
+    draw_mega_box(&data.area_box, &mut img, &mut entity_metrics);
+
+    img.save(Path::new("out2.png.raw"));
 }
 
 fn translate_entities_to_image<E>(
@@ -75,25 +80,47 @@ fn translate_entities_to_image<E>(
     E: LuaEntity,
 {
     for entity in entities {
-        match color_for_resource(&entity.name()) {
-            Some(color) => img.set_color(
-                color,
-                entity_box.absolute_x(entity.position().x),
-                entity_box.absolute_y(entity.position().y),
-            ),
-            None => {
-                let name = entity.name().to_string();
-                if !printed_warnings.contains(&name) {
-                    println!("unsupported resource type {}", entity.name());
-                    printed_warnings.push(name)
-                }
+        img.set_pixel(
+            Pixel::parse(entity.name()),
+            entity_box.absolute_x_f32(entity.position().x),
+            entity_box.absolute_y_f32(entity.position().y),
+        );
+        increment_metric(entity_metrics, &entity.name());
+    }
+}
+
+fn draw_mega_box(
+    area_box: &EasyBox,
+    img: &mut ImageArray,
+    entity_metrics: &mut HashMap<String, u32>,
+) {
+    let tiles: isize = 15 * TILES_PER_CHUNK as isize;
+    let banner_width = 10;
+    let edge_neg = -tiles - banner_width;
+    let edge_pos = tiles + banner_width;
+    println!("edge {} to {}", edge_neg, edge_pos);
+    // lazy way
+    for root_x in edge_neg..edge_pos {
+        for root_y in edge_neg..edge_pos {
+            if (root_x < -tiles || root_x > tiles) && (root_y < -tiles || root_y > tiles) {
+                img.set_pixel(
+                    Pixel::EdgeWall,
+                    area_box.absolute_x_i32(root_x as i32),
+                    area_box.absolute_y_i32(root_y as i32),
+                );
+                increment_metric(entity_metrics, "loop-box");
             }
         }
-        entity_metrics
-            .entry(entity.name().to_string())
-            .and_modify(|v| *v += 1)
-            .or_insert(1);
     }
+    increment_metric(entity_metrics, "fff-box");
+    println!("megabox?")
+}
+
+fn increment_metric(entity_metrics: &mut HashMap<String, u32>, metric_name: &str) {
+    entity_metrics
+        .entry(metric_name.to_string())
+        .and_modify(|v| *v += 1)
+        .or_insert(1);
 }
 
 fn dump_data(data: DataFile) {
