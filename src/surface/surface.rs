@@ -27,14 +27,17 @@ impl Surface {
     pub fn set_pixel(&mut self, pixel: Pixel, x: u32, y: u32) {
         let i: usize = (self.width * y + x).try_into().unwrap();
         if self.buffer[i] != Pixel::Empty {
-            let pixel = self.buffer[i].clone();
-            panic!("unexpected existing pixel {}x{} data {:?}", x, y, pixel)
+            let existing_pixel = self.buffer[i].clone();
+            println!(
+                "[warn] unexpected existing pixel {}x{} data {:?} trying {:?}",
+                x, y, existing_pixel, pixel
+            )
         }
         self.buffer[i] = pixel.clone();
     }
 
     pub fn save(&self, path: &Path) {
-        println!("Saving image to {}", path.display());
+        println!("Saving RGB dump image to {}", path.display());
         let file = File::create(path).unwrap();
         let mut writer = BufWriter::new(file);
 

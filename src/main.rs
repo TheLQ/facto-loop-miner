@@ -1,14 +1,15 @@
 #![feature(convert_float_to_int)]
 
-mod data;
+mod gamedata;
 mod state;
 mod surface;
 
-use crate::data::{open_data, DataFile, EasyBox, LuaEntity};
+use crate::gamedata::importer::build_image;
+use crate::gamedata::lua::LuaData;
 use crate::state::State;
-use crate::surface::{pixel::Pixel, surface::Surface};
-use num_format::{Locale, ToFormattedString};
-use std::collections::HashMap;
+use num_format::Locale;
+use num_format::Locale::root;
+use std::fs::read_dir;
 use std::path::Path;
 
 #[global_allocator]
@@ -19,112 +20,53 @@ pub const TILES_PER_CHUNK: usize = 32;
 
 fn main() {
     println!("hello");
+    let root_dir = Path::new("work");
 
-    let state = State::new(Path::new("work/state.json"));
+    let mut state = State::new(&root_dir.join(Path::new("state.json")));
 
     let sources = [
-        Path::new("chunk500/filtered-resources.json"),
-        Path::new("chunk500/filtered-tiles.json"),
+        &root_dir.join(Path::new("chunk500/filtered-resources.json")),
+        &root_dir.join(Path::new("chunk500/filtered-tiles.json")),
     ];
 
     let rebuild_data = sources
         .map(|v| state.image_needs_rebuild(v))
         .iter()
         .fold(true, |acc, v| if acc { *v } else { false });
+    let output_dir = root_dir.join(Path::new("map0"));
     if rebuild_data {
         println!("Source JSON changed, rebuilding");
-        let data = match open_data(sources[0], sources[1]) {
-            Ok(v) => v,
-            Err(e) => {
-                println!("error {}", e);
-                return;
-            }
-        };
-    }
 
-    if 1 + 1 == 2 {
-        create_image(data);
-    } else {
-        dump_data(data);
-    }
-}
+        panic_if_output_not_empty(&output_dir);
 
-fn create_image(data: DataFile) {
-    let mut img = Surface::new(data.area_box.width, data.area_box.height);
-    let mut entity_metrics: HashMap<String, u32> = HashMap::new();
+        let data = LuaData::open(sources[0], sources[1]);
 
-    println!("Loading {} resources...", data.resource.len());
-    translate_entities_to_image(
-        &data.resource,
-        &data.area_box,
-        &mut img,
-        &mut entity_metrics,
-    );
-
-    println!("Loading {} tiles...", data.tile.len());
-    translate_entities_to_image(&data.tile, &data.area_box, &mut img, &mut entity_metrics);
-
-    for (name, count) in &entity_metrics {
-        println!(
-            "-- Added {}\t\t{} ",
-            name,
-            count.to_formatted_string(&LOCALE)
-        );
-    }
-
-    draw_mega_box(&data.area_box, &mut img, &mut entity_metrics);
-
-    img.save(Path::new("out2.png.raw"));
-}
-
-fn translate_entities_to_image<E>(
-    entities: &[E],
-    entity_box: &EasyBox,
-    img: &mut Surface,
-    entity_metrics: &mut HashMap<String, u32>,
-) where
-    E: LuaEntity,
-{
-    for entity in entities {
-        img.set_pixel(
-            Pixel::parse(entity.name()),
-            entity_box.absolute_x_f32(entity.position().x),
-            entity_box.absolute_y_f32(entity.position().y),
-        );
-        increment_metric(entity_metrics, &entity.name());
-    }
-}
-
-fn draw_mega_box(area_box: &EasyBox, img: &mut Surface, entity_metrics: &mut HashMap<String, u32>) {
-    let tiles: isize = 15 * TILES_PER_CHUNK as isize;
-    let banner_width = 10;
-    let edge_neg = -tiles - banner_width;
-    let edge_pos = tiles + banner_width;
-    println!("edge {} to {}", edge_neg, edge_pos);
-    // lazy way
-    for root_x in edge_neg..edge_pos {
-        for root_y in edge_neg..edge_pos {
-            if (root_x < -tiles || root_x > tiles) && (root_y < -tiles || root_y > tiles) {
-                img.set_pixel(
-                    Pixel::EdgeWall,
-                    area_box.absolute_x_i32(root_x as i32),
-                    area_box.absolute_y_i32(root_y as i32),
-                );
-                increment_metric(entity_metrics, "loop-box");
-            }
+        if 1 + 1 == 2 {
+            build_image(data, &output_dir.join("run00.rgb"));
+        } else {
+            dump_data(data);
         }
+        state.disk_write();
+    } else {
+        todo!()
     }
-    increment_metric(entity_metrics, "fff-box");
-    println!("megabox?")
 }
 
-fn increment_metric(entity_metrics: &mut HashMap<String, u32>, metric_name: &str) {
-    entity_metrics
-        .entry(metric_name.to_string())
-        .and_modify(|v| *v += 1)
-        .or_insert(1);
+fn panic_if_output_not_empty(dir: &Path) {
+    let raw_entries = read_dir(dir).unwrap();
+    let children_count: Vec<String> = raw_entries
+        .into_iter()
+        .map(|v| v.unwrap().file_name().into_string().unwrap())
+        .collect();
+    if !children_count.is_empty() {
+        panic!(
+            "output path {} not empty with files {}",
+            dir.display(),
+            children_count.join(" ")
+        )
+    }
 }
 
-fn dump_data(data: DataFile) {
+fn dump_data(data: LuaData) {
     println!("data {}", data.tile.len())
 }

@@ -3,28 +3,27 @@ use num_format::ToFormattedString;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
-use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::time::Instant;
 
 #[derive(Serialize, Deserialize)]
-pub struct DataFile {
+pub struct LuaData {
     pub resource: Vec<LuaResource>,
     pub tile: Vec<LuaTile>,
     #[serde(default)]
     pub area_box: EasyBox,
 }
 
-impl DataFile {
-    pub fn build_new(resource: &Path, tile: &Path) -> Self {
+impl LuaData {
+    pub fn open(resource: &Path, tile: &Path) -> Self {
         let start_time = Instant::now();
 
-        let mut data = DataFile {
+        let mut data = LuaData {
             area_box: EasyBox::default(),
-            resource: open_data_file::<Vec<LuaResource>>(resource),
-            tile: open_data_file::<Vec<LuaTile>>(tile),
+            resource: open_data_file(resource),
+            tile: open_data_file(tile),
         };
         println!("Reading Complete");
 

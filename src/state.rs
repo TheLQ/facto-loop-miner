@@ -1,6 +1,4 @@
-use crate::surface::pixel::Pixel;
 use serde::{Deserialize, Serialize};
-use std::any::Any;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::{read_to_string, File};
@@ -56,13 +54,33 @@ impl State {
         serde_json::to_writer(BufWriter::new(file), self).unwrap();
     }
 
-    pub fn image_needs_rebuild(&self, path: &Path) -> bool {
-        let modified_new = fs::metadata(path).unwrap().modified().unwrap();
-        match self.files_to_last_modified.get(path) {
-            Some(modified_old) => {
-                modified_new.duration_since(UNIX_EPOCH).unwrap().as_millis() == modified_old.clone()
-            }
-            None => true,
-        }
+    pub fn image_needs_rebuild(&mut self, path: &Path) -> bool {
+        let metadata = match fs::metadata(path) {
+            Ok(v) => v,
+            Err(e) => panic!("Path {} e {}", path.display(), e),
+        };
+        let mut force_rebuild = false;
+        let modified_new = metadata.modified().unwrap();
+        let modified_new_milli = modified_new.duration_since(UNIX_EPOCH).unwrap().as_millis();
+        self.files_to_last_modified
+            .entry(PathBuf::from(path))
+            .and_modify(|modified_old| {
+                if modified_new_milli != modified_old.clone() {
+                    force_rebuild = true;
+                    println!(
+                        "[State] found change on {} old {} new {}",
+                        path.display(),
+                        modified_old,
+                        modified_new_milli
+                    );
+                    *modified_old = modified_new_milli;
+                }
+            })
+            .or_insert_with(|| {
+                force_rebuild = true;
+                modified_new_milli
+            });
+
+        return force_rebuild;
     }
 }
