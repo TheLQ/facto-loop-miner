@@ -1,10 +1,12 @@
 #![feature(convert_float_to_int)]
 
 mod data;
+mod state;
 mod surface;
 
 use crate::data::{open_data, DataFile, EasyBox, LuaEntity};
-use crate::surface::{Pixel, Surface};
+use crate::state::State;
+use crate::surface::{pixel::Pixel, surface::Surface};
 use num_format::{Locale, ToFormattedString};
 use std::collections::HashMap;
 use std::path::Path;
@@ -17,16 +19,29 @@ pub const TILES_PER_CHUNK: usize = 32;
 
 fn main() {
     println!("hello");
-    let data = match open_data(
+
+    let state = State::new(Path::new("work/state.json"));
+
+    let sources = [
         Path::new("chunk500/filtered-resources.json"),
         Path::new("chunk500/filtered-tiles.json"),
-    ) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("error {}", e);
-            return;
-        }
-    };
+    ];
+
+    let rebuild_data = sources
+        .map(|v| state.image_needs_rebuild(v))
+        .iter()
+        .fold(true, |acc, v| if acc { *v } else { false });
+    if rebuild_data {
+        println!("Source JSON changed, rebuilding");
+        let data = match open_data(sources[0], sources[1]) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("error {}", e);
+                return;
+            }
+        };
+    }
+
     if 1 + 1 == 2 {
         create_image(data);
     } else {
@@ -36,7 +51,6 @@ fn main() {
 
 fn create_image(data: DataFile) {
     let mut img = Surface::new(data.area_box.width, data.area_box.height);
-    let mut printed_warnings = Vec::new();
     let mut entity_metrics: HashMap<String, u32> = HashMap::new();
 
     println!("Loading {} resources...", data.resource.len());
@@ -44,18 +58,11 @@ fn create_image(data: DataFile) {
         &data.resource,
         &data.area_box,
         &mut img,
-        &mut printed_warnings,
         &mut entity_metrics,
     );
 
     println!("Loading {} tiles...", data.tile.len());
-    translate_entities_to_image(
-        &data.tile,
-        &data.area_box,
-        &mut img,
-        &mut printed_warnings,
-        &mut entity_metrics,
-    );
+    translate_entities_to_image(&data.tile, &data.area_box, &mut img, &mut entity_metrics);
 
     for (name, count) in &entity_metrics {
         println!(
@@ -74,7 +81,6 @@ fn translate_entities_to_image<E>(
     entities: &[E],
     entity_box: &EasyBox,
     img: &mut Surface,
-    printed_warnings: &mut Vec<String>,
     entity_metrics: &mut HashMap<String, u32>,
 ) where
     E: LuaEntity,

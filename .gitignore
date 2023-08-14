@@ -2,11 +2,6 @@
 /dist/
 /.idea/
 *.iml
-
-
-# Added by cargo
-
 /target
-/*.json
-/*.png
-/chunk500
+/work
+

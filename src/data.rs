@@ -17,6 +17,32 @@ pub struct DataFile {
     pub area_box: EasyBox,
 }
 
+impl DataFile {
+    pub fn build_new(resource: &Path, tile: &Path) -> Self {
+        let start_time = Instant::now();
+
+        let mut data = DataFile {
+            area_box: EasyBox::default(),
+            resource: open_data_file::<Vec<LuaResource>>(resource),
+            tile: open_data_file::<Vec<LuaTile>>(tile),
+        };
+        println!("Reading Complete");
+
+        data.area_box.expand_to(&data.resource);
+        data.area_box.expand_to(&data.tile);
+
+        let duration = Instant::now() - start_time;
+        println!("-- Opened Data file in {} seconds", duration.as_secs());
+        println!("-- {} Tile", data.tile.len().to_formatted_string(&LOCALE),);
+        println!(
+            "-- {} Resource",
+            data.resource.len().to_formatted_string(&LOCALE),
+        );
+        println!("-- {:?}", data.area_box);
+        data
+    }
+}
+
 pub trait LuaEntity {
     fn name(&self) -> &str;
     fn position(&self) -> &Position;
@@ -113,30 +139,6 @@ impl EasyBox {
         self.width = (self.max_x - self.min_x).try_into().unwrap();
         self.height = (self.max_y - self.min_y).try_into().unwrap();
     }
-}
-
-pub fn open_data(resource: &Path, tile: &Path) -> Result<DataFile, Box<dyn Error>> {
-    let start_time = Instant::now();
-
-    let mut data = DataFile {
-        area_box: EasyBox::default(),
-        resource: open_data_file::<Vec<LuaResource>>(resource),
-        tile: open_data_file::<Vec<LuaTile>>(tile),
-    };
-    println!("Reading Complete");
-
-    data.area_box.expand_to(&data.resource);
-    data.area_box.expand_to(&data.tile);
-
-    let duration = Instant::now() - start_time;
-    println!("-- Opened Data file in {} seconds", duration.as_secs());
-    println!("-- {} Tile", data.tile.len().to_formatted_string(&LOCALE),);
-    println!(
-        "-- {} Resource",
-        data.resource.len().to_formatted_string(&LOCALE),
-    );
-    println!("-- {:?}", data.area_box);
-    Ok(data)
 }
 
 fn open_data_file<T>(path: &Path) -> T
