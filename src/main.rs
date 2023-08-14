@@ -4,7 +4,7 @@ mod data;
 mod surface;
 
 use crate::data::{open_data, DataFile, EasyBox, LuaEntity};
-use crate::surface::{ImageArray, Pixel};
+use crate::surface::{Pixel, Surface};
 use num_format::{Locale, ToFormattedString};
 use std::collections::HashMap;
 use std::path::Path;
@@ -35,7 +35,7 @@ fn main() {
 }
 
 fn create_image(data: DataFile) {
-    let mut img = ImageArray::new(data.area_box.width, data.area_box.height);
+    let mut img = Surface::new(data.area_box.width, data.area_box.height);
     let mut printed_warnings = Vec::new();
     let mut entity_metrics: HashMap<String, u32> = HashMap::new();
 
@@ -73,7 +73,7 @@ fn create_image(data: DataFile) {
 fn translate_entities_to_image<E>(
     entities: &[E],
     entity_box: &EasyBox,
-    img: &mut ImageArray,
+    img: &mut Surface,
     printed_warnings: &mut Vec<String>,
     entity_metrics: &mut HashMap<String, u32>,
 ) where
@@ -89,11 +89,7 @@ fn translate_entities_to_image<E>(
     }
 }
 
-fn draw_mega_box(
-    area_box: &EasyBox,
-    img: &mut ImageArray,
-    entity_metrics: &mut HashMap<String, u32>,
-) {
+fn draw_mega_box(area_box: &EasyBox, img: &mut Surface, entity_metrics: &mut HashMap<String, u32>) {
     let tiles: isize = 15 * TILES_PER_CHUNK as isize;
     let banner_width = 10;
     let edge_neg = -tiles - banner_width;
