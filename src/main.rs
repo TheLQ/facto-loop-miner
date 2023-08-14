@@ -1,10 +1,10 @@
 #![feature(convert_float_to_int)]
 
 mod data;
-mod img;
+mod surface;
 
 use crate::data::{open_data, DataFile, EasyBox, LuaEntity};
-use crate::img::{ImageArray, Pixel};
+use crate::surface::{ImageArray, Pixel};
 use num_format::{Locale, ToFormattedString};
 use std::collections::HashMap;
 use std::path::Path;
