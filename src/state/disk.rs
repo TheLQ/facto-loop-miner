@@ -54,7 +54,7 @@ impl State {
         serde_json::to_writer(BufWriter::new(file), self).unwrap();
     }
 
-    pub fn image_needs_rebuild(&mut self, path: &Path) -> bool {
+    pub fn update_modified(&mut self, path: &Path) -> bool {
         let metadata = match fs::metadata(path) {
             Ok(v) => v,
             Err(e) => panic!("Path {} e {}", path.display(), e),

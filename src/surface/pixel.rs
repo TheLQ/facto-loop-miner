@@ -55,7 +55,7 @@ impl Pixel {
             Pixel::CrudeOil => [0x20, 0x66, 0xFF],
             //
             Pixel::Empty => [0x00, 0x00, 0x00],
-            Pixel::EdgeWall => [0xAA, 0xAA, 0xAA],
+            Pixel::EdgeWall => [0xBD, 0x5F, 0x5F],
         }
     }
 }

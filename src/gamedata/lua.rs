@@ -16,6 +16,16 @@ pub struct LuaData {
     pub area_box: EasyBox,
 }
 
+// impl Default for LuaData {
+//     fn default() -> Self {
+//         LuaData {
+//             resource: Vec::new(),
+//             tile: Vec::new(),
+//             area_box: EasyBox::default(),
+//         }
+//     }
+// }
+
 impl LuaData {
     pub fn open(resource: &Path, tile: &Path) -> Self {
         let start_time = Instant::now();
