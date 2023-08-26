@@ -3,6 +3,7 @@ use crate::LOCALE;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
 use num_format::ToFormattedString;
+use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
@@ -39,7 +40,7 @@ impl Surface {
     }
 
     pub fn save(&self, path: &Path) {
-        println!("Saving RGB dump image to {}", path.display());
+        // println!("Saving RGB dump image to {}", path.display());
         let mut output: Vec<u8> = vec![0; self.buffer.len() * 3];
         for (i, pixel) in self.buffer.iter().enumerate() {
             let color = &pixel.color();
@@ -49,28 +50,46 @@ impl Surface {
             output[start + 2] = color[2];
         }
 
+        let name_prefix: String = path.file_name().unwrap().to_string_lossy().to_string();
+
+        self.save_rgb(
+            &output,
+            &path
+                .to_path_buf()
+                .with_file_name(name_prefix.clone() + ".rgb"),
+        );
+
+        self.save_png(
+            &output,
+            &path
+                .to_path_buf()
+                .with_file_name(name_prefix.clone() + ".png"),
+        );
+    }
+
+    fn save_rgb(&self, rgb: &[u8], path: &Path) {
+        fs::write(path, rgb).unwrap();
+
+        println!(
+            "Saved {} byte RGB array to {}",
+            rgb.len().to_formatted_string(&LOCALE),
+            path.display()
+        );
+    }
+
+    fn save_png(&self, rgb: &[u8], path: &Path) {
         let file = File::create(path).unwrap();
-        let writer = BufWriter::new(file);
+        let writer = BufWriter::new(&file);
 
         let encoder = PngEncoder::new(writer);
         encoder
-            .write_image(&output, self.width, self.height, ColorType::Rgb8)
+            .write_image(&rgb, self.width, self.height, ColorType::Rgb8)
             .unwrap();
-
-        // for pixel in &self.buffer {
-        //     // converted.extend_from_slice(&pixel.color());
-        //     writer.write(&pixel.color()).unwrap();
-        // }
-        // let raw = self.buffer.as_slice();
-        // let converted = raw as &[u8];
-        // let converted = convert(raw);
-        // image::save_buffer(
-        //     path,
-        //     &converted,
-        //     self.width,
-        //     self.height,
-        //     image::ColorType::Rgb8,
-        // )
-        // .unwrap();
+        let size = file.metadata().unwrap().len();
+        println!(
+            "Saved {} byte image to {}",
+            size.to_formatted_string(&LOCALE),
+            path.display()
+        );
     }
 }

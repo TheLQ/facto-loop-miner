@@ -50,7 +50,7 @@ impl Machine {
             if changed {
                 let mut metrics = Metrics::default();
 
-                if let Some(previous_step) = previous_step_opt.get() {
+                if let Some(_) = previous_step_opt.get() {
                     println!("=== Found changes, transforming");
 
                     step.transformer(&mut lua_surface, &mut lua_data, &mut metrics)

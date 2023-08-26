@@ -3,9 +3,6 @@ use crate::state::machine::Step;
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
-use crate::LOCALE;
-use num_format::ToFormattedString;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 pub struct Step00 {
