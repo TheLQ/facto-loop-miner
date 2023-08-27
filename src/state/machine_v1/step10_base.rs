@@ -1,5 +1,5 @@
 use crate::gamedata::lua::{EasyBox, LuaData};
-use crate::state::machine::Step;
+use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
@@ -19,12 +19,8 @@ impl Step for Step10 {
         "step01-base".to_string()
     }
 
-    fn dependency_files(&self) -> Option<Vec<PathBuf>> {
-        None
-    }
-
-    fn transformer(&self, surface: &mut Surface, data: &mut LuaData, metrics: &mut Metrics) {
-        draw_mega_box(&data.area_box, surface, metrics);
+    fn transformer(&self, params: StepParams) {
+        // draw_mega_box(&data.area_box, surface, metrics);
     }
 }
 

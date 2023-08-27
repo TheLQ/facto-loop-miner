@@ -21,7 +21,7 @@ fn main() {
     println!("hello");
     let root_dir = Path::new("work");
 
-    if 1 + 1 == 2 {
+    if 1 + 1 == 4 {
         // generate_lookup_image();
         opencv::start(&root_dir);
     } else {

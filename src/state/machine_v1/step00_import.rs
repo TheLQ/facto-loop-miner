@@ -1,5 +1,5 @@
 use crate::gamedata::lua::{EasyBox, LuaData, LuaEntity};
-use crate::state::machine::Step;
+use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
@@ -25,18 +25,22 @@ impl Step for Step00 {
         "step00-import".to_string()
     }
 
-    fn dependency_files(&self) -> Option<Vec<PathBuf>> {
-        Some(self.input_files.clone())
-    }
+    fn transformer(&self, params: StepParams) {
+        let lua_dir = Path::new("work/chunk500");
+        let data = LuaData::open(
+            &lua_dir.join("filtered-resources.json"),
+            &lua_dir.join("filtered-tiles.json"),
+        );
 
-    fn transformer(&self, surface: &mut Surface, data: &mut LuaData, metrics: &mut Metrics) {
-        *surface = Surface::new(data.area_box.width, data.area_box.height);
+        let mut surface = Surface::new(data.area_box.width, data.area_box.height);
 
         println!("Loading {} resources...", data.resource.len());
-        translate_entities_to_image(&data.resource, &data.area_box, surface, metrics);
+        translate_entities_to_image(&data.resource, &data.area_box, &mut surface, &params);
 
         println!("Loading {} tiles...", data.tile.len());
-        translate_entities_to_image(&data.tile, &data.area_box, surface, metrics);
+        translate_entities_to_image(&data.tile, &data.area_box, &mut surface, &params);
+
+        surface.save(&params.step_out_dir);
     }
 
     // fn force_transformer_run(&self) {
@@ -52,7 +56,7 @@ fn translate_entities_to_image<E>(
     entities: &[E],
     entity_box: &EasyBox,
     img: &mut Surface,
-    metrics: &mut Metrics,
+    params: &StepParams,
 ) where
     E: LuaEntity,
 {
@@ -62,6 +66,6 @@ fn translate_entities_to_image<E>(
             entity_box.absolute_x_f32(entity.position().x),
             entity_box.absolute_y_f32(entity.position().y),
         );
-        metrics.increment(&entity.name());
+        params.metrics.borrow_mut().increment(&entity.name());
     }
 }

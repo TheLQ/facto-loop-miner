@@ -15,8 +15,8 @@ impl Metrics {
             .or_insert(1);
     }
 
-    pub fn log_final(self) {
-        for (name, count) in self.entity_metrics {
+    pub fn log_final(&self) {
+        for (name, count) in &self.entity_metrics {
             println!(
                 "-- Added {}\t\t{} ",
                 name,

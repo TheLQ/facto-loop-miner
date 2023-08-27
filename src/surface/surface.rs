@@ -2,17 +2,21 @@ use crate::surface::pixel::Pixel;
 use crate::LOCALE;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
+use num_format::Locale::da;
 use num_format::ToFormattedString;
 use std::fs;
-use std::fs::File;
+use std::fs::{read, write, File};
 use std::io::BufWriter;
-use std::path::Path;
+use std::mem::transmute;
+use std::path::{Path, PathBuf};
 
 pub struct Surface {
     buffer: Vec<Pixel>,
     width: u32,
     height: u32,
 }
+
+const NAME_PREFIX: &str = "surface-";
 
 impl Surface {
     pub fn new(width: u32, mut height: u32) -> Self {
@@ -39,8 +43,49 @@ impl Surface {
         self.buffer[i] = pixel.clone();
     }
 
-    pub fn save(&self, path: &Path) {
-        // println!("Saving RGB dump image to {}", path.display());
+    pub fn load(out_dir: &Path) -> Self {
+        let dat_path = dat_path(&out_dir);
+        let buffer = read(&dat_path).unwrap();
+        println!("read buffer from {}", &dat_path.display());
+
+        let size_path = size_path(&out_dir);
+        let size_raw = read(&size_path).unwrap();
+        let size = u32::from_le_bytes(size_raw[0..4].try_into().unwrap());
+        println!("read size from {}", &size_path.display());
+
+        Surface {
+            buffer: unsafe { transmute(buffer) },
+            width: size,
+            height: size,
+        }
+    }
+
+    pub fn save(&self, out_dir: &Path) {
+        println!("Saving RGB dump image to {}", out_dir.display());
+        if !out_dir.is_dir() {
+            panic!("dir does not exist {}", out_dir.display());
+        }
+
+        self.save_raw(out_dir, NAME_PREFIX);
+        self.save_colorized(out_dir, NAME_PREFIX);
+    }
+
+    fn save_raw(&self, out_dir: &Path, name_prefix: &str) {
+        let bytes: &Vec<u8> = unsafe { transmute(&self.buffer) };
+
+        let dat_path = dat_path(&out_dir);
+        write(&dat_path, bytes).unwrap();
+        println!("wrote to {}", dat_path.display());
+
+        // if self.width != self.height {
+        //     panic!("unexpected size {} x {}", self.width, self.height)
+        // }
+        let size_path = size_path(&out_dir);
+        write(&size_path, self.width.to_le_bytes()).unwrap();
+        println!("wrote to {}", size_path.display());
+    }
+
+    fn save_colorized(&self, out_dir: &Path, name_prefix: &str) {
         let mut output: Vec<u8> = vec![0; self.buffer.len() * 3];
         for (i, pixel) in self.buffer.iter().enumerate() {
             let color = &pixel.color();
@@ -50,21 +95,14 @@ impl Surface {
             output[start + 2] = color[2];
         }
 
-        let name_prefix: String = path.file_name().unwrap().to_string_lossy().to_string();
+        // self.save_rgb(
+        //     &output,
+        //     &out_dir
+        //         .to_path_buf()
+        //         .with_file_name(name_prefix.clone() + ".rgb"),
+        // );
 
-        self.save_rgb(
-            &output,
-            &path
-                .to_path_buf()
-                .with_file_name(name_prefix.clone() + ".rgb"),
-        );
-
-        self.save_png(
-            &output,
-            &path
-                .to_path_buf()
-                .with_file_name(name_prefix.clone() + ".png"),
-        );
+        self.save_png(&output, &out_dir.join(format!("{}full.png", name_prefix)));
     }
 
     fn save_rgb(&self, rgb: &[u8], path: &Path) {
@@ -92,4 +130,12 @@ impl Surface {
             path.display()
         );
     }
+}
+
+fn dat_path(out_dir: &Path) -> PathBuf {
+    out_dir.join(format!("{}raw.dat", NAME_PREFIX))
+}
+
+fn size_path(out_dir: &Path) -> PathBuf {
+    out_dir.join(format!("{}size.txt", NAME_PREFIX))
 }

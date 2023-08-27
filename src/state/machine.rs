@@ -2,9 +2,11 @@ use crate::gamedata::lua::LuaData;
 use crate::state::disk::State;
 use crate::surface::metric::Metrics;
 use crate::surface::surface::Surface;
-use std::cell::Cell;
+use std::cell::{Cell, Ref, RefCell};
 use std::fs::{create_dir, read_dir};
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
+use std::sync::Arc;
 
 type StepBox = Box<dyn Step>;
 
@@ -12,61 +14,60 @@ pub struct Machine {
     pub(crate) steps: Vec<StepBox>,
 }
 
+pub struct StepParams {
+    pub step_out_dir: PathBuf,
+    pub metrics: Rc<RefCell<Metrics>>,
+    pub step_history_out_dirs: Vec<PathBuf>,
+    pub state: Rc<RefCell<State>>,
+}
+
 pub trait Step {
     fn name(&self) -> String;
-    fn dependency_files(&self) -> Option<Vec<PathBuf>>;
-    fn transformer(&self, surface: &mut Surface, data: &mut LuaData, metrics: &mut Metrics);
-    // fn force_transformer_run(&self);
+    fn transformer(&self, params: StepParams);
 }
 
 impl Machine {
-    pub fn start(self, root_dir: &Path) {
-        let output_dir = root_dir.join("out0");
+    pub fn start(self, work_dir: &Path) {
+        let output_dir = work_dir.join("out0");
         if !output_dir.is_dir() {
             create_dir(&output_dir).unwrap();
         }
-        panic_if_dir_not_empty(&output_dir);
 
-        let mut state = State::new(&root_dir.join("state.json"));
+        let state = Rc::new(RefCell::new(State::new(&work_dir.join("state.json"))));
 
         let step_names: Vec<String> = self.steps.iter().map(|v| v.name()).collect();
         println!("[Machine] Steps {}", step_names.join(","));
 
-        let previous_step_opt: Cell<Option<&StepBox>> = Cell::new(None);
-        // dummy values immediately replaced
-        let mut lua_surface = Surface::new(1, 1);
-        let lua_files = self.steps[0].dependency_files().unwrap();
-        let mut lua_data = LuaData::open(&lua_files[0], &lua_files[1]);
         for step in &self.steps {
             println!("=== {}", step.name());
 
-            let mut changed = true;
-            if let Some(dependency_files) = step.dependency_files() {
-                for dependency_file_path in dependency_files {
-                    let dependency_changed = state.update_modified(&dependency_file_path);
-                    changed = if changed { dependency_changed } else { false };
-                }
+            let step_out_dir = output_dir.join(step.name());
+            let mut changed = false;
+            if !step_out_dir.is_dir() {
+                create_dir(&step_out_dir).unwrap();
+                changed = true;
             }
+            changed = state.borrow_mut().update_modified(&step_out_dir);
             if changed {
-                let mut metrics = Metrics::default();
+                let mut metrics = Rc::new(RefCell::new(Metrics::default()));
+                println!("=== Found changes, transforming");
 
-                if let Some(_) = previous_step_opt.get() {
-                    println!("=== Found changes, transforming");
+                step.transformer(StepParams {
+                    step_out_dir: step_out_dir.clone(),
+                    metrics: metrics.clone(),
+                    step_history_out_dirs: Vec::new(),
+                    state: state.clone(),
+                });
 
-                    step.transformer(&mut lua_surface, &mut lua_data, &mut metrics)
-                } else {
-                    println!("=== Found changes on first step, transforming");
-
-                    step.transformer(&mut lua_surface, &mut lua_data, &mut metrics);
-                }
-                lua_surface.save(&output_dir.join(step.name()));
-
-                metrics.log_final();
+                metrics.borrow().log_final();
+                // dir modify date updated after writing to folder
+                state.borrow_mut().update_modified(&step_out_dir);
             } else {
                 println!("No Changes Found")
             }
-            previous_step_opt.set(Some(step));
         }
+
+        state.borrow().disk_write();
     }
 }
 

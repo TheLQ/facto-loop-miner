@@ -1,4 +1,3 @@
-use color_space::Rgb;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
 use opencv::core::{Point3d, Vec3b, VecN};
@@ -7,17 +6,18 @@ use std::io::BufWriter;
 use std::path::Path;
 
 #[derive(Clone, Debug, PartialEq)]
+#[repr(u8)]
 pub enum Pixel {
-    Iron,
-    Copper,
-    Stone,
-    Coal,
-    Uranium,
-    Water,
-    CrudeOil,
+    Iron = 25,
+    Copper = 50,
+    Stone = 75,
+    Coal = 100,
+    Uranium = 125,
+    Water = 150,
+    CrudeOil = 175,
     //
-    Empty,
-    EdgeWall,
+    Empty = 0,
+    EdgeWall = 200,
 }
 
 impl Pixel {
@@ -74,15 +74,6 @@ impl Pixel {
         rev.reverse();
         Vec3b::from(rev)
     }
-
-    pub fn color_rgb(&self) -> Rgb {
-        let color = self.color();
-        Rgb::new(
-            color[0].try_into().unwrap(),
-            color[1].try_into().unwrap(),
-            color[2].try_into().unwrap(),
-        )
-    }
 }
 
 pub const LOOKUP_IMAGE_ORDER: [Pixel; 9] = [
@@ -105,7 +96,8 @@ pub fn generate_lookup_image() {
     let file = File::create(path).unwrap();
     let writer = BufWriter::new(&file);
 
-    let buf: Vec<u8> = LOOKUP_IMAGE_ORDER.iter().flat_map(|e| e.color()).collect();
+    let buf: [u8; 9] = LOOKUP_IMAGE_ORDER.map(|e| e as u8);
+    // let buf: Vec<u8> = LOOKUP_IMAGE_ORDER.iter().flat_map(|e| e.color()).collect();
 
     let encoder = PngEncoder::new(writer);
     encoder
