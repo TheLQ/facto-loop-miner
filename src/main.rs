@@ -21,10 +21,10 @@ fn main() {
     println!("hello");
     let root_dir = Path::new("work");
 
-    if 1 + 1 == 4 {
-        // generate_lookup_image();
-        opencv::start(&root_dir);
-    } else {
-        new_v1_machine(root_dir).start(root_dir);
+    match 1 {
+        1 => new_v1_machine(root_dir).start(root_dir),
+        2 => opencv::start(&root_dir),
+        3 => generate_lookup_image(),
+        _ => panic!("wtf"),
     }
 }

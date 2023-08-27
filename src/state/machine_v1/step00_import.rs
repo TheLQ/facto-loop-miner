@@ -1,6 +1,5 @@
-use crate::gamedata::lua::{EasyBox, LuaData, LuaEntity};
+use crate::gamedata::lua::{LuaData, LuaEntity};
 use crate::state::machine::{Step, StepParams};
-use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
 use std::path::{Path, PathBuf};

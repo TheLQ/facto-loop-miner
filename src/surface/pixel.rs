@@ -1,6 +1,6 @@
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
-use opencv::core::{Point3d, Vec3b, VecN};
+use opencv::core::Vec3b;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;

@@ -1,10 +1,9 @@
-use crate::gamedata::lua::{EasyBox, LuaData};
+use crate::gamedata::easybox::EasyBox;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
 use crate::TILES_PER_CHUNK;
-use std::path::PathBuf;
 
 pub struct Step10 {}
 

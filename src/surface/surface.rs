@@ -1,12 +1,13 @@
+use crate::gamedata::easybox::EasyBox;
 use crate::surface::pixel::Pixel;
 use crate::LOCALE;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
-use num_format::Locale::da;
 use num_format::ToFormattedString;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::{read, write, File};
-use std::io::BufWriter;
+use std::io::{BufReader, BufWriter};
 use std::mem::transmute;
 use std::path::{Path, PathBuf};
 

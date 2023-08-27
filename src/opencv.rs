@@ -1,9 +1,8 @@
 use crate::surface::pixel::Pixel;
-use opencv::core::{in_range, Point, Rect, Scalar, Size, Vector};
+use opencv::core::{in_range, Point, Scalar, Vector};
 use opencv::imgcodecs::{imread, imwrite, IMREAD_COLOR};
 use opencv::imgproc::{
-    bounding_rect, find_contours, rectangle, CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE, LINE_8,
-    RETR_CCOMP, RETR_EXTERNAL, RETR_LIST, RETR_TREE,
+    bounding_rect, find_contours, rectangle, CHAIN_APPROX_SIMPLE, LINE_8, RETR_EXTERNAL,
 };
 use opencv::prelude::*;
 use std::path::Path;
