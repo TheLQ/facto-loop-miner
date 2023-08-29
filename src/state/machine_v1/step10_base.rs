@@ -1,5 +1,5 @@
-use crate::gamedata::easybox::EasyBox;
 use crate::state::machine::{Step, StepParams};
+use crate::surface::easybox::EasyBox;
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;

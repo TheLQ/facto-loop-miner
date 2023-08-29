@@ -1,4 +1,4 @@
-use crate::gamedata::easybox::EasyBox;
+use crate::surface::easybox::EasyBox;
 use crate::surface::pixel::Pixel;
 use crate::LOCALE;
 use image::codecs::png::PngEncoder;
@@ -11,10 +11,13 @@ use std::io::{BufReader, BufWriter};
 use std::mem::transmute;
 use std::path::{Path, PathBuf};
 
+#[derive(Serialize, Deserialize)]
 pub struct Surface {
+    #[serde(skip)]
     buffer: Vec<Pixel>,
     width: u32,
     height: u32,
+    pub area_box: EasyBox,
 }
 
 const NAME_PREFIX: &str = "surface-";
@@ -29,6 +32,7 @@ impl Surface {
             buffer,
             width,
             height,
+            area_box: EasyBox::default(),
         }
     }
 
@@ -49,16 +53,13 @@ impl Surface {
         let buffer = read(&dat_path).unwrap();
         println!("read buffer from {}", &dat_path.display());
 
-        let size_path = size_path(&out_dir);
-        let size_raw = read(&size_path).unwrap();
-        let size = u32::from_le_bytes(size_raw[0..4].try_into().unwrap());
-        println!("read size from {}", &size_path.display());
+        let meta_path = meta_path(&out_dir);
+        let meta_reader = BufReader::new(File::open(&meta_path).unwrap());
+        let mut surface: Surface = simd_json::serde::from_reader(meta_reader).unwrap();
+        println!("read size from {}", &meta_path.display());
 
-        Surface {
-            buffer: unsafe { transmute(buffer) },
-            width: size,
-            height: size,
-        }
+        surface.buffer = unsafe { transmute(buffer) };
+        surface
     }
 
     pub fn save(&self, out_dir: &Path) {
@@ -67,23 +68,21 @@ impl Surface {
             panic!("dir does not exist {}", out_dir.display());
         }
 
-        self.save_raw(out_dir, NAME_PREFIX);
+        self.save_raw(out_dir);
         self.save_colorized(out_dir, NAME_PREFIX);
     }
 
-    fn save_raw(&self, out_dir: &Path, name_prefix: &str) {
+    fn save_raw(&self, out_dir: &Path) {
         let bytes: &Vec<u8> = unsafe { transmute(&self.buffer) };
 
         let dat_path = dat_path(&out_dir);
         write(&dat_path, bytes).unwrap();
         println!("wrote to {}", dat_path.display());
 
-        // if self.width != self.height {
-        //     panic!("unexpected size {} x {}", self.width, self.height)
-        // }
-        let size_path = size_path(&out_dir);
-        write(&size_path, self.width.to_le_bytes()).unwrap();
-        println!("wrote to {}", size_path.display());
+        let meta_path = meta_path(&out_dir);
+        let meta_writer = BufWriter::new(File::open(&meta_path).unwrap());
+        simd_json::serde::to_writer(meta_writer, self).unwrap();
+        println!("wrote to {}", &meta_path.display());
     }
 
     fn save_colorized(&self, out_dir: &Path, name_prefix: &str) {
@@ -137,6 +136,6 @@ fn dat_path(out_dir: &Path) -> PathBuf {
     out_dir.join(format!("{}raw.dat", NAME_PREFIX))
 }
 
-fn size_path(out_dir: &Path) -> PathBuf {
-    out_dir.join(format!("{}size.txt", NAME_PREFIX))
+fn meta_path(out_dir: &Path) -> PathBuf {
+    out_dir.join(format!("{}meta.json", NAME_PREFIX))
 }

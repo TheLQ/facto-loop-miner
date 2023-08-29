@@ -35,30 +35,31 @@ impl Machine {
         let step_names: Vec<String> = self.steps.iter().map(|v| v.name()).collect();
         println!("[Machine] Steps {}", step_names.join(","));
 
+        let mut step_history_out_dirs = Vec::new();
         for step in &self.steps {
             println!("=== {}", step.name());
 
             let step_out_dir = output_dir.join(step.name());
-            let mut changed = false;
             if !step_out_dir.is_dir() {
                 create_dir(&step_out_dir).unwrap();
-                changed = true;
             }
-            changed = state.borrow_mut().update_modified(&step_out_dir);
+            let changed = state.borrow_mut().update_modified(&step_out_dir);
             if changed {
-                let mut metrics = Rc::new(RefCell::new(Metrics::default()));
+                let metrics = Rc::new(RefCell::new(Metrics::default()));
                 println!("=== Found changes, transforming");
 
                 step.transformer(StepParams {
                     step_out_dir: step_out_dir.clone(),
                     metrics: metrics.clone(),
-                    step_history_out_dirs: Vec::new(),
+                    step_history_out_dirs: step_history_out_dirs.clone(),
                     state: state.clone(),
                 });
 
                 metrics.borrow().log_final();
                 // dir modify date updated after writing to folder
                 state.borrow_mut().update_modified(&step_out_dir);
+
+                step_history_out_dirs.push(step_out_dir);
             } else {
                 println!("No Changes Found")
             }
