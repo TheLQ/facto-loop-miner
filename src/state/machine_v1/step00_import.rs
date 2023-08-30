@@ -47,10 +47,13 @@ where
 {
     for entity in entities {
         &img.set_pixel(
-            Pixel::parse(entity.name()),
+            entity.name().clone(),
             img.area_box.absolute_x_f32(entity.position().x),
             img.area_box.absolute_y_f32(entity.position().y),
         );
-        params.metrics.borrow_mut().increment(&entity.name());
+        params
+            .metrics
+            .borrow_mut()
+            .increment(entity.name().as_ref());
     }
 }

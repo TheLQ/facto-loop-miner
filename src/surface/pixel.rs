@@ -1,18 +1,21 @@
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
 use opencv::core::Vec3b;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
+use strum::AsRefStr;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, AsRefStr, Debug, PartialEq, Clone)]
 #[repr(u8)]
+#[serde(rename_all = "kebab-case")]
 pub enum Pixel {
-    Iron = 25,
-    Copper = 50,
+    IronOre = 25,
+    CopperOre = 50,
     Stone = 75,
     Coal = 100,
-    Uranium = 125,
+    UraniumOre = 125,
     Water = 150,
     CrudeOil = 175,
     //
@@ -21,44 +24,13 @@ pub enum Pixel {
 }
 
 impl Pixel {
-    pub fn parse(name: &str) -> Pixel {
-        match name {
-            "iron-ore" => Pixel::Iron,
-            "copper-ore" => Pixel::Copper,
-            "stone" => Pixel::Stone,
-            "coal" => Pixel::Coal,
-            "uranium-ore" => Pixel::Uranium,
-            "water" => Pixel::Water,
-            "crude-oil" => Pixel::CrudeOil,
-            //
-            "loop-empty" => Pixel::Empty,
-            "loop-edge" => Pixel::EdgeWall,
-            _ => panic!("unknown name {}", name),
-        }
-    }
-
-    // pub fn lua_resource_name(&self) -> &str {
-    //     match self {
-    //         Pixel::Iron => "iron-ore",
-    //         Pixel::Copper => "copper-ore",
-    //         Pixel::Stone => "stone",
-    //         Pixel::Coal => "coal",
-    //         Pixel::Uranium => "uranium-ore",
-    //         Pixel::Water => "water",
-    //         Pixel::CrudeOil => "crude-oil",
-    //         //
-    //         Pixel::Empty => "loop-empty",
-    //         Pixel::EdgeWall => "loop-edge",
-    //     }
-    // }
-
     pub fn color(&self) -> [u8; 3] {
         match self {
-            Pixel::Iron => [0x68, 0x82, 0x90],
-            Pixel::Copper => [0xc8, 0x62, 0x30],
+            Pixel::IronOre => [0x68, 0x82, 0x90],
+            Pixel::CopperOre => [0xc8, 0x62, 0x30],
             Pixel::Stone => [0xb0, 0x98, 0x68],
             Pixel::Coal => [0x5e, 0x62, 0x66],
-            Pixel::Uranium => [0x0b, 0x20, 0x00],
+            Pixel::UraniumOre => [0x0b, 0x20, 0x00],
             Pixel::Water => [0xFF, 0xFF, 0xFF],
             Pixel::CrudeOil => [0x20, 0x66, 0xFF],
             //
@@ -77,11 +49,11 @@ impl Pixel {
 }
 
 pub const LOOKUP_IMAGE_ORDER: [Pixel; 9] = [
-    Pixel::Iron,
-    Pixel::Copper,
+    Pixel::IronOre,
+    Pixel::CopperOre,
     Pixel::Stone,
     Pixel::Coal,
-    Pixel::Uranium,
+    Pixel::UraniumOre,
     Pixel::Water,
     Pixel::CrudeOil,
     //
@@ -90,7 +62,7 @@ pub const LOOKUP_IMAGE_ORDER: [Pixel; 9] = [
 ];
 
 pub fn generate_lookup_image() {
-    let img = image::RgbImage::new(LOOKUP_IMAGE_ORDER.len() as u32, 1);
+    // let img = image::RgbImage::new(LOOKUP_IMAGE_ORDER.len() as u32, 1);
 
     let path = Path::new("work/out0/lookup.png");
     let file = File::create(path).unwrap();

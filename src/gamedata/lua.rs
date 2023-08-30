@@ -1,3 +1,4 @@
+use crate::surface::pixel::Pixel;
 use crate::LOCALE;
 use num_format::ToFormattedString;
 use serde::de::DeserializeOwned;
@@ -29,25 +30,42 @@ impl LuaData {
             "-- {} Resource",
             data.resource.len().to_formatted_string(&LOCALE),
         );
+
+        // let mut printed: Vec<String> = Vec::new();
+        // for tile in &data.tile {
+        //     let name = tile.name().to_string();
+        //     if !printed.contains(&name) {
+        //         println!("type {}", &name);
+        //         printed.push(name);
+        //     }
+        // }
+        // for tile in &data.resource {
+        //     let name = tile.lua_type.to_string();
+        //     if !printed.contains(&name) {
+        //         println!("type {}", &name);
+        //         printed.push(name);
+        //     }
+        // }
+
         data
     }
 }
 
 pub trait LuaEntity {
-    fn name(&self) -> &str;
+    fn name(&self) -> &Pixel;
     fn position(&self) -> &Position;
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct LuaResource {
-    #[serde(rename = "type")]
-    pub lua_type: String,
-    pub name: String,
+    // #[serde(rename = "type")]
+    // pub lua_type: String,
+    pub name: Pixel,
     pub position: Position,
 }
 
 impl LuaEntity for LuaResource {
-    fn name(&self) -> &str {
+    fn name(&self) -> &Pixel {
         &self.name
     }
     fn position(&self) -> &Position {
@@ -57,12 +75,12 @@ impl LuaEntity for LuaResource {
 
 #[derive(Serialize, Deserialize)]
 pub struct LuaTile {
-    pub name: String,
+    pub name: Pixel,
     pub position: Position,
 }
 
 impl LuaEntity for LuaTile {
-    fn name(&self) -> &str {
+    fn name(&self) -> &Pixel {
         &self.name
     }
     fn position(&self) -> &Position {

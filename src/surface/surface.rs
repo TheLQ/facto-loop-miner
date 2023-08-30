@@ -39,13 +39,12 @@ impl Surface {
     pub fn set_pixel(&mut self, pixel: Pixel, x: u32, y: u32) {
         let i: usize = (self.width * y + x).try_into().unwrap();
         if self.buffer[i] != Pixel::Empty {
-            let existing_pixel = self.buffer[i].clone();
             println!(
                 "[warn] unexpected existing pixel {}x{} data {:?} trying {:?}",
-                x, y, existing_pixel, pixel
+                x, y, self.buffer[i], pixel
             )
         }
-        self.buffer[i] = pixel.clone();
+        self.buffer[i] = pixel;
     }
 
     pub fn load(out_dir: &Path) -> Self {

@@ -14,3 +14,4 @@ serde = { version = "1.0.183", features = ["derive"]  }
 serde_json = { version = "1.0.104" }
 simd-json = { version = "0.10.5", features = ["serde"] }
 opencv = { version = "0.84.5", features = ["imgcodecs"] }
+strum = { version = "0.25.0", features = ["derive"]}

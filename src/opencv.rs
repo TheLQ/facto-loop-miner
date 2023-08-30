@@ -45,7 +45,7 @@ pub fn start(work_dir: &Path) {
 
 fn filter_iron(base: Mat) -> Mat {
     // min
-    let color = Pixel::Iron.color_cv();
+    let color = Pixel::IronOre.color_cv();
     // let mut input_filtered = Mat::clone(&base).unwrap();
     let mut input_filtered = unsafe { Mat::new_rows_cols(base.rows(), base.cols(), 0).unwrap() };
     println!("filter_iron...");
@@ -73,7 +73,7 @@ fn find_objects(mut base: Mat) -> Mat {
 
     println!("found contours {}", contours.len());
 
-    let color = Pixel::EdgeWall.color_cv();
+    // let color = Pixel::EdgeWall.color_cv();
     for contour in contours {
         let rect = bounding_rect(&contour).unwrap();
         rectangle(
