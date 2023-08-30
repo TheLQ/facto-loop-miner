@@ -75,13 +75,13 @@ impl Surface {
         let bytes: &Vec<u8> = unsafe { transmute(&self.buffer) };
 
         let dat_path = dat_path(&out_dir);
+        println!("writing to {}", dat_path.display());
         write(&dat_path, bytes).unwrap();
-        println!("wrote to {}", dat_path.display());
 
         let meta_path = meta_path(&out_dir);
-        let meta_writer = BufWriter::new(File::open(&meta_path).unwrap());
+        println!("writing to {}", &meta_path.display());
+        let meta_writer = BufWriter::new(File::create(&meta_path).unwrap());
         simd_json::serde::to_writer(meta_writer, self).unwrap();
-        println!("wrote to {}", &meta_path.display());
     }
 
     fn save_colorized(&self, out_dir: &Path, name_prefix: &str) {
