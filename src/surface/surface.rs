@@ -15,8 +15,8 @@ use std::path::{Path, PathBuf};
 pub struct Surface {
     #[serde(skip)]
     buffer: Vec<Pixel>,
-    width: u32,
-    height: u32,
+    pub width: u32,
+    pub height: u32,
     pub area_box: EasyBox,
 }
 
@@ -48,16 +48,22 @@ impl Surface {
     }
 
     pub fn load(out_dir: &Path) -> Self {
+        let mut surface = Surface::load_meta(out_dir);
+
         let dat_path = dat_path(&out_dir);
         let buffer = read(&dat_path).unwrap();
         println!("read buffer from {}", &dat_path.display());
 
+        surface.buffer = unsafe { transmute(buffer) };
+        surface
+    }
+
+    pub fn load_meta(out_dir: &Path) -> Self {
         let meta_path = meta_path(&out_dir);
         let meta_reader = BufReader::new(File::open(&meta_path).unwrap());
         let mut surface: Surface = simd_json::serde::from_reader(meta_reader).unwrap();
         println!("read size from {}", &meta_path.display());
 
-        surface.buffer = unsafe { transmute(buffer) };
         surface
     }
 

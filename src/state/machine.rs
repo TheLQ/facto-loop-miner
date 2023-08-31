@@ -1,7 +1,7 @@
 use crate::state::disk::State;
 use crate::surface::metric::Metrics;
 use std::cell::RefCell;
-use std::fs::{create_dir, read_dir};
+use std::fs::{create_dir, read_dir, remove_dir};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -54,15 +54,19 @@ impl Machine {
                     step_history_out_dirs: step_history_out_dirs.clone(),
                     state: state.clone(),
                 });
-
                 metrics.borrow().log_final();
-                // dir modify date updated after writing to folder
-                state.borrow_mut().update_modified(&step_out_dir);
 
-                step_history_out_dirs.push(step_out_dir);
+                if read_dir(&step_out_dir).unwrap().count() == 0 {
+                    println!("=== detected empty dir, removing for future re-processing");
+                    remove_dir(&step_out_dir).unwrap();
+                } else {
+                    // dir modify date updated after writing to folder
+                    state.borrow_mut().update_modified(&step_out_dir);
+                }
             } else {
-                println!("No Changes Found")
+                println!("=== No Changes Found")
             }
+            step_history_out_dirs.push(step_out_dir.clone());
         }
 
         state.borrow().disk_write();
