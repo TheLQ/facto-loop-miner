@@ -1,10 +1,8 @@
-use crate::state::machine::{search_step_history_dirs, Step, StepParams};
-use crate::surface::easybox::EasyBox;
+use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
 use crate::TILES_PER_CHUNK;
-use opencv::sys::cv_cuda_DeviceInfo_surfaceAlignment_const;
 
 pub struct Step10 {}
 
@@ -20,11 +18,7 @@ impl Step for Step10 {
     }
 
     fn transformer(&self, params: StepParams) {
-        let recent_surface = search_step_history_dirs(
-            params.step_history_out_dirs.clone().into_iter(),
-            "surface-full.png",
-        );
-        let mut surface = Surface::load(recent_surface.parent().unwrap());
+        let mut surface = Surface::load_from_step_history(&params.step_history_out_dirs);
 
         draw_mega_box(&mut surface, &mut params.metrics.borrow_mut());
 

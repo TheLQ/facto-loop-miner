@@ -1,12 +1,11 @@
-use crate::opencv::{load_raw_image, load_raw_image_with_surface};
+use crate::opencv::load_raw_image_with_surface;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
-use crate::surface::patch::{DiskPatch, Patch};
+use crate::surface::patch::{map_patch_corners_to_kdtree, DiskPatch, Patch, PixelKdTree};
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
 use kiddo::float::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
-use kiddo::KdTree;
 use opencv::core::{Point, Rect, Vector};
 use opencv::imgcodecs::imwrite;
 use opencv::imgproc::{
@@ -14,11 +13,9 @@ use opencv::imgproc::{
 };
 use opencv::prelude::*;
 use std::fmt::Display;
-use std::fs::{read, File};
+use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
-
-type PixelKdTree = KdTree<f32, 2>;
 
 pub struct Step04 {}
 
@@ -94,14 +91,14 @@ fn detect_pixel(
 
     let mut patch_rects = detect_patch_rectangles(&img);
 
-    let cloud = map_patch_corners_to_kdtree(&patch_rects);
+    let cloud = map_patch_corners_to_kdtree(patch_rects.iter().map(Patch::from));
     detect_merge_nearby_patches(&mut patch_rects, &cloud, pixel);
 
     draw_patch_border(&mut img, patch_rects.iter());
     let debug_image_name = format!("cv-{}.png", pixel.as_ref());
     write_png(&out_dir.join(debug_image_name), &img);
 
-    patch_rects.into_iter().map(Patch::from_rect).collect()
+    patch_rects.into_iter().map(Patch::from).collect()
 }
 
 fn detect_patch_rectangles(base: &Mat) -> Vec<Rect> {
@@ -141,16 +138,6 @@ fn detect_patch_rectangles(base: &Mat) -> Vec<Rect> {
     rects
 }
 
-fn map_patch_corners_to_kdtree(patch_rects: &Vec<Rect>) -> PixelKdTree {
-    let mut tree: PixelKdTree = KdTree::new();
-    let mut patch_counter = 0;
-    for patch_rect in patch_rects {
-        tree.add(&rect_corner_to_slice(patch_rect), patch_counter);
-        patch_counter = patch_counter + 1;
-    }
-    tree
-}
-
 fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree, pixel: &Pixel) {
     let mut search_square_size = 0;
     // find largest size
@@ -165,7 +152,7 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree,
         .iter()
         .map(|patch| {
             cloud.within(
-                &rect_corner_to_slice(patch),
+                &Patch::from(patch).corner_slice(),
                 search_square_size as f32,
                 &squared_euclidean,
             )
@@ -253,10 +240,6 @@ where
     for rect in rects {
         rectangle(img, *rect, Pixel::EdgeWall.scalar_cv(), 2, LINE_8, 0).unwrap();
     }
-}
-
-fn rect_corner_to_slice(patch: &Rect) -> [f32; 2] {
-    [patch.x as f32, patch.y as f32]
 }
 
 #[allow(dead_code)]

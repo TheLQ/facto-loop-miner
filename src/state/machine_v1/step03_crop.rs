@@ -1,7 +1,5 @@
-use crate::opencv::{load_raw_image, load_raw_image_with_surface};
 use crate::state::machine::{Step, StepParams};
 use crate::surface::surface::Surface;
-use opencv::core::Range;
 use opencv::prelude::*;
 
 pub struct Step03 {}
@@ -28,5 +26,3 @@ impl Step for Step03 {
         cropped_surface.save(&params.step_out_dir);
     }
 }
-
-fn crop_image() {}

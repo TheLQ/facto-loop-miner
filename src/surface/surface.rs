@@ -1,3 +1,4 @@
+use crate::state::machine::search_step_history_dirs;
 use crate::surface::easybox::EasyBox;
 use crate::surface::pixel::Pixel;
 use crate::LOCALE;
@@ -48,6 +49,14 @@ impl Surface {
             )
         }
         self.buffer[i] = pixel;
+    }
+
+    pub fn load_from_step_history(step_history_out_dirs: &Vec<PathBuf>) -> Self {
+        let recent_surface = search_step_history_dirs(
+            step_history_out_dirs.clone().into_iter(),
+            "surface-full.png",
+        );
+        Surface::load(recent_surface.parent().unwrap())
     }
 
     #[allow(dead_code)]
