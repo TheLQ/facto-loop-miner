@@ -1,24 +1,26 @@
 use crate::state::machine::search_step_history_dirs;
 use crate::surface::easybox::EasyBox;
 use crate::surface::pixel::Pixel;
-use crate::LOCALE;
+use crate::{PixelKdTree, LOCALE};
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
 use num_format::ToFormattedString;
-use opencv::core::{Mat, Point, Range};
+use opencv::core::{rotate, Mat, Point, Point_, Range, ROTATE_90_COUNTERCLOCKWISE};
 use opencv::imgproc::{get_font_scale_from_height, put_text, FONT_HERSHEY_SIMPLEX, LINE_8};
 use opencv::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::fs::{read, write, File};
 use std::io::{BufReader, BufWriter};
 use std::mem::transmute;
 use std::path::{Path, PathBuf};
+use std::{fs, mem};
+
+pub type PointU32 = Point_<u32>;
 
 #[derive(Serialize, Deserialize)]
 pub struct Surface {
     #[serde(skip)]
-    buffer: Vec<Pixel>,
+    pub buffer: Vec<Pixel>,
     pub width: u32,
     pub height: u32,
     pub area_box: EasyBox,
@@ -40,23 +42,64 @@ impl Surface {
         }
     }
 
-    pub fn set_pixel(&mut self, pixel: Pixel, x: u32, y: u32) {
-        if let Some(existing_pixel) = self.try_set_pixel(pixel.clone(), x, y) {
-            println!(
-                "[warn] unexpected existing pixel {}x{} data {:?} trying {:?}",
-                x, y, existing_pixel, &pixel
-            )
-        }
+    pub fn get_pixel_point_i32(&self, point: Point) -> &Pixel {
+        self.get_pixel_i32(point.x, point.y)
     }
 
-    pub fn try_set_pixel(&mut self, pixel: Pixel, x: u32, y: u32) -> Option<&Pixel> {
-        let i: usize = (self.width * y + x).try_into().unwrap();
-        if self.buffer[i] != Pixel::Empty {
-            Some(&self.buffer[i])
-        } else {
-            self.buffer[i] = pixel;
-            None
+    pub fn get_pixel_point_u32(&self, point: PointU32) -> &Pixel {
+        self.get_pixel(point.x, point.y)
+    }
+
+    pub fn get_pixel_i32(&self, x: i32, y: i32) -> &Pixel {
+        anti_bad_pixel_i32(x, y);
+        let i = self.xy_to_index(x as u32, y as u32);
+        &self.buffer[i]
+    }
+
+    pub fn get_pixel(&self, x: u32, y: u32) -> &Pixel {
+        let i = self.xy_to_index(x, y);
+        &self.buffer[i]
+    }
+
+    pub fn set_pixel_point_u32(&mut self, pixel: Pixel, point: PointU32) {
+        self.set_pixel(pixel, point.x, point.y)
+    }
+
+    pub fn set_pixel_point_i32(&mut self, pixel: Pixel, point: Point) {
+        self.set_pixel_i32(pixel, point.x, point.y)
+    }
+
+    pub fn set_pixel_i32(&mut self, pixel: Pixel, x: i32, y: i32) {
+        anti_bad_pixel_i32(x, y);
+        self.set_pixel(pixel, x as u32, y as u32)
+    }
+
+    pub fn set_pixel(&mut self, pixel: Pixel, x: u32, y: u32) {
+        let _old = self.replace_pixel(pixel.clone(), x, y);
+        // if old != Pixel::Empty {
+        //     println!(
+        //         "[warn] unexpected existing pixel {}x{} data {:?} trying {:?}",
+        //         x, y, old, pixel
+        //     )
+        // }
+    }
+
+    pub fn replace_pixel(&mut self, pixel: Pixel, x: u32, y: u32) -> Pixel {
+        let i = self.xy_to_index(x, y);
+        mem::replace(&mut self.buffer[i], pixel)
+    }
+
+    pub fn xy_to_index(&self, x: u32, y: u32) -> usize {
+        (self.width * y + x).try_into().unwrap()
+    }
+
+    pub fn index_to_xy(&self, i: usize) -> PointU32 {
+        let y = i as u32 / self.width;
+        let x = i as u32 % self.width;
+        if self.xy_to_index(x, y) != i {
+            panic!("unexpected {}x{} for {}", x, y, i);
         }
+        PointU32 { x, y }
     }
 
     pub fn load_from_step_history(step_history_out_dirs: &Vec<PathBuf>) -> Self {
@@ -184,28 +227,51 @@ impl Surface {
         } else if cropped.cols() != expected_size {
             panic!("expected cols {} got {}", expected_size, cropped.cols());
         }
-        draw_text_cv(&mut cropped, "cv(0,0)", Point::new(100, 100));
+        let crop_box = EasyBox {
+            min_x: -crop_radius_from_center,
+            max_x: crop_radius_from_center,
+            min_y: -crop_radius_from_center,
+            max_y: crop_radius_from_center,
+            width: (crop_radius_from_center * 2) as u32,
+            height: (crop_radius_from_center * 2) as u32,
+        };
+        if cropped.rows() != crop_box.height as i32 {
+            panic!(
+                "expected height {} rows {}",
+                crop_box.height,
+                cropped.rows()
+            );
+        } else if cropped.cols() != crop_box.width as i32 {
+            panic!("expected width {} cols {}", crop_box.width, cropped.cols());
+        }
+
+        draw_text_cv(&mut cropped, "cv(0,0)", Point::new(0, 100));
+        let rows = cropped.rows();
+        draw_text_cv(&mut cropped, "cv(0,1)", Point::new(0, rows - 50));
+        draw_text_cv(
+            &mut cropped,
+            "g(-1,0)",
+            Point {
+                x: crop_box.absolute_x_i32(-crop_radius_from_center) as i32,
+                y: crop_box.absolute_y_i32(0) as i32,
+            },
+        );
+        draw_text_cv(
+            &mut cropped,
+            "g(0,1)",
+            Point {
+                x: crop_box.absolute_x_i32(0) as i32,
+                y: crop_box.absolute_y_i32(crop_radius_from_center - 50) as i32,
+            },
+        );
 
         let cropped_buffer: &[Pixel] = unsafe { transmute(cropped.data_bytes().unwrap()) };
         let surface = Surface {
             buffer: Vec::from(cropped_buffer),
             width: cropped.cols() as u32,
             height: cropped.rows() as u32,
-            area_box: EasyBox {
-                min_x: -crop_radius_from_center,
-                max_x: crop_radius_from_center,
-                min_y: -crop_radius_from_center,
-                max_y: crop_radius_from_center,
-                width: (crop_radius_from_center * 2) as u32,
-                height: (crop_radius_from_center * 2) as u32,
-            },
+            area_box: crop_box,
         };
-
-        if cropped.rows() != surface.height as i32 {
-            panic!("expected height {} rows {}", surface.height, cropped.rows());
-        } else if cropped.cols() != surface.width as i32 {
-            panic!("expected width {} cols {}", surface.width, cropped.cols());
-        }
 
         surface
     }
@@ -216,9 +282,29 @@ impl Surface {
         let buf: &[Pixel] = unsafe { transmute(mat.data_bytes().unwrap()) };
         self.buffer = Vec::from(buf);
     }
+
+    pub fn pixel_to_kdtree(&self, filter_pixel: &Pixel) -> PixelKdTree {
+        let mut added: Vec<[f32; 2]> = Vec::new();
+        for (pos, cur_pixel) in self.buffer.iter().enumerate() {
+            if cur_pixel == filter_pixel {
+                let pos = self.index_to_xy(pos);
+                added.push([pos.x as f32, pos.y as f32]);
+            }
+        }
+        (&added).into()
+    }
+}
+
+fn anti_bad_pixel_i32(x: i32, y: i32) {
+    if x < 0 {
+        panic!("x < 0");
+    } else if y < 0 {
+        panic!("y < 0");
+    }
 }
 
 pub fn draw_text_cv(img: &mut Mat, text: &str, origin: Point) {
+    println!("drawing {} at {:?}", text, origin);
     put_text(
         img,
         text,
@@ -231,6 +317,27 @@ pub fn draw_text_cv(img: &mut Mat, text: &str, origin: Point) {
         false,
     )
     .unwrap();
+}
+
+pub fn draw_text_vertical_cv(img: &mut Mat, text: &str, origin: Point) {
+    println!("drawing {} at {:?}", text, origin);
+    // "cv(0,0)" is roughly 500x150
+    let mut text_img = unsafe { Mat::new_rows_cols(500, 1000, 0).unwrap() };
+    put_text(
+        &mut text_img,
+        text,
+        origin,
+        FONT_HERSHEY_SIMPLEX,
+        get_font_scale_from_height(FONT_HERSHEY_SIMPLEX, 100, 10).unwrap(),
+        Pixel::EdgeWall.scalar_cv(),
+        10,
+        LINE_8,
+        false,
+    )
+    .unwrap();
+
+    let mut rotated_text_img = unsafe { Mat::new_rows_cols(1000, 500, 0).unwrap() };
+    rotate(&text_img, &mut rotated_text_img, ROTATE_90_COUNTERCLOCKWISE).unwrap();
 }
 
 fn dat_path(out_dir: &Path) -> PathBuf {

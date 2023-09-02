@@ -7,7 +7,7 @@ use std::io::BufWriter;
 use std::path::Path;
 use strum::AsRefStr;
 
-#[derive(Serialize, Deserialize, AsRefStr, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, AsRefStr, Debug, PartialEq, Clone, Eq, Hash)]
 #[repr(u8)]
 #[serde(rename_all = "kebab-case")]
 pub enum Pixel {
@@ -22,6 +22,7 @@ pub enum Pixel {
     Empty = 0,
     EdgeWall = 200,
     Rail = 225,
+    Highlighter = 250,
 }
 
 impl Pixel {
@@ -38,6 +39,7 @@ impl Pixel {
             Pixel::Empty => [0x00, 0x00, 0x00],
             Pixel::EdgeWall => [0xBD, 0x5F, 0x5F],
             Pixel::Rail => [0xB9, 0x7A, 0x57],
+            Pixel::Highlighter => [0x3C, 0xB6, 0xDE],
         }
     }
 
@@ -54,10 +56,10 @@ impl Pixel {
         Scalar::from(id as i32)
     }
 
-    pub fn nearby_patch_search_distance(&self) -> i32 {
+    pub fn nearby_patch_search_distance(&self, search_area: i32) -> i32 {
         match self {
-            Pixel::CrudeOil => 100,
-            _ => 1,
+            Pixel::CrudeOil => 300,
+            _ => search_area * 1,
         }
     }
 }
