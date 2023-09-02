@@ -1,11 +1,8 @@
 use crate::gamedata::lua::{LuaData, LuaEntity};
 use crate::state::machine::{Step, StepParams};
 use crate::surface::easybox::EasyBox;
-use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
-use std::cell::RefCell;
-use std::path::{Path, PathBuf};
-use std::rc::Rc;
+use std::path::Path;
 
 pub struct Step00 {}
 
@@ -48,7 +45,7 @@ where
     E: LuaEntity,
 {
     for entity in entities {
-        &img.set_pixel(
+        img.set_pixel(
             entity.name().clone(),
             img.area_box.absolute_x_f32(entity.position().x),
             img.area_box.absolute_y_f32(entity.position().y),

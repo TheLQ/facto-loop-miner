@@ -1,21 +1,20 @@
 use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
+use crate::surface::patch::{DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
-use fixed::types::extra::U0;
-use fixed::FixedU32;
-use itertools::Itertools;
 use kiddo::float::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
 use kiddo::KdTree;
-use opencv::core::{Point, Rect, Scalar, Vector};
+use opencv::core::{Point, Rect, Vector};
 use opencv::imgcodecs::imwrite;
 use opencv::imgproc::{
     bounding_rect, find_contours, rectangle, CHAIN_APPROX_SIMPLE, LINE_8, RETR_EXTERNAL,
 };
 use opencv::prelude::*;
 use std::fmt::Display;
-use std::fs::read;
+use std::fs::{read, File};
+use std::io::BufWriter;
 use std::path::Path;
 
 type PixelKdTree = KdTree<f32, 2>;
@@ -40,30 +39,16 @@ impl Step for Step04 {
         let surface_meta = Surface::load_meta(&previous_step_dir);
         let surface_raw_path = previous_step_dir.join("surface-raw.dat");
         println!("Loading {}", surface_raw_path.display());
-        let mut img = load_raw_image(
-            &surface_raw_path,
-            surface_meta.height as usize,
-            surface_meta.width as usize,
-            Pixel::IronOre,
-        );
-        let size = img.size().unwrap();
-        println!(
-            "Read {} size {}x{} type {}",
-            surface_raw_path.display(),
-            size.width,
-            size.height,
-            img.typ()
-        );
 
-        detector(&mut img);
+        let disk_patches = detector(&surface_raw_path, surface_meta, &params.step_out_dir);
 
-        write_png(&params.step_out_dir.join("cv.png"), &img);
+        write_patch_dump(&params.step_out_dir.join("patches.json"), disk_patches);
     }
 }
 
-fn load_raw_image(path: &Path, rows: usize, height: usize, pixel: Pixel) -> Mat {
+fn load_raw_image(path: &Path, rows: usize, height: usize, pixel: &Pixel) -> Mat {
     let mut surface_raw = read(path).unwrap();
-    let pixel_id = pixel as u8;
+    let pixel_id = pixel.clone() as u8;
 
     // let mut found_ids: Vec<u8> = Vec::new();
     for pixel_raw in surface_raw.iter_mut() {
@@ -93,19 +78,65 @@ fn load_raw_image(path: &Path, rows: usize, height: usize, pixel: Pixel) -> Mat 
 }
 
 fn write_png(path: &Path, img: &Mat) {
+    println!("Wrote debug image {}", path.display());
     imwrite(path.to_str().unwrap(), img, &Vector::new()).unwrap();
 }
 
-fn detector(base: &mut Mat) {
-    let mut patch_rects = detect_patch_rectangles(base);
+fn write_patch_dump(path: &Path, patches: DiskPatch) {
+    println!("Wrote output patch dump to {}", path.display());
+    let file = File::create(path).unwrap();
+    simd_json::to_writer(BufWriter::new(file), &patches).unwrap();
+}
 
-    let first_debug = patch_rects.get(0).unwrap();
-    println!("{}", rect_to_string(first_debug));
+fn detector(surface_raw_path: &Path, surface_meta: Surface, out_dir: &Path) -> DiskPatch {
+    let useful_pixels = [
+        Pixel::IronOre,
+        Pixel::CopperOre,
+        Pixel::Coal,
+        Pixel::Stone,
+        Pixel::CrudeOil,
+    ];
+    let mut disk = DiskPatch::default();
+    for pixel in useful_pixels {
+        disk.patches.insert(
+            pixel.as_ref().to_string(),
+            detect_pixel(surface_raw_path, &surface_meta, out_dir, &pixel),
+        );
+    }
+    disk
+}
+
+fn detect_pixel(
+    surface_raw_path: &Path,
+    surface_meta: &Surface,
+    out_dir: &Path,
+    pixel: &Pixel,
+) -> Vec<Patch> {
+    let mut img = load_raw_image(
+        surface_raw_path,
+        surface_meta.height as usize,
+        surface_meta.width as usize,
+        pixel,
+    );
+    let size = img.size().unwrap();
+    println!(
+        "Read {} size {}x{} type {}",
+        surface_raw_path.display(),
+        size.width,
+        size.height,
+        img.typ()
+    );
+
+    let mut patch_rects = detect_patch_rectangles(&img);
 
     let cloud = map_patch_corners_to_kdtree(&patch_rects);
-    detect_merge_nearby_patches(&mut patch_rects, &cloud);
+    detect_merge_nearby_patches(&mut patch_rects, &cloud, pixel);
 
-    draw_patch_border(base, patch_rects.into_iter());
+    draw_patch_border(&mut img, patch_rects.iter());
+    let debug_image_name = format!("cv-{}.png", pixel.as_ref());
+    write_png(&out_dir.join(debug_image_name), &img);
+
+    patch_rects.into_iter().map(Patch::from_rect).collect()
 }
 
 fn detect_patch_rectangles(base: &Mat) -> Vec<Rect> {
@@ -127,7 +158,7 @@ fn detect_patch_rectangles(base: &Mat) -> Vec<Rect> {
     .unwrap();
 
     println!("found contours {}", contours.len());
-    metricify("contour sizes", contours.iter().map(|v| v.len()));
+    // metricify("contour sizes", contours.iter().map(|v| v.len()));
 
     // let first_debug = contours.get(0).unwrap();
     // println!(
@@ -155,9 +186,7 @@ fn map_patch_corners_to_kdtree(patch_rects: &Vec<Rect>) -> PixelKdTree {
     tree
 }
 
-const MERGE_WITHIN_DIAMETERS: i32 = 100;
-
-fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree) {
+fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree, pixel: &Pixel) {
     let mut search_square_size = 0;
     // find largest size
     for patch in patch_rects.iter() {
@@ -165,7 +194,7 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree)
         search_square_size = search_square_size.max(patch.height);
     }
     // arbitrary size, for some reason within 1 diameter for IronOre still finds max 5...
-    search_square_size = search_square_size * MERGE_WITHIN_DIAMETERS;
+    search_square_size = search_square_size * pixel.nearby_patch_search_distance();
 
     let within_search: Vec<Vec<Neighbour<_, _>>> = patch_rects
         .iter()
@@ -252,9 +281,12 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree)
     println!("patches with merge replacements {}", patch_rects.len());
 }
 
-fn draw_patch_border(img: &mut Mat, rects: impl Iterator<Item = Rect>) {
+fn draw_patch_border<'a, I>(img: &mut Mat, rects: I)
+where
+    I: Iterator<Item = &'a Rect>,
+{
     for rect in rects {
-        rectangle(img, rect, Scalar::from(100f64), 2, LINE_8, 0).unwrap();
+        rectangle(img, *rect, Pixel::EdgeWall.scalar_cv(), 2, LINE_8, 0).unwrap();
     }
 }
 
@@ -262,6 +294,7 @@ fn rect_corner_to_slice(patch: &Rect) -> [f32; 2] {
     [patch.x as f32, patch.y as f32]
 }
 
+#[allow(dead_code)]
 fn metricify<I, T>(name: &str, input: I)
 where
     I: Iterator<Item = T>,
@@ -276,6 +309,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 fn rect_to_string(rect: &Rect) -> String {
     format!(
         "h {} w {} x {} y {}",

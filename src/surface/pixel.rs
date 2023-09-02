@@ -47,9 +47,16 @@ impl Pixel {
         Vec3b::from(rev)
     }
 
-    pub fn scalar(self) -> Scalar {
+    pub fn scalar_cv(self) -> Scalar {
         let id = self as u8;
         Scalar::from(id as i32)
+    }
+
+    pub fn nearby_patch_search_distance(&self) -> i32 {
+        match self {
+            Pixel::CrudeOil => 100,
+            _ => 1,
+        }
     }
 }
 

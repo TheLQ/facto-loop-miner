@@ -47,6 +47,7 @@ impl Surface {
         self.buffer[i] = pixel;
     }
 
+    #[allow(dead_code)]
     pub fn load(out_dir: &Path) -> Self {
         let mut surface = Surface::load_meta(out_dir);
 
@@ -61,7 +62,7 @@ impl Surface {
     pub fn load_meta(out_dir: &Path) -> Self {
         let meta_path = meta_path(&out_dir);
         let meta_reader = BufReader::new(File::open(&meta_path).unwrap());
-        let mut surface: Surface = simd_json::serde::from_reader(meta_reader).unwrap();
+        let surface: Surface = simd_json::serde::from_reader(meta_reader).unwrap();
         println!("read size from {}", &meta_path.display());
 
         surface
@@ -110,6 +111,7 @@ impl Surface {
         self.save_png(&output, &out_dir.join(format!("{}full.png", name_prefix)));
     }
 
+    #[allow(dead_code)]
     fn save_rgb(&self, rgb: &[u8], path: &Path) {
         fs::write(path, rgb).unwrap();
 

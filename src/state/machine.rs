@@ -1,6 +1,6 @@
 use crate::state::disk::State;
 use crate::surface::metric::Metrics;
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::fs::{create_dir, read_dir, remove_dir};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -73,6 +73,7 @@ impl Machine {
     }
 }
 
+#[allow(dead_code)]
 fn panic_if_dir_not_empty(dir: &Path) {
     let raw_entries = read_dir(dir).unwrap();
     let children_count: Vec<String> = raw_entries

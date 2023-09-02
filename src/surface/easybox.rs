@@ -34,10 +34,12 @@ impl EasyBox {
         (game_center_y.floor() as i32 - self.min_y) as u32
     }
 
+    #[allow(dead_code)]
     pub fn absolute_x_i32(&self, game_center_x: i32) -> u32 {
         (game_center_x - self.min_x) as u32
     }
 
+    #[allow(dead_code)]
     pub fn absolute_y_i32(&self, game_center_y: i32) -> u32 {
         (game_center_y - self.min_y) as u32
     }
