@@ -1,6 +1,6 @@
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
-use opencv::core::Vec3b;
+use opencv::core::{Scalar, Vec3b};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufWriter;
@@ -45,6 +45,11 @@ impl Pixel {
         let mut rev = self.color();
         rev.reverse();
         Vec3b::from(rev)
+    }
+
+    pub fn scalar(self) -> Scalar {
+        let id = self as u8;
+        Scalar::from(id as i32)
     }
 }
 

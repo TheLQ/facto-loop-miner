@@ -17,3 +17,4 @@ opencv = { version = "0.84.5", features = ["imgcodecs"] }
 strum = { version = "0.25.0", features = ["derive"]}
 itertools = "0.11.0"
 kiddo = "2.1.1"
+fixed = "1.23.1"

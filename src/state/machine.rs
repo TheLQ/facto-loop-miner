@@ -1,6 +1,6 @@
 use crate::state::disk::State;
 use crate::surface::metric::Metrics;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::fs::{create_dir, read_dir, remove_dir};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -45,7 +45,7 @@ impl Machine {
             }
             let changed = state.borrow_mut().update_modified(&step_out_dir);
             if changed {
-                let metrics = Rc::new(RefCell::new(Metrics::default()));
+                let metrics = Rc::new(RefCell::new(Metrics::new(step.name())));
                 println!("=== Found changes, transforming");
 
                 step.transformer(StepParams {
@@ -54,7 +54,7 @@ impl Machine {
                     step_history_out_dirs: step_history_out_dirs.clone(),
                     state: state.clone(),
                 });
-                metrics.borrow().log_final();
+                RefCell::into_inner(Rc::into_inner(metrics).unwrap()).log_final();
 
                 if read_dir(&step_out_dir).unwrap().count() == 0 {
                     println!("=== detected empty dir, removing for future re-processing");
@@ -69,7 +69,7 @@ impl Machine {
             step_history_out_dirs.push(step_out_dir.clone());
         }
 
-        state.borrow().disk_write();
+        RefCell::into_inner(Rc::into_inner(state).unwrap()).disk_write();
     }
 }
 

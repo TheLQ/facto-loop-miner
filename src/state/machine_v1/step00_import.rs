@@ -3,7 +3,9 @@ use crate::state::machine::{Step, StepParams};
 use crate::surface::easybox::EasyBox;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
+use std::cell::RefCell;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 pub struct Step00 {}
 

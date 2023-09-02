@@ -2,19 +2,18 @@ use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
-use image::load;
+use fixed::types::extra::U0;
+use fixed::FixedU32;
 use itertools::Itertools;
 use kiddo::float::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
 use kiddo::KdTree;
-use opencv::core::{Point, Point_, Rect, Scalar, Vector};
-use opencv::imgcodecs::{imread, imwrite};
+use opencv::core::{Point, Rect, Scalar, Vector};
+use opencv::imgcodecs::imwrite;
 use opencv::imgproc::{
     bounding_rect, find_contours, rectangle, CHAIN_APPROX_SIMPLE, LINE_8, RETR_EXTERNAL,
 };
-use opencv::platform_types::size_t;
 use opencv::prelude::*;
-use std::ffi::c_void;
 use std::fmt::Display;
 use std::fs::read;
 use std::path::Path;
@@ -101,10 +100,7 @@ fn detector(base: &mut Mat) {
     let mut patch_rects = detect_patch_rectangles(base);
 
     let first_debug = patch_rects.get(0).unwrap();
-    println!(
-        "h {} w {} x {} y {}",
-        first_debug.height, first_debug.width, first_debug.x, first_debug.y
-    );
+    println!("{}", rect_to_string(first_debug));
 
     let cloud = map_patch_corners_to_kdtree(&patch_rects);
     detect_merge_nearby_patches(&mut patch_rects, &cloud);
@@ -150,11 +146,13 @@ fn detect_patch_rectangles(base: &Mat) -> Vec<Rect> {
 }
 
 fn map_patch_corners_to_kdtree(patch_rects: &Vec<Rect>) -> PixelKdTree {
-    let cloud_init: Vec<[f32; 2]> = patch_rects
-        .iter()
-        .map(|patch| rect_corner_to_slice(patch))
-        .collect();
-    (&cloud_init).into()
+    let mut tree: PixelKdTree = KdTree::new();
+    let mut patch_counter = 0;
+    for patch_rect in patch_rects {
+        tree.add(&rect_corner_to_slice(patch_rect), patch_counter);
+        patch_counter = patch_counter + 1;
+    }
+    tree
 }
 
 const MERGE_WITHIN_DIAMETERS: i32 = 100;
@@ -179,23 +177,27 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree)
             )
         })
         .collect();
-    let mut metric: Metrics = Metrics::default();
-    for within in &within_search {
-        metric.increment(&format!("within {}", within.len()));
-    }
-    metric.log_final();
+
+    Metrics::process(
+        "within",
+        within_search.iter().map(|input| input.len().to_string()),
+    );
 
     let mut combine_replacements: Vec<Rect> = Vec::new();
     let mut combine_mask: Vec<bool> = vec![false; patch_rects.len()];
-    let mut combine_counter = 1usize;
-    for within in &within_search {
+    'search: for within in &within_search {
         if within.len() <= 1 {
             continue;
+        }
+        // TODO: First mergeable wins. This isn't always the optimal merge. Close enough
+        for neighbor in within {
+            if combine_mask[neighbor.item] {
+                continue 'search;
+            }
         }
         for neighbor in within {
             combine_mask[neighbor.item] = true;
         }
-        combine_counter = combine_counter + 1;
 
         let nearby_rects: Vec<Rect> = within
             .iter()
@@ -213,24 +215,41 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree)
 
         // lazy opencv way
         let mut corners: Vec<Point> = Vec::new();
-        for nearby_rect in nearby_rects {
+        for nearby_rect in &nearby_rects {
             corners.push(Point::new(nearby_rect.x, nearby_rect.y));
             corners.push(Point::new(
                 nearby_rect.x + nearby_rect.width,
-                nearby_rect.y - nearby_rect.height,
+                nearby_rect.y + nearby_rect.height,
             ));
         }
         let super_rect = bounding_rect(&Vector::from_slice(&corners)).unwrap();
+
+        // println!("====");
+        // println!(
+        //     "for {}",
+        //     (&nearby_rects)
+        //         .iter()
+        //         .map(|rect| rect_to_string((rect)))
+        //         .join(", ")
+        // );
+        // println!("got super {}", rect_to_string(&super_rect));
+
         combine_replacements.push(super_rect);
     }
-    println!("want to merge {}", combine_replacements.len());
 
-    for (pos, _) in combine_mask.iter().enumerate().rev() {
-        patch_rects.remove(pos);
+    println!("patches init {}", patch_rects.len());
+    for (pos, mask) in combine_mask.iter().enumerate().rev() {
+        if *mask {
+            patch_rects.remove(pos);
+        }
     }
+    println!("patches with mergeable removed {}", patch_rects.len());
+
+    // patch_rects.clear();
     for super_rect in combine_replacements {
         patch_rects.push(super_rect);
     }
+    println!("patches with merge replacements {}", patch_rects.len());
 }
 
 fn draw_patch_border(img: &mut Mat, rects: impl Iterator<Item = Rect>) {
@@ -255,4 +274,11 @@ where
             found.push(val.clone());
         }
     }
+}
+
+fn rect_to_string(rect: &Rect) -> String {
+    format!(
+        "h {} w {} x {} y {}",
+        rect.height, rect.width, rect.x, rect.y
+    )
 }
