@@ -23,7 +23,6 @@ fn main() {
 
     match 1 {
         1 => new_v1_machine().start(root_dir),
-        2 => opencv::start(&root_dir),
         3 => generate_lookup_image(),
         _ => panic!("wtf"),
     }

@@ -4,6 +4,9 @@ use crate::LOCALE;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
 use num_format::ToFormattedString;
+use opencv::core::{Mat, Point, Range};
+use opencv::imgproc::{get_font_scale_from_height, put_text, FONT_HERSHEY_SIMPLEX, LINE_8};
+use opencv::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::{read, write, File};
@@ -136,6 +139,67 @@ impl Surface {
             size.to_formatted_string(&LOCALE),
             path.display()
         );
+    }
+
+    pub fn crop(&self, crop_radius_from_center: i32) -> Self {
+        let x_start = self.area_box.absolute_x_i32(-crop_radius_from_center);
+        let x_end = self.area_box.absolute_x_i32(crop_radius_from_center);
+        let y_start = self.area_box.absolute_y_i32(-crop_radius_from_center);
+        let y_end = self.area_box.absolute_y_i32(crop_radius_from_center);
+
+        let raw_buffer: &[u8] = unsafe { transmute(self.buffer.as_slice()) };
+
+        let img = Mat::from_slice_rows_cols(&raw_buffer, self.height as usize, self.width as usize)
+            .unwrap();
+        let mut cropped = img
+            .apply(
+                Range::new(y_start as i32, y_end as i32).unwrap(),
+                Range::new(x_start as i32, x_end as i32).unwrap(),
+            )
+            .unwrap()
+            // clone to new contiguous memory location
+            .clone();
+        let expected_size = crop_radius_from_center * 2;
+        if cropped.rows() != expected_size {
+            panic!("expected rows {} got {}", expected_size, cropped.rows());
+        } else if cropped.cols() != expected_size {
+            panic!("expected cols {} got {}", expected_size, cropped.cols());
+        }
+        put_text(
+            &mut cropped,
+            "cv(0,0)",
+            Point::new(100, 100),
+            FONT_HERSHEY_SIMPLEX,
+            get_font_scale_from_height(FONT_HERSHEY_SIMPLEX, 100, 10).unwrap(),
+            Pixel::EdgeWall.scalar_cv(),
+            10,
+            LINE_8,
+            false,
+        )
+        .unwrap();
+
+        let cropped_buffer: &[Pixel] = unsafe { transmute(cropped.data_bytes().unwrap()) };
+        let surface = Surface {
+            buffer: Vec::from(cropped_buffer),
+            width: cropped.cols() as u32,
+            height: cropped.rows() as u32,
+            area_box: EasyBox {
+                min_x: -crop_radius_from_center,
+                max_x: crop_radius_from_center,
+                min_y: -crop_radius_from_center,
+                max_y: crop_radius_from_center,
+                width: (crop_radius_from_center * 2) as u32,
+                height: (crop_radius_from_center * 2) as u32,
+            },
+        };
+
+        if cropped.rows() != surface.height as i32 {
+            panic!("expected height {} rows {}", surface.height, cropped.rows());
+        } else if cropped.cols() != surface.width as i32 {
+            panic!("expected width {} cols {}", surface.width, cropped.cols());
+        }
+
+        surface
     }
 }
 
