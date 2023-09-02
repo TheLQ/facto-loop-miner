@@ -21,6 +21,7 @@ pub enum Pixel {
     //
     Empty = 0,
     EdgeWall = 200,
+    Rail = 225,
 }
 
 impl Pixel {
@@ -36,6 +37,7 @@ impl Pixel {
             //
             Pixel::Empty => [0x00, 0x00, 0x00],
             Pixel::EdgeWall => [0xBD, 0x5F, 0x5F],
+            Pixel::Rail => [0xB9, 0x7A, 0x57],
         }
     }
 
@@ -60,7 +62,7 @@ impl Pixel {
     }
 }
 
-pub const LOOKUP_IMAGE_ORDER: [Pixel; 9] = [
+pub const LOOKUP_IMAGE_ORDER: [Pixel; 10] = [
     Pixel::IronOre,
     Pixel::CopperOre,
     Pixel::Stone,
@@ -71,6 +73,7 @@ pub const LOOKUP_IMAGE_ORDER: [Pixel; 9] = [
     //
     Pixel::Empty,
     Pixel::EdgeWall,
+    Pixel::Rail,
 ];
 
 pub fn generate_lookup_image() {
@@ -80,7 +83,7 @@ pub fn generate_lookup_image() {
     let file = File::create(path).unwrap();
     let writer = BufWriter::new(&file);
 
-    let buf: [u8; 9] = LOOKUP_IMAGE_ORDER.map(|e| e as u8);
+    let buf = LOOKUP_IMAGE_ORDER.map(|e| e as u8);
     // let buf: Vec<u8> = LOOKUP_IMAGE_ORDER.iter().flat_map(|e| e.color()).collect();
 
     let encoder = PngEncoder::new(writer);

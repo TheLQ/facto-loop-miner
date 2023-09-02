@@ -1,6 +1,6 @@
 use crate::state::machine::search_step_history_dirs;
 use kiddo::KdTree;
-use opencv::core::Rect;
+use opencv::core::{Point, Rect};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
@@ -22,7 +22,7 @@ impl DiskPatch {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Patch {
     pub x: i32,
     pub y: i32,
@@ -33,6 +33,13 @@ pub struct Patch {
 impl Patch {
     pub fn corner_slice(&self) -> [f32; 2] {
         [self.x as f32, self.y as f32]
+    }
+
+    pub fn corner_point(&self) -> Point {
+        Point {
+            x: self.x,
+            y: self.y,
+        }
     }
 }
 

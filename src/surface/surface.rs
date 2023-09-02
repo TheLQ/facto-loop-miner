@@ -41,14 +41,22 @@ impl Surface {
     }
 
     pub fn set_pixel(&mut self, pixel: Pixel, x: u32, y: u32) {
-        let i: usize = (self.width * y + x).try_into().unwrap();
-        if self.buffer[i] != Pixel::Empty {
+        if let Some(existing_pixel) = self.try_set_pixel(pixel.clone(), x, y) {
             println!(
                 "[warn] unexpected existing pixel {}x{} data {:?} trying {:?}",
-                x, y, self.buffer[i], pixel
+                x, y, existing_pixel, &pixel
             )
         }
-        self.buffer[i] = pixel;
+    }
+
+    pub fn try_set_pixel(&mut self, pixel: Pixel, x: u32, y: u32) -> Option<&Pixel> {
+        let i: usize = (self.width * y + x).try_into().unwrap();
+        if self.buffer[i] != Pixel::Empty {
+            Some(&self.buffer[i])
+        } else {
+            self.buffer[i] = pixel;
+            None
+        }
     }
 
     pub fn load_from_step_history(step_history_out_dirs: &Vec<PathBuf>) -> Self {
@@ -150,16 +158,18 @@ impl Surface {
         );
     }
 
+    pub fn to_mat(&self) -> Mat {
+        let raw_buffer: &[u8] = unsafe { transmute(self.buffer.as_slice()) };
+        Mat::from_slice_rows_cols(&raw_buffer, self.height as usize, self.width as usize).unwrap()
+    }
+
     pub fn crop(&self, crop_radius_from_center: i32) -> Self {
         let x_start = self.area_box.absolute_x_i32(-crop_radius_from_center);
         let x_end = self.area_box.absolute_x_i32(crop_radius_from_center);
         let y_start = self.area_box.absolute_y_i32(-crop_radius_from_center);
         let y_end = self.area_box.absolute_y_i32(crop_radius_from_center);
 
-        let raw_buffer: &[u8] = unsafe { transmute(self.buffer.as_slice()) };
-
-        let img = Mat::from_slice_rows_cols(&raw_buffer, self.height as usize, self.width as usize)
-            .unwrap();
+        let img = self.to_mat();
         let mut cropped = img
             .apply(
                 Range::new(y_start as i32, y_end as i32).unwrap(),
@@ -174,18 +184,7 @@ impl Surface {
         } else if cropped.cols() != expected_size {
             panic!("expected cols {} got {}", expected_size, cropped.cols());
         }
-        put_text(
-            &mut cropped,
-            "cv(0,0)",
-            Point::new(100, 100),
-            FONT_HERSHEY_SIMPLEX,
-            get_font_scale_from_height(FONT_HERSHEY_SIMPLEX, 100, 10).unwrap(),
-            Pixel::EdgeWall.scalar_cv(),
-            10,
-            LINE_8,
-            false,
-        )
-        .unwrap();
+        draw_text_cv(&mut cropped, "cv(0,0)", Point::new(100, 100));
 
         let cropped_buffer: &[Pixel] = unsafe { transmute(cropped.data_bytes().unwrap()) };
         let surface = Surface {
@@ -210,6 +209,28 @@ impl Surface {
 
         surface
     }
+
+    pub fn draw_text(&mut self, text: &str, origin: Point) {
+        let mut mat = self.to_mat();
+        draw_text_cv(&mut mat, text, origin);
+        let buf: &[Pixel] = unsafe { transmute(mat.data_bytes().unwrap()) };
+        self.buffer = Vec::from(buf);
+    }
+}
+
+pub fn draw_text_cv(img: &mut Mat, text: &str, origin: Point) {
+    put_text(
+        img,
+        text,
+        origin,
+        FONT_HERSHEY_SIMPLEX,
+        get_font_scale_from_height(FONT_HERSHEY_SIMPLEX, 100, 10).unwrap(),
+        Pixel::EdgeWall.scalar_cv(),
+        10,
+        LINE_8,
+        false,
+    )
+    .unwrap();
 }
 
 fn dat_path(out_dir: &Path) -> PathBuf {
