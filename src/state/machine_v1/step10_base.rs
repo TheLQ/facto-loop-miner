@@ -1,9 +1,10 @@
-use crate::state::machine::{Step, StepParams};
+use crate::state::machine::{search_step_history_dirs, Step, StepParams};
 use crate::surface::easybox::EasyBox;
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
 use crate::TILES_PER_CHUNK;
+use opencv::sys::cv_cuda_DeviceInfo_surfaceAlignment_const;
 
 pub struct Step10 {}
 
@@ -15,15 +16,23 @@ impl Step10 {
 
 impl Step for Step10 {
     fn name(&self) -> String {
-        "step01-base".to_string()
+        "step10-base".to_string()
     }
 
     fn transformer(&self, params: StepParams) {
-        // draw_mega_box(&data.area_box, surface, metrics);
+        let recent_surface = search_step_history_dirs(
+            params.step_history_out_dirs.clone().into_iter(),
+            "surface-full.png",
+        );
+        let mut surface = Surface::load(recent_surface.parent().unwrap());
+
+        draw_mega_box(&mut surface, &mut params.metrics.borrow_mut());
+
+        surface.save(&params.step_out_dir);
     }
 }
 
-pub fn draw_mega_box(area_box: &EasyBox, img: &mut Surface, metrics: &mut Metrics) {
+pub fn draw_mega_box(img: &mut Surface, metrics: &mut Metrics) {
     let tiles: isize = 20 * TILES_PER_CHUNK as isize;
     let banner_width = 50;
     let edge_neg = -tiles - banner_width;
@@ -35,8 +44,8 @@ pub fn draw_mega_box(area_box: &EasyBox, img: &mut Surface, metrics: &mut Metric
             if !((root_x > -tiles && root_x < tiles) && (root_y > -tiles && root_y < tiles)) {
                 img.set_pixel(
                     Pixel::EdgeWall,
-                    area_box.absolute_x_i32(root_x as i32),
-                    area_box.absolute_y_i32(root_y as i32),
+                    img.area_box.absolute_x_i32(root_x as i32),
+                    img.area_box.absolute_y_i32(root_y as i32),
                 );
                 metrics.increment("loop-box");
             }

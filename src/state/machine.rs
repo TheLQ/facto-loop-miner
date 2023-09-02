@@ -73,6 +73,19 @@ impl Machine {
     }
 }
 
+pub fn search_step_history_dirs<I>(step_history_out_dirs: I, name: &str) -> PathBuf
+where
+    I: Iterator<Item = PathBuf> + std::iter::DoubleEndedIterator,
+{
+    for dir in step_history_out_dirs.rev() {
+        let file = dir.join(name);
+        if file.exists() {
+            return file;
+        }
+    }
+    panic!("cannot find {}", name)
+}
+
 #[allow(dead_code)]
 fn panic_if_dir_not_empty(dir: &Path) {
     let raw_entries = read_dir(dir).unwrap();
