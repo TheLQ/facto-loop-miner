@@ -89,6 +89,10 @@ impl Surface {
         mem::replace(&mut self.buffer[i], pixel)
     }
 
+    pub fn xy_in_range_point_u32(&self, point: PointU32) -> bool {
+        self.xy_in_range(point.x, point.y)
+    }
+
     pub fn xy_in_range(&self, x: u32, y: u32) -> bool {
         if x >= self.width {
             false

@@ -1,11 +1,20 @@
 use crate::surface::pixel::Pixel;
-use crate::surface::surface::Surface;
+use crate::surface::surface::{PointU32, Surface};
 use itertools::Itertools;
 use pathfinding::prelude::astar;
 
-pub fn devo_start(surface: &mut Surface, start: Rail, end: Rail) {
+pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
+    start = Rail {
+        x: start.x + (start.x % 2),
+        y: start.y + (start.y % 2),
+        direction: start.direction,
+    };
+    end = Rail {
+        x: end.x + (end.x % 2),
+        y: end.y + (end.y % 2),
+        direction: end.direction,
+    };
     println!("Devo start {:?} end {:?}", start, end);
-
     let (path, path_size) =
         astar(&start, |p| p.successors(surface), |_p| 1, |p| *p == end).unwrap();
     println!("built path {} long with {}", path.len(), path_size);
@@ -37,11 +46,18 @@ pub struct Rail {
 }
 
 impl Rail {
+    fn to_point_u32(&self) -> PointU32 {
+        PointU32 {
+            x: self.x.clone(),
+            y: self.y.clone(),
+        }
+    }
+
     fn distance(&self, other: &Rail) -> u32 {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
     }
 
-    fn move_force_rotate_clockwise(&self, rotations: usize) -> Rail {
+    fn move_force_rotate_clockwise(&self, rotations: usize) -> Self {
         if rotations == 0 {
             panic!("0");
         }
@@ -55,19 +71,18 @@ impl Rail {
             new_direction = directions.next().unwrap();
         }
 
-        Rail {
-            x: self.x,
-            y: self.y,
-            direction: new_direction.clone(),
-        }
+        let mut next = self.clone();
+        next.direction = new_direction.clone();
+        next
     }
 
-    fn move_forward(&self, steps: u32) -> Rail {
-        let mut next = Rail {
-            x: self.x,
-            y: self.y,
-            direction: self.direction.clone(),
-        };
+    fn move_forward(&self, steps: u32) -> Self {
+        if steps == 0 {
+            panic!("0");
+        }
+        let mut next = self.clone();
+        // rail is 2x2
+        let steps = steps * 2;
         match self.direction {
             RailDirection::Up => next.y = next.y + steps,
             RailDirection::Down => next.y = next.y - steps,
@@ -77,36 +92,30 @@ impl Rail {
         next
     }
 
-    fn move_left(&self) -> Rail {
-        // let mut next = self.move_forward(12);
-        // next = next.move_force_rotate_clockwise(1);
-        // next = next.move_forward(12);
-        let mut next = self.move_forward(1);
+    fn move_left(&self) -> Self {
+        let mut next = self.move_forward(6);
         next = next.move_force_rotate_clockwise(1);
-        next = next.move_forward(1);
+        next = next.move_forward(6);
         next
     }
 
-    fn move_right(&self) -> Rail {
-        // let mut next = self.move_forward(12);
-        // next = next.move_force_rotate_clockwise(3);
-        // next = next.move_forward(12);
-        let mut next = self.move_forward(1);
+    fn move_right(&self) -> Self {
+        let mut next = self.move_forward(6);
         next = next.move_force_rotate_clockwise(3);
-        next = next.move_forward(1);
+        next = next.move_forward(6);
         next
     }
 
-    fn successors(&self, surface: &Surface) -> Vec<(Rail, u32)> {
+    fn successors(&self, surface: &Surface) -> Vec<(Self, u32)> {
         let mut res = Vec::new();
-        if let Some(rail) = is_position_buildable(surface, self.move_forward(1)) {
-            res.push((rail, 1))
+        if let Some(rail) = is_single_rail_buildable(surface, self.move_forward(1)) {
+            res.push((rail, 2))
         }
-        if let Some(rail) = is_position_buildable(surface, self.move_left()) {
-            res.push((rail, 3))
+        if let Some(rail) = is_single_rail_buildable(surface, self.move_left()) {
+            res.push((rail, 1000))
         }
-        if let Some(rail) = is_position_buildable(surface, self.move_right()) {
-            res.push((rail, 3))
+        if let Some(rail) = is_single_rail_buildable(surface, self.move_right()) {
+            res.push((rail, 1000))
         }
         // println!(
         //     "for {:?} found {}",
@@ -117,12 +126,42 @@ impl Rail {
     }
 }
 
+fn is_single_rail_buildable(surface: &Surface, position: Rail) -> Option<Rail> {
+    is_position_buildable(
+        surface,
+        Rail {
+            x: position.x.clone() - 1,
+            y: position.y.clone(),
+            direction: position.direction.clone(),
+        },
+    )
+    .and(is_position_buildable(
+        surface,
+        Rail {
+            x: position.x.clone(),
+            y: position.y.clone() - 1,
+            direction: position.direction.clone(),
+        },
+    ))
+    .and(is_position_buildable(
+        surface,
+        Rail {
+            x: position.x.clone() - 1,
+            y: position.y.clone() - 1,
+            direction: position.direction.clone(),
+        },
+    ))
+    // Last to give back the original
+    .and(is_position_buildable(surface, position.clone()))
+}
+
 fn is_position_buildable(surface: &Surface, position: Rail) -> Option<Rail> {
-    if !surface.xy_in_range(position.x, position.y) {
+    let point = position.to_point_u32();
+    if !surface.xy_in_range_point_u32(point) {
         return None;
     }
-    match surface.get_pixel(position.x, position.y) {
-        Pixel::Empty | Pixel::Highlighter | Pixel::EdgeWall => Some(position),
+    match surface.get_pixel_point_u32(point) {
+        Pixel::Empty | Pixel::EdgeWall => Some(position),
         _existing => {
             // println!("blocked at {:?} by {:?}", &position, existing);
             None
