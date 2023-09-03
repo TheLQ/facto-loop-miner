@@ -1,25 +1,25 @@
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use itertools::Itertools;
+use num_format::Locale::is;
 use pathfinding::prelude::astar;
 
 pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
-    start = Rail {
-        x: start.x + (start.x % 2),
-        y: start.y + (start.y % 2),
-        direction: start.direction,
-    };
-    end = Rail {
-        x: end.x + (end.x % 2),
-        y: end.y + (end.y % 2),
-        direction: end.direction,
-    };
+    start = start.round();
+    end = end.round();
     println!("Devo start {:?} end {:?}", start, end);
     let (path, path_size) =
         astar(&start, |p| p.successors(surface), |_p| 1, |p| *p == end).unwrap();
     println!("built path {} long with {}", path.len(), path_size);
+    let mut total_rail = 0;
     for entity in path {
-        surface.set_pixel(Pixel::Rail, entity.x, entity.y);
+        for game_entity in entity.to_game_points_3_wide() {
+            total_rail = total_rail + 1;
+            if surface.get_pixel_point_u32(game_entity) == &Pixel::Rail {
+                panic!("existing {:?} at {}", game_entity, total_rail)
+            }
+            surface.set_pixel_point_u32(Pixel::Rail, game_entity);
+        }
     }
 }
 
@@ -46,10 +46,17 @@ pub struct Rail {
 }
 
 impl Rail {
+    fn round(&self) -> Self {
+        let mut next = self.clone();
+        next.x = next.x + (self.x % 2);
+        next.y = next.y + (self.y % 2);
+        next
+    }
+
     fn to_point_u32(&self) -> PointU32 {
         PointU32 {
-            x: self.x.clone(),
-            y: self.y.clone(),
+            x: self.x,
+            y: self.y,
         }
     }
 
@@ -106,15 +113,32 @@ impl Rail {
         next
     }
 
+    fn move_force_adjacent(&self) -> Self {
+        let orig = self.clone();
+
+        let mut next = self.move_force_rotate_clockwise(1);
+        next = next.move_forward(1);
+        // recover original direction
+        next = next.move_force_rotate_clockwise(3);
+
+        if orig == next {
+            panic!("didn't do anything? {:?}", orig);
+        } else if orig.direction != next.direction {
+            panic!("wrong dir {:?}", next.direction.clone());
+        }
+
+        next
+    }
+
     fn successors(&self, surface: &Surface) -> Vec<(Self, u32)> {
         let mut res = Vec::new();
-        if let Some(rail) = is_single_rail_buildable(surface, self.move_forward(1)) {
+        if let Some(rail) = is_dual_rail_buildable(surface, self.move_forward(1)) {
             res.push((rail, 2))
         }
-        if let Some(rail) = is_single_rail_buildable(surface, self.move_left()) {
+        if let Some(rail) = is_dual_rail_buildable(surface, self.move_left()) {
             res.push((rail, 1000))
         }
-        if let Some(rail) = is_single_rail_buildable(surface, self.move_right()) {
+        if let Some(rail) = is_dual_rail_buildable(surface, self.move_right()) {
             res.push((rail, 1000))
         }
         // println!(
@@ -124,44 +148,57 @@ impl Rail {
         // );
         res
     }
+
+    fn to_game_points(&self) -> [PointU32; 4] {
+        [
+            self.to_point_u32(),
+            {
+                let mut v = self.to_point_u32();
+                v.x = v.x - 1;
+                v
+            },
+            {
+                let mut v = self.to_point_u32();
+                v.y = v.y - 1;
+                v
+            },
+            {
+                let mut v = self.to_point_u32();
+                v.x = v.x - 1;
+                v.y = v.y - 1;
+                v
+            },
+        ]
+    }
+
+    fn to_game_points_3_wide(&self) -> impl Iterator<Item = PointU32> {
+        [
+            self.to_game_points(),
+            self.move_force_adjacent().to_game_points(),
+            self.move_force_adjacent()
+                .move_force_adjacent()
+                .to_game_points(),
+        ]
+        .into_iter()
+        .flatten()
+    }
 }
 
-fn is_single_rail_buildable(surface: &Surface, position: Rail) -> Option<Rail> {
-    is_position_buildable(
-        surface,
-        Rail {
-            x: position.x.clone() - 1,
-            y: position.y.clone(),
-            direction: position.direction.clone(),
-        },
-    )
-    .and(is_position_buildable(
-        surface,
-        Rail {
-            x: position.x.clone(),
-            y: position.y.clone() - 1,
-            direction: position.direction.clone(),
-        },
-    ))
-    .and(is_position_buildable(
-        surface,
-        Rail {
-            x: position.x.clone() - 1,
-            y: position.y.clone() - 1,
-            direction: position.direction.clone(),
-        },
-    ))
-    // Last to give back the original
-    .and(is_position_buildable(surface, position.clone()))
+fn is_dual_rail_buildable(surface: &Surface, rail: Rail) -> Option<Rail> {
+    rail.to_game_points_3_wide()
+        .map(|game_pont| is_buildable_point_u32(surface, game_pont))
+        .into_iter()
+        .reduce(|total, is_buildable| total.and(is_buildable))
+        .unwrap()
+        .map(|_| rail)
 }
 
-fn is_position_buildable(surface: &Surface, position: Rail) -> Option<Rail> {
-    let point = position.to_point_u32();
+fn is_buildable_point_u32(surface: &Surface, point: PointU32) -> Option<PointU32> {
     if !surface.xy_in_range_point_u32(point) {
         return None;
     }
     match surface.get_pixel_point_u32(point) {
-        Pixel::Empty | Pixel::EdgeWall => Some(position),
+        Pixel::Empty | Pixel::EdgeWall => Some(point),
         _existing => {
             // println!("blocked at {:?} by {:?}", &position, existing);
             None

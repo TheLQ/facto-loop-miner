@@ -264,25 +264,25 @@ impl Surface {
             panic!("expected width {} cols {}", crop_box.width, cropped.cols());
         }
 
-        draw_text_cv(&mut cropped, "cv(0,0)", Point::new(0, 100));
-        let rows = cropped.rows();
-        draw_text_cv(&mut cropped, "cv(0,1)", Point::new(0, rows - 50));
-        draw_text_cv(
-            &mut cropped,
-            "g(-1,0)",
-            Point {
-                x: crop_box.absolute_x_i32(-crop_radius_from_center) as i32,
-                y: crop_box.absolute_y_i32(0) as i32,
-            },
-        );
-        draw_text_cv(
-            &mut cropped,
-            "g(0,1)",
-            Point {
-                x: crop_box.absolute_x_i32(0) as i32,
-                y: crop_box.absolute_y_i32(crop_radius_from_center - 50) as i32,
-            },
-        );
+        // draw_text_cv(&mut cropped, "cv(0,0)", Point::new(0, 100));
+        // let rows = cropped.rows();
+        // draw_text_cv(&mut cropped, "cv(0,1)", Point::new(0, rows - 50));
+        // draw_text_cv(
+        //     &mut cropped,
+        //     "g(-1,0)",
+        //     Point {
+        //         x: crop_box.absolute_x_i32(-crop_radius_from_center) as i32,
+        //         y: crop_box.absolute_y_i32(0) as i32,
+        //     },
+        // );
+        // draw_text_cv(
+        //     &mut cropped,
+        //     "g(0,1)",
+        //     Point {
+        //         x: crop_box.absolute_x_i32(0) as i32,
+        //         y: crop_box.absolute_y_i32(crop_radius_from_center - 50) as i32,
+        //     },
+        // );
 
         let cropped_buffer: &[Pixel] = unsafe { transmute(cropped.data_bytes().unwrap()) };
         let surface = Surface {

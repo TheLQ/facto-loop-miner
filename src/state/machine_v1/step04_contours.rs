@@ -44,8 +44,8 @@ impl Step for Step04 {
 
         write_patch_dump(&params.step_out_dir.join("patches.json"), &disk_patches);
 
-        write_surface_with_all_patches_wrapped(&mut surface, &disk_patches);
-        surface.save(&params.step_out_dir);
+        // write_surface_with_all_patches_wrapped(&mut surface, &disk_patches);
+        // surface.save(&params.step_out_dir);
     }
 }
 

@@ -74,12 +74,12 @@ fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch) {
         Rail {
             x: patch_start.x as u32,
             y: patch_start.y as u32,
-            direction: RailDirection::Right,
+            direction: RailDirection::Left,
         },
         Rail {
-            x: end.x as u32,
-            y: end.y as u32,
-            direction: RailDirection::Right,
+            x: end.x,
+            y: end.y,
+            direction: RailDirection::Left,
         },
     )
 }
