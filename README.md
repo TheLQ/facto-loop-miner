@@ -14,7 +14,7 @@ Output is a standalone mod creating
 network via Lua API. Mod works on any save with same map seed and base generation settings. 
 Mods may be disabled after.
 
-## Automatic Rail Loops
+## Automatic Rail Network
 
 Scaled up application of known megabase best practices
 
@@ -242,3 +242,9 @@ Research areas include
   * 2 back to back trains on basic empty/filled schedule
   * Shortest possible rail loop that includes 2 station. 2nd station not inside a facto block
   * On 2nd station arrival event, immediately fill train. Train moves on
+
+# How it works
+
+1. Export map data from in-game map
+2. Build a rough equivelent to LuaSurface
+3. 

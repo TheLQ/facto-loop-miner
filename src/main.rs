@@ -2,7 +2,6 @@
 
 use facto_loop_miner::state::machine_v1::new_v1_machine;
 use facto_loop_miner::surface::pixel::generate_lookup_image;
-use num_format::Locale;
 use std::path::Path;
 
 // Fix simd-json eating all my ram
