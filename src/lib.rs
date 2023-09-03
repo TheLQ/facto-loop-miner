@@ -2,6 +2,7 @@ use kiddo::KdTree;
 use num_format::Locale;
 
 mod gamedata;
+pub mod navigator;
 mod opencv;
 pub mod state;
 pub mod surface;

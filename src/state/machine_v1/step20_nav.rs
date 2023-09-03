@@ -1,3 +1,4 @@
+use crate::navigator::basic::Navigator;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::patch::{map_patch_corners_to_kdtree, DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
@@ -48,24 +49,25 @@ fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch) {
         },
     );
 
-    route_patch(surface, patch_start);
-
     let end = find_end_simple(surface, patch_start);
     surface.set_pixel_point_u32(Pixel::Rail, end);
-
-    for super_x in 0..100 {
-        for super_y in 0..100 {
-            surface.set_pixel(Pixel::Rail, end.x + super_x, end.y + super_y);
-        }
-    }
-
     println!("set end {:?}", end);
+    // endpoint box
+    // for super_x in 0..100 {
+    //     for super_y in 0..100 {
+    //         surface.set_pixel(Pixel::Rail, end.x + super_x, end.y + super_y);
+    //     }
+    // }
 
-    let nav = Navigator {
+    // start line
+    // route_patch(surface, patch_start);
+
+    let mut nav = Navigator {
         surface,
         end,
         current: patch_start.corner_point_u32(),
     };
+    nav.start();
 }
 
 fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {
@@ -74,34 +76,6 @@ fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {
         current.x = current.x - 1
     }
     current.into()
-}
-
-struct Navigator<'a> {
-    surface: &'a Surface,
-    end: PointU32,
-    current: PointU32,
-}
-
-impl<'a> Navigator<'a> {
-    pub fn start(&mut self) {}
-}
-
-fn route_patch(surface: &mut Surface, patch: &Patch) {
-    let mut offset = 0;
-    loop {
-        let pos = Point::new(patch.x + offset, patch.y);
-        let existing = surface.get_pixel_point_i32(pos);
-        match existing {
-            &Pixel::Empty | &Pixel::Highlighter => {
-                surface.set_pixel_point_i32(Pixel::Rail, pos);
-            }
-            existing => {
-                println!("stopping at {} offset {}", existing.as_ref(), offset);
-                break;
-            }
-        }
-        offset = offset - 1;
-    }
 }
 
 fn right_mid_edge_point(surface: &Surface) -> Point {
