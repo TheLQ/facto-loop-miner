@@ -1,6 +1,7 @@
 [build]
 rustflags = ["-C", "target-cpu=native"]
 rustdocflags = ["-C", "target-cpu=native"]
+lto = "thin"
 
 [target.wasm32-unknown-unknown]
 rustflags = ["-C", "target-feature=+simd128"]

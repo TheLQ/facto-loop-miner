@@ -1,13 +1,17 @@
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
+use crate::LOCALE;
 use itertools::Itertools;
-use num_format::Locale::{is, se};
+use num_format::Locale::{he, is, se};
+use num_format::ToFormattedString;
 use opencv::core::Point;
 use pathfinding::prelude::astar;
+use std::cell::Cell;
+use std::ops::Add;
 
 pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
-    start.mode = start.mode.round();
-    end.mode = end.mode.round();
+    start = start.round();
+    end = end.round();
     println!("Devo start {:?} end {:?}", start, end);
     let (path, path_size) = astar(
         &start,
@@ -19,27 +23,31 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
     println!("built path {} long with {}", path.len(), path_size);
     let mut total_rail = 0;
     for path_rail in path {
-        for path_rail_point in path_rail.area_points() {
+        for path_rail_point in path_rail.area {
             for path_rail_game_point in path_rail_point.to_game_points() {
                 total_rail = total_rail + 1;
                 if surface.get_pixel_point_u32(path_rail_game_point) == &Pixel::Rail {
-                    panic!("existing {:?} at {}", path_rail_point, total_rail)
+                    println!("existing {:?} at {}", path_rail_point, total_rail)
                 }
                 surface.set_pixel_point_u32(Pixel::Rail, path_rail_game_point);
             }
         }
     }
+    println!(
+        "metric successors called {}",
+        METRIC_SUCCESSOR.get().to_formatted_string(&LOCALE)
+    )
 }
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct FactoPointU32 {
+pub struct RailPoint {
     x: u32,
     y: u32,
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum RailMode {
-    Straight(FactoPointU32, Vec<FactoPointU32>),
-    Curved(FactoPointU32, Vec<FactoPointU32>),
+    Straight,
+    Curved,
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -59,57 +67,47 @@ const RAIL_DIRECTION_CLOCKWISE: [RailDirection; 4] = [
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Rail {
+    pub endpoint: RailPoint,
+    pub area: Vec<RailPoint>,
     pub direction: RailDirection,
     pub mode: RailMode,
 }
 
 const DUAL_RAIL_SIZE: u32 = 3;
+type DualRailArea = [RailPoint; DUAL_RAIL_SIZE as usize];
+
+const SAFETY_ZERO: Cell<bool> = Cell::new(false);
+const METRIC_SUCCESSOR: Cell<u64> = Cell::new(0);
 
 impl Rail {
     pub fn new_straight(point: PointU32, direction: RailDirection) -> Self {
+        SAFETY_ZERO.set(true);
         let mut res = Rail {
-            mode: RailMode::Straight(FactoPointU32::from_point_u32(point), Vec::new()),
+            endpoint: RailPoint::from_point_u32(point).round(),
+            area: Vec::new(),
+            mode: RailMode::Straight,
             direction,
         };
-
-        // res.mode = RailMode::Straight(
-        //     res.mode.endpoint(),
-        //     res.move_force_adjacent(DUAL_RAIL_SIZE as u32 - 1)
-        //         .into_iter()
-        //         .map(|rail| rail.mode.endpoint())
-        //         .collect(),
-        // );
+        res.area = res.build_dual_rail_area();
+        SAFETY_ZERO.set(false);
 
         res
     }
 
-    fn area_points(&self) -> Vec<&FactoPointU32> {
-        let mut res = Vec::new();
-        match &self.mode {
-            RailMode::Straight(end, adjacent_box) => {
-                res.push(end);
-                for turn_point in adjacent_box {
-                    res.push(turn_point);
-                }
-            }
-            RailMode::Curved(end, turn_box) => {
-                res.push(end);
-                for turn_point in turn_box {
-                    res.push(turn_point);
-                }
-            }
-        }
-        res
+    fn round(&self) -> Self {
+        let mut next = self.clone();
+        next.endpoint = next.endpoint.round();
+        next
     }
 
     fn distance(&self, other: &Rail) -> u32 {
-        let a = self.mode.endpoint();
-        let b = other.mode.endpoint();
+        let a = &self.endpoint;
+        let b = &other.endpoint;
         a.x.abs_diff(b.x) + a.y.abs_diff(b.y)
     }
 
     fn move_force_rotate_clockwise(&self, rotations: usize) -> Self {
-        if rotations == 0 {
+        if !SAFETY_ZERO.get() && rotations == 0 {
             panic!("0");
         }
 
@@ -132,93 +130,89 @@ impl Rail {
             panic!("0");
         }
         let mut next = self.clone();
-        let mut next_endpoint = next.mode.endpoint();
+        next.mode = RailMode::Straight;
+
+        next.move_force_forward_mut(steps);
+        next.area = next.build_dual_rail_area();
+
+        next
+    }
+
+    fn build_dual_rail_area(&self) -> Vec<RailPoint> {
+        let mut next = self.move_force_rotate_clockwise(1);
+        (0..DUAL_RAIL_SIZE)
+            .map(|i| next.move_force_forward(i).endpoint)
+            .collect()
+    }
+
+    fn move_force_forward(&self, steps: u32) -> Rail {
+        let mut cur = self.clone();
+        cur.move_force_forward_mut(steps);
+        cur
+    }
+
+    fn move_force_forward_mut(&mut self, steps: u32) {
         // rail is 2x2
         let steps = steps * 2;
         match self.direction {
-            RailDirection::Up => next_endpoint.y = next_endpoint.y + steps,
-            RailDirection::Down => next_endpoint.y = next_endpoint.y - steps,
-            RailDirection::Left => next_endpoint.x = next_endpoint.x - steps,
-            RailDirection::Right => next_endpoint.x = next_endpoint.x + steps,
+            RailDirection::Up => self.endpoint.y = self.endpoint.y + steps,
+            RailDirection::Down => self.endpoint.y = self.endpoint.y - steps,
+            RailDirection::Left => self.endpoint.x = self.endpoint.x - steps,
+            RailDirection::Right => self.endpoint.x = self.endpoint.x + steps,
         };
-        next.mode = RailMode::Straight(
-            next_endpoint,
-            self.move_force_adjacent(DUAL_RAIL_SIZE as u32 - 1)
-                .iter()
-                .map(|rail| rail.mode.endpoint())
-                .collect(),
-        );
-        next
     }
 
     fn move_left(&self) -> Self {
-        let mut next = self.move_forward(6);
-        next = next.move_force_rotate_clockwise(1);
-        next = next.move_forward(6);
-        next.mode = RailMode::Curved(
-            next.mode.endpoint(),
-            self.build_turn_box(next.direction.clone()),
-        );
-        next
+        self.move_rotating(3)
     }
 
     fn move_right(&self) -> Self {
-        let mut next = self.move_forward(6);
-        next = next.move_force_rotate_clockwise(3);
-        next = next.move_forward(6);
-        next.mode = RailMode::Curved(
-            next.mode.endpoint(),
-            self.build_turn_box(next.direction.clone()),
-        );
+        self.move_rotating(1)
+    }
+
+    fn move_rotating(&self, rotation_steps: usize) -> Self {
+        let mut next = self.clone();
+        next.move_force_forward_mut(6);
+        next = next.move_force_rotate_clockwise(rotation_steps);
+        next.move_force_forward_mut(6);
+
+        next.mode = RailMode::Curved;
+
+        next.area = self.build_dual_rail_area();
+        // turn area build start is previous position
+        next.area.extend(self.build_turn_area(&next.direction));
+
+        // let before = next.area.len();
+        // next.area.dedup();
+        // let after = next.area.len();
+        // if before != after {
+        //     panic!("broken area check {} \n\n {}", before, after);
+        // }
+
         next
     }
 
-    fn build_turn_box(&self, new_direction: RailDirection) -> Vec<FactoPointU32> {
-        let start = self.move_forward(1);
+    fn build_turn_area(&self, new_direction: &RailDirection) -> Vec<RailPoint> {
         let mut check_rail = Vec::new();
+        let mut start = self.clone();
+
+        start.move_force_forward_mut(1);
+
         for width in 0..(6 + DUAL_RAIL_SIZE) {
             for height in 0..(6 + DUAL_RAIL_SIZE) {
-                let mut next = if height != 0 {
-                    start.move_forward(height)
-                } else {
-                    start.clone()
-                };
+                let mut next = start.clone();
+                next.move_force_forward_mut(width);
                 next.direction = new_direction.clone();
-                next = if width != 0 {
-                    next.move_forward(width)
-                } else {
-                    next
-                };
+                next.move_force_forward_mut(height);
 
-                check_rail.push(next.mode.endpoint());
+                check_rail.push(next.endpoint);
             }
         }
         check_rail
     }
 
-    fn move_force_adjacent(&self, steps: u32) -> Vec<Self> {
-        let orig = self.clone();
-        let mut res: Vec<Rail> = Vec::new();
-
-        let mut next = self.move_force_rotate_clockwise(1);
-        for _ in 0..steps {
-            res.push(next.clone());
-            next = next.move_forward(1);
-        }
-
-        // recover original direction
-        next = res.last().unwrap().move_force_rotate_clockwise(3);
-
-        if orig == next {
-            panic!("didn't do anything? {:?}", orig);
-        } else if orig.direction != next.direction {
-            panic!("wrong dir {:?}", next.direction.clone());
-        }
-
-        res
-    }
-
     fn successors(&self, surface: &Surface, end: &Rail) -> Vec<(Self, u32)> {
+        METRIC_SUCCESSOR.get_mut().add(1);
         let direction_bias = if self.direction != end.direction {
             100
         } else {
@@ -243,8 +237,8 @@ impl Rail {
         res
     }
     fn is_buildable(&self, surface: &Surface) -> Option<Self> {
-        self.area_points()
-            .into_iter()
+        self.area
+            .iter()
             .map(|r| r.to_game_points())
             .flatten()
             .map(|game_pont| is_buildable_point_u32(surface, game_pont))
@@ -254,7 +248,7 @@ impl Rail {
     }
 }
 
-impl FactoPointU32 {
+impl RailPoint {
     fn round(&self) -> Self {
         let mut next = self.clone();
         next.x = next.x + (self.x % 2);
@@ -293,29 +287,10 @@ impl FactoPointU32 {
     }
 
     pub fn from_point_u32(point: PointU32) -> Self {
-        FactoPointU32 {
+        RailPoint {
             x: point.x,
             y: point.y,
         }
-    }
-}
-
-impl RailMode {
-    fn endpoint(&self) -> FactoPointU32 {
-        match self {
-            RailMode::Straight(con, _) => con,
-            RailMode::Curved(con, _) => con,
-        }
-        .clone()
-    }
-
-    fn round(&self) -> Self {
-        let mut next = self.clone();
-        next = match next {
-            RailMode::Straight(piece, area) => RailMode::Straight(piece.round(), area),
-            RailMode::Curved(piece, area) => RailMode::Curved(piece.round(), area),
-        };
-        next
     }
 }
 
@@ -324,7 +299,7 @@ fn is_buildable_point_u32(surface: &Surface, point: PointU32) -> Option<PointU32
         return None;
     }
     match surface.get_pixel_point_u32(point) {
-        Pixel::Empty => Some(point),
+        Pixel::Empty | Pixel::EdgeWall => Some(point),
         _existing => {
             // println!("blocked at {:?} by {:?}", &position, existing);
             None
