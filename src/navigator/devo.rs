@@ -36,8 +36,8 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
 }
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct RailPoint {
-    x: u32,
-    y: u32,
+    x: i32,
+    y: i32,
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -121,17 +121,17 @@ impl Rail {
         next
     }
 
-    fn move_forward(&self, steps: u32) -> Self {
-        if steps == 0 {
-            panic!("0");
-        }
+    fn move_forward(&self) -> Option<Self> {
         let mut next = self.clone();
         next.mode = RailMode::Straight;
 
-        next.move_force_forward_mut(steps);
-        next.area = next.build_dual_rail_area();
-
-        next
+        next.move_force_forward_mut(6);
+        if next.endpoint.is_negative() {
+            None
+        } else {
+            next.area = next.build_dual_rail_area();
+            Some(next)
+        }
     }
 
     fn build_dual_rail_area(&self) -> Vec<RailPoint> {
@@ -151,41 +151,45 @@ impl Rail {
         // rail is 2x2
         let steps = steps * 2;
         match self.direction {
-            RailDirection::Up => self.endpoint.y = self.endpoint.y + steps,
-            RailDirection::Down => self.endpoint.y = self.endpoint.y - steps,
-            RailDirection::Left => self.endpoint.x = self.endpoint.x - steps,
-            RailDirection::Right => self.endpoint.x = self.endpoint.x + steps,
+            RailDirection::Up => self.endpoint.y = self.endpoint.y + steps as i32,
+            RailDirection::Down => self.endpoint.y = self.endpoint.y - steps as i32,
+            RailDirection::Left => self.endpoint.x = self.endpoint.x - steps as i32,
+            RailDirection::Right => self.endpoint.x = self.endpoint.x + steps as i32,
         };
     }
 
-    fn move_left(&self) -> Self {
+    fn move_left(&self) -> Option<Self> {
         self.move_rotating(3)
     }
 
-    fn move_right(&self) -> Self {
+    fn move_right(&self) -> Option<Self> {
         self.move_rotating(1)
     }
 
-    fn move_rotating(&self, rotation_steps: usize) -> Self {
+    fn move_rotating(&self, rotation_steps: usize) -> Option<Self> {
         let mut next = self.clone();
         next.move_force_forward_mut(6);
         next = next.move_force_rotate_clockwise(rotation_steps);
         next.move_force_forward_mut(6);
 
-        next.mode = RailMode::Curved;
+        if next.endpoint.is_negative() {
+            None
+        } else {
+            next.mode = RailMode::Curved;
 
-        next.area = self.build_dual_rail_area();
-        // turn area build start is previous position
-        next.area.extend(self.build_turn_area(&next.direction));
+            next.area = self.build_dual_rail_area();
+            // turn area build start is previous position
+            next.area.extend(self.build_turn_area(&next.direction));
 
-        // let before = next.area.len();
-        // next.area.dedup();
-        // let after = next.area.len();
-        // if before != after {
-        //     panic!("broken area check {} \n\n {}", before, after);
-        // }
+            // let before = next.area.len();
+            // next.area.dedup();
+            // let after = next.area.len();
+            // if before != after {
+            //     panic!("broken area check {} \n\n {}", before, after);
+            // }
 
-        next
+            Some(next)
+        }
     }
 
     fn build_turn_area(&self, new_direction: &RailDirection) -> Vec<RailPoint> {
@@ -216,13 +220,13 @@ impl Rail {
         };
 
         let mut res = Vec::new();
-        if let Some(rail) = self.move_forward(1).is_buildable(surface) {
+        if let Some(rail) = self.move_forward(7).and_then(|v| v.into_buildable(surface)) {
             res.push((rail, 2 + direction_bias))
         }
-        if let Some(rail) = self.move_left().is_buildable(surface) {
+        if let Some(rail) = self.move_left().and_then(|v| v.into_buildable(surface)) {
             res.push((rail, 1000))
         }
-        if let Some(rail) = self.move_right().is_buildable(surface) {
+        if let Some(rail) = self.move_right().and_then(|v| v.into_buildable(surface)) {
             res.push((rail, 1000))
         }
         // println!(
@@ -232,27 +236,35 @@ impl Rail {
         // );
         res
     }
-    fn is_buildable(&self, surface: &Surface) -> Option<Self> {
+    fn into_buildable(self, surface: &Surface) -> Option<Self> {
         self.area
             .iter()
             .map(|r| r.to_game_points())
+            .map(|game_points| {
+                if game_points.len() == 4 {
+                    Some(game_points)
+                } else {
+                    None
+                }
+            })
+            .filter_map(|v| v)
             .flatten()
             .map(|game_pont| is_buildable_point_u32(surface, game_pont))
             .reduce(|total, is_buildable| total.and(is_buildable))
             .unwrap()
-            .map(|_| self.clone())
+            .map(|_| self)
     }
 }
 
 impl RailPoint {
     fn round(&self) -> Self {
         let mut next = self.clone();
-        next.x = next.x + (self.x % 2);
-        next.y = next.y + (self.y % 2);
+        next.x = if next.x % 2 == 0 { next.x + 1 } else { next.x };
+        next.y = if next.y % 2 == 0 { next.y + 1 } else { next.y };
         next
     }
 
-    fn to_game_points(&self) -> [PointU32; 4] {
+    fn to_game_points(&self) -> Vec<PointU32> {
         [
             self.clone(),
             {
@@ -272,20 +284,31 @@ impl RailPoint {
                 v
             },
         ]
+        .iter()
         .map(|v| v.to_point_u32())
+        .filter_map(|v| v)
+        .collect()
     }
 
-    fn to_point_u32(&self) -> PointU32 {
-        PointU32 {
-            x: self.x,
-            y: self.y,
+    fn is_negative(&self) -> bool {
+        self.x < 0 || self.y < 0
+    }
+
+    fn to_point_u32(&self) -> Option<PointU32> {
+        if self.is_negative() {
+            None
+        } else {
+            Some(PointU32 {
+                x: self.x.try_into().unwrap(),
+                y: self.y.try_into().unwrap(),
+            })
         }
     }
 
     pub fn from_point_u32(point: PointU32) -> Self {
         RailPoint {
-            x: point.x,
-            y: point.y,
+            x: point.x as i32,
+            y: point.y as i32,
         }
     }
 }
@@ -305,6 +328,23 @@ fn is_buildable_point_u32(surface: &Surface, point: PointU32) -> Option<PointU32
 
 #[cfg(test)]
 mod test {
+    use crate::navigator::devo::{devo_start, Rail, RailDirection};
+    use crate::surface::pixel::Pixel;
+    use crate::surface::surface::{PointU32, Surface};
+    use std::path::Path;
+
+    #[test]
+    fn spawn_function() {
+        let mut surface = Surface::new(100, 100);
+        // surface.set_pixel(Pixel::IronOre, 50, 5);
+        devo_start(
+            &mut surface,
+            Rail::new_straight(PointU32 { x: 15, y: 15 }, RailDirection::Right),
+            Rail::new_straight(PointU32 { x: 85, y: 15 }, RailDirection::Right),
+        );
+        surface.save(Path::new("work/test"))
+    }
+
     #[test]
     fn it_works() {
         assert_eq!(2 + 2, 4);
