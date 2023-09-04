@@ -1,13 +1,19 @@
+use crate::navigator::resource_cloud::ResourceCloud;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::LOCALE;
 use itertools::Itertools;
+use kiddo::distance::squared_euclidean;
 use num_format::ToFormattedString;
+use opencv::core::reduce;
 use pathfinding::prelude::astar;
+use rayon::prelude::*;
 use std::cell::Cell;
-use std::ops::Range;
+use std::time::Instant;
 
 pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
+    let start_time = Instant::now();
+
     start = start.round();
     end = end.round();
 
@@ -21,10 +27,13 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
         }
     }
 
+    // let resource_cloud = ResourceCloud::new(surface);
+    let resource_cloud = ResourceCloud::default();
+
     println!("Devo start {:?} end {:?}", start, end);
     let (path, path_size) = astar(
         &start,
-        |p| p.successors(surface, &end),
+        |p| p.successors(surface, &end, &resource_cloud),
         |_p| 1,
         |p| valid_destinations.contains(p),
     )
@@ -32,6 +41,14 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
     println!("built path {} long with {}", path.len(), path_size);
 
     write_rail(surface, path);
+
+    let end_time = Instant::now();
+    let duration = end_time - start_time;
+
+    println!(
+        "+++ Devo duration {}",
+        duration.as_millis().to_formatted_string(&LOCALE)
+    );
 
     println!(
         "metric successors called {}",
@@ -79,6 +96,8 @@ const SAFETY_ZERO: Cell<bool> = Cell::new(false);
 const METRIC_SUCCESSOR: Cell<u64> = Cell::new(0);
 
 const RAIL_STEP_SIZE: u32 = 6;
+
+const EMPTY_POINT_32_VEC: Vec<PointU32> = Vec::new();
 
 impl Rail {
     pub fn new_straight(point: PointU32, direction: RailDirection) -> Self {
@@ -255,7 +274,12 @@ impl Rail {
         }
     }
 
-    fn successors(&self, surface: &Surface, end: &Rail) -> Vec<(Self, u32)> {
+    fn successors(
+        &self,
+        surface: &Surface,
+        end: &Rail,
+        resource_cloud: &ResourceCloud,
+    ) -> Vec<(Self, u32)> {
         METRIC_SUCCESSOR.update(|v| v + 1);
         let end_distance = self.distance(end);
 
@@ -264,6 +288,11 @@ impl Rail {
         } else {
             0
         };
+
+        resource_cloud.kdtree.nearest_one(
+            &[self.endpoint.x as f32, self.endpoint.y as f32],
+            &squared_euclidean,
+        );
 
         let mut res = Vec::new();
         if let Some(rail) = self.move_forward().and_then(|v| v.into_buildable(surface)) {
@@ -286,22 +315,51 @@ impl Rail {
         res
     }
 
-    fn add
-
     fn into_buildable(self, surface: &Surface) -> Option<Self> {
+        match 2 {
+            1 => self.into_buildable_sequential(surface),
+            2 => self.into_buildable_parallel(surface),
+            _ => panic!("0"),
+        }
+    }
+
+    fn into_buildable_sequential(self, surface: &Surface) -> Option<Self> {
         if let Some(area) = self.area() {
             area.iter()
-                .map(|r| r.to_game_points())
-                .map(|game_points| {
+                .flat_map(|rail| {
+                    let game_points = rail.to_game_points();
                     if game_points.len() == 4 {
-                        Some(game_points)
+                        game_points
                     } else {
-                        None
+                        EMPTY_POINT_32_VEC
                     }
                 })
-                .filter_map(|v| v)
-                .flatten()
                 .map(|game_pont| is_buildable_point_u32(surface, game_pont))
+                .reduce(|total, is_buildable| total.and(is_buildable))
+                .unwrap()
+                .map(|_| self)
+        } else {
+            None
+        }
+    }
+
+    fn into_buildable_parallel(self, surface: &Surface) -> Option<Self> {
+        if let Some(area) = self.area() {
+            let area_buildable_opt: Vec<Option<PointU32>> = area
+                .par_iter()
+                .flat_map_iter(|rail| {
+                    let game_points = rail.to_game_points();
+                    if game_points.len() == 4 {
+                        game_points
+                    } else {
+                        EMPTY_POINT_32_VEC
+                    }
+                })
+                .map(|game_pont| is_buildable_point_u32(surface, game_pont))
+                .collect();
+
+            area_buildable_opt
+                .into_iter()
                 .reduce(|total, is_buildable| total.and(is_buildable))
                 .unwrap()
                 .map(|_| self)

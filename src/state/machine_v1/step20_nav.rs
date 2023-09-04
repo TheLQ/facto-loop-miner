@@ -23,6 +23,14 @@ impl Step for Step20 {
         let mut surface = Surface::load_from_step_history(&params.step_history_out_dirs);
         let patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
 
+        // let mut counter: usize = 0;
+        // for item in surface.buffer {
+        //     if item == Pixel::IronOre {
+        //         counter = counter + 1;
+        //     }
+        // }
+        // panic!("found {} iron", counter.to_formatted_string(&LOCALE));
+
         navigate_patches_to_base(&mut surface, patches);
 
         surface.save(&params.step_out_dir);

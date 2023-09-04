@@ -279,6 +279,7 @@ dependencies = [
  "num-traits",
  "opencv",
  "pathfinding",
+ "rayon",
  "serde",
  "serde_json",
  "simd-json",
