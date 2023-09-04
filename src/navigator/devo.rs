@@ -1,3 +1,4 @@
+use crate::navigator::devo_bias::{calculate_bias_for_point, RailAction};
 use crate::navigator::resource_cloud::ResourceCloud;
 use crate::state::machine::StepParams;
 use crate::surface::patch::DiskPatch;
@@ -61,8 +62,8 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params:
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct RailPoint {
-    x: i32,
-    y: i32,
+    pub(crate) x: i32,
+    pub(crate) y: i32,
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -202,7 +203,7 @@ impl Rail {
     }
 
     #[allow(dead_code)]
-    fn distance(&self, other: &Rail) -> u32 {
+    pub(crate) fn distance(&self, other: &Rail) -> u32 {
         let a = &self.endpoint;
         let b = &other.endpoint;
         a.x.abs_diff(b.x) + a.y.abs_diff(b.y)
@@ -285,42 +286,22 @@ impl Rail {
     ) -> Vec<(Self, u32)> {
         METRIC_SUCCESSOR.update(|v| v + 1);
 
-        const DIRECTION_BIAS_EFFECT: f32 = 1f32;
-        const TURN_BIAS_EFFECT: f32 = 5f32;
-        const RESOURCE_BIAS_EFFECT: f32 = 20f32;
-
-        let cost_unit = self.distance(end) as f32;
-
-        // Encourage going in the direction of origin.
-        let direction_bias = if self.direction == end.direction {
-            cost_unit * DIRECTION_BIAS_EFFECT
-        } else {
-            0f32
-        };
-
-        // Avoid resource patches
-        let closest_resources: Vec<Neighbour<f32, usize>> = resource_cloud.kdtree.within_unsorted(
-            &[self.endpoint.x as f32, self.endpoint.y as f32],
-            1000f32,
-            &squared_euclidean,
-        );
-        let resource_distance_bias =
-            cost_unit * closest_resources.len() as f32 * RESOURCE_BIAS_EFFECT;
-
-        let total_cost = direction_bias + resource_distance_bias;
-
         let mut res = Vec::new();
         if let Some(rail) = self.move_forward().and_then(|v| v.into_buildable(surface)) {
-            let cost = (2f32 + total_cost);
-
-            res.push((rail, cost as u32))
+            let cost =
+                calculate_bias_for_point(RailAction::Straight, self, &rail, end, resource_cloud);
+            res.push((rail, cost))
         }
-        let total_cost_turn = total_cost + (cost_unit * TURN_BIAS_EFFECT);
+
         if let Some(rail) = self.move_left().and_then(|v| v.into_buildable(surface)) {
-            res.push((rail, total_cost_turn as u32))
+            let cost =
+                calculate_bias_for_point(RailAction::TurnLeft, self, &rail, end, resource_cloud);
+            res.push((rail, cost))
         }
         if let Some(rail) = self.move_right().and_then(|v| v.into_buildable(surface)) {
-            res.push((rail, total_cost_turn as u32))
+            let cost =
+                calculate_bias_for_point(RailAction::TurnRight, self, &rail, end, resource_cloud);
+            res.push((rail, cost))
         }
         // println!(
         //     "for {:?} found {}",
