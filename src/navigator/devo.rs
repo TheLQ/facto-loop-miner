@@ -257,21 +257,26 @@ impl Rail {
 
     fn successors(&self, surface: &Surface, end: &Rail) -> Vec<(Self, u32)> {
         METRIC_SUCCESSOR.update(|v| v + 1);
-        let direction_bias = if self.direction != end.direction {
-            100
+        let end_distance = self.distance(end);
+
+        let direction_bias = if self.direction == end.direction {
+            end_distance
         } else {
             0
         };
 
         let mut res = Vec::new();
         if let Some(rail) = self.move_forward().and_then(|v| v.into_buildable(surface)) {
-            res.push((rail, 2 + direction_bias))
+            let endpoint = &rail.endpoint;
+            let cost = (2 + direction_bias);
+            res.push((rail, cost))
         }
+        let turn_cost = end_distance * 2;
         if let Some(rail) = self.move_left().and_then(|v| v.into_buildable(surface)) {
-            res.push((rail, 1000))
+            res.push((rail, turn_cost))
         }
         if let Some(rail) = self.move_right().and_then(|v| v.into_buildable(surface)) {
-            res.push((rail, 1000))
+            res.push((rail, turn_cost))
         }
         // println!(
         //     "for {:?} found {}",
@@ -280,6 +285,9 @@ impl Rail {
         // );
         res
     }
+
+    fn add
+
     fn into_buildable(self, surface: &Surface) -> Option<Self> {
         if let Some(area) = self.area() {
             area.iter()
