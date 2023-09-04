@@ -5,16 +5,28 @@ use itertools::Itertools;
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar;
 use std::cell::Cell;
+use std::ops::Range;
 
 pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
     start = start.round();
     end = end.round();
+
+    let mut valid_destinations: Vec<Rail> = Vec::new();
+    for width in 0..RAIL_STEP_SIZE {
+        for height in 0..RAIL_STEP_SIZE {
+            let mut next = end.clone();
+            next.endpoint.x = &next.endpoint.x + (width as i32 * 2);
+            next.endpoint.y = &next.endpoint.y + (height as i32 * 2);
+            valid_destinations.push(next);
+        }
+    }
+
     println!("Devo start {:?} end {:?}", start, end);
     let (path, path_size) = astar(
         &start,
         |p| p.successors(surface, &end),
         |_p| 1,
-        |p| *p == end,
+        |p| valid_destinations.contains(p),
     )
     .unwrap();
     println!("built path {} long with {}", path.len(), path_size);
@@ -26,6 +38,7 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
         METRIC_SUCCESSOR.get().to_formatted_string(&LOCALE)
     )
 }
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct RailPoint {
     x: i32,
@@ -107,21 +120,26 @@ impl Rail {
                     direction: source_direction.clone(),
                     mode: RailMode::Straight,
                 };
-                println!("source {:?}", source_rail);
+                // println!("source {:?}", source_rail);
 
                 let first_leg = source_rail.move_forward()?;
-                println!("first_leg {:?}", first_leg);
+                // println!("first_leg {:?}", first_leg);
 
-                let dog_leg = first_leg.move_force_forward(DUAL_RAIL_SIZE - 1);
-                println!("dog_leg {:?}", dog_leg);
+                let is_left_turn =
+                    source_rail.move_force_rotate_clockwise(1).direction == self.direction;
+                if is_left_turn {
+                    let dog_leg = first_leg.move_force_forward(DUAL_RAIL_SIZE - 1);
+                    res.extend(dog_leg.area()?);
+                    // println!("dog_leg {:?}", dog_leg);
+                }
 
                 let mut second_leg = first_leg.clone();
                 second_leg.direction = self.direction.clone();
                 second_leg = second_leg.move_forward()?;
-                println!("second_leg {:?}", second_leg);
+                // println!("second_leg {:?}", second_leg);
 
                 res.extend(first_leg.area()?);
-                res.extend(dog_leg.area()?);
+
                 res.extend(second_leg.area()?);
 
                 // very first row is the source's
@@ -187,7 +205,7 @@ impl Rail {
         next
     }
 
-    fn move_forward(&self) -> Option<Self> {
+    pub fn move_forward(&self) -> Option<Self> {
         let mut next = self.clone();
         next.mode = RailMode::Straight;
         next.move_force_forward_mut(RAIL_STEP_SIZE);
@@ -355,7 +373,7 @@ fn is_buildable_point_u32(surface: &Surface, point: PointU32) -> Option<PointU32
     }
 }
 
-fn write_rail(surface: &mut Surface, path: Vec<Rail>) {
+pub fn write_rail(surface: &mut Surface, path: Vec<Rail>) {
     let special_endpoint_pixels: Vec<PointU32> = path
         .iter()
         .map(|v| v.endpoint.to_point_u32().unwrap())

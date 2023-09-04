@@ -226,10 +226,10 @@ impl Surface {
     }
 
     pub fn crop(&self, crop_radius_from_center: i32) -> Self {
-        let x_start = self.area_box.absolute_x_i32(-crop_radius_from_center);
-        let x_end = self.area_box.absolute_x_i32(crop_radius_from_center);
-        let y_start = self.area_box.absolute_y_i32(-crop_radius_from_center);
-        let y_end = self.area_box.absolute_y_i32(crop_radius_from_center);
+        let x_start = self.area_box.absolute_x_u32(-crop_radius_from_center);
+        let x_end = self.area_box.absolute_x_u32(crop_radius_from_center);
+        let y_start = self.area_box.absolute_y_u32(-crop_radius_from_center);
+        let y_end = self.area_box.absolute_y_u32(crop_radius_from_center);
 
         let img = self.to_mat();
         let cropped = img

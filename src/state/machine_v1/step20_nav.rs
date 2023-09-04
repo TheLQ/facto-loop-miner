@@ -1,4 +1,4 @@
-use crate::navigator::devo::{devo_start, Rail, RailDirection};
+use crate::navigator::devo::{devo_start, write_rail, Rail, RailDirection};
 use crate::state::machine::{Step, StepParams};
 use crate::surface::patch::{map_patch_corners_to_kdtree, DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
@@ -41,13 +41,13 @@ fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch) {
 
     let patch_start = &patches[patch_index];
     let patch_corner = patch_start.corner_point_u32();
-    surface.draw_text(
-        "start",
-        Point {
-            x: patch_corner.x as i32 - 150,
-            y: patch_corner.y as i32 - 50,
-        },
-    );
+    // surface.draw_text(
+    //     "start",
+    //     Point {
+    //         x: patch_corner.x as i32 + 150,
+    //         y: patch_corner.y as i32 + 50,
+    //     },
+    // );
 
     let end = find_end_simple(surface, patch_start);
     surface.set_pixel_point_u32(Pixel::Empty, end);
@@ -69,11 +69,14 @@ fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch) {
     // };
     // nav.start();
 
-    devo_start(
-        surface,
-        Rail::new_straight(patch_corner, RailDirection::Left),
-        Rail::new_straight(end, RailDirection::Left),
-    )
+    let start = Rail::new_straight(patch_corner, RailDirection::Left);
+    let next = start.move_forward().unwrap().move_forward().unwrap();
+
+    let end = Rail::new_straight(end, RailDirection::Left);
+
+    // write_rail(surface, Vec::from([start, next, end]));
+
+    devo_start(surface, start, end)
 }
 
 fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {
@@ -82,7 +85,7 @@ fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {
         current.x = current.x - 1
     }
     //back away
-    current.x = current.x + 2;
+    current.x = current.x + 15;
 
     current.into()
 }

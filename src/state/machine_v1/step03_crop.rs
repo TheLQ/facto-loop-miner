@@ -9,7 +9,7 @@ impl Step03 {
     }
 }
 
-const CROP_RADIUS: i32 = 2000;
+const CROP_RADIUS: i32 = 4000;
 
 impl Step for Step03 {
     fn name(&self) -> String {
