@@ -75,7 +75,7 @@ impl Surface {
     }
 
     pub fn set_pixel(&mut self, pixel: Pixel, x: u32, y: u32) {
-        let _old = self.replace_pixel(pixel.clone(), x, y);
+        let _old = self.replace_pixel(pixel, x, y);
         // if old != Pixel::Empty {
         //     println!(
         //         "[warn] unexpected existing pixel {}x{} data {:?} trying {:?}",

@@ -1,6 +1,7 @@
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::LOCALE;
+use itertools::Itertools;
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar;
 use std::cell::Cell;
@@ -18,7 +19,7 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
     .unwrap();
     println!("built path {} long with {}", path.len(), path_size);
 
-    write_rail(surface, path.into_iter());
+    write_rail(surface, path);
 
     println!(
         "metric successors called {}",
@@ -64,7 +65,7 @@ const DUAL_RAIL_SIZE: u32 = 3;
 const SAFETY_ZERO: Cell<bool> = Cell::new(false);
 const METRIC_SUCCESSOR: Cell<u64> = Cell::new(0);
 
-const STEP_SIZE: u32 = 6;
+const RAIL_STEP_SIZE: u32 = 6;
 
 impl Rail {
     pub fn new_straight(point: PointU32, direction: RailDirection) -> Self {
@@ -83,11 +84,14 @@ impl Rail {
         let mut res = Vec::new();
         match &self.mode {
             RailMode::Straight => {
-                for step_forward in 0..STEP_SIZE {
-                    let next = self.move_force_forward(step_forward);
+                for step_forward in 0..RAIL_STEP_SIZE {
+                    let mut next = self.clone();
+                    // must cover 0..1 -like area
+                    next = next.move_force_rotate_clockwise(2);
+                    next = next.move_force_forward(step_forward);
                     for adjacent in 0..DUAL_RAIL_SIZE {
-                        let next = next.move_force_rotate_clockwise(1);
-                        next.move_force_forward(adjacent);
+                        let mut next = next.move_force_rotate_clockwise(1);
+                        next = next.move_force_forward(adjacent);
 
                         if next.endpoint.is_negative() {
                             return None;
@@ -103,37 +107,41 @@ impl Rail {
                     direction: source_direction.clone(),
                     mode: RailMode::Straight,
                 };
-                if let Some(mut leg) = source_rail.move_forward() {
-                    if let Some(area) = leg.area() {
-                        res.extend(area);
-                    } else {
-                        return None;
-                    }
+                println!("source {:?}", source_rail);
 
-                    leg.direction = self.direction.clone();
-                    if let Some(leg) = leg.move_forward() {
-                        if let Some(area) = leg.area() {
-                            res.extend(area);
-                        } else {
-                            return None;
-                        }
-                    } else {
-                        return None;
-                    }
-                } else {
-                    return None;
-                }
+                let first_leg = source_rail.move_forward()?;
+                println!("first_leg {:?}", first_leg);
 
-                for width in 0..STEP_SIZE {
-                    for height in 0..STEP_SIZE {
+                let dog_leg = first_leg.move_force_forward(DUAL_RAIL_SIZE - 1);
+                println!("dog_leg {:?}", dog_leg);
+
+                let mut second_leg = first_leg.clone();
+                second_leg.direction = self.direction.clone();
+                second_leg = second_leg.move_forward()?;
+                println!("second_leg {:?}", second_leg);
+
+                res.extend(first_leg.area()?);
+                res.extend(dog_leg.area()?);
+                res.extend(second_leg.area()?);
+
+                // very first row is the source's
+                for width in 1..RAIL_STEP_SIZE {
+                    for height in 0..RAIL_STEP_SIZE {
                         let mut next = source_rail.clone();
                         next.move_force_forward_mut(width);
                         next.direction = self.direction.clone();
                         next.move_force_forward_mut(height);
 
+                        if next.endpoint.is_negative() {
+                            return None;
+                        }
+
                         res.push(next.endpoint);
                     }
                 }
+
+                res.sort();
+                res.dedup();
             }
         }
 
@@ -182,8 +190,7 @@ impl Rail {
     fn move_forward(&self) -> Option<Self> {
         let mut next = self.clone();
         next.mode = RailMode::Straight;
-
-        next.move_force_forward_mut(STEP_SIZE);
+        next.move_force_forward_mut(RAIL_STEP_SIZE);
         if next.endpoint.is_negative() {
             None
         } else {
@@ -218,9 +225,9 @@ impl Rail {
 
     fn move_rotating(&self, rotation_steps: usize) -> Option<Self> {
         let mut next = self.clone();
-        next.move_force_forward_mut(STEP_SIZE);
+        next.move_force_forward_mut(RAIL_STEP_SIZE);
         next = next.move_force_rotate_clockwise(rotation_steps);
-        next.move_force_forward_mut(STEP_SIZE);
+        next.move_force_forward_mut(RAIL_STEP_SIZE);
 
         if next.endpoint.is_negative() {
             None
@@ -348,18 +355,33 @@ fn is_buildable_point_u32(surface: &Surface, point: PointU32) -> Option<PointU32
     }
 }
 
-fn write_rail(surface: &mut Surface, path: impl Iterator<Item = Rail>) {
+fn write_rail(surface: &mut Surface, path: Vec<Rail>) {
+    let special_endpoint_pixels: Vec<PointU32> = path
+        .iter()
+        .map(|v| v.endpoint.to_point_u32().unwrap())
+        .collect();
+
     let mut total_rail = 0;
     for path_rail in path {
         if let Some(path_area) = path_rail.area() {
             for path_area_rail_point in path_area {
                 total_rail = total_rail + 1;
                 for path_area_game_point in path_area_rail_point.to_game_points() {
-                    let existing = surface.get_pixel_point_u32(path_area_game_point);
-                    if existing == &Pixel::Rail {
-                        println!("existing {:?} at {}", existing, total_rail)
+                    let mut new_pixel = match surface.get_pixel_point_u32(path_area_game_point) {
+                        Pixel::Rail => {
+                            println!(
+                                "existing Rail at {:?} total {}",
+                                path_area_game_point, total_rail
+                            );
+                            Pixel::IronOre
+                        }
+                        Pixel::IronOre => Pixel::IronOre,
+                        _ => Pixel::Rail,
+                    };
+                    if special_endpoint_pixels.contains(&path_area_game_point) {
+                        new_pixel = Pixel::CopperOre;
                     }
-                    surface.set_pixel_point_u32(Pixel::Rail, path_area_game_point);
+                    surface.set_pixel_point_u32(new_pixel, path_area_game_point);
                 }
             }
         }
@@ -368,7 +390,8 @@ fn write_rail(surface: &mut Surface, path: impl Iterator<Item = Rail>) {
 
 #[cfg(test)]
 mod test {
-    use crate::navigator::devo::{write_rail, Rail, RailDirection};
+    use crate::navigator::devo::{write_rail, Rail, RailDirection, RAIL_STEP_SIZE};
+    use crate::surface::pixel::Pixel;
     use crate::surface::surface::{PointU32, Surface};
     use std::path::Path;
 
@@ -386,21 +409,222 @@ mod test {
 
     #[test]
     fn operator() {
-        let mut surface = Surface::new(100, 100);
+        let mut surface = Surface::new(200, 200);
+        let mut path: Vec<Rail> = Vec::new();
 
-        let mut path = Vec::new();
-        path.push(Rail::new_straight(
-            PointU32 { x: 15, y: 15 },
-            RailDirection::Right,
-        ));
-        path.push(path.last().unwrap().move_forward().unwrap());
-        path.push(path.last().unwrap().move_left().unwrap());
-        path.push(path.last().unwrap().move_forward().unwrap());
-        path.push(path.last().unwrap().move_forward().unwrap());
+        let origin = PointU32 { x: 75, y: 75 };
+        surface.set_pixel_point_u32(Pixel::Highlighter, origin);
 
-        write_rail(&mut surface, path.into_iter());
+        path.extend(make_dash_left(origin));
+        path.extend(make_dash_right(origin));
+        path.extend(make_dash_up(origin));
+        path.extend(make_dash_down(origin));
+        //
+        path.extend(make_left_side_left_l(origin));
+        path.extend(make_left_side_right_l(origin));
+        //
+        path.extend(make_right_side_left_l(origin));
+        path.extend(make_right_side_right_l(origin));
+        //
+        path.extend(make_up_side_left_l(origin));
+        path.extend(make_up_side_right_l(origin));
+        //
+        path.extend(make_down_side_left_l(origin));
+        path.extend(make_down_side_right_l(origin));
+
+        write_rail(&mut surface, path);
 
         surface.save(Path::new("work/test"))
+    }
+
+    const DASH_STEP_SIZE: u32 = 6;
+
+    fn make_dash_left(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+                y: origin.y,
+            },
+            RailDirection::Left,
+        ));
+
+        path
+    }
+
+    fn make_dash_right(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+                y: origin.y,
+            },
+            RailDirection::Left,
+        ));
+
+        path
+    }
+
+    fn make_dash_up(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x,
+                y: origin.y + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+            },
+            RailDirection::Up,
+        ));
+
+        path
+    }
+
+    fn make_dash_down(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x,
+                y: origin.y - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+            },
+            RailDirection::Down,
+        ));
+
+        path
+    }
+
+    fn make_left_side_left_l(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+                y: origin.y - (RAIL_STEP_SIZE * 2),
+            },
+            RailDirection::Left,
+        ));
+        path.push(path.last().unwrap().move_left().unwrap());
+        path.push(path.last().unwrap().move_forward().unwrap());
+
+        // for i in 0..(RAIL_STEP_SIZE * 2) {
+        //     surface.set_pixel(Pixel::Stone, 30, 35 + i);
+        // }
+        path
+    }
+
+    fn make_left_side_right_l(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+                y: origin.y + (RAIL_STEP_SIZE * 2),
+            },
+            RailDirection::Left,
+        ));
+        // path.push(path.last().unwrap().move_forward().unwrap());
+        path.push(path.last().unwrap().move_right().unwrap());
+        path.push(path.last().unwrap().move_forward().unwrap());
+        path
+    }
+
+    fn make_right_side_left_l(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+                y: origin.y + (RAIL_STEP_SIZE * 2),
+            },
+            RailDirection::Right,
+        ));
+        path.push(path.last().unwrap().move_left().unwrap());
+        path.push(path.last().unwrap().move_forward().unwrap());
+
+        // for i in 0..(RAIL_STEP_SIZE * 2) {
+        //     surface.set_pixel(Pixel::Stone, 30, 35 + i);
+        // }
+        path
+    }
+
+    fn make_right_side_right_l(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+                y: origin.y - (RAIL_STEP_SIZE * 2),
+            },
+            RailDirection::Right,
+        ));
+        // path.push(path.last().unwrap().move_forward().unwrap());
+        path.push(path.last().unwrap().move_right().unwrap());
+        path.push(path.last().unwrap().move_forward().unwrap());
+        path
+    }
+
+    fn make_up_side_left_l(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x - (RAIL_STEP_SIZE * 2),
+                y: origin.y + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+            },
+            RailDirection::Up,
+        ));
+        path.push(path.last().unwrap().move_left().unwrap());
+        path.push(path.last().unwrap().move_forward().unwrap());
+
+        // for i in 0..(RAIL_STEP_SIZE * 2) {
+        //     surface.set_pixel(Pixel::Stone, 30, 35 + i);
+        // }
+        path
+    }
+
+    fn make_up_side_right_l(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x + (RAIL_STEP_SIZE * 2),
+                y: origin.y + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+            },
+            RailDirection::Up,
+        ));
+        // path.push(path.last().unwrap().move_forward().unwrap());
+        path.push(path.last().unwrap().move_right().unwrap());
+        path.push(path.last().unwrap().move_forward().unwrap());
+        path
+    }
+
+    fn make_down_side_left_l(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x + (RAIL_STEP_SIZE * 2),
+                y: origin.y - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+            },
+            RailDirection::Down,
+        ));
+        path.push(path.last().unwrap().move_left().unwrap());
+        path.push(path.last().unwrap().move_forward().unwrap());
+
+        // for i in 0..(RAIL_STEP_SIZE * 2) {
+        //     surface.set_pixel(Pixel::Stone, 30, 35 + i);
+        // }
+        path
+    }
+
+    fn make_down_side_right_l(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x - (RAIL_STEP_SIZE * 2),
+                y: origin.y - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+            },
+            RailDirection::Down,
+        ));
+        // path.push(path.last().unwrap().move_forward().unwrap());
+        path.push(path.last().unwrap().move_right().unwrap());
+        path.push(path.last().unwrap().move_forward().unwrap());
+        path
     }
 
     #[test]
