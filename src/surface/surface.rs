@@ -232,7 +232,7 @@ impl Surface {
         let y_end = self.area_box.absolute_y_i32(crop_radius_from_center);
 
         let img = self.to_mat();
-        let mut cropped = img
+        let cropped = img
             .apply(
                 Range::new(y_start as i32, y_end as i32).unwrap(),
                 Range::new(x_start as i32, x_end as i32).unwrap(),
@@ -338,7 +338,7 @@ pub fn draw_text_cv(img: &mut Mat, text: &str, origin: Point) {
     .unwrap();
 }
 
-pub fn draw_text_vertical_cv(img: &mut Mat, text: &str, origin: Point) {
+pub fn draw_text_vertical_cv(_img: &mut Mat, text: &str, origin: Point) {
     println!("drawing {} at {:?}", text, origin);
     // "cv(0,0)" is roughly 500x150
     let mut text_img = unsafe { Mat::new_rows_cols(500, 1000, 0).unwrap() };

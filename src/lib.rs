@@ -1,3 +1,5 @@
+#![feature(cell_update)]
+
 use kiddo::KdTree;
 use num_format::Locale;
 

@@ -1,4 +1,4 @@
-use crate::navigator::devo::{devo_start, Rail, RailDirection, RailMode, RailPoint};
+use crate::navigator::devo::{devo_start, Rail, RailDirection};
 use crate::state::machine::{Step, StepParams};
 use crate::surface::patch::{map_patch_corners_to_kdtree, DiskPatch, Patch};
 use crate::surface::pixel::Pixel;

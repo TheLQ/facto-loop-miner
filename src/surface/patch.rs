@@ -4,7 +4,6 @@ use crate::surface::surface::PointU32;
 use crate::PixelKdTree;
 use kiddo::KdTree;
 use opencv::core::{Point, Rect, Rect_};
-use opencv::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;

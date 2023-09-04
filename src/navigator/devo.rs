@@ -1,13 +1,9 @@
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::LOCALE;
-use itertools::Itertools;
-use num_format::Locale::{he, is, se};
 use num_format::ToFormattedString;
-use opencv::core::Point;
 use pathfinding::prelude::astar;
 use std::cell::Cell;
-use std::ops::Add;
 
 pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
     start = start.round();
@@ -74,7 +70,6 @@ pub struct Rail {
 }
 
 const DUAL_RAIL_SIZE: u32 = 3;
-type DualRailArea = [RailPoint; DUAL_RAIL_SIZE as usize];
 
 const SAFETY_ZERO: Cell<bool> = Cell::new(false);
 const METRIC_SUCCESSOR: Cell<u64> = Cell::new(0);
@@ -100,6 +95,7 @@ impl Rail {
         next
     }
 
+    #[allow(dead_code)]
     fn distance(&self, other: &Rail) -> u32 {
         let a = &self.endpoint;
         let b = &other.endpoint;
@@ -139,7 +135,7 @@ impl Rail {
     }
 
     fn build_dual_rail_area(&self) -> Vec<RailPoint> {
-        let mut next = self.move_force_rotate_clockwise(1);
+        let next = self.move_force_rotate_clockwise(1);
         (0..DUAL_RAIL_SIZE)
             .map(|i| next.move_force_forward(i).endpoint)
             .collect()
@@ -212,7 +208,7 @@ impl Rail {
     }
 
     fn successors(&self, surface: &Surface, end: &Rail) -> Vec<(Self, u32)> {
-        METRIC_SUCCESSOR.get_mut().add(1);
+        METRIC_SUCCESSOR.update(|v| v + 1);
         let direction_bias = if self.direction != end.direction {
             100
         } else {
@@ -304,5 +300,13 @@ fn is_buildable_point_u32(surface: &Surface, point: PointU32) -> Option<PointU32
             // println!("blocked at {:?} by {:?}", &position, existing);
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
     }
 }

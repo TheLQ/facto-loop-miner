@@ -36,7 +36,7 @@ impl Step for Step04 {
     fn transformer(&self, params: StepParams) {
         let previous_step_dir = params.step_history_out_dirs.last().unwrap();
 
-        let mut surface = Surface::load(&previous_step_dir);
+        let surface = Surface::load(&previous_step_dir);
 
         let surface_raw_path = previous_step_dir.join("surface-raw.dat");
         println!("Loading {}", surface_raw_path.display());
@@ -49,6 +49,7 @@ impl Step for Step04 {
     }
 }
 
+#[allow(dead_code)]
 fn write_surface_with_all_patches_wrapped(surface: &mut Surface, disk_patches: &DiskPatch) {
     let mut img = surface.to_mat();
     for (_pixel, patches) in &disk_patches.patches {

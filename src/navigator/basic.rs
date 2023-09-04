@@ -10,9 +10,7 @@ pub struct Navigator<'a> {
 }
 
 impl<'a> Navigator<'a> {
-    pub fn start(&mut self) {
-        let steps: Vec<NavDirection> = Vec::new();
-    }
+    pub fn start(&mut self) {}
 
     pub fn most_valuable_direction(&self) {
         let mut winning_direction = NavDirection::Up(0);
@@ -36,6 +34,7 @@ enum NavDirection {
 }
 
 impl NavDirection {
+    #[allow(dead_code)]
     fn step_size(&self) -> &u32 {
         match self {
             NavDirection::Up(step_size) => step_size,
@@ -80,6 +79,7 @@ impl NavDirection {
     }
 }
 
+#[allow(dead_code)]
 fn route_patch(surface: &mut Surface, patch: &Patch) {
     let mut offset = 0;
     loop {
