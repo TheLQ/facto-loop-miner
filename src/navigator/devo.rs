@@ -1,17 +1,19 @@
 use crate::navigator::resource_cloud::ResourceCloud;
+use crate::state::machine::StepParams;
+use crate::surface::patch::DiskPatch;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::LOCALE;
 use itertools::Itertools;
 use kiddo::distance::squared_euclidean;
+use kiddo::float::neighbour::Neighbour;
 use num_format::ToFormattedString;
-use opencv::core::reduce;
 use pathfinding::prelude::astar;
 use rayon::prelude::*;
 use std::cell::Cell;
 use std::time::Instant;
 
-pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
+pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params: &StepParams) {
     let start_time = Instant::now();
 
     start = start.round();
@@ -27,8 +29,9 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail) {
         }
     }
 
-    // let resource_cloud = ResourceCloud::new(surface);
-    let resource_cloud = ResourceCloud::default();
+    let patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
+    let resource_cloud = ResourceCloud::from_patches(&patches);
+    // let resource_cloud = ResourceCloud::default();
 
     println!("Devo start {:?} end {:?}", start, end);
     let (path, path_size) = astar(
@@ -281,31 +284,43 @@ impl Rail {
         resource_cloud: &ResourceCloud,
     ) -> Vec<(Self, u32)> {
         METRIC_SUCCESSOR.update(|v| v + 1);
-        let end_distance = self.distance(end);
 
+        const DIRECTION_BIAS_EFFECT: f32 = 1f32;
+        const TURN_BIAS_EFFECT: f32 = 5f32;
+        const RESOURCE_BIAS_EFFECT: f32 = 20f32;
+
+        let cost_unit = self.distance(end) as f32;
+
+        // Encourage going in the direction of origin.
         let direction_bias = if self.direction == end.direction {
-            end_distance
+            cost_unit * DIRECTION_BIAS_EFFECT
         } else {
-            0
+            0f32
         };
 
-        resource_cloud.kdtree.nearest_one(
+        // Avoid resource patches
+        let closest_resources: Vec<Neighbour<f32, usize>> = resource_cloud.kdtree.within_unsorted(
             &[self.endpoint.x as f32, self.endpoint.y as f32],
+            1000f32,
             &squared_euclidean,
         );
+        let resource_distance_bias =
+            cost_unit * closest_resources.len() as f32 * RESOURCE_BIAS_EFFECT;
+
+        let total_cost = direction_bias + resource_distance_bias;
 
         let mut res = Vec::new();
         if let Some(rail) = self.move_forward().and_then(|v| v.into_buildable(surface)) {
-            let endpoint = &rail.endpoint;
-            let cost = (2 + direction_bias);
-            res.push((rail, cost))
+            let cost = (2f32 + total_cost);
+
+            res.push((rail, cost as u32))
         }
-        let turn_cost = end_distance * 2;
+        let total_cost_turn = total_cost + (cost_unit * TURN_BIAS_EFFECT);
         if let Some(rail) = self.move_left().and_then(|v| v.into_buildable(surface)) {
-            res.push((rail, turn_cost))
+            res.push((rail, total_cost_turn as u32))
         }
         if let Some(rail) = self.move_right().and_then(|v| v.into_buildable(surface)) {
-            res.push((rail, turn_cost))
+            res.push((rail, total_cost_turn as u32))
         }
         // println!(
         //     "for {:?} found {}",
@@ -315,8 +330,12 @@ impl Rail {
         res
     }
 
+    fn bias_distance() -> u32 {
+        0
+    }
+
     fn into_buildable(self, surface: &Surface) -> Option<Self> {
-        match 2 {
+        match 1 {
             1 => self.into_buildable_sequential(surface),
             2 => self.into_buildable_parallel(surface),
             _ => panic!("0"),
@@ -344,6 +363,7 @@ impl Rail {
     }
 
     fn into_buildable_parallel(self, surface: &Surface) -> Option<Self> {
+        // observations: way slower than sequential, especially in --release mode
         if let Some(area) = self.area() {
             let area_buildable_opt: Vec<Option<PointU32>> = area
                 .par_iter()

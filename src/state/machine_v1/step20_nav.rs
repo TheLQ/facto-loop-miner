@@ -31,13 +31,13 @@ impl Step for Step20 {
         // }
         // panic!("found {} iron", counter.to_formatted_string(&LOCALE));
 
-        navigate_patches_to_base(&mut surface, patches);
+        navigate_patches_to_base(&mut surface, patches, &params);
 
         surface.save(&params.step_out_dir);
     }
 }
 
-fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch) {
+fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch, params: &StepParams) {
     let pixel = Pixel::IronOre;
 
     let patches = disk_patches.patches.get(&pixel).unwrap();
@@ -84,7 +84,7 @@ fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch) {
 
     // write_rail(surface, Vec::from([start, next, end]));
 
-    devo_start(surface, start, end)
+    devo_start(surface, start, end, params)
 }
 
 fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {

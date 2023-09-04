@@ -52,6 +52,10 @@ impl Patch {
         }
     }
 
+    pub fn corner_point_slice_f32(&self) -> [f32; 2] {
+        [self.x as f32, self.y as f32]
+    }
+
     pub fn patch_to_rect(&self) -> Rect {
         Rect {
             x: self.x,
