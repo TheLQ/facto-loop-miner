@@ -46,8 +46,8 @@ pub fn draw_mega_box(img: &mut Surface, metrics: &mut Metrics, patches: &DiskPat
             if !((root_x > -tiles && root_x < tiles) && (root_y > -tiles && root_y < tiles)) {
                 img.set_pixel(
                     Pixel::EdgeWall,
-                    img.area_box.absolute_x_u32(root_x as i32),
-                    img.area_box.absolute_y_u32(root_y as i32),
+                    img.area_box.game_centered_x_i32(root_x as i32),
+                    img.area_box.game_centered_y_i32(root_y as i32),
                 );
                 metrics.increment("base-box");
             }
@@ -69,8 +69,8 @@ fn draw_resource_exclude(img: &mut Surface, metrics: &mut Metrics, patches: &Dis
     for root_x in edge_neg..edge_pos {
         for root_y in edge_neg..edge_pos {
             let point = PointU32 {
-                x: img.area_box.absolute_x_u32(root_x),
-                y: img.area_box.absolute_y_u32(root_y),
+                x: img.area_box.game_centered_x_i32(root_x),
+                y: img.area_box.game_centered_y_i32(root_y),
             };
 
             if !((root_x > -tiles && root_x < tiles) && (root_y > -tiles && root_y < tiles)) {

@@ -501,6 +501,7 @@ mod test {
     use crate::navigator::devo::{write_rail, Rail, RailDirection, RAIL_STEP_SIZE};
     use crate::surface::pixel::Pixel;
     use crate::surface::surface::{PointU32, Surface};
+    use std::mem::transmute;
     use std::path::Path;
 
     // #[test]
@@ -736,7 +737,12 @@ mod test {
     }
 
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn surface_vs_opencv() {
+        let mut surface = Surface::new(100, 100);
+        surface.draw_square(&Pixel::Stone, 5, PointU32 { x: 15, y: 15 });
+
+        let pixels: &[u8] = unsafe { transmute(surface.buffer) };
+
+        surface.save(Path::new("work/test2"))
     }
 }

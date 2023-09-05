@@ -47,8 +47,8 @@ where
     for entity in entities {
         img.set_pixel(
             entity.name().clone(),
-            img.area_box.absolute_x_f32(entity.position().x),
-            img.area_box.absolute_y_f32(entity.position().y),
+            img.area_box.game_centered_x_f32(entity.position().x),
+            img.area_box.game_centered_y_f32(entity.position().y),
         );
         params
             .metrics
