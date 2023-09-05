@@ -31,8 +31,8 @@ impl Step for Step10 {
     }
 }
 
-const CENTRAL_BASE_TILES: isize = 20;
-const REMOVE_RESOURCE_BASE_TILES: isize = 40;
+const CENTRAL_BASE_TILES: i32 = 20;
+const REMOVE_RESOURCE_BASE_TILES: i32 = 40;
 
 pub fn draw_mega_box(img: &mut Surface, metrics: &mut Metrics, patches: &DiskPatch) {
     let tiles: i32 = CENTRAL_BASE_TILES * TILES_PER_CHUNK as i32;
@@ -69,8 +69,8 @@ fn draw_resource_exclude(img: &mut Surface, metrics: &mut Metrics, patches: &Dis
     for root_x in edge_neg..edge_pos {
         for root_y in edge_neg..edge_pos {
             let point = PointU32 {
-                x: img.area_box.absolute_x_u32(root_x as i32),
-                y: img.area_box.absolute_y_u32(root_y as i32),
+                x: img.area_box.absolute_x_u32(root_x),
+                y: img.area_box.absolute_y_u32(root_y),
             };
 
             if !((root_x > -tiles && root_x < tiles) && (root_y > -tiles && root_y < tiles)) {

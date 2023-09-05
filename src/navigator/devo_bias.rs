@@ -1,6 +1,5 @@
-use crate::navigator::devo::{Rail, RailPoint};
+use crate::navigator::devo::Rail;
 use crate::navigator::resource_cloud::ResourceCloud;
-use crate::PixelKdTree;
 use kiddo::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
 

@@ -66,6 +66,21 @@ impl Patch {
             height: self.height,
         }
     }
+
+    pub fn remove_resource_from_surface_square(&self, pixel: &Pixel, surface: &mut Surface) -> u32 {
+        let mut metric = 0;
+        for remove_x in self.x..self.x + self.width {
+            for remove_y in self.y..self.y + self.height {
+                let remove_x = remove_x as u32;
+                let remove_y = remove_y as u32;
+                if surface.get_pixel(remove_x, remove_y) == pixel {
+                    surface.set_pixel(Pixel::Empty, remove_x, remove_y);
+                    metric = metric + 1;
+                }
+            }
+        }
+        metric
+    }
 }
 
 impl From<Rect_<i32>> for Patch {
@@ -83,6 +98,32 @@ impl From<&Rect_<i32>> for Patch {
             height: rect.height,
         }
     }
+}
+
+pub fn map_patch_map_to_kdtree(
+    patches: &HashMap<Pixel, Vec<Patch>>,
+) -> HashMap<Pixel, PixelKdTree> {
+    patches
+        .iter()
+        .map(|(key_pixel, patches_for_key)| {
+            (
+                key_pixel.clone(),
+                map_patch_corners_to_kdtree_ref(patches_for_key.iter()),
+            )
+        })
+        .collect()
+}
+
+pub fn map_patch_corners_to_kdtree_ref<'a>(
+    patch_rects: impl Iterator<Item = &'a Patch>,
+) -> PixelKdTree {
+    let mut tree: PixelKdTree = KdTree::new();
+    let mut patch_counter = 0;
+    for patch_rect in patch_rects {
+        tree.add(&patch_rect.corner_slice(), patch_counter);
+        patch_counter = patch_counter + 1;
+    }
+    tree
 }
 
 pub fn map_patch_corners_to_kdtree(patch_rects: impl Iterator<Item = Patch>) -> PixelKdTree {

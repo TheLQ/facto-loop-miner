@@ -1,4 +1,5 @@
 use crate::state::machine::{Step, StepParams};
+use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
 
 pub struct Step03 {}
@@ -18,10 +19,19 @@ impl Step for Step03 {
 
     fn transformer(&self, params: StepParams) {
         let surface_dir = params.step_history_out_dirs.last().unwrap();
-        let surface = Surface::load(&surface_dir);
+        let mut surface = Surface::load(&surface_dir);
 
-        let cropped_surface = surface.crop(CROP_RADIUS);
+        let mut surf = surface.crop(CROP_RADIUS);
 
-        cropped_surface.save(&params.step_out_dir);
+        let mut count: u32 = 0;
+        for val in &mut surf.buffer {
+            if val == &Pixel::Water {
+                *val = Pixel::Empty;
+                count = count + 1;
+            }
+        }
+        println!("wiped out {} water", count);
+
+        surf.save(&params.step_out_dir);
     }
 }

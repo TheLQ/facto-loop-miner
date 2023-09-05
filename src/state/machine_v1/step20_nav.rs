@@ -1,4 +1,4 @@
-use crate::navigator::devo::{devo_start, write_rail, Rail, RailDirection};
+use crate::navigator::devo::{devo_start, Rail, RailDirection};
 use crate::state::machine::{Step, StepParams};
 use crate::surface::patch::{map_patch_corners_to_kdtree, DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
@@ -77,12 +77,12 @@ fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch, para
     // };
     // nav.start();
 
-    let start = Rail::new_straight(patch_corner, RailDirection::Left);
-    let next = start.move_forward().unwrap().move_forward().unwrap();
-
+    let start = Rail::new_straight(patch_corner, RailDirection::Left)
+        .move_forward()
+        .unwrap();
     let end = Rail::new_straight(end, RailDirection::Left);
-
-    // write_rail(surface, Vec::from([start, next, end]));
+    // let next = start.move_forward().unwrap().move_forward().unwrap();
+    // write_rail(surface, Vec::from([start.clone(), next, end.clone()]));
 
     devo_start(surface, start, end, params)
 }

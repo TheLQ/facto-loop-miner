@@ -328,10 +328,6 @@ impl Rail {
         res
     }
 
-    fn bias_distance() -> u32 {
-        0
-    }
-
     fn into_buildable(self, surface: &Surface) -> Option<Self> {
         match 1 {
             1 => self.into_buildable_sequential(surface),

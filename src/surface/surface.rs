@@ -312,6 +312,14 @@ impl Surface {
         }
         (&added).into()
     }
+
+    pub fn draw_square(&mut self, pixel: &Pixel, square_size: usize, origin: PointU32) {
+        for i in 0..square_size {
+            for j in 0..square_size {
+                self.set_pixel(pixel.clone(), origin.x + i as u32, origin.y + j as u32);
+            }
+        }
+    }
 }
 
 fn anti_bad_pixel_i32(x: i32, y: i32) {

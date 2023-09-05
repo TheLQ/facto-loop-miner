@@ -62,6 +62,18 @@ impl Pixel {
             _ => search_area * 1,
         }
     }
+
+    pub fn is_resource(&self) -> bool {
+        match self {
+            Pixel::IronOre
+            | Pixel::CopperOre
+            | Pixel::Stone
+            | Pixel::CrudeOil
+            | Pixel::Coal
+            | Pixel::UraniumOre => true,
+            _ => false,
+        }
+    }
 }
 
 pub const LOOKUP_IMAGE_ORDER: [Pixel; 10] = [
