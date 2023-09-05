@@ -9,12 +9,5 @@ use std::path::Path;
 static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 fn main() {
-    println!("hello");
-    let root_dir = Path::new("work");
-
-    match 1 {
-        1 => new_v1_machine().start(root_dir),
-        3 => generate_lookup_image(),
-        _ => panic!("wtf"),
-    }
+    facto_loop_miner::innser_main();
 }
