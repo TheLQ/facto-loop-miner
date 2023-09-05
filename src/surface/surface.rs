@@ -220,9 +220,14 @@ impl Surface {
         );
     }
 
-    pub fn to_mat(&self) -> Mat {
+    pub fn get_buffer_to_cv(&self) -> Mat {
         let raw_buffer: &[u8] = unsafe { transmute(self.buffer.as_slice()) };
         Mat::from_slice_rows_cols(&raw_buffer, self.height as usize, self.width as usize).unwrap()
+    }
+
+    pub fn set_buffer_from_cv(&mut self, img: Mat) {
+        let buf: &[Pixel] = unsafe { transmute(img.data_bytes().unwrap()) };
+        self.buffer = Vec::from(buf);
     }
 
     pub fn crop(&self, crop_radius_from_center: i32) -> Self {
@@ -231,7 +236,7 @@ impl Surface {
         let y_start = self.area_box.game_centered_y_i32(-crop_radius_from_center);
         let y_end = self.area_box.game_centered_y_i32(crop_radius_from_center);
 
-        let img = self.to_mat();
+        let img = self.get_buffer_to_cv();
         let cropped = img
             .apply(
                 Range::new(y_start as i32, y_end as i32).unwrap(),
@@ -284,22 +289,21 @@ impl Surface {
         //     },
         // );
 
-        let cropped_buffer: &[Pixel] = unsafe { transmute(cropped.data_bytes().unwrap()) };
-        let surface = Surface {
-            buffer: Vec::from(cropped_buffer),
+        let mut surface = Surface {
+            buffer: Vec::new(),
             width: cropped.cols() as u32,
             height: cropped.rows() as u32,
             area_box: crop_box,
         };
+        surface.set_buffer_from_cv(cropped);
 
         surface
     }
 
     pub fn draw_text(&mut self, text: &str, origin: Point) {
-        let mut mat = self.to_mat();
+        let mut mat = self.get_buffer_to_cv();
         draw_text_cv(&mut mat, text, origin);
-        let buf: &[Pixel] = unsafe { transmute(mat.data_bytes().unwrap()) };
-        self.buffer = Vec::from(buf);
+        self.set_buffer_from_cv(mat)
     }
 
     pub fn pixel_to_kdtree(&self, filter_pixel: &Pixel) -> PixelKdTree {
@@ -313,7 +317,7 @@ impl Surface {
         (&added).into()
     }
 
-    pub fn draw_square(&mut self, pixel: &Pixel, square_size: usize, origin: PointU32) {
+    pub fn draw_square(&mut self, pixel: &Pixel, square_size: usize, origin: &PointU32) {
         for i in 0..square_size {
             for j in 0..square_size {
                 self.set_pixel(pixel.clone(), origin.x + i as u32, origin.y + j as u32);

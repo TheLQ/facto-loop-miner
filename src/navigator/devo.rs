@@ -6,6 +6,7 @@ use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::LOCALE;
 use num_format::ToFormattedString;
+use opencv::prelude::*;
 use pathfinding::prelude::astar;
 use rayon::prelude::*;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -499,8 +500,11 @@ pub fn write_rail(surface: &mut Surface, path: Vec<Rail>) {
 #[cfg(test)]
 mod test {
     use crate::navigator::devo::{write_rail, Rail, RailDirection, RAIL_STEP_SIZE};
+    use crate::opencv::load_raw_image_from_slice;
     use crate::surface::pixel::Pixel;
     use crate::surface::surface::{PointU32, Surface};
+    use opencv::core::{Point, Scalar, Vec2b};
+    use opencv::prelude::*;
     use std::mem::transmute;
     use std::path::Path;
 
@@ -739,9 +743,16 @@ mod test {
     #[test]
     fn surface_vs_opencv() {
         let mut surface = Surface::new(100, 100);
-        surface.draw_square(&Pixel::Stone, 5, PointU32 { x: 15, y: 15 });
+        let center = PointU32 { x: 15, y: 15 };
 
-        let pixels: &[u8] = unsafe { transmute(surface.buffer) };
+        surface.draw_square(&Pixel::Stone, 5, &center);
+
+        let mut img = surface.get_buffer_to_cv();
+        match img.at_2d_mut::<u8>(center.x as i32, center.y as i32) {
+            Ok(e) => *e = Pixel::EdgeWall as u8,
+            Err(e) => panic!("error {}", e),
+        }
+        surface.set_buffer_from_cv(img);
 
         surface.save(Path::new("work/test2"))
     }

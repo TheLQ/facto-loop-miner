@@ -46,6 +46,14 @@ pub fn load_raw_image(path: &Path, rows: usize, height: usize, pixel_opt: Option
     }
     .unwrap();*/
     // let img = imread(surface_raw_path.as_os_str().to_str().unwrap(), 0).unwrap();
-
     Mat::from_slice_rows_cols(&surface_raw, rows, height).unwrap()
+}
+
+pub fn load_raw_image_from_slice(surface_meta: &Surface, raw: &[u8]) -> Mat {
+    Mat::from_slice_rows_cols(
+        raw,
+        surface_meta.height as usize,
+        surface_meta.width as usize,
+    )
+    .unwrap()
 }

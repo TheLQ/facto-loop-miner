@@ -51,7 +51,7 @@ impl Step for Step04 {
 
 #[allow(dead_code)]
 fn write_surface_with_all_patches_wrapped(surface: &mut Surface, disk_patches: &DiskPatch) {
-    let mut img = surface.to_mat();
+    let mut img = surface.get_buffer_to_cv();
     for (_pixel, patches) in &disk_patches.patches {
         let vec: Vec<Rect> = patches
             .into_iter()
