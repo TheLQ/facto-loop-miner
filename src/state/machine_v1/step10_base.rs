@@ -1,12 +1,10 @@
 use crate::navigator::resource_cloud::point_to_slice_f32;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
-use crate::surface::patch::{map_patch_corners_to_kdtree_ref, map_patch_map_to_kdtree, DiskPatch};
+use crate::surface::patch::{map_patch_map_to_kdtree, DiskPatch};
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
-use crate::{PixelKdTree, TILES_PER_CHUNK};
-use kiddo::distance::{dot_product, squared_euclidean};
-use std::collections::HashMap;
+use crate::TILES_PER_CHUNK;
 
 pub struct Step10 {}
 

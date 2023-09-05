@@ -21,10 +21,10 @@ impl Step for Step03 {
         let surface_dir = params.step_history_out_dirs.last().unwrap();
         let mut surface = Surface::load(&surface_dir);
 
-        let mut surf = surface.crop(CROP_RADIUS);
+        surface = surface.crop(CROP_RADIUS);
 
         let mut count: u32 = 0;
-        for val in &mut surf.buffer {
+        for val in &mut surface.buffer {
             if val == &Pixel::Water {
                 *val = Pixel::Empty;
                 count = count + 1;
@@ -32,6 +32,6 @@ impl Step for Step03 {
         }
         println!("wiped out {} water", count);
 
-        surf.save(&params.step_out_dir);
+        surface.save(&params.step_out_dir);
     }
 }

@@ -10,7 +10,11 @@ pub fn get_patch_main() {
     let mut surface = Surface::load(Path::new("work/out0/step03-crop"));
     let patches = DiskPatch::load_from_dir(Path::new("work/out0/step04-contours"));
 
-    let first_patch: &Patch = &patches.patches[&Pixel::IronOre][0];
+    let first_patch: &Patch = &patches.patches[&Pixel::IronOre]
+        .iter()
+        .filter(|v| v.height + v.width > 50)
+        .next()
+        .unwrap();
     println!("dumping {:?}", first_patch);
 
     let mut img = surface.get_buffer_to_cv();
