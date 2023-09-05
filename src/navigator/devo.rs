@@ -501,9 +501,11 @@ pub fn write_rail(surface: &mut Surface, path: Vec<Rail>) {
 mod test {
     use crate::navigator::devo::{write_rail, Rail, RailDirection, RAIL_STEP_SIZE};
     use crate::opencv::load_raw_image_from_slice;
+    use crate::surface::patch::{DiskPatch, Patch};
     use crate::surface::pixel::Pixel;
     use crate::surface::surface::{PointU32, Surface};
-    use opencv::core::{Point, Scalar, Vec2b};
+    use opencv::core::{Point, Range, Scalar, Vec2b, Vector};
+    use opencv::imgcodecs::imwrite;
     use opencv::prelude::*;
     use std::mem::transmute;
     use std::path::Path;

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct DiskPatch {
@@ -17,17 +17,22 @@ pub struct DiskPatch {
     pub area_box: EasyBox,
 }
 
+const JSON_NAME: &str = "patches.json";
+
 impl DiskPatch {
     pub fn load_from_step_history(step_history_out_dirs: &Vec<PathBuf>) -> Self {
         let recent_surface =
-            search_step_history_dirs(step_history_out_dirs.clone().into_iter(), "patches.json");
+            search_step_history_dirs(step_history_out_dirs.clone().into_iter(), JSON_NAME);
+        Self::load_from_dir(&recent_surface)
+    }
 
-        let io = BufReader::new(File::open(recent_surface).unwrap());
+    pub fn load_from_dir(dir: &Path) -> Self {
+        let io = BufReader::new(File::open(dir.join(JSON_NAME)).unwrap());
         simd_json::from_reader(io).unwrap()
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Patch {
     pub x: i32,
     pub y: i32,
