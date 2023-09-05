@@ -87,6 +87,7 @@ fn detector(surface_raw_path: &Path, surface_meta: &Surface, out_dir: &Path) -> 
         let patches = detect_pixel(surface_raw_path, surface_meta, out_dir, &pixel);
         disk.patches.insert(pixel, patches);
     }
+    disk.area_box = surface_meta.area_box.clone();
     disk
 }
 

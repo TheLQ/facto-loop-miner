@@ -1,6 +1,7 @@
 use crate::state::machine::search_step_history_dirs;
+use crate::surface::easybox::EasyBox;
 use crate::surface::pixel::Pixel;
-use crate::surface::surface::PointU32;
+use crate::surface::surface::{PointU32, Surface};
 use crate::PixelKdTree;
 use kiddo::KdTree;
 use opencv::core::{Point, Rect, Rect_};
@@ -13,6 +14,7 @@ use std::path::PathBuf;
 #[derive(Serialize, Deserialize, Default)]
 pub struct DiskPatch {
     pub patches: HashMap<Pixel, Vec<Patch>>,
+    pub area_box: EasyBox,
 }
 
 impl DiskPatch {

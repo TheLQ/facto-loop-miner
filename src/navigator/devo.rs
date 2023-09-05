@@ -5,13 +5,10 @@ use crate::surface::patch::DiskPatch;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::LOCALE;
-use itertools::Itertools;
-use kiddo::distance::squared_euclidean;
-use kiddo::float::neighbour::Neighbour;
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar;
 use rayon::prelude::*;
-use std::cell::Cell;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params: &StepParams) {
@@ -19,6 +16,33 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params:
 
     start = start.round();
     end = end.round();
+
+    // end.endpoint.y = end.endpoint.y + 800;
+
+    // // come in as far away as possible
+    // // optimize area around base
+    end = {
+        let mut counter = 0;
+        let mut new = end.clone();
+        new = new.move_force_rotate_clockwise(2);
+        while let Some(next) = new.move_forward().and_then(|v| v.into_buildable(surface)) {
+            new = next;
+            counter = counter + 0;
+        }
+        new = new.move_force_rotate_clockwise(2);
+        // manual 1, may be unnessesary
+        new = new.move_forward().unwrap();
+        for _ in 0..RAIL_STEP_SIZE {
+            new = new.move_forward().unwrap();
+        }
+        println!("moves {} from {:?} to {:?}", counter, end, new);
+
+        // surface.draw_square(&Pixel::Stone, 100, new.endpoint.to_point_u32().unwrap());
+
+        new
+    };
+
+    // let path = Vec::from([end]);
 
     let mut valid_destinations: Vec<Rail> = Vec::new();
     for width in 0..RAIL_STEP_SIZE {
@@ -56,7 +80,9 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params:
 
     println!(
         "metric successors called {}",
-        METRIC_SUCCESSOR.get().to_formatted_string(&LOCALE)
+        METRIC_SUCCESSOR
+            .load(Ordering::Relaxed)
+            .to_formatted_string(&LOCALE)
     )
 }
 
@@ -96,22 +122,17 @@ pub struct Rail {
 
 const DUAL_RAIL_SIZE: u32 = 3;
 
-const SAFETY_ZERO: Cell<bool> = Cell::new(false);
-const METRIC_SUCCESSOR: Cell<u64> = Cell::new(0);
+static METRIC_SUCCESSOR: AtomicU64 = AtomicU64::new(0);
 
 const RAIL_STEP_SIZE: u32 = 6;
 
-const EMPTY_POINT_32_VEC: Vec<PointU32> = Vec::new();
-
 impl Rail {
     pub fn new_straight(point: PointU32, direction: RailDirection) -> Self {
-        SAFETY_ZERO.set(true);
         let res = Rail {
             endpoint: RailPoint::from_point_u32(point).round(),
             mode: RailMode::Straight,
             direction,
         };
-        SAFETY_ZERO.set(false);
 
         res
     }
@@ -210,10 +231,6 @@ impl Rail {
     }
 
     fn move_force_rotate_clockwise(&self, rotations: usize) -> Self {
-        if !SAFETY_ZERO.get() && rotations == 0 {
-            panic!("0");
-        }
-
         let mut directions = RAIL_DIRECTION_CLOCKWISE.iter().cycle();
 
         while directions.next().unwrap() != &self.direction {}
@@ -284,7 +301,7 @@ impl Rail {
         end: &Rail,
         resource_cloud: &ResourceCloud,
     ) -> Vec<(Self, u32)> {
-        METRIC_SUCCESSOR.update(|v| v + 1);
+        METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
 
         let mut res = Vec::new();
         if let Some(rail) = self.move_forward().and_then(|v| v.into_buildable(surface)) {
@@ -326,15 +343,9 @@ impl Rail {
     fn into_buildable_sequential(self, surface: &Surface) -> Option<Self> {
         if let Some(area) = self.area() {
             area.iter()
-                .flat_map(|rail| {
-                    let game_points = rail.to_game_points();
-                    if game_points.len() == 4 {
-                        game_points
-                    } else {
-                        EMPTY_POINT_32_VEC
-                    }
-                })
-                .map(|game_pont| is_buildable_point_u32(surface, game_pont))
+                .filter_map(map_buildable_points)
+                .flatten()
+                .map(|game_pont| is_buildable_point_u32_take(surface, game_pont))
                 .reduce(|total, is_buildable| total.and(is_buildable))
                 .unwrap()
                 .map(|_| self)
@@ -348,15 +359,9 @@ impl Rail {
         if let Some(area) = self.area() {
             let area_buildable_opt: Vec<Option<PointU32>> = area
                 .par_iter()
-                .flat_map_iter(|rail| {
-                    let game_points = rail.to_game_points();
-                    if game_points.len() == 4 {
-                        game_points
-                    } else {
-                        EMPTY_POINT_32_VEC
-                    }
-                })
-                .map(|game_pont| is_buildable_point_u32(surface, game_pont))
+                .filter_map(map_buildable_points)
+                .flat_map_iter(|v| v)
+                .map(|game_pont| is_buildable_point_u32_take(surface, game_pont))
                 .collect();
 
             area_buildable_opt
@@ -367,6 +372,15 @@ impl Rail {
         } else {
             None
         }
+    }
+}
+
+fn map_buildable_points<'r>(rail: &RailPoint) -> Option<Vec<PointU32>> {
+    let game_points: Vec<PointU32> = rail.to_game_points();
+    if game_points.len() == 4 {
+        Some(game_points)
+    } else {
+        None
     }
 }
 
@@ -427,7 +441,20 @@ impl RailPoint {
     }
 }
 
-fn is_buildable_point_u32(surface: &Surface, point: PointU32) -> Option<PointU32> {
+fn is_buildable_point_u32_take(surface: &Surface, point: PointU32) -> Option<PointU32> {
+    if !surface.xy_in_range_point_u32(&point) {
+        return None;
+    }
+    match surface.get_pixel_point_u32(&point) {
+        Pixel::Empty | Pixel::EdgeWall => Some(point),
+        _existing => {
+            // println!("blocked at {:?} by {:?}", &position, existing);
+            None
+        }
+    }
+}
+
+fn is_buildable_point_u32<'p>(surface: &Surface, point: &'p PointU32) -> Option<&'p PointU32> {
     if !surface.xy_in_range_point_u32(point) {
         return None;
     }
@@ -452,7 +479,7 @@ pub fn write_rail(surface: &mut Surface, path: Vec<Rail>) {
             for path_area_rail_point in path_area {
                 total_rail = total_rail + 1;
                 for path_area_game_point in path_area_rail_point.to_game_points() {
-                    let mut new_pixel = match surface.get_pixel_point_u32(path_area_game_point) {
+                    let mut new_pixel = match surface.get_pixel_point_u32(&path_area_game_point) {
                         Pixel::Rail => {
                             println!(
                                 "existing Rail at {:?} total {}",

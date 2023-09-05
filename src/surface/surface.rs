@@ -46,7 +46,7 @@ impl Surface {
         self.get_pixel_i32(point.x, point.y)
     }
 
-    pub fn get_pixel_point_u32(&self, point: PointU32) -> &Pixel {
+    pub fn get_pixel_point_u32(&self, point: &PointU32) -> &Pixel {
         self.get_pixel(point.x, point.y)
     }
 
@@ -89,7 +89,7 @@ impl Surface {
         mem::replace(&mut self.buffer[i], pixel)
     }
 
-    pub fn xy_in_range_point_u32(&self, point: PointU32) -> bool {
+    pub fn xy_in_range_point_u32(&self, point: &PointU32) -> bool {
         self.xy_in_range(point.x, point.y)
     }
 

@@ -89,7 +89,7 @@ fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch, para
 
 fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {
     let mut current = patch.corner_point_u32();
-    while surface.get_pixel_point_u32(current) != &Pixel::EdgeWall {
+    while surface.get_pixel_point_u32(&current) != &Pixel::EdgeWall {
         current.x = current.x - 1
     }
     //back away

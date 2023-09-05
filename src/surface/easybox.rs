@@ -2,7 +2,7 @@ use crate::gamedata::lua::LuaEntity;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EasyBox {
     pub max_x: i32,
     pub max_y: i32,

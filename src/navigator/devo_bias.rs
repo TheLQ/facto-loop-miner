@@ -36,7 +36,12 @@ pub fn calculate_bias_for_point(
         1000f32,
         &squared_euclidean,
     );
-    let resource_distance_bias = cost_unit * closest_resources.len() as f32 * RESOURCE_BIAS_EFFECT;
+    let mut resource_distance_bias =
+        cost_unit * closest_resources.len() as f32 * RESOURCE_BIAS_EFFECT;
+    // except too strong when at start
+    if next.distance(start) < 500 {
+        resource_distance_bias = 0f32;
+    }
 
     let turn_bias = match action {
         RailAction::TurnLeft | RailAction::TurnRight => cost_unit * TURN_BIAS_EFFECT,
