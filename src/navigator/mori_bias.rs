@@ -1,4 +1,4 @@
-use crate::navigator::devo::Rail;
+use crate::navigator::mori::Rail;
 use crate::navigator::resource_cloud::ResourceCloud;
 use kiddo::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;

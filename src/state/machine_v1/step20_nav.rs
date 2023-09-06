@@ -1,4 +1,4 @@
-use crate::navigator::devo::{devo_start, Rail, RailDirection};
+use crate::navigator::mori::{mori_start, Rail, RailDirection};
 use crate::state::machine::{Step, StepParams};
 use crate::surface::patch::{map_patch_corners_to_kdtree, DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
@@ -96,7 +96,7 @@ fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch, para
     // let next = start.move_forward().unwrap().move_forward().unwrap();
     // write_rail(surface, Vec::from([start.clone(), next, end.clone()]));
 
-    devo_start(surface, start, end, params)
+    mori_start(surface, start, end, params)
 }
 
 fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {

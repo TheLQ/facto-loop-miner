@@ -1,4 +1,4 @@
-use crate::navigator::devo_bias::{calculate_bias_for_point, RailAction};
+use crate::navigator::mori_bias::{calculate_bias_for_point, RailAction};
 use crate::navigator::resource_cloud::ResourceCloud;
 use crate::state::machine::StepParams;
 use crate::surface::patch::DiskPatch;
@@ -13,8 +13,8 @@ use rayon::prelude::*;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-/// Pathfind rail from start to end
-pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params: &StepParams) {
+/// Pathfinder v1, Mori Calliope
+pub fn mori_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params: &StepParams) {
     let start_time = Instant::now();
 
     start = start.round();
@@ -33,7 +33,7 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params:
     let patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
     let resource_cloud = ResourceCloud::from_patches(&patches);
 
-    println!("Devo start {:?} end {:?}", start, end);
+    println!("Mori start {:?} end {:?}", start, end);
     let (path, path_size) = astar(
         &start,
         |p| p.successors(surface, &end, &resource_cloud),
@@ -49,7 +49,7 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params:
     let duration = end_time - start_time;
 
     println!(
-        "+++ Devo duration {}",
+        "+++ Mori duration {}",
         duration.as_millis().to_formatted_string(&LOCALE)
     );
 
@@ -507,7 +507,7 @@ pub fn write_rail(surface: &mut Surface, path: Vec<Rail>) {
 
 #[cfg(test)]
 mod test {
-    use crate::navigator::devo::{write_rail, Rail, RailDirection, RAIL_STEP_SIZE};
+    use crate::navigator::mori::{write_rail, Rail, RailDirection, RAIL_STEP_SIZE};
     use crate::opencv::load_raw_image_from_slice;
     use crate::surface::patch::{DiskPatch, Patch};
     use crate::surface::pixel::Pixel;
