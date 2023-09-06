@@ -14,7 +14,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 /// Pathfinder v1, Mori Calliope
-pub fn mori_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params: &StepParams) {
+pub fn mori_start(
+    surface: &Surface,
+    mut start: Rail,
+    mut end: Rail,
+    params: &StepParams,
+) -> Option<Vec<Rail>> {
     let start_time = Instant::now();
 
     start = start.round();
@@ -42,11 +47,12 @@ pub fn mori_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params:
         |_p| 1,
         |p| valid_destinations.contains(p),
     );
+    let mut result = None;
     if let Some(pathfind) = pathfind {
         let (path, path_size) = pathfind;
         println!("built path {} long with {}", path.len(), path_size);
 
-        write_rail(surface, path);
+        result = Some(path);
     } else {
         println!("failed to pathfind from {:?} to {:?}", start, end);
     }
@@ -61,9 +67,11 @@ pub fn mori_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params:
     println!(
         "metric successors called {}",
         METRIC_SUCCESSOR
-            .load(Ordering::Relaxed)
+            .swap(0, Ordering::Relaxed)
             .to_formatted_string(&LOCALE)
     );
+
+    result
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

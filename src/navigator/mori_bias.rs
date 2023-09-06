@@ -3,7 +3,7 @@ use crate::navigator::resource_cloud::ResourceCloud;
 use kiddo::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
 
-const DIRECTION_BIAS_EFFECT: f32 = 1f32;
+const DIRECTION_BIAS_EFFECT: f32 = 2f32;
 const TURN_BIAS_EFFECT: f32 = 5f32;
 const RESOURCE_BIAS_EFFECT: f32 = 20f32;
 
@@ -21,6 +21,7 @@ pub fn calculate_bias_for_point(
     resource_cloud: &ResourceCloud,
 ) -> u32 {
     let cost_unit = next.distance(end) as f32;
+    // let cost_unit = 100f32;
 
     // Encourage going in the direction of origin.
     let direction_bias = if start.direction == end.direction {

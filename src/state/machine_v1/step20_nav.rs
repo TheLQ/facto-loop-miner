@@ -1,4 +1,4 @@
-use crate::navigator::mori::{mori_start, Rail, RailDirection};
+use crate::navigator::mori::{mori_start, write_rail, Rail, RailDirection};
 use crate::state::machine::{Step, StepParams};
 use crate::state::machine_v1::step10_base::{
     REMOVE_RESOURCE_BASE_CHUNKS, REMOVE_RESOURCE_BASE_TILES,
@@ -24,7 +24,7 @@ impl Step for Step20 {
         "step20-nav".to_string()
     }
 
-    fn transformer(&self, params: StepParams) {
+    fn transformer(&self, mut params: StepParams) {
         let mut surface = Surface::load_from_step_history(&params.step_history_out_dirs);
         let patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
 
@@ -36,21 +36,25 @@ impl Step for Step20 {
         // }
         // panic!("found {} iron", counter.to_formatted_string(&LOCALE));
 
-        navigate_patches_to_base(&mut surface, patches, &params);
+        surface = navigate_patches_to_base(surface, patches, &mut params);
 
         surface.save(&params.step_out_dir);
     }
 }
 
-const NEAREST_COUNT: usize = 50;
+const NEAREST_COUNT: usize = 100;
 
-fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch, params: &StepParams) {
+fn navigate_patches_to_base(
+    mut surface: Surface,
+    disk_patches: DiskPatch,
+    params: &mut StepParams,
+) -> Surface {
     let pixel = Pixel::IronOre;
 
     let patches = disk_patches.patches.get(&pixel).unwrap();
     let cloud = map_patch_corners_to_kdtree(patches.iter().cloned());
 
-    let base_corner = base_bottom_right_corner(surface);
+    let base_corner = base_bottom_right_corner(&surface);
     let needle = point_to_slice_f32(&base_corner);
     let nearest: Vec<Neighbour<f32, usize>> =
         cloud.nearest_n(&needle, NEAREST_COUNT, &squared_euclidean);
@@ -75,12 +79,20 @@ fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch, para
                 surface.buffer[pos] = Pixel::Highlighter;
             }
         }
-        return;
+        return surface;
     }
 
     // println!("found {} patch {} away", pixel.as_ref(), patch_distance);
 
+    // TODO: Speculation
+    enum SpeculationTypes {
+        CurrentEnd,
+        CurrentEndAdd(u8),     // 1 and 2 after
+        NearestPatchToEnd(u8), // "somehow", keep the last
+    }
+
     for (nearest_count, nearest_entry) in nearest.iter().enumerate() {
+        println!("path {} of {}", nearest_count, NEAREST_COUNT);
         let patch_start = patches.get(nearest_entry.item).unwrap();
 
         if x_start < patch_start.x
@@ -121,8 +133,16 @@ fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch, para
             .move_forward()
             .unwrap();
         let end = Rail::new_straight(end, RailDirection::Left);
-        mori_start(surface, start, end, params)
+
+        if let Some(path) = mori_start(&surface, start, end, params) {
+            write_rail(&mut surface, path);
+            params.metrics.borrow_mut().increment("path-success")
+        } else {
+            params.metrics.borrow_mut().increment("path-failure")
+        }
     }
+
+    surface
 }
 
 fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {

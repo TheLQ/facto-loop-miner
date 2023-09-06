@@ -1,7 +1,7 @@
 # LoopMiner - Factorio Map Generator Mod
 
 Generate massive rail loop networks between mining outposts and bases.
-Provide effectively unlimited throughput ore collection
+Jump start your base with effectively unlimited throughput ore collection
 on _vanilla_ maps.
 
 Train loops avoid bottleneck problems with other designs at scale. 
