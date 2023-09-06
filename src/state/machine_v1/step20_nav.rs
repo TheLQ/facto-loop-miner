@@ -57,9 +57,20 @@ fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch, para
     //     },
     // );
 
-    let end = find_end_simple(surface, patch_start);
-    surface.set_pixel_point_u32(Pixel::Empty, end);
-    println!("set end {:?}", end);
+    let end = match 2 {
+        1 => {
+            let end = find_end_simple(surface, patch_start);
+            surface.set_pixel_point_u32(Pixel::Empty, end);
+            end
+        }
+        2 => {
+            let end = PointU32 { x: 150, y: 150 };
+            // surface.draw_square(&Pixel::IronOre, 100, &end);
+            end
+        }
+        _ => panic!("unexpected"),
+    };
+
     // endpoint box
     // for super_x in 0..100 {
     //     for super_y in 0..100 {
@@ -80,6 +91,7 @@ fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch, para
     let start = Rail::new_straight(patch_corner, RailDirection::Left)
         .move_forward()
         .unwrap();
+
     let end = Rail::new_straight(end, RailDirection::Left);
     // let next = start.move_forward().unwrap().move_forward().unwrap();
     // write_rail(surface, Vec::from([start.clone(), next, end.clone()]));

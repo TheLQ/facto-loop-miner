@@ -5,6 +5,7 @@ use crate::surface::patch::DiskPatch;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::LOCALE;
+use num_format::Locale::se;
 use num_format::ToFormattedString;
 use opencv::prelude::*;
 use pathfinding::prelude::astar;
@@ -12,38 +13,12 @@ use rayon::prelude::*;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
+/// Pathfind rail from start to end
 pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params: &StepParams) {
     let start_time = Instant::now();
 
     start = start.round();
     end = end.round();
-
-    // end.endpoint.y = end.endpoint.y + 800;
-
-    // // come in as far away as possible
-    // // optimize area around base
-    end = {
-        let mut counter = 0;
-        let mut new = end.clone();
-        new = new.move_force_rotate_clockwise(2);
-        while let Some(next) = new.move_forward().and_then(|v| v.into_buildable(surface)) {
-            new = next;
-            counter = counter + 0;
-        }
-        new = new.move_force_rotate_clockwise(2);
-        // manual 1, may be unnessesary
-        new = new.move_forward().unwrap();
-        for _ in 0..RAIL_STEP_SIZE {
-            new = new.move_forward().unwrap();
-        }
-        println!("moves {} from {:?} to {:?}", counter, end, new);
-
-        // surface.draw_square(&Pixel::Stone, 100, new.endpoint.to_point_u32().unwrap());
-
-        new
-    };
-
-    // let path = Vec::from([end]);
 
     let mut valid_destinations: Vec<Rail> = Vec::new();
     for width in 0..RAIL_STEP_SIZE {
@@ -57,7 +32,6 @@ pub fn devo_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params:
 
     let patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
     let resource_cloud = ResourceCloud::from_patches(&patches);
-    // let resource_cloud = ResourceCloud::default();
 
     println!("Devo start {:?} end {:?}", start, end);
     let (path, path_size) = astar(
@@ -246,6 +220,30 @@ impl Rail {
         next
     }
 
+    pub fn move_backwards_toward_water(&self, surface: &Surface) -> Self {
+        // // come in as far away as possible
+        // // optimize area around base
+        let mut counter = 0;
+        let mut next = self.clone();
+        next = next.move_force_rotate_clockwise(2);
+        while let Some(next_rail) = next.move_forward().and_then(|v| v.into_buildable(surface)) {
+            next = next_rail;
+            counter = counter + 0;
+        }
+        next = next.move_force_rotate_clockwise(2);
+        // manual 1, may be unnessesary
+        next = next.move_forward().unwrap();
+        next = next.move_forward().unwrap();
+        // todo: this isn't needed anymore?
+        // for _ in 0..RAIL_STEP_SIZE {
+        //     new = new.move_forward().unwrap();
+        // }
+
+        println!("moves {} from {:?} to {:?}", counter, self, next);
+
+        next
+    }
+
     pub fn move_forward(&self) -> Option<Self> {
         let mut next = self.clone();
         next.mode = RailMode::Straight;
@@ -272,6 +270,16 @@ impl Rail {
             RailDirection::Left => self.endpoint.x = self.endpoint.x - steps as i32,
             RailDirection::Right => self.endpoint.x = self.endpoint.x + steps as i32,
         };
+    }
+
+    /// may be negative
+    fn distance_in_direction_to_point(&self, end: &PointU32) -> i32 {
+        match self.direction {
+            RailDirection::Up => end.y as i32 - self.endpoint.y,
+            RailDirection::Down => -(end.y as i32 - self.endpoint.y),
+            RailDirection::Left => end.x as i32 - self.endpoint.x,
+            RailDirection::Right => -(end.x as i32 - self.endpoint.x),
+        }
     }
 
     fn move_left(&self) -> Option<Self> {

@@ -27,7 +27,7 @@ pub fn inner_main() {
     println!("hello");
     let root_dir = Path::new("work");
 
-    match 4 {
+    match 1 {
         1 => new_v1_machine().start(root_dir),
         3 => generate_lookup_image(),
         4 => crate::self_bin::get_patch::get_patch_main(),

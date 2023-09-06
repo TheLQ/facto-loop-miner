@@ -27,7 +27,18 @@ impl DiskPatch {
     }
 
     pub fn load_from_dir(dir: &Path) -> Self {
-        let io = BufReader::new(File::open(dir.join(JSON_NAME)).unwrap());
+        let new = dir;
+        if !new.exists() {
+            panic!("missing {}", &new.display());
+        }
+        let io = BufReader::new(
+            File::open(new)
+                .map_err(|e| {
+                    println!("failed for {}", dir.display());
+                    e
+                })
+                .unwrap(),
+        );
         simd_json::from_reader(io).unwrap()
     }
 }
