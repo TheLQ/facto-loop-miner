@@ -8,7 +8,7 @@ use crate::LOCALE;
 use num_format::Locale::se;
 use num_format::ToFormattedString;
 use opencv::prelude::*;
-use pathfinding::prelude::astar;
+use pathfinding::prelude::{astar, astar_bag, astar_mori};
 use rayon::prelude::*;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
@@ -34,20 +34,25 @@ pub fn mori_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params:
     let resource_cloud = ResourceCloud::from_patches(&patches);
 
     println!("Mori start {:?} end {:?}", start, end);
-    let (path, path_size) = astar(
+    let pathfind = astar_mori(
         &start,
-        |p| p.successors(surface, &end, &resource_cloud),
+        |(p, parents, total_cost)| {
+            p.successors(parents, total_cost, surface, &end, &resource_cloud)
+        },
         |_p| 1,
         |p| valid_destinations.contains(p),
-    )
-    .unwrap();
-    println!("built path {} long with {}", path.len(), path_size);
+    );
+    if let Some(pathfind) = pathfind {
+        let (path, path_size) = pathfind;
+        println!("built path {} long with {}", path.len(), path_size);
 
-    write_rail(surface, path);
+        write_rail(surface, path);
+    } else {
+        println!("failed to pathfind from {:?} to {:?}", start, end);
+    }
 
     let end_time = Instant::now();
     let duration = end_time - start_time;
-
     println!(
         "+++ Mori duration {}",
         duration.as_millis().to_formatted_string(&LOCALE)
@@ -58,7 +63,7 @@ pub fn mori_start(surface: &mut Surface, mut start: Rail, mut end: Rail, params:
         METRIC_SUCCESSOR
             .load(Ordering::Relaxed)
             .to_formatted_string(&LOCALE)
-    )
+    );
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -306,10 +311,16 @@ impl Rail {
 
     fn successors(
         &self,
+        parents: Vec<Rail>,
+        total_cost: u32,
         surface: &Surface,
         end: &Rail,
         resource_cloud: &ResourceCloud,
     ) -> Vec<(Self, u32)> {
+        // if parents.len() > 1000 {
+        //     return Vec::new();
+        // }
+
         METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
 
         let mut res = Vec::new();
@@ -338,10 +349,15 @@ impl Rail {
     }
 
     fn into_buildable(self, surface: &Surface) -> Option<Self> {
-        match 1 {
-            1 => self.into_buildable_sequential(surface),
-            2 => self.into_buildable_parallel(surface),
-            _ => panic!("0"),
+        const size: u32 = 0;
+        if self.endpoint.x < 4000 {
+            None
+        } else {
+            match 1 {
+                1 => self.into_buildable_sequential(surface),
+                2 => self.into_buildable_parallel(surface),
+                _ => panic!("0"),
+            }
         }
     }
 
@@ -451,7 +467,7 @@ fn is_buildable_point_u32_take(surface: &Surface, point: PointU32) -> Option<Poi
         return None;
     }
     match surface.get_pixel_point_u32(&point) {
-        Pixel::Empty | Pixel::EdgeWall => Some(point),
+        Pixel::Empty => Some(point),
         _existing => {
             // println!("blocked at {:?} by {:?}", &position, existing);
             None
@@ -464,7 +480,7 @@ fn is_buildable_point_u32<'p>(surface: &Surface, point: &'p PointU32) -> Option<
         return None;
     }
     match surface.get_pixel_point_u32(point) {
-        Pixel::Empty | Pixel::EdgeWall => Some(point),
+        Pixel::Empty => Some(point),
         _existing => {
             // println!("blocked at {:?} by {:?}", &position, existing);
             None
@@ -554,7 +570,9 @@ mod test {
         //
         path.extend(make_down_side_left_l(origin));
         path.extend(make_down_side_right_l(origin));
-
+        //
+        path.extend(make_l_alone(origin));
+        path.extend(make_r_alone(origin));
         write_rail(&mut surface, path);
 
         surface.save(Path::new("work/test"))
@@ -660,7 +678,7 @@ mod test {
             },
             RailDirection::Right,
         ));
-        path.push(path.last().unwrap().move_left().unwrap());
+
         path.push(path.last().unwrap().move_forward().unwrap());
 
         // for i in 0..(RAIL_STEP_SIZE * 2) {
@@ -747,6 +765,36 @@ mod test {
         // path.push(path.last().unwrap().move_forward().unwrap());
         path.push(path.last().unwrap().move_right().unwrap());
         path.push(path.last().unwrap().move_forward().unwrap());
+        path
+    }
+
+    fn make_l_alone(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x - (RAIL_STEP_SIZE * 2),
+                y: origin.y + 100 - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+            },
+            RailDirection::Down,
+        ));
+        path.push(path.last().unwrap().move_left().unwrap());
+
+        // [path.last().unwrap().clone()].into()
+        path
+    }
+
+    fn make_r_alone(origin: PointU32) -> Vec<Rail> {
+        let mut path = Vec::new();
+        path.push(Rail::new_straight(
+            PointU32 {
+                x: origin.x - (RAIL_STEP_SIZE * 2),
+                y: origin.y + 140 - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+            },
+            RailDirection::Down,
+        ));
+        path.push(path.last().unwrap().move_right().unwrap());
+
+        // Vec::from([path.last().unwrap().clone()])
         path
     }
 

@@ -104,9 +104,9 @@ impl Surface {
     }
 
     pub fn xy_to_index(&self, x: u32, y: u32) -> usize {
-        if x >= self.width {
+        if x > self.width {
             panic!("width {} x {}", self.width, x);
-        } else if y >= self.height {
+        } else if y > self.height {
             panic!("height {} y {}", self.height, y);
         }
         (self.width * y + x).try_into().unwrap()

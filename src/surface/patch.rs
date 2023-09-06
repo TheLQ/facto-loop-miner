@@ -52,7 +52,7 @@ impl DiskPatch {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Patch {
     pub x: i32,
     pub y: i32,

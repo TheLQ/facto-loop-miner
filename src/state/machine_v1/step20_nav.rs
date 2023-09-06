@@ -1,9 +1,14 @@
 use crate::navigator::mori::{mori_start, Rail, RailDirection};
 use crate::state::machine::{Step, StepParams};
+use crate::state::machine_v1::step10_base::{
+    REMOVE_RESOURCE_BASE_CHUNKS, REMOVE_RESOURCE_BASE_TILES,
+};
 use crate::surface::patch::{map_patch_corners_to_kdtree, DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use kiddo::distance::squared_euclidean;
+use kiddo::float::neighbour::Neighbour;
+use num_format::Locale::bas;
 use opencv::core::Point;
 
 pub struct Step20 {}
@@ -37,66 +42,87 @@ impl Step for Step20 {
     }
 }
 
+const NEAREST_COUNT: usize = 50;
+
 fn navigate_patches_to_base(surface: &mut Surface, disk_patches: DiskPatch, params: &StepParams) {
     let pixel = Pixel::IronOre;
 
     let patches = disk_patches.patches.get(&pixel).unwrap();
     let cloud = map_patch_corners_to_kdtree(patches.iter().cloned());
 
-    let needle = point_to_slice_f32(&right_mid_edge_point(surface));
-    let (patch_distance, patch_index) = cloud.nearest_one(&needle, &squared_euclidean);
-    println!("found {} patch {} away", pixel.as_ref(), patch_distance);
+    let base_corner = base_bottom_right_corner(surface);
+    let needle = point_to_slice_f32(&base_corner);
+    let nearest: Vec<Neighbour<f32, usize>> =
+        cloud.nearest_n(&needle, NEAREST_COUNT, &squared_euclidean);
 
-    let patch_start = &patches[patch_index];
-    let patch_corner = patch_start.corner_point_u32();
-    // surface.draw_text(
-    //     "start",
-    //     Point {
-    //         x: patch_corner.x as i32 + 150,
-    //         y: patch_corner.y as i32 + 50,
-    //     },
-    // );
+    let x_start = surface
+        .area_box
+        .game_centered_x_i32(-REMOVE_RESOURCE_BASE_TILES) as i32;
+    let x_end = surface
+        .area_box
+        .game_centered_x_i32(REMOVE_RESOURCE_BASE_TILES) as i32;
+    let y_start = surface
+        .area_box
+        .game_centered_y_i32(-REMOVE_RESOURCE_BASE_TILES) as i32;
+    let y_end = surface
+        .area_box
+        .game_centered_y_i32(REMOVE_RESOURCE_BASE_TILES) as i32;
 
-    let end = match 2 {
-        1 => {
-            let end = find_end_simple(surface, patch_start);
-            surface.set_pixel_point_u32(Pixel::Empty, end);
-            end
+    if 1 + 2 == 99 {
+        for set_x in x_start..x_end {
+            for set_y in x_start..x_end {
+                let pos = surface.xy_to_index(set_x as u32, set_y as u32);
+                surface.buffer[pos] = Pixel::Highlighter;
+            }
         }
-        2 => {
-            let end = PointU32 { x: 150, y: 150 };
-            // surface.draw_square(&Pixel::IronOre, 100, &end);
-            end
+        return;
+    }
+
+    // println!("found {} patch {} away", pixel.as_ref(), patch_distance);
+
+    for (nearest_count, nearest_entry) in nearest.iter().enumerate() {
+        let patch_start = patches.get(nearest_entry.item).unwrap();
+
+        if x_start < patch_start.x
+            && x_end > patch_start.x
+            && y_start < patch_start.y
+            && y_end > patch_start.y
+        {
+            println!("[Warn] broken patch in the remove area {:?}", patch_start);
+            continue;
         }
-        _ => panic!("unexpected"),
-    };
 
-    // endpoint box
-    // for super_x in 0..100 {
-    //     for super_y in 0..100 {
-    //         surface.set_pixel(Pixel::Rail, end.x + super_x, end.y + super_y);
-    //     }
-    // }
+        let patch_corner = patch_start.corner_point_u32();
 
-    // start line
-    // route_patch(surface, patch_start);
+        // surface.draw_text(
+        //     "start",
+        //     Point {
+        //         x: patch_corner.x as i32 + 150,
+        //         y: patch_corner.y as i32 + 50,
+        //     },
+        // );
 
-    // let mut nav = Navigator {
-    //     surface,
-    //     end,
-    //     current: patch_start.corner_point_u32(),
-    // };
-    // nav.start();
+        let end = PointU32 {
+            x: base_corner.x as u32,
+            y: base_corner.y as u32 - (nearest_count as u32 * 20),
+        };
 
-    let start = Rail::new_straight(patch_corner, RailDirection::Left)
-        .move_forward()
-        .unwrap();
+        // endpoint box
+        // for super_x in 0..100 {
+        //     for super_y in 0..100 {
+        //         surface.set_pixel(Pixel::Rail, end.x + super_x, end.y + super_y);
+        //     }
+        // }
 
-    let end = Rail::new_straight(end, RailDirection::Left);
-    // let next = start.move_forward().unwrap().move_forward().unwrap();
-    // write_rail(surface, Vec::from([start.clone(), next, end.clone()]));
+        // start line
+        // route_patch(surface, patch_start);
 
-    mori_start(surface, start, end, params)
+        let start = Rail::new_straight(patch_corner, RailDirection::Left)
+            .move_forward()
+            .unwrap();
+        let end = Rail::new_straight(end, RailDirection::Left);
+        mori_start(surface, start, end, params)
+    }
 }
 
 fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {
@@ -115,6 +141,14 @@ fn right_mid_edge_point(surface: &Surface) -> Point {
         x: surface.width as i32,
         y: (surface.height / 2) as i32,
     }
+}
+
+fn base_bottom_right_corner(surface: &Surface) -> Point {
+    Point { x: 4700, y: 4700 }
+}
+
+fn base_resource_bottom_right_corner(surface: &Surface) -> Point {
+    Point { x: 5300, y: 5300 }
 }
 
 fn point_to_slice_f32(point: &Point) -> [f32; 2] {

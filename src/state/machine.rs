@@ -79,6 +79,7 @@ where
 {
     for dir in step_history_out_dirs.rev() {
         let file = dir.join(name);
+        println!("search {}", file.display());
         if file.exists() {
             return file;
         }

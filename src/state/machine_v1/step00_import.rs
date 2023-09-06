@@ -27,7 +27,7 @@ impl Step for Step00 {
         area_box.expand_to(&data.resource);
         area_box.expand_to(&data.tile);
 
-        let mut surface = Surface::new(area_box.width, area_box.height);
+        let mut surface = Surface::new(area_box.width + 1, area_box.height);
         surface.area_box = area_box;
 
         println!("Loading {} resources...", data.resource.len());
