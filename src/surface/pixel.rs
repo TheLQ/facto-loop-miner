@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
-use strum::AsRefStr;
+use strum::{AsRefStr, EnumIter};
 
-#[derive(Serialize, Deserialize, AsRefStr, Debug, PartialEq, Clone, Eq, Hash)]
+#[derive(Serialize, Deserialize, AsRefStr, EnumIter, Debug, PartialEq, Clone, Eq, Hash)]
 #[repr(u8)]
 #[serde(rename_all = "kebab-case")]
 pub enum Pixel {

@@ -18,6 +18,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::mem::transmute;
 use std::path::Path;
+use strum::IntoEnumIterator;
 
 pub struct Step04 {}
 
@@ -75,17 +76,12 @@ fn write_patch_dump(path: &Path, patches: &DiskPatch) {
 }
 
 fn detector(surface_raw_path: &Path, surface_meta: &Surface, out_dir: &Path) -> DiskPatch {
-    let useful_pixels = [
-        Pixel::IronOre,
-        Pixel::CopperOre,
-        Pixel::Coal,
-        Pixel::Stone,
-        Pixel::CrudeOil,
-    ];
     let mut disk = DiskPatch::default();
-    for pixel in useful_pixels {
-        let patches = detect_pixel(surface_raw_path, surface_meta, out_dir, &pixel);
-        disk.patches.insert(pixel, patches);
+    for pixel in Pixel::iter() {
+        if pixel.is_resource() {
+            let patches = detect_pixel(surface_raw_path, surface_meta, out_dir, &pixel);
+            disk.patches.insert(pixel, patches);
+        }
     }
     disk.area_box = surface_meta.area_box.clone();
     disk
