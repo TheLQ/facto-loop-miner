@@ -43,7 +43,7 @@ impl Step for Step04 {
         println!("Loading {}", surface_raw_path.display());
         let disk_patches = detector(&surface_raw_path, &surface, &params.step_out_dir);
 
-        write_patch_dump(&params.step_out_dir.join("patches.json"), &disk_patches);
+        disk_patches.save(&params.step_out_dir);
 
         // write_surface_with_all_patches_wrapped(&mut surface, &disk_patches);
         // surface.save(&params.step_out_dir);
@@ -67,12 +67,6 @@ fn write_surface_with_all_patches_wrapped(surface: &mut Surface, disk_patches: &
 fn write_png(path: &Path, img: &Mat) {
     println!("Wrote debug image {}", path.display());
     imwrite(path.to_str().unwrap(), img, &Vector::new()).unwrap();
-}
-
-fn write_patch_dump(path: &Path, patches: &DiskPatch) {
-    println!("Wrote output patch dump to {}", path.display());
-    let file = File::create(path).unwrap();
-    simd_json::to_writer(BufWriter::new(file), patches).unwrap();
 }
 
 fn detector(surface_raw_path: &Path, surface_meta: &Surface, out_dir: &Path) -> DiskPatch {

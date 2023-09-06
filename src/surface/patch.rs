@@ -8,13 +8,22 @@ use opencv::core::{Point, Rect, Rect_};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct DiskPatch {
     pub patches: HashMap<Pixel, Vec<Patch>>,
     pub area_box: EasyBox,
+}
+
+impl DiskPatch {
+    pub fn save(&self, dir: &Path) {
+        let path = &dir.join("patches.json");
+        println!("Wrote output patch dump to {}", path.display());
+        let file = File::create(path).unwrap();
+        simd_json::to_writer(BufWriter::new(file), self).unwrap();
+    }
 }
 
 const JSON_NAME: &str = "patches.json";
