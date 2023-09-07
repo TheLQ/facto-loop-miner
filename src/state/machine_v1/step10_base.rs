@@ -1,7 +1,7 @@
 use crate::navigator::resource_cloud::point_to_slice_f32;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
-use crate::surface::patch::{map_patch_map_to_kdtree, DiskPatch, Patch};
+use crate::surface::patch::{map_patch_map_to_kdtree, DiskPatch};
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::TILES_PER_CHUNK;

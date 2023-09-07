@@ -14,8 +14,6 @@ use opencv::imgproc::{
 };
 use opencv::prelude::*;
 use std::fmt::Display;
-use std::fs::File;
-use std::io::BufWriter;
 use std::mem::transmute;
 use std::path::Path;
 use strum::IntoEnumIterator;

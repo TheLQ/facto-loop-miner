@@ -1,14 +1,11 @@
 use crate::navigator::mori::{mori_start, write_rail, Rail, RailDirection};
 use crate::state::machine::{Step, StepParams};
-use crate::state::machine_v1::step10_base::{
-    REMOVE_RESOURCE_BASE_CHUNKS, REMOVE_RESOURCE_BASE_TILES,
-};
+use crate::state::machine_v1::step10_base::REMOVE_RESOURCE_BASE_TILES;
 use crate::surface::patch::{map_patch_corners_to_kdtree, DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use kiddo::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
-use num_format::Locale::bas;
 use opencv::core::Point;
 
 pub struct Step20 {}

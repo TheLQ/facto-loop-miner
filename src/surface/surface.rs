@@ -9,9 +9,13 @@ use opencv::core::{rotate, Mat, Point, Point_, Range, ROTATE_90_COUNTERCLOCKWISE
 use opencv::imgproc::{get_font_scale_from_height, put_text, FONT_HERSHEY_SIMPLEX, LINE_8};
 use opencv::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::arch::x86_64::{
+    __m128i, __m256i, _mm256_and_si256, _mm256_load_si256, _mm256_or_si256, _popcnt64,
+};
 use std::fs::{read, write, File};
 use std::io::{BufReader, BufWriter};
 use std::mem::transmute;
+use std::ops::BitXor;
 use std::path::{Path, PathBuf};
 use std::{fs, mem};
 
