@@ -9,6 +9,7 @@ use num_format::ToFormattedString;
 use opencv::prelude::*;
 use pathfinding::prelude::astar_mori;
 use rayon::prelude::*;
+use std::arch::x86_64::__m256i;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
@@ -37,11 +38,20 @@ pub fn mori_start(
     let patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
     let resource_cloud = ResourceCloud::from_patches(&patches);
 
+    let mut working_buffer = surface.get_buffer_as_m256();
+
     println!("Mori start {:?} end {:?}", start, end);
     let pathfind = astar_mori(
         &start,
         |(p, parents, total_cost)| {
-            p.successors(parents, total_cost, surface, &end, &resource_cloud)
+            p.successors(
+                parents,
+                total_cost,
+                surface,
+                &end,
+                &resource_cloud,
+                &mut working_buffer,
+            )
         },
         |_p| 1,
         |p| valid_destinations.contains(p),
@@ -232,13 +242,18 @@ impl Rail {
         next
     }
 
+    #[warn(unreachable_code)]
     pub fn move_backwards_toward_water(&self, surface: &Surface) -> Self {
         // // come in as far away as possible
         // // optimize area around base
         let mut counter = 0;
         let mut next = self.clone();
         next = next.move_force_rotate_clockwise(2);
-        while let Some(next_rail) = next.move_forward().and_then(|v| v.into_buildable(surface)) {
+        // TODO
+        while let Some(next_rail) = next
+            .move_forward()
+            .and_then(|v| v.into_buildable(surface, unimplemented!()))
+        {
             next = next_rail;
             counter = counter + 0;
         }
@@ -323,6 +338,7 @@ impl Rail {
         surface: &Surface,
         end: &Rail,
         resource_cloud: &ResourceCloud,
+        working_buffer: &mut Vec<__m256i>,
     ) -> Vec<(Self, u32)> {
         // if parents.len() > 1000 {
         //     return Vec::new();
@@ -331,18 +347,27 @@ impl Rail {
         METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
 
         let mut res = Vec::new();
-        if let Some(rail) = self.move_forward().and_then(|v| v.into_buildable(surface)) {
+        if let Some(rail) = self
+            .move_forward()
+            .and_then(|v| v.into_buildable(surface, working_buffer))
+        {
             let cost =
                 calculate_bias_for_point(RailAction::Straight, self, &rail, end, resource_cloud);
             res.push((rail, cost))
         }
 
-        if let Some(rail) = self.move_left().and_then(|v| v.into_buildable(surface)) {
+        if let Some(rail) = self
+            .move_left()
+            .and_then(|v| v.into_buildable(surface, working_buffer))
+        {
             let cost =
                 calculate_bias_for_point(RailAction::TurnLeft, self, &rail, end, resource_cloud);
             res.push((rail, cost))
         }
-        if let Some(rail) = self.move_right().and_then(|v| v.into_buildable(surface)) {
+        if let Some(rail) = self
+            .move_right()
+            .and_then(|v| v.into_buildable(surface, working_buffer))
+        {
             let cost =
                 calculate_bias_for_point(RailAction::TurnRight, self, &rail, end, resource_cloud);
             res.push((rail, cost))
@@ -355,7 +380,7 @@ impl Rail {
         res
     }
 
-    fn into_buildable(self, surface: &Surface) -> Option<Self> {
+    fn into_buildable(self, surface: &Surface, working_buffer: &mut Vec<__m256i>) -> Option<Self> {
         const size: u32 = 0;
         if self.endpoint.x < 4000 {
             None
@@ -363,6 +388,7 @@ impl Rail {
             match 1 {
                 1 => self.into_buildable_sequential(surface),
                 2 => self.into_buildable_parallel(surface),
+                3 => self.into_buildable_avx(surface, working_buffer),
                 _ => panic!("0"),
             }
         }
@@ -397,6 +423,23 @@ impl Rail {
                 .reduce(|total, is_buildable| total.and(is_buildable))
                 .unwrap()
                 .map(|_| self)
+        } else {
+            None
+        }
+    }
+
+    fn into_buildable_avx(
+        self,
+        surface: &Surface,
+        working_buffer: &mut Vec<__m256i>,
+    ) -> Option<Self> {
+        if let Some(area) = self.area() {
+            let points = area
+                .iter()
+                .filter_map(map_buildable_points)
+                .flatten()
+                .collect();
+            is_buildable_point_u32_vec_fast(surface, points, working_buffer).map(|_| self)
         } else {
             None
         }
@@ -467,6 +510,54 @@ impl RailPoint {
             y: point.y as i32,
         }
     }
+}
+
+fn is_buildable_point_u32_vec_fast(
+    surface: &Surface,
+    points: Vec<PointU32>,
+    working_buffer: &mut Vec<__m256i>,
+) -> Option<()> {
+    None
+    // let mut point_indexes = Vec::new();
+    // for point in points {
+    //     if !surface.xy_in_range_point_u32(&point) {
+    //         return None;
+    //     }
+    //     let i = surface.xy_to_index(point.x, point.y);
+    //     point_indexes.push(i);
+    // }
+    //
+    // apply_buffer_to_m256_vec()
+    //
+    //
+    //
+    //     let chunk_bitset = working_buffer[(i % SSE_BITS) / (SSE_BITS)];
+    //     *chunk_bitset = chunk_bitset | (0b1000000 >> ())
+    //
+    //     match surface.buffer.get(i) {
+    //         Some(Pixel::Empty) => 1u8,
+    //         Some(_existing) => 0u8,
+    //         None => {
+    //             // println!("blocked at {:?} by {:?}", &position, existing);
+    //             0u8
+    //         }
+    //     };
+    //     scratch_surface_u8[i] = value;
+    // }
+    //
+    // // todo: _mm256_cmpgt_
+    //
+    // for _chunk in point.into_iter().array_chunks() {
+    //     let chunk: [PointU32; 32] = _chunk;
+    // }
+    //
+    // match surface.get_pixel_point_u32(&point) {
+    //     Pixel::Empty => Some(point),
+    //     _existing => {
+    //         // println!("blocked at {:?} by {:?}", &position, existing);
+    //         None
+    //     }
+    // }
 }
 
 fn is_buildable_point_u32_take(surface: &Surface, point: PointU32) -> Option<PointU32> {

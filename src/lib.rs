@@ -1,5 +1,8 @@
 #![feature(cell_update)]
 #![feature(convert_float_to_int)]
+#![feature(iter_array_chunks)]
+#![feature(portable_simd)]
+#![feature(exclusive_range_pattern)]
 
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
@@ -11,6 +14,7 @@ mod gamedata;
 pub mod navigator;
 mod opencv;
 pub mod self_bin;
+pub mod simd;
 pub mod state;
 pub mod surface;
 

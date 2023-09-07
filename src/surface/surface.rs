@@ -4,6 +4,7 @@ use crate::surface::pixel::Pixel;
 use crate::{PixelKdTree, LOCALE};
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
+use num_format::Locale::wo;
 use num_format::ToFormattedString;
 use opencv::core::{rotate, Mat, Point, Point_, Range, ROTATE_90_COUNTERCLOCKWISE};
 use opencv::imgproc::{get_font_scale_from_height, put_text, FONT_HERSHEY_SIMPLEX, LINE_8};
@@ -17,17 +18,20 @@ use std::io::{BufReader, BufWriter};
 use std::mem::transmute;
 use std::ops::BitXor;
 use std::path::{Path, PathBuf};
+use std::simd::{i64x4, Simd};
 use std::{fs, mem};
 
 pub type PointU32 = Point_<u32>;
 
 #[derive(Serialize, Deserialize)]
 pub struct Surface {
-    #[serde(skip)]
-    pub buffer: Vec<Pixel>,
     pub width: u32,
     pub height: u32,
     pub area_box: EasyBox,
+    #[serde(skip)]
+    pub buffer: Vec<Pixel>,
+    #[serde(skip)]
+    pub occupied_pixels: Vec<__m256i>,
 }
 
 const NAME_PREFIX: &str = "surface-";
@@ -43,6 +47,7 @@ impl Surface {
             width,
             height,
             area_box: EasyBox::default(),
+            occupied_pixels: Vec::new(),
         }
     }
 
@@ -141,6 +146,8 @@ impl Surface {
         let buffer = read(&dat_path).unwrap();
         println!("read buffer from {}", &dat_path.display());
 
+        // compress [15,0,99,0] to 0b1010
+
         surface.buffer = unsafe { transmute(buffer) };
         surface
     }
@@ -234,6 +241,10 @@ impl Surface {
         self.buffer = Vec::from(buf);
     }
 
+    pub fn get_buffer_as_m256(&self) -> Vec<__m256i> {
+        pixel_u8_iter_to_m256(&self.buffer)
+    }
+
     pub fn crop(&self, crop_radius_from_center: i32) -> Self {
         let x_start = self.area_box.game_centered_x_i32(-crop_radius_from_center);
         let x_end = self.area_box.game_centered_x_i32(crop_radius_from_center);
@@ -298,6 +309,7 @@ impl Surface {
             width: cropped.cols() as u32,
             height: cropped.rows() as u32,
             area_box: crop_box,
+            occupied_pixels: Vec::new(),
         };
         surface.set_buffer_from_cv(cropped);
 
