@@ -16,13 +16,17 @@ use bitvec::bitvec;
 use bitvec::slice::BitSlice;
 use bitvec::vec::BitVec;
 use itertools::Itertools;
+use lazy_static::lazy_static;
+use pathfinding::prelude::Common;
 use std::arch::x86_64::{
-    __m128i, __m256i, _mm256_and_si256, _mm256_cmpeq_epi64, _mm256_load_si256, _mm256_loadu_si256,
-    _mm256_or_si256, _mm256_set_epi64x, _mm256_setzero_si256, _mm256_slli_si256, _mm256_srli_si256,
-    _mm256_storeu_si256, _mm256_testc_si256, _mm256_testz_si256, _mm_and_si128, _mm_or_si128,
-    _mm_set_epi64x, _popcnt64,
+    __m128i, __m256i, _mm256_and_si256, _mm256_cmpeq_epi32, _mm256_cmpeq_epi64, _mm256_load_si256,
+    _mm256_loadu_si256, _mm256_movemask_epi8, _mm256_or_si256, _mm256_set_epi64x,
+    _mm256_setzero_si256, _mm256_slli_si256, _mm256_srli_si256, _mm256_storeu_si256,
+    _mm256_testc_si256, _mm256_testz_si256, _mm256_xor_si256, _mm_and_si128, _mm_cmpeq_epi32,
+    _mm_or_si128, _mm_set_epi64x, _popcnt64,
 };
 use std::mem::transmute;
+use std::process::exit;
 use std::simd::i64x4;
 
 pub const SSE_BITS: usize = 256;
@@ -42,7 +46,7 @@ pub fn apply_any_u8_iter_to_m256_buffer<'a>(
         let mask = if *change_id != 0 {
             create_flip(pos % SSE_BITS)
         } else {
-            m256_zero()
+            *COMMON_ZERO
         };
 
         *buffer_row = unsafe { _mm256_or_si256(*buffer_row, mask) };
@@ -51,8 +55,9 @@ pub fn apply_any_u8_iter_to_m256_buffer<'a>(
 
 /// Apply buffer array positions to PRE-ALLOCATED working buffer
 pub fn apply_positions_iter_to_m256_buffer(
-    position: impl Iterator<Item = usize>,
+    position: &Vec<usize>,
     working_buffer: &mut Vec<SseUnit>,
+    enable: bool,
 ) {
     for pos in position {
         let buffer = working_buffer
@@ -60,7 +65,11 @@ pub fn apply_positions_iter_to_m256_buffer(
             .unwrap();
 
         let buffer_mask = create_flip(pos % SSE_BITS);
-        *buffer = unsafe { _mm256_or_si256(*buffer, buffer_mask) };
+        if enable {
+            *buffer = unsafe { _mm256_or_si256(*buffer, buffer_mask) };
+        } else {
+            *buffer = unsafe { _mm256_xor_si256(*buffer, buffer_mask) };
+        }
     }
 }
 
@@ -90,39 +99,62 @@ pub fn compare_m256_count(
     total
 }
 
-pub fn any_bit_equal_m256_iter_bool<'a>(
-    mut a: impl Iterator<Item = &'a SseUnit>,
-    mut b: impl Iterator<Item = &'a SseUnit>,
-) -> bool {
+pub fn any_bit_equal_m256_bool<'a>(mut a: &Vec<SseUnit>, mut b: &Vec<SseUnit>) -> bool {
     let mut total: SseUnit = m256_zero();
-    loop {
-        match (a.next(), b.next()) {
-            (Some(a), None) => panic!("a gave {:?} b game None", a),
-            (None, Some(b)) => panic!("a gave None b gave {:?}", b),
-            (Some(a), Some(b)) => unsafe {
-                let matches = _mm256_and_si256(*a, *b);
-                total = _mm256_or_si256(matches, total);
-                // println!(
-                //     "{}{}\n{}{}\n{}{}\n{}{}",
-                //     "a       ",
-                //     format_m256(a.clone()),
-                //     "b       ",
-                //     format_m256(b.clone()),
-                //     "matches ",
-                //     format_m256(matches.clone()),
-                //     "total   ",
-                //     format_m256(total.clone())
-                // );
-            },
-            (None, None) => break,
+
+    for i in 0..a.len() {
+        unsafe {
+            let matches = _mm256_and_si256(a[i], b[i]);
+            total = _mm256_or_si256(matches, total);
+
+            // println!(
+            //     "{}{}\n{}{}\n{}{}\n{}{}",
+            //     "a       ",
+            //     format_m256(a[i].clone()),
+            //     "b       ",
+            //     format_m256(a[i].clone()),
+            //     "matches ",
+            //     format_m256(matches.clone()),
+            //     "total   ",
+            //     format_m256(total.clone())
+            // );
         }
     }
 
+    // loop {
+    //     match (a.next(), b.next()) {
+    //         (Some(a), None) => panic!("a gave {:?} b game None", a),
+    //         (None, Some(b)) => panic!("a gave None b gave {:?}", b),
+    //         (Some(a), Some(b)) => unsafe {
+    //             let matches = _mm256_and_si256(*a, *b);
+    //             total = _mm256_or_si256(matches, total);
+    //         },
+    //         (None, None) => break,
+    //     }
+    // }
+
     // Does `bits & 0`, returning 1 if all = 0
-    // let and_is_zero = unsafe { _mm256_testz_si256(total, m256_zero()) };
+    // let and_is_zero = unsafe { _mm256_testz_si256(total, total) };
     // and_is_zero == 1
-    let parts: i64x4 = total.into();
-    (parts[0] + parts[1] + parts[2] + parts[3]) != 0
+    // let and_is_zero = unsafe { _mm256_testz_si256(total, m256_zero()) };
+    // let res = and_is_zero == 1;
+    let cmp = unsafe { _mm256_cmpeq_epi32(total, *COMMON_ZERO) };
+    let mask = unsafe { _mm256_movemask_epi8(cmp) };
+    // println!(
+    //     "{}{}\n{}{:b}\n",
+    //     "cmp     ",
+    //     format_m256(cmp.clone()),
+    //     "mask    ",
+    //     mask,
+    // );
+    // exit(1);
+    // mask
+    mask != 0xFF_FF_FF_FFu32 as i32
+    //
+    // println!("is zero {}", res);
+    // res
+    // let parts: i64x4 = total.into();
+    // (parts[0] + parts[1] + parts[2] + parts[3]) != 0
 }
 
 fn create_flip(count: usize) -> SseUnit {
@@ -144,6 +176,11 @@ fn create_flip(count: usize) -> SseUnit {
     // }
 }
 
+// const COMMON_ZERO: Box<SseUnit> = Box::new(m256_zero());
+lazy_static! {
+    static ref COMMON_ZERO: SseUnit = m256_zero();
+}
+
 #[inline]
 fn m256_zero() -> SseUnit {
     // unsafe { _mm256_set_epi64x(0, 0, 0, 0) }
@@ -152,7 +189,12 @@ fn m256_zero() -> SseUnit {
 
 #[inline]
 pub fn m256_zero_vec(size: usize) -> Vec<SseUnit> {
-    (0..size).map(|_| m256_zero()).collect()
+    // (0..size).map(|_| m256_zero()).collect()
+    let mut res = Vec::new();
+    for _ in 0..size {
+        res.push(m256_zero());
+    }
+    res
 }
 
 #[inline]
@@ -198,7 +240,7 @@ fn bitvec_into_m256(input: BitVec) -> __m256i {
 fn format_m256(input: __m256i) -> String {
     let input: i64x4 = input.into();
     format!(
-        "{:0>32}{:0>32}{:0>32}{:0>32}",
+        "{:0>64}{:0>64}{:0>64}{:0>64}",
         format_i64(input[3]),
         format_i64(input[2]),
         format_i64(input[1]),
@@ -244,7 +286,7 @@ mod test {
     #[test]
     fn positions_test() {
         let mut actual_buffer = m256_zero_vec(1);
-        apply_positions_iter_to_m256_buffer([5usize, 10].into_iter(), &mut actual_buffer);
+        apply_positions_iter_to_m256_buffer(&Vec::from([5usize, 10]), &mut actual_buffer, false);
         let actual = m256_into_bitvec(actual_buffer[0]);
 
         let mut expected = bitvec_for_m256();

@@ -40,6 +40,8 @@ impl Step for Step20 {
 }
 
 const NEAREST_COUNT: usize = 100;
+const PATH_LIMIT: Option<u8> = Some(5);
+// const PATH_LIMIT: Option<u8> = None;
 
 fn navigate_patches_to_base(
     mut surface: Surface,
@@ -88,9 +90,17 @@ fn navigate_patches_to_base(
         NearestPatchToEnd(u8), // "somehow", keep the last
     }
 
+    let mut made_paths: u8 = 0;
     for (nearest_count, nearest_entry) in nearest.iter().enumerate() {
         println!("path {} of {}", nearest_count, NEAREST_COUNT);
         let patch_start = patches.get(nearest_entry.item).unwrap();
+
+        if let Some(test) = PATH_LIMIT {
+            if test == made_paths {
+                println!("path limit");
+                break;
+            }
+        }
 
         if x_start < patch_start.x
             && x_end > patch_start.x
@@ -131,12 +141,18 @@ fn navigate_patches_to_base(
             .unwrap();
         let end = Rail::new_straight(end, RailDirection::Left);
 
+        if 1 + 1 == 23 {
+            write_rail(&mut surface, Vec::from([start, end]));
+            return surface;
+        }
+
         if let Some(path) = mori_start(&surface, start, end, params) {
             write_rail(&mut surface, path);
             params.metrics.borrow_mut().increment("path-success")
         } else {
             params.metrics.borrow_mut().increment("path-failure")
         }
+        made_paths = made_paths + 1;
     }
 
     surface

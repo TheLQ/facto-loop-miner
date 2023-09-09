@@ -118,8 +118,8 @@ fn draw_resource_exclude(img: &mut Surface, metrics: &mut Metrics, disk_patches:
                             .push(patch.corner_point_i32());
                     }
                 }
-                img.set_pixel_point_u32(Pixel::EdgeWall, point);
-                metrics.increment("resource-exclude-wall");
+                // img.set_pixel_point_u32(Pixel::EdgeWall, point);
+                // metrics.increment("resource-exclude-wall");
             } else if existing.is_resource() {
                 // resource exclude
                 img.set_pixel_point_u32(Pixel::Empty, point);

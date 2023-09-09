@@ -343,11 +343,17 @@ impl Rail {
         resource_cloud: &ResourceCloud,
         working_buffer: &mut SurfaceDiff,
     ) -> Vec<(Self, u32)> {
-        // if parents.len() > 1000 {
-        //     return Vec::new();
-        // }
+        if parents.len() > 30 {
+            return Vec::new();
+        }
+        // println!("testing {:?}", self);
 
-        METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
+        {
+            let cur = METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
+            if cur % 1_000 == 0 {
+                println!("run {}", cur);
+            }
+        }
 
         let mut res = Vec::new();
         if let Some(rail) = self
@@ -441,7 +447,8 @@ impl Rail {
                 .iter()
                 .filter_map(|v| filter_buildable_points(v, surface))
                 .flatten()
-                .map(|v| surface.xy_to_index_point_u32(v));
+                .map(|v| surface.xy_to_index_point_u32(v))
+                .collect();
 
             if working_buffer.is_positions_free(points) {
                 Some(self)
