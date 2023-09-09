@@ -40,7 +40,7 @@ impl Step for Step20 {
 }
 
 const NEAREST_COUNT: usize = 100;
-const PATH_LIMIT: Option<u8> = Some(5);
+const PATH_LIMIT: Option<u8> = Some(20);
 // const PATH_LIMIT: Option<u8> = None;
 
 fn navigate_patches_to_base(
@@ -142,7 +142,7 @@ fn navigate_patches_to_base(
         let end = Rail::new_straight(end, RailDirection::Left);
 
         if 1 + 1 == 23 {
-            write_rail(&mut surface, Vec::from([start.clone(), end.clone()]));
+            write_rail(&mut surface, &Vec::from([start.clone(), end.clone()]));
             // surface.draw_square(
             //     &Pixel::IronOre,
             //     100,
@@ -152,7 +152,7 @@ fn navigate_patches_to_base(
         }
 
         if let Some(path) = mori_start(&surface, start, end, params) {
-            write_rail(&mut surface, path);
+            write_rail(&mut surface, &path);
             params.metrics.borrow_mut().increment("path-success")
         } else {
             params.metrics.borrow_mut().increment("path-failure")

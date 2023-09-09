@@ -343,7 +343,7 @@ impl Rail {
         resource_cloud: &ResourceCloud,
         working_buffer: &mut SurfaceDiff,
     ) -> Vec<(Self, u32)> {
-        // if parents.len() > 30 {
+        // if parents.len() > 400 {
         //     return Vec::new();
         // }
         // println!("testing {:?}", self);
@@ -351,7 +351,11 @@ impl Rail {
         {
             let cur = METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
             if cur % 100_000 == 0 {
-                println!("run {}", cur);
+                println!(
+                    "successor {} spot parents {}",
+                    cur.to_formatted_string(&LOCALE),
+                    parents.len()
+                );
             }
         }
 
@@ -362,7 +366,9 @@ impl Rail {
         {
             let cost =
                 calculate_bias_for_point(RailAction::Straight, self, &rail, end, resource_cloud);
-            res.push((rail, cost))
+            if !(rail.distance(end) < 400 && rail.direction != end.direction) {
+                res.push((rail, cost))
+            }
         }
 
         if let Some(rail) = self
@@ -371,7 +377,9 @@ impl Rail {
         {
             let cost =
                 calculate_bias_for_point(RailAction::TurnLeft, self, &rail, end, resource_cloud);
-            res.push((rail, cost))
+            if !(rail.distance(end) < 400 && rail.direction != end.direction) {
+                res.push((rail, cost))
+            }
         }
         if let Some(rail) = self
             .move_right()
@@ -379,7 +387,9 @@ impl Rail {
         {
             let cost =
                 calculate_bias_for_point(RailAction::TurnRight, self, &rail, end, resource_cloud);
-            res.push((rail, cost))
+            if !(rail.distance(end) < 400 && rail.direction != end.direction) {
+                res.push((rail, cost))
+            }
         }
         // println!(
         //     "for {:?} found {}",
@@ -562,7 +572,7 @@ fn is_buildable_point_u32<'p>(surface: &Surface, point: &'p PointU32) -> Option<
     }
 }
 
-pub fn write_rail(surface: &mut Surface, path: Vec<Rail>) {
+pub fn write_rail(surface: &mut Surface, path: &Vec<Rail>) {
     let special_endpoint_pixels: Vec<PointU32> = path
         .iter()
         .map(|v| v.endpoint.to_point_u32().unwrap())
@@ -597,7 +607,7 @@ pub fn write_rail(surface: &mut Surface, path: Vec<Rail>) {
 
 #[cfg(test)]
 mod test {
-    use crate::navigator::mori::{write_rail, Rail, RailDirection, RAIL_STEP_SIZE};
+    use crate::navigator::mori::{write_rail, Rail, RailDirection, RailPoint, RAIL_STEP_SIZE};
     use crate::surface::pixel::Pixel;
     use crate::surface::surface::{PointU32, Surface};
     use opencv::prelude::*;
@@ -642,7 +652,7 @@ mod test {
         //
         path.extend(make_l_alone(origin));
         path.extend(make_r_alone(origin));
-        write_rail(&mut surface, path);
+        write_rail(&mut surface, &path);
 
         surface.save(Path::new("work/test"))
     }
@@ -882,5 +892,149 @@ mod test {
         surface.set_buffer_from_cv(img);
 
         surface.save(Path::new("work/test2"))
+    }
+
+    #[test]
+    fn closed_circle_left_test() {
+        let mut surface = Surface::new(100, 100);
+        let start = PointU32 { x: 50, y: 50 };
+
+        let mut rail = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
+        rail.push(rail.last().unwrap().move_left().unwrap());
+        rail.push(rail.last().unwrap().move_left().unwrap());
+        rail.push(rail.last().unwrap().move_left().unwrap());
+        rail.push(rail.last().unwrap().move_left().unwrap());
+        assert_eq_rail(
+            rail.first().unwrap(),
+            rail.last().unwrap(),
+            &mut surface,
+            &rail,
+            |r| r.x + r.y,
+        );
+    }
+
+    #[test]
+    fn closed_circle_right_test() {
+        let mut surface = Surface::new(100, 100);
+        let start = PointU32 { x: 50, y: 50 };
+
+        // we are on X going up and down Y for turns
+        let mut rail = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
+        rail.push(rail.last().unwrap().move_right().unwrap());
+        rail.push(rail.last().unwrap().move_right().unwrap());
+        rail.push(rail.last().unwrap().move_right().unwrap());
+        rail.push(rail.last().unwrap().move_right().unwrap());
+        assert_eq_rail(
+            rail.first().unwrap(),
+            rail.last().unwrap(),
+            &mut surface,
+            &rail,
+            |r| r.y,
+        );
+    }
+
+    #[test]
+    fn return_to_center_line_right_test() {
+        let mut surface = Surface::new(100, 100);
+        let start = PointU32 { x: 30, y: 50 };
+
+        let mut rail = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
+        rail.push(rail.last().unwrap().move_right().unwrap());
+        rail.push(rail.last().unwrap().move_left().unwrap());
+        rail.push(rail.last().unwrap().move_left().unwrap());
+        rail.push(rail.last().unwrap().move_right().unwrap());
+        assert_eq_rail(
+            rail.first().unwrap(),
+            rail.last().unwrap(),
+            &mut surface,
+            &rail,
+            |r| r.y,
+        );
+    }
+
+    #[test]
+    fn return_to_center_line_left_test() {
+        let mut surface = Surface::new(100, 100);
+        let start = PointU32 { x: 30, y: 50 };
+
+        let mut rail: Vec<Rail> = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
+        rail.push(rail.last().unwrap().move_left().unwrap());
+        rail.push(rail.last().unwrap().move_right().unwrap());
+        rail.push(rail.last().unwrap().move_right().unwrap());
+        rail.push(rail.last().unwrap().move_left().unwrap());
+        assert_eq_rail(
+            rail.first().unwrap(),
+            rail.last().unwrap(),
+            &mut surface,
+            &rail,
+            |r| r.y,
+        );
+    }
+
+    #[test]
+    fn centerline_vs_left_right_distance_test() {
+        let mut surface = Surface::new(100, 100);
+        let start = PointU32 { x: 30, y: 50 };
+
+        let mut wavy_rail: Vec<Rail> = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
+        wavy_rail.push(wavy_rail.last().unwrap().move_left().unwrap());
+        wavy_rail.push(wavy_rail.last().unwrap().move_right().unwrap());
+        wavy_rail.push(wavy_rail.last().unwrap().move_right().unwrap());
+        wavy_rail.push(wavy_rail.last().unwrap().move_left().unwrap());
+
+        let mut straight_rail: Vec<Rail> = Vec::from([Rail::new_straight(
+            PointU32 {
+                x: start.x,
+                y: start.y - 20,
+            },
+            RailDirection::Right,
+        )]);
+        straight_rail.push(straight_rail.last().unwrap().move_forward().unwrap());
+        straight_rail.push(straight_rail.last().unwrap().move_forward().unwrap());
+        straight_rail.push(straight_rail.last().unwrap().move_forward().unwrap());
+        straight_rail.push(straight_rail.last().unwrap().move_forward().unwrap());
+
+        let mut all_rail = Vec::new();
+        wavy_rail.clone().into_iter().for_each(|v| all_rail.push(v));
+        straight_rail
+            .clone()
+            .into_iter()
+            .for_each(|v| all_rail.push(v));
+
+        assert_eq_rail(
+            straight_rail.last().unwrap(),
+            wavy_rail.last().unwrap(),
+            &mut surface,
+            &all_rail,
+            |r| r.x,
+        );
+
+        for i in 0..wavy_rail.len() {
+            assert_eq_rail(
+                &straight_rail[i],
+                &wavy_rail[i],
+                &mut surface,
+                &all_rail,
+                |r| r.x,
+            );
+        }
+    }
+
+    fn assert_eq_rail<T>(a: &Rail, b: &Rail, surface: &mut Surface, all_rail: &Vec<Rail>, test: T)
+    where
+        T: Fn(&RailPoint) -> i32,
+    {
+        let compare_a = test(&a.endpoint);
+        let compare_b = test(&b.endpoint);
+        if compare_a != compare_b {
+            write_rail(surface, all_rail);
+            surface.save(Path::new("work/test4"));
+
+            assert_eq!(
+                compare_a, compare_b,
+                "point left {:?} right {:?}",
+                a.endpoint, b.endpoint
+            );
+        }
     }
 }

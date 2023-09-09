@@ -2,9 +2,11 @@ use crate::navigator::mori::Rail;
 use crate::navigator::resource_cloud::ResourceCloud;
 use kiddo::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
+use num_traits::Pow;
 
 const DIRECTION_BIAS_EFFECT: f32 = 2f32;
 const TURN_BIAS_EFFECT: f32 = 5f32;
+const ANTI_WRONG_BIAS_EFFECT: f32 = 10f32;
 const RESOURCE_BIAS_EFFECT: f32 = 20f32;
 
 pub enum RailAction {
@@ -20,12 +22,25 @@ pub fn calculate_bias_for_point(
     end: &Rail,
     resource_cloud: &ResourceCloud,
 ) -> u32 {
-    let cost_unit = next.distance(end) as f32;
+    let distance = next.distance(end) as f32;
+    let cost_unit = 1f32;
     // let cost_unit = 100f32;
 
     // Encourage going in the direction of origin.
     let direction_bias = if start.direction == end.direction {
         cost_unit * DIRECTION_BIAS_EFFECT
+    } else {
+        0f32
+    };
+
+    // block it closer to base
+    let anti_wrong = if distance < 400.0 {
+        if start.direction != end.direction {
+            0f32
+        } else {
+            let v = cost_unit * ANTI_WRONG_BIAS_EFFECT;
+            v
+        }
     } else {
         0f32
     };
@@ -48,6 +63,6 @@ pub fn calculate_bias_for_point(
         RailAction::Straight => 0f32,
     };
 
-    let total_cost = direction_bias + resource_distance_bias + turn_bias;
+    let total_cost = direction_bias + resource_distance_bias + turn_bias + anti_wrong;
     total_cost as u32
 }
