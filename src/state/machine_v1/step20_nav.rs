@@ -142,7 +142,12 @@ fn navigate_patches_to_base(
         let end = Rail::new_straight(end, RailDirection::Left);
 
         if 1 + 1 == 23 {
-            write_rail(&mut surface, Vec::from([start, end]));
+            write_rail(&mut surface, Vec::from([start.clone(), end.clone()]));
+            // surface.draw_square(
+            //     &Pixel::IronOre,
+            //     100,
+            //     &start.endpoint.to_point_u32().unwrap(),
+            // );
             return surface;
         }
 

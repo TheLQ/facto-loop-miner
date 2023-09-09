@@ -343,14 +343,14 @@ impl Rail {
         resource_cloud: &ResourceCloud,
         working_buffer: &mut SurfaceDiff,
     ) -> Vec<(Self, u32)> {
-        if parents.len() > 30 {
-            return Vec::new();
-        }
+        // if parents.len() > 30 {
+        //     return Vec::new();
+        // }
         // println!("testing {:?}", self);
 
         {
             let cur = METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
-            if cur % 1_000 == 0 {
+            if cur % 100_000 == 0 {
                 println!("run {}", cur);
             }
         }
@@ -394,7 +394,7 @@ impl Rail {
         if self.endpoint.x < 4000 {
             None
         } else {
-            match 3 {
+            match 1 {
                 1 => self.into_buildable_sequential(surface),
                 2 => self.into_buildable_parallel(surface),
                 3 => self.into_buildable_avx(surface, working_buffer),
@@ -410,7 +410,7 @@ impl Rail {
                 .flatten()
                 .map(|game_pont| is_buildable_point_u32_take(surface, game_pont))
                 .reduce(|total, is_buildable| total.and(is_buildable))
-                .unwrap()
+                .flatten()
                 .map(|_| self)
         } else {
             None
@@ -507,7 +507,7 @@ impl RailPoint {
         self.x < 0 || self.y < 0
     }
 
-    fn to_point_u32(&self) -> Option<PointU32> {
+    pub fn to_point_u32(&self) -> Option<PointU32> {
         if self.is_negative() {
             None
         } else {
