@@ -1,5 +1,6 @@
 use crate::navigator::mori_bias::{calculate_bias_for_point, RailAction};
 use crate::navigator::resource_cloud::ResourceCloud;
+use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::StepParams;
 use crate::surface::patch::DiskPatch;
 use crate::surface::pixel::Pixel;
@@ -38,7 +39,7 @@ pub fn mori_start(
     let patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
     let resource_cloud = ResourceCloud::from_patches(&patches);
 
-    let mut working_buffer = surface.get_buffer_as_m256();
+    let mut working_buffer = surface.surface_diff();
 
     println!("Mori start {:?} end {:?}", start, end);
     let pathfind = astar_mori(
@@ -250,13 +251,14 @@ impl Rail {
         let mut next = self.clone();
         next = next.move_force_rotate_clockwise(2);
         // TODO
-        while let Some(next_rail) = next
-            .move_forward()
-            .and_then(|v| v.into_buildable(surface, unimplemented!()))
-        {
-            next = next_rail;
-            counter = counter + 0;
-        }
+        // while let Some(next_rail) = next
+        //     .move_forward()
+        //     .and_then(|v| v.into_buildable(surface, unimplemented!()))
+        // {
+        //     next = next_rail;
+        //     counter = counter + 0;
+        // }
+        next = next.move_forward().unwrap();
         next = next.move_force_rotate_clockwise(2);
         // manual 1, may be unnessesary
         next = next.move_forward().unwrap();
@@ -338,7 +340,7 @@ impl Rail {
         surface: &Surface,
         end: &Rail,
         resource_cloud: &ResourceCloud,
-        working_buffer: &mut Vec<__m256i>,
+        working_buffer: &mut SurfaceDiff,
     ) -> Vec<(Self, u32)> {
         // if parents.len() > 1000 {
         //     return Vec::new();
@@ -380,12 +382,12 @@ impl Rail {
         res
     }
 
-    fn into_buildable(self, surface: &Surface, working_buffer: &mut Vec<__m256i>) -> Option<Self> {
-        const size: u32 = 0;
+    fn into_buildable(self, surface: &Surface, working_buffer: &mut SurfaceDiff) -> Option<Self> {
+        const SIZE: u32 = 0;
         if self.endpoint.x < 4000 {
             None
         } else {
-            match 1 {
+            match 3 {
                 1 => self.into_buildable_sequential(surface),
                 2 => self.into_buildable_parallel(surface),
                 3 => self.into_buildable_avx(surface, working_buffer),
@@ -397,7 +399,7 @@ impl Rail {
     fn into_buildable_sequential(self, surface: &Surface) -> Option<Self> {
         if let Some(area) = self.area() {
             area.iter()
-                .filter_map(map_buildable_points)
+                .filter_map(|v| filter_buildable_points(v, surface))
                 .flatten()
                 .map(|game_pont| is_buildable_point_u32_take(surface, game_pont))
                 .reduce(|total, is_buildable| total.and(is_buildable))
@@ -413,7 +415,7 @@ impl Rail {
         if let Some(area) = self.area() {
             let area_buildable_opt: Vec<Option<PointU32>> = area
                 .par_iter()
-                .filter_map(map_buildable_points)
+                .filter_map(|v| filter_buildable_points(v, surface))
                 .flat_map_iter(|v| v)
                 .map(|game_pont| is_buildable_point_u32_take(surface, game_pont))
                 .collect();
@@ -431,23 +433,28 @@ impl Rail {
     fn into_buildable_avx(
         self,
         surface: &Surface,
-        working_buffer: &mut Vec<__m256i>,
+        working_buffer: &mut SurfaceDiff,
     ) -> Option<Self> {
         if let Some(area) = self.area() {
             let points = area
                 .iter()
-                .filter_map(map_buildable_points)
+                .filter_map(|v| filter_buildable_points(v, surface))
                 .flatten()
-                .collect();
-            is_buildable_point_u32_vec_fast(surface, points, working_buffer).map(|_| self)
+                .map(|v| surface.xy_to_index_point_u32(v));
+
+            if working_buffer.diff_positions(points) {
+                Some(self)
+            } else {
+                None
+            }
         } else {
             None
         }
     }
 }
 
-fn map_buildable_points<'r>(rail: &RailPoint) -> Option<Vec<PointU32>> {
-    let game_points: Vec<PointU32> = rail.to_game_points();
+fn filter_buildable_points<'r>(rail: &RailPoint, surface: &Surface) -> Option<Vec<PointU32>> {
+    let game_points: Vec<PointU32> = rail.to_game_points(surface);
     if game_points.len() == 4 {
         Some(game_points)
     } else {
@@ -463,7 +470,7 @@ impl RailPoint {
         next
     }
 
-    fn to_game_points(&self) -> Vec<PointU32> {
+    fn to_game_points(&self, surface: &Surface) -> Vec<PointU32> {
         [
             self.clone(),
             {
@@ -484,8 +491,7 @@ impl RailPoint {
             },
         ]
         .iter()
-        .map(|v| v.to_point_u32())
-        .filter_map(|v| v)
+        .filter_map(|v| v.to_point_u32_surface(surface))
         .collect()
     }
 
@@ -502,6 +508,16 @@ impl RailPoint {
                 y: self.y.try_into().unwrap(),
             })
         }
+    }
+
+    fn to_point_u32_surface(&self, surface: &Surface) -> Option<PointU32> {
+        self.to_point_u32().and_then(|p| {
+            if p.x < surface.width && p.y < surface.height {
+                Some(p)
+            } else {
+                None
+            }
+        })
     }
 
     pub fn from_point_u32(point: PointU32) -> Self {
@@ -597,7 +613,7 @@ pub fn write_rail(surface: &mut Surface, path: Vec<Rail>) {
         if let Some(path_area) = path_rail.area() {
             for path_area_rail_point in path_area {
                 total_rail = total_rail + 1;
-                for path_area_game_point in path_area_rail_point.to_game_points() {
+                for path_area_game_point in path_area_rail_point.to_game_points(surface) {
                     let mut new_pixel = match surface.get_pixel_point_u32(&path_area_game_point) {
                         Pixel::Rail => {
                             println!(
@@ -622,14 +638,9 @@ pub fn write_rail(surface: &mut Surface, path: Vec<Rail>) {
 #[cfg(test)]
 mod test {
     use crate::navigator::mori::{write_rail, Rail, RailDirection, RAIL_STEP_SIZE};
-    use crate::opencv::load_raw_image_from_slice;
-    use crate::surface::patch::{DiskPatch, Patch};
     use crate::surface::pixel::Pixel;
     use crate::surface::surface::{PointU32, Surface};
-    use opencv::core::{Point, Range, Scalar, Vec2b, Vector};
-    use opencv::imgcodecs::imwrite;
     use opencv::prelude::*;
-    use std::mem::transmute;
     use std::path::Path;
 
     // #[test]

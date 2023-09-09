@@ -6,6 +6,7 @@ use crate::PixelKdTree;
 use kiddo::KdTree;
 use opencv::core::{Point, Rect, Rect_};
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
@@ -52,7 +53,7 @@ impl DiskPatch {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Patch {
     pub x: i32,
     pub y: i32,
@@ -122,6 +123,20 @@ impl From<&Rect_<i32>> for Patch {
             width: rect.width,
             height: rect.height,
         }
+    }
+}
+
+impl PartialOrd<Self> for Patch {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let a = self.x as u64 * self.y as u64 * self.width as u64 * self.height as u64;
+        let b = other.x as u64 * other.y as u64 * other.width as u64 * self.height as u64;
+        Some(a.cmp(&b))
+    }
+}
+
+impl Ord for Patch {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 

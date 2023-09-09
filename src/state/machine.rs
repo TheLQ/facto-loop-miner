@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 type StepBox = Box<dyn Step>;
+pub const DEATH_STEP_NAME: &str = "step99-death";
 
 pub struct Machine {
     pub(crate) steps: Vec<StepBox>,
@@ -38,6 +39,10 @@ impl Machine {
         let mut step_history_out_dirs = Vec::new();
         for step in &self.steps {
             println!("=== {}", step.name());
+            if step.name() == DEATH_STEP_NAME {
+                println!("RIP");
+                break;
+            }
 
             let step_out_dir = output_dir.join(step.name());
             if !step_out_dir.is_dir() {

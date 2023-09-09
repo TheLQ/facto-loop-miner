@@ -153,6 +153,7 @@ fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {
     current.into()
 }
 
+#[allow(unused)]
 fn right_mid_edge_point(surface: &Surface) -> Point {
     Point {
         x: surface.width as i32,
@@ -160,10 +161,12 @@ fn right_mid_edge_point(surface: &Surface) -> Point {
     }
 }
 
+#[allow(unused)]
 fn base_bottom_right_corner(surface: &Surface) -> Point {
     Point { x: 4700, y: 4700 }
 }
 
+#[allow(unused)]
 fn base_resource_bottom_right_corner(surface: &Surface) -> Point {
     Point { x: 5300, y: 5300 }
 }

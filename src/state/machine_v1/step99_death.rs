@@ -1,4 +1,4 @@
-use crate::state::machine::{Step, StepParams};
+use crate::state::machine::{Step, StepParams, DEATH_STEP_NAME};
 use std::process::exit;
 
 pub struct Step99Death {}
@@ -11,10 +11,10 @@ impl Step99Death {
 
 impl Step for Step99Death {
     fn name(&self) -> String {
-        "step99-death".to_string()
+        DEATH_STEP_NAME.to_string()
     }
 
     fn transformer(&self, _: StepParams) {
-        exit(0);
+        println!("UNEXPECTED DEATH RUN");
     }
 }

@@ -7,6 +7,7 @@ use crate::surface::surface::{PointU32, Surface};
 use crate::TILES_PER_CHUNK;
 use opencv::core::Point;
 use std::collections::HashMap;
+use std::ops::{Add, Mul};
 
 pub struct Step10 {}
 
@@ -132,7 +133,15 @@ fn draw_resource_exclude(img: &mut Surface, metrics: &mut Metrics, disk_patches:
         }
     }
 
-    for (resource, patches) in patches_to_remove {
+    for (resource, mut patches) in patches_to_remove.into_iter() {
+        patches.sort_by(|a, b| {
+            calculate_index(img.width as i32, a.x, a.y).cmp(&calculate_index(
+                img.width as i32,
+                b.x,
+                b.y,
+            ))
+        });
+        patches.reverse();
         for patch in patches {
             let vec = disk_patches.patches.get_mut(&resource).unwrap();
             let before_len = vec.len();
@@ -144,4 +153,11 @@ fn draw_resource_exclude(img: &mut Surface, metrics: &mut Metrics, disk_patches:
             }
         }
     }
+}
+
+fn calculate_index<N>(width: N, x: N, y: N) -> N
+where
+    N: Mul<Output = N> + Add<Output = N>,
+{
+    width * y + x
 }

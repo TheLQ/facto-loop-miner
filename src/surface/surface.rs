@@ -1,3 +1,5 @@
+use crate::simd::{apply_any_u8_iter_to_m256_buffer, m256_zero_vec, SSE_BITS};
+use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::search_step_history_dirs;
 use crate::surface::easybox::EasyBox;
 use crate::surface::pixel::Pixel;
@@ -31,7 +33,7 @@ pub struct Surface {
     #[serde(skip)]
     pub buffer: Vec<Pixel>,
     #[serde(skip)]
-    pub occupied_pixels: Vec<__m256i>,
+    pub collision_mask: Vec<__m256i>,
 }
 
 const NAME_PREFIX: &str = "surface-";
@@ -47,7 +49,7 @@ impl Surface {
             width,
             height,
             area_box: EasyBox::default(),
-            occupied_pixels: Vec::new(),
+            collision_mask: Vec::new(),
         }
     }
 
@@ -110,6 +112,10 @@ impl Surface {
         } else {
             true
         }
+    }
+
+    pub fn xy_to_index_point_u32(&self, point: PointU32) -> usize {
+        self.xy_to_index(point.x, point.y)
     }
 
     pub fn xy_to_index(&self, x: u32, y: u32) -> usize {
@@ -241,8 +247,8 @@ impl Surface {
         self.buffer = Vec::from(buf);
     }
 
-    pub fn get_buffer_as_m256(&self) -> Vec<__m256i> {
-        pixel_u8_iter_to_m256(&self.buffer)
+    pub fn surface_diff(&self) -> SurfaceDiff {
+        SurfaceDiff::from_surface(self)
     }
 
     pub fn crop(&self, crop_radius_from_center: i32) -> Self {
@@ -309,7 +315,7 @@ impl Surface {
             width: cropped.cols() as u32,
             height: cropped.rows() as u32,
             area_box: crop_box,
-            occupied_pixels: Vec::new(),
+            collision_mask: Vec::new(),
         };
         surface.set_buffer_from_cv(cropped);
 

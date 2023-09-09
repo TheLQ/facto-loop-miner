@@ -3,8 +3,7 @@ use crate::LOCALE;
 use num_format::ToFormattedString;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::BufReader;
+use std::fs::read;
 use std::path::Path;
 use std::time::Instant;
 
@@ -99,8 +98,14 @@ where
     T: DeserializeOwned,
 {
     println!("Reading entity data {} ...", path.display());
-    let file = File::open(path).unwrap();
-    let buf_reader = BufReader::new(file);
-    let result = simd_json::serde::from_reader(buf_reader).unwrap();
+    // let file = File::open(path).unwrap();
+    // let buf_reader = BufReader::new(file);
+    // let result = simd_json::serde::from_reader(buf_reader).unwrap();
+
+    // nope, slice is mutated
+    // let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
+
+    let mut raw = read(path).unwrap();
+    let result = simd_json::serde::from_slice(raw.as_mut_slice()).unwrap();
     result
 }
