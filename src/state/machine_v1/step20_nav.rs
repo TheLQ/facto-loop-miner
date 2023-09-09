@@ -40,7 +40,7 @@ impl Step for Step20 {
 }
 
 const NEAREST_COUNT: usize = 100;
-const PATH_LIMIT: Option<u8> = Some(20);
+const PATH_LIMIT: Option<u8> = Some(10);
 // const PATH_LIMIT: Option<u8> = None;
 
 fn navigate_patches_to_base(
@@ -92,7 +92,10 @@ fn navigate_patches_to_base(
 
     let mut made_paths: u8 = 0;
     for (nearest_count, nearest_entry) in nearest.iter().enumerate() {
-        println!("path {} of {}", nearest_count, NEAREST_COUNT);
+        println!(
+            "path {} of {} - actually made {} max {:?}",
+            nearest_count, NEAREST_COUNT, made_paths, PATH_LIMIT
+        );
         let patch_start = patches.get(nearest_entry.item).unwrap();
 
         if let Some(test) = PATH_LIMIT {

@@ -472,7 +472,38 @@ impl Rail {
 }
 
 fn filter_buildable_points<'r>(rail: &RailPoint, surface: &Surface) -> Option<Vec<PointU32>> {
-    let game_points: Vec<PointU32> = rail.to_game_points(surface);
+    // let game_points: Vec<PointU32> = rail.to_game_points(surface);
+    // if game_points.len() == 4 {
+    //     Some(game_points)
+    // } else {
+    //     None
+    // }
+    let mut game_points: Vec<PointU32> = Vec::new();
+
+    let v = rail;
+    if let Some(v) = v.to_point_u32_surface(surface) {
+        game_points.push(v);
+    }
+
+    let mut v = rail.clone();
+    v.x = v.x - 1;
+    if let Some(v) = v.to_point_u32_surface(surface) {
+        game_points.push(v);
+    }
+
+    let mut v = rail.clone();
+    v.y = v.y - 1;
+    if let Some(v) = v.to_point_u32_surface(surface) {
+        game_points.push(v);
+    }
+
+    let mut v = rail.clone();
+    v.x = v.x - 1;
+    v.y = v.y - 1;
+    if let Some(v) = v.to_point_u32_surface(surface) {
+        game_points.push(v);
+    }
+
     if game_points.len() == 4 {
         Some(game_points)
     } else {

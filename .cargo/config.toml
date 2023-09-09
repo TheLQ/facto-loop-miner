@@ -9,5 +9,5 @@ rustflags = ["-C", "target-feature=+simd128"]
 rustflags = ["-C", "target-feature=+simd128"]
 
 
-[profile.release]
-debug = true
+#[profile.release]
+#debug = true

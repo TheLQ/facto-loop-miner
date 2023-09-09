@@ -33,17 +33,17 @@ pub fn calculate_bias_for_point(
         0f32
     };
 
-    // block it closer to base
-    let anti_wrong = if distance < 400.0 {
-        if start.direction != end.direction {
-            0f32
-        } else {
-            let v = cost_unit * ANTI_WRONG_BIAS_EFFECT;
-            v
-        }
-    } else {
-        0f32
-    };
+    // // block it closer to base
+    // let anti_wrong = if distance < 400.0 {
+    //     if start.direction != end.direction {
+    //         0f32
+    //     } else {
+    //         let v = cost_unit * ANTI_WRONG_BIAS_EFFECT;
+    //         v
+    //     }
+    // } else {
+    //     0f32
+    // };
 
     // Avoid resource patches
     let closest_resources: Vec<Neighbour<f32, usize>> = resource_cloud.kdtree.within_unsorted(
@@ -63,6 +63,6 @@ pub fn calculate_bias_for_point(
         RailAction::Straight => 0f32,
     };
 
-    let total_cost = direction_bias + resource_distance_bias + turn_bias + anti_wrong;
+    let total_cost = direction_bias + resource_distance_bias + turn_bias;
     total_cost as u32
 }
