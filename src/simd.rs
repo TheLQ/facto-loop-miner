@@ -15,6 +15,7 @@
 use bitvec::bitvec;
 use bitvec::slice::BitSlice;
 use bitvec::vec::BitVec;
+use itertools::Itertools;
 use std::arch::x86_64::{
     __m128i, __m256i, _mm256_and_si256, _mm256_cmpeq_epi64, _mm256_load_si256, _mm256_loadu_si256,
     _mm256_or_si256, _mm256_set_epi64x, _mm256_setzero_si256, _mm256_slli_si256, _mm256_srli_si256,
@@ -80,7 +81,7 @@ pub fn compare_m256_count(
                     + _popcnt64(matches_x4[0]) as u32
                     + _popcnt64(matches_x4[1]) as u32
                     + _popcnt64(matches_x4[2]) as u32
-                    + _popcnt64(matches_x4[5]) as u32;
+                    + _popcnt64(matches_x4[3]) as u32;
             },
             (None, None) => break,
         }
@@ -89,7 +90,7 @@ pub fn compare_m256_count(
     total
 }
 
-pub fn compare_m256_bool<'a>(
+pub fn any_bit_equal_m256_iter_bool<'a>(
     mut a: impl Iterator<Item = &'a SseUnit>,
     mut b: impl Iterator<Item = &'a SseUnit>,
 ) -> bool {
@@ -101,14 +102,27 @@ pub fn compare_m256_bool<'a>(
             (Some(a), Some(b)) => unsafe {
                 let matches = _mm256_and_si256(*a, *b);
                 total = _mm256_or_si256(matches, total);
+                // println!(
+                //     "{}{}\n{}{}\n{}{}\n{}{}",
+                //     "a       ",
+                //     format_m256(a.clone()),
+                //     "b       ",
+                //     format_m256(b.clone()),
+                //     "matches ",
+                //     format_m256(matches.clone()),
+                //     "total   ",
+                //     format_m256(total.clone())
+                // );
             },
             (None, None) => break,
         }
     }
 
     // Does `bits & 0`, returning 1 if all = 0
-    let compare = unsafe { _mm256_testz_si256(total, m256_zero()) };
-    compare == 1
+    // let and_is_zero = unsafe { _mm256_testz_si256(total, m256_zero()) };
+    // and_is_zero == 1
+    let parts: i64x4 = total.into();
+    (parts[0] + parts[1] + parts[2] + parts[3]) != 0
 }
 
 fn create_flip(count: usize) -> SseUnit {
@@ -156,6 +170,11 @@ fn to_bitvec() -> SseUnit {
 /// __m256i = [u64; USIZE_COUNT_M256]
 const USIZE_COUNT_M256: usize = 4;
 
+fn m256_into_bitvec(input: __m256i) -> BitVec {
+    let simd_as_slice = unsafe { m256_into_slice_usize(input) };
+    BitVec::from_slice(&simd_as_slice)
+}
+
 #[target_feature(enable = "avx2")]
 unsafe fn m256_into_slice_usize(input: __m256i) -> [usize; 4] {
     let mut as_64 = [0u64; USIZE_COUNT_M256];
@@ -176,10 +195,27 @@ fn bitvec_into_m256(input: BitVec) -> __m256i {
     unsafe { _mm256_loadu_si256(as_64.as_ptr() as *mut __m256i) }
 }
 
+fn format_m256(input: __m256i) -> String {
+    let input: i64x4 = input.into();
+    format!(
+        "{:0>32}{:0>32}{:0>32}{:0>32}",
+        format_i64(input[3]),
+        format_i64(input[2]),
+        format_i64(input[1]),
+        format_i64(input[0])
+    )
+}
+
+fn format_i64(i: i64) -> String {
+    format!("{:b}", i)
+}
+
 #[cfg(test)]
 mod test {
     use crate::simd::{
-        bitslice_popcnt, bitvec_for_m256, bitvec_into_m256, create_flip, m256_into_slice_usize,
+        apply_any_u8_iter_to_m256_buffer, apply_positions_iter_to_m256_buffer, bitslice_popcnt,
+        bitvec_for_m256, bitvec_into_m256, compare_m256_count, create_flip, format_m256,
+        m256_into_bitvec, m256_into_slice_usize, m256_zero, m256_zero_vec,
     };
     use bitvec::order::Lsb0;
     use bitvec::prelude::*;
@@ -187,12 +223,11 @@ mod test {
 
     // probably needed...
     #[test]
-    pub fn flip_basic() {
+    fn flip_basic() {
         let test_value = 5;
 
-        let simd = create_flip(test_value);
-        let simd_as_slice = unsafe { m256_into_slice_usize(simd) };
-        let simd_bitvec: BitVec = BitVec::from_slice(&simd_as_slice);
+        let simd_raw = create_flip(test_value);
+        let simd_bitvec = m256_into_bitvec(simd_raw);
         let simd_popcnt = bitslice_popcnt(&simd_bitvec);
 
         let mut expected = bitvec_for_m256();
@@ -207,7 +242,43 @@ mod test {
     }
 
     #[test]
-    pub fn from_into_test() {
+    fn positions_test() {
+        let mut actual_buffer = m256_zero_vec(1);
+        apply_positions_iter_to_m256_buffer([5usize, 10].into_iter(), &mut actual_buffer);
+        let actual = m256_into_bitvec(actual_buffer[0]);
+
+        let mut expected = bitvec_for_m256();
+        expected.set(5, true);
+        expected.set(10, true);
+
+        assert_eq!(
+            expected, actual,
+            "Bit compare failed. left = expected, right = actual"
+        );
+    }
+
+    #[test]
+    fn flip_test() {
+        let mut actual_buffer = vec![create_flip(3)];
+        apply_any_u8_iter_to_m256_buffer(
+            [0, 0, 0, 0, 0, 5u8, 0, 0, 0, 0, 10].iter(),
+            &mut actual_buffer,
+        );
+        let actual = m256_into_bitvec(actual_buffer[0]);
+
+        let mut expected = bitvec_for_m256();
+        expected.set(3, true);
+        expected.set(5, true);
+        expected.set(10, true);
+
+        assert_eq!(
+            expected, actual,
+            "Bit compare failed. left = expected, right = actual"
+        );
+    }
+
+    #[test]
+    fn bitbec_from_into_test() {
         let mut input = bitvec_for_m256();
         input.set(5, true);
         input.set(10, true);
@@ -217,6 +288,45 @@ mod test {
 
         let res = BitVec::<usize, Lsb0>::from_slice(&into_bitvec_raw);
         assert_eq!(input, res);
+    }
+
+    #[test]
+    fn compare_test() {
+        let mut input = bitvec_for_m256();
+        input.set(50, true);
+        input.set(100, true);
+        input.set(150, true);
+        input.set(200, true);
+        input.set(250, true);
+
+        let right_input = input.clone();
+
+        // should be ignored
+        input.set(51, true);
+        input.set(101, true);
+        input.set(151, true);
+        input.set(201, true);
+        input.set(251, true);
+
+        let count = compare_m256_count(
+            [bitvec_into_m256(input)].into_iter(),
+            [bitvec_into_m256(right_input)].into_iter(),
+        );
+        assert_eq!(5, count);
+    }
+
+    #[test]
+    fn format_m256_test() {
+        let formatted = format_m256(create_flip(4));
+        assert_eq!(
+            formatted
+                .chars()
+                .nth(formatted.chars().count() - 5)
+                .unwrap(),
+            '1',
+            "raw {}",
+            formatted
+        );
     }
 }
 

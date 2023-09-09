@@ -243,32 +243,33 @@ impl Rail {
         next
     }
 
-    #[warn(unreachable_code)]
-    pub fn move_backwards_toward_water(&self, surface: &Surface) -> Self {
+    pub fn move_backwards_toward_water(
+        &self,
+        surface: &Surface,
+        working_buffer: &mut SurfaceDiff,
+    ) -> Self {
         // // come in as far away as possible
         // // optimize area around base
         let mut counter = 0;
         let mut next = self.clone();
         next = next.move_force_rotate_clockwise(2);
         // TODO
-        // while let Some(next_rail) = next
-        //     .move_forward()
-        //     .and_then(|v| v.into_buildable(surface, unimplemented!()))
-        // {
-        //     next = next_rail;
-        //     counter = counter + 0;
-        // }
-        next = next.move_forward().unwrap();
+        loop {
+            let next_rail = next.move_force_forward(1);
+            if let Some(next_rail) = next_rail.into_buildable(surface, working_buffer) {
+                next = next_rail;
+            } else {
+                break;
+            }
+        }
+        // point back in original direction
         next = next.move_force_rotate_clockwise(2);
-        // manual 1, may be unnessesary
+        // back away from water with a full step
         next = next.move_forward().unwrap();
+        // full step again for spacing (eg in a cove)
         next = next.move_forward().unwrap();
-        // todo: this isn't needed anymore?
-        // for _ in 0..RAIL_STEP_SIZE {
-        //     new = new.move_forward().unwrap();
-        // }
 
-        println!("moves {} from {:?} to {:?}", counter, self, next);
+        println!("move backwards {} from {:?} to {:?}", counter, self, next);
 
         next
     }
@@ -442,7 +443,7 @@ impl Rail {
                 .flatten()
                 .map(|v| surface.xy_to_index_point_u32(v));
 
-            if working_buffer.diff_positions(points) {
+            if working_buffer.is_positions_free(points) {
                 Some(self)
             } else {
                 None
@@ -526,54 +527,6 @@ impl RailPoint {
             y: point.y as i32,
         }
     }
-}
-
-fn is_buildable_point_u32_vec_fast(
-    surface: &Surface,
-    points: Vec<PointU32>,
-    working_buffer: &mut Vec<__m256i>,
-) -> Option<()> {
-    None
-    // let mut point_indexes = Vec::new();
-    // for point in points {
-    //     if !surface.xy_in_range_point_u32(&point) {
-    //         return None;
-    //     }
-    //     let i = surface.xy_to_index(point.x, point.y);
-    //     point_indexes.push(i);
-    // }
-    //
-    // apply_buffer_to_m256_vec()
-    //
-    //
-    //
-    //     let chunk_bitset = working_buffer[(i % SSE_BITS) / (SSE_BITS)];
-    //     *chunk_bitset = chunk_bitset | (0b1000000 >> ())
-    //
-    //     match surface.buffer.get(i) {
-    //         Some(Pixel::Empty) => 1u8,
-    //         Some(_existing) => 0u8,
-    //         None => {
-    //             // println!("blocked at {:?} by {:?}", &position, existing);
-    //             0u8
-    //         }
-    //     };
-    //     scratch_surface_u8[i] = value;
-    // }
-    //
-    // // todo: _mm256_cmpgt_
-    //
-    // for _chunk in point.into_iter().array_chunks() {
-    //     let chunk: [PointU32; 32] = _chunk;
-    // }
-    //
-    // match surface.get_pixel_point_u32(&point) {
-    //     Pixel::Empty => Some(point),
-    //     _existing => {
-    //         // println!("blocked at {:?} by {:?}", &position, existing);
-    //         None
-    //     }
-    // }
 }
 
 fn is_buildable_point_u32_take(surface: &Surface, point: PointU32) -> Option<PointU32> {

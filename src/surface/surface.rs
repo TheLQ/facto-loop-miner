@@ -242,8 +242,12 @@ impl Surface {
         Mat::from_slice_rows_cols(&raw_buffer, self.height as usize, self.width as usize).unwrap()
     }
 
+    pub fn slice_u8_to_pixel(img: &[u8]) -> &[Pixel] {
+        unsafe { transmute(img) }
+    }
+
     pub fn set_buffer_from_cv(&mut self, img: Mat) {
-        let buf: &[Pixel] = unsafe { transmute(img.data_bytes().unwrap()) };
+        let buf: &[Pixel] = Surface::slice_u8_to_pixel(img.data_bytes().unwrap());
         self.buffer = Vec::from(buf);
     }
 
