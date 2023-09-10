@@ -1,28 +1,54 @@
 # LoopMiner - Factorio Map Generator Mod
 
-Generate massive rail loop networks between mining outposts and bases.
+Generate massive rail loop networks between mining outposts and base.
 Jump start your base with effectively unlimited throughput ore collection
 on _vanilla_ maps.
 
-Train loops avoid bottleneck problems with other designs at scale. 
-Cost is enormous, repetitive building time. 
-Instead automation easily solves it for us.
+A loop of unintersected rail avoids bottleneck problems in other designs at scale. 
+Cost is significant, repetitive spaghetti building time. 
+Automation makes this feasible.
 
-`loop-miner-exporter` Factorio mod collects map data from a save.
-`loop-miner` running locally generates loop network from map data.
-Output is a standalone mod creating
-network via Lua API. Mod works on any save with same map seed and base generation settings. 
-Mods may be disabled after.
+Puzzle is building a base capable of handling so much throughput, 
+best network design parameters suitable for base, 
+megabase stress testing the Factorio engine,
+and benchmarking designs.
+Internally, puzzle is optimal path finding, optimal outpost design, and performance. 
 
-## Automatic Rail Network
+`loop-miner-exporter` Factorio mod only collects map data from a save into JSON.
+`loop-miner` generates loop network from map data.
+Output is a standalone mod to build network via Lua API.
+Mod works on any Save with same map seed and base generation settings. 
+Mods may be disabled after. Save works on any vanilla game. 
+
+## Why
 
 Scaled up application of known megabase best practices
 
-* Dedicated rail eliminates late-game contention problems on shared rail. (Best Throughput) 
-Intersections without bottlenecks is difficult. 
-* Dedicated rail avoids complexity from buffer yards up to LTN, Logistic Train Network 
-* Continuous rail has simplest game pathing (best UPS)
-* Tuned train count avoids over production (Lower entity overhead)
+* Rail Loop for each connection between Miner > Base, Miner > Aggregation, Aggregation > Base 
+  * Dedicated rail eliminates late-game contention problems on shared rail (Best Throughput). 
+    Intersections without bottlenecks is difficult. 
+  * Dedicated rail avoids more complex concepts from buffer yards up to LTN, Logistic Train Network 
+  * A loop of unintersected rail has the simplest game pathing (Best UPS)
+* Mining outposts
+  * Drill > Train, Direct Insertion for lowest handling costs (Best UPS) 
+  * Fixed loading and optionally unloading train timers to avoid holding up train from empty drill patches and unequal unloading
+* Optional aggregation outposts
+  * Aggregation outposts deliver significantly more ore per train. For example from >3 wagons from mining outposts to 30+ wagon trains.
+  * Longer trains reduce effect of _train change at stop delay_ (Best Throughput)
+  * Balances mining outposts to aggregation outposts 
+* Optional smelt-on-site mining outposts
+  * Drill > Smelter > Train, Direct Insertion reduces handling costs (Best UPS)
+  * Doubles amount of ore patches required to replace ore inaccessible under smelters 
+* Design testing and benchmarking
+  * Rebuilding the network is cheap when generated instead of tens of hours when manually laid.
+
+Planned
+
+* 
+
+
+* Balanced aggregation outposts to mining outposts ratio for ideally 0    
+  * Tuned train count avoids over production (Lower entity overhead)
 * Fixed ore loading timer (avoid trains wasting time without all drills feeding)
 * Pathfinds train to edge of base. 
   * `Avoid Water` default on. Limits available density from difficult pathfinding
