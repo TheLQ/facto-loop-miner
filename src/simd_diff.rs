@@ -1,11 +1,14 @@
+use crate::bucket_div;
 use crate::simd::{
     any_bit_equal_m256_bool, apply_any_u8_iter_to_m256_buffer, apply_positions_iter_to_m256_buffer,
-    m256_zero, m256_zero_vec, SseUnit, SSE_BITS,
+    format_m256, m256_zero, m256_zero_vec, SseUnit, SSE_BITS,
 };
+use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
 use std::mem::transmute;
 
 pub struct SurfaceDiff {
+    surface_copy: Vec<u8>,
     source: Vec<SseUnit>,
     working: Vec<SseUnit>,
 }
@@ -14,12 +17,18 @@ impl SurfaceDiff {
     pub fn from_surface(surface: &Surface) -> Self {
         let len = surface.buffer.len();
         let mut source = m256_zero_vec((len - (len % SSE_BITS)) / SSE_BITS);
-        let raw_buffer: &[u8] = unsafe { transmute(surface.buffer.as_slice()) };
+        let surface_buffer = surface.buffer.clone();
+        let raw_buffer: &[u8] = unsafe { transmute(surface_buffer.as_slice()) };
+        let raw_buffer2 = raw_buffer.clone();
         apply_any_u8_iter_to_m256_buffer((*raw_buffer).into_iter(), &mut source);
 
         let mut working = m256_zero_vec(source.len());
 
-        let res = SurfaceDiff { source, working };
+        let res = SurfaceDiff {
+            source,
+            working,
+            surface_copy: Vec::from(raw_buffer2),
+        };
 
         res
     }
@@ -27,17 +36,32 @@ impl SurfaceDiff {
     pub fn is_positions_free(&mut self, positions: Vec<usize>) -> bool {
         apply_positions_iter_to_m256_buffer(&positions, &mut self.working, true);
 
+        // let mut talked = false;
+        // for pos in &positions {
+        //     if !talked && self.surface_copy[pos] != 0 {
+        //         // println!("expect {:?} at {}", self.surface_copy[pos], pos);
+        //         // println!(
+        //         //     "{}{}\n{}{}",
+        //         //     "source  ",
+        //         //     format_m256(*self.source.get(bucket_div(pos, SSE_BITS)).unwrap()),
+        //         //     "working ",
+        //         //     format_m256(*self.working.get(bucket_div(pos, SSE_BITS)).unwrap()),
+        //         // );
+        //     }
+        // }
+
         let found = any_bit_equal_m256_bool(&self.source, &self.working);
 
-        self.reset_source();
-        // apply_positions_iter_to_m256_buffer(&positions, &mut self.working, false);
+        // self.reset_buffer();
+        // println!("found {}", found);
+        apply_positions_iter_to_m256_buffer(&positions, &mut self.working, false);
 
         !found
     }
 
-    fn reset_source(&mut self) {
-        for source in self.source.iter_mut() {
-            *source = m256_zero();
+    fn reset_buffer(&mut self) {
+        for entry in self.working.iter_mut() {
+            *entry = m256_zero();
         }
     }
 }

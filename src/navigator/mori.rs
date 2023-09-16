@@ -350,13 +350,15 @@ impl Rail {
 
         {
             let cur = METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
-            // if cur % 100_000 == 0 {
-            println!(
-                "successor {} spot parents {}",
-                cur.to_formatted_string(&LOCALE),
-                parents.len()
-            );
-            // }
+            if cur % 100_000 == 0 {
+                println!(
+                    "successor {} spot parents {} size {}x{}",
+                    cur.to_formatted_string(&LOCALE),
+                    parents.len(),
+                    surface.width,
+                    surface.height,
+                );
+            }
         }
 
         let mut res = Vec::new();
@@ -404,60 +406,70 @@ impl Rail {
         if self.endpoint.x < 4000 {
             None
         } else {
-            // match 3 {
-            //     1 => self.into_buildable_sequential(surface),
-            //     2 => self.into_buildable_parallel(surface),
-            //     3 => self.into_buildable_avx(surface, working_buffer),
-            //     _ => panic!("0"),
-            // }
-            let seq = self.clone().into_buildable_sequential(surface);
-            let avx = self.clone().into_buildable_avx(surface, working_buffer);
-            match (seq, avx) {
-                (None, None) => None,
-                (Some(left), Some(right)) => {
-                    if left != right {
-                        panic!("UNEQUAL left {:?} right {:?}", left, right);
-                    }
-                    Some(left)
-                }
-                (left, right) => panic!("self {:?} left {:?} right {:?}", self, left, right),
+            match 1 {
+                1 => self.into_buildable_sequential(surface),
+                // 2 => self.into_buildable_parallel(surface),
+                3 => self.into_buildable_avx(surface, working_buffer),
+                _ => panic!("0"),
             }
+            // let seq = self.clone().into_buildable_sequential(surface);
+            // let avx = self.clone().into_buildable_avx(surface, working_buffer);
+            // match (seq, avx) {
+            //     (None, None) => None,
+            //     (Some(left), Some(right)) => {
+            //         if left != right {
+            //             panic!("UNEQUAL left {:?} right {:?}", left, right);
+            //         }
+            //         Some(left)
+            //     }
+            //     (left, right) => panic!("self {:?} left {:?} right {:?}", self, left, right),
+            // }
         }
     }
 
     fn into_buildable_sequential(self, surface: &Surface) -> Option<Self> {
         if let Some(area) = self.area() {
             area.into_iter()
-                .filter_map(|v| filter_buildable_points(&v, surface))
+                .map(|v| filter_available_points(&v, surface))
                 .flatten()
-                .map(|game_pont| is_buildable_point_u32_take(surface, game_pont))
-                .reduce(|total, is_buildable| total.and(is_buildable))
+                .try_fold(Some(self), |acc, cur| {
+                    acc.and_then(|acc| {
+                        cur.and_then(|v| is_buildable_point_u32_take(surface, v).map(|_| Some(acc)))
+                    })
+                })
                 .flatten()
-                .map(|_| self)
+            // let points: Vec<Option<PointU32>> = area.into_iter().map(|v| filter_available_points(&v, surface)).collect();
+            // if points.contains(None) {
+            //     return None;
+            // }
+            // .reduce(|total, is_buildable| total.and(is_buildable))
+            // .unwrap()
+            // // .flatten()
+            // .map(|_| self)
         } else {
             None
         }
     }
 
-    fn into_buildable_parallel(self, surface: &Surface) -> Option<Self> {
-        // observations: way slower than sequential, especially in --release mode
-        if let Some(area) = self.area() {
-            let area_buildable_opt: Vec<Option<PointU32>> = area
-                .par_iter()
-                .filter_map(|v| filter_buildable_points(v, surface))
-                .flat_map_iter(|v| v)
-                .map(|game_pont| is_buildable_point_u32_take(surface, game_pont))
-                .collect();
-
-            area_buildable_opt
-                .into_iter()
-                .reduce(|total, is_buildable| total.and(is_buildable))
-                .unwrap()
-                .map(|_| self)
-        } else {
-            None
-        }
-    }
+    // fn into_buildable_parallel(self, surface: &Surface) -> Option<Self> {
+    //     // observations: way slower than sequential, especially in --release mode
+    //     if let Some(area) = self.area() {
+    //         let area_buildable_opt: Vec<Option<PointU32>> = area
+    //             .par_iter()
+    //             .filter_map(|v| filter_buildable_points(v, surface))
+    //             .flat_map_iter(|v| v)
+    //             .map(|game_pont| is_buildable_point_u32_take(surface, game_pont))
+    //             .collect();
+    //
+    //         area_buildable_opt
+    //             .into_iter()
+    //             .reduce(|total, is_buildable| total.and(is_buildable))
+    //             .unwrap()
+    //             .map(|_| self)
+    //     } else {
+    //         None
+    //     }
+    // }
 
     fn into_buildable_avx(
         self,
@@ -465,62 +477,65 @@ impl Rail {
         working_buffer: &mut SurfaceDiff,
     ) -> Option<Self> {
         if let Some(area) = self.area() {
-            let points = area
+            if let Some(points) = area
                 .into_iter()
-                .filter_map(|v| filter_buildable_points(&v, surface))
+                .map(|v| filter_available_points(&v, surface))
                 .flatten()
-                .map(|v| surface.xy_to_index_point_u32(v))
-                .collect();
-
-            if working_buffer.is_positions_free(points) {
-                Some(self)
-            } else {
-                None
+                .map(|v| v.and_then(|v| Some(surface.xy_to_index_point_u32(v))))
+                .try_collect()
+            {
+                if working_buffer.is_positions_free(points) {
+                    return Some(self);
+                }
             }
-        } else {
-            None
         }
+        None
     }
 }
 
-fn filter_buildable_points<'r>(rail: &RailPoint, surface: &Surface) -> Option<Vec<PointU32>> {
+fn filter_available_points<'r>(rail: &RailPoint, surface: &Surface) -> [Option<PointU32>; 4] {
     // let game_points: Vec<PointU32> = rail.to_game_points(surface);
     // if game_points.len() == 4 {
     //     Some(game_points)
     // } else {
     //     None
     // }
-    let mut game_points: Vec<PointU32> = Vec::new();
 
-    let v = rail;
-    if let Some(v) = v.to_point_u32_surface(surface) {
-        game_points.push(v);
-    }
+    let v1 = rail;
 
-    let mut v = rail.clone();
-    v.x = v.x - 1;
-    if let Some(v) = v.to_point_u32_surface(surface) {
-        game_points.push(v);
-    }
+    let mut v2 = rail.clone();
+    v2.x = v2.x - 1;
 
-    let mut v = rail.clone();
-    v.y = v.y - 1;
-    if let Some(v) = v.to_point_u32_surface(surface) {
-        game_points.push(v);
-    }
+    let mut v3 = rail.clone();
+    v3.y = v3.y - 1;
 
-    let mut v = rail.clone();
-    v.x = v.x - 1;
-    v.y = v.y - 1;
-    if let Some(v) = v.to_point_u32_surface(surface) {
-        game_points.push(v);
-    }
+    let mut v4 = rail.clone();
+    v4.x = v4.x - 1;
+    v4.y = v4.y - 1;
 
-    if game_points.len() == 4 {
-        Some(game_points)
-    } else {
-        None
-    }
+    [
+        v1.to_point_u32_surface(surface),
+        v2.to_point_u32_surface(surface),
+        v3.to_point_u32_surface(surface),
+        v4.to_point_u32_surface(surface),
+    ]
+
+    // match (
+    //     v1.to_point_u32_surface(surface),
+    //     v2.to_point_u32_surface(surface),
+    //     v3.to_point_u32_surface(surface),
+    //     v4.to_point_u32_surface(surface),
+    // ) {
+    //     (Some(v1), Some(v2), Some(v3), Some(v4)) => {
+    //         let mut game_points: Vec<PointU32> = Vec::new();
+    //         game_points.push(v1);
+    //         game_points.push(v2);
+    //         game_points.push(v3);
+    //         game_points.push(v4);
+    //         Some(game_points)
+    //     }
+    //     _ => None,
+    // }
 }
 
 impl RailPoint {

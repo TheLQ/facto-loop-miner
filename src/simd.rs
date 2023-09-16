@@ -141,6 +141,16 @@ pub fn any_bit_equal_m256_bool<'a>(mut a: &Vec<SseUnit>, mut b: &Vec<SseUnit>) -
     let cmp = unsafe { _mm256_cmpeq_epi32(total, *COMMON_ZERO) };
     let mask = unsafe { _mm256_movemask_epi8(cmp) };
     // println!(
+    //     "{}{}\n{}{}\n{}{:b}\n",
+    //     "total   ",
+    //     format_m256(total.clone()),
+    //     "cmp     ",
+    //     format_m256(cmp.clone()),
+    //     "mask    ",
+    //     mask,
+    // );
+
+    // println!(
     //     "{}{}\n{}{:b}\n",
     //     "cmp     ",
     //     format_m256(cmp.clone()),
@@ -242,10 +252,16 @@ fn bitvec_into_m256(input: BitVec) -> __m256i {
     unsafe { _mm256_loadu_si256(as_64.as_ptr() as *mut __m256i) }
 }
 
-fn format_m256(input: __m256i) -> String {
+pub fn format_m256(input: __m256i) -> String {
     let input: i64x4 = input.into();
+    // "{:08}{:08}{:08}{:08} {:0>64}{:0>64}{:0>64}{:0>64}",
+    //"{:x>16}{:x>16}{:x>16}{:x>16} {:0>64}{:0>64}{:0>64}{:0>64}",
     format!(
-        "{:0>64}{:0>64}{:0>64}{:0>64}",
+        "{:016x}{:016x}{:016x}{:016x} {:0>64}{:0>64}{:0>64}{:0>64}",
+        input[3] as u64,
+        input[2] as u64,
+        input[1] as u64,
+        input[0] as u64,
         format_i64(input[3]),
         format_i64(input[2]),
         format_i64(input[1]),
@@ -260,14 +276,17 @@ fn format_i64(i: i64) -> String {
 #[cfg(test)]
 mod test {
     use crate::simd::{
-        apply_any_u8_iter_to_m256_buffer, apply_positions_iter_to_m256_buffer, bitslice_popcnt,
-        bitvec_for_m256, bitvec_into_m256, compare_m256_count, create_flip, format_m256,
-        m256_into_bitvec, m256_into_slice_usize, m256_zero, m256_zero_vec, SSE_BITS,
+        any_bit_equal_m256_bool, apply_any_u8_iter_to_m256_buffer,
+        apply_positions_iter_to_m256_buffer, bitslice_popcnt, bitvec_for_m256, bitvec_into_m256,
+        compare_m256_count, create_flip, format_m256, m256_into_bitvec, m256_into_slice_usize,
+        m256_zero, m256_zero_vec, SSE_BITS,
     };
     use crate::surface::pixel::Pixel;
     use bitvec::order::Lsb0;
     use bitvec::prelude::*;
     use bitvec::vec::BitVec;
+    use opencv::core::exp;
+    use std::arch::x86_64::_mm256_or_si256;
 
     // probably needed...
     #[test]
@@ -362,6 +381,19 @@ mod test {
     }
 
     #[test]
+    fn flip_test_all() {
+        for i in 0..SSE_BITS {
+            let flip = create_flip(i);
+            let flip_bits = m256_into_bitvec(flip);
+
+            let mut expected = bitvec_for_m256();
+            expected.set(i, true);
+
+            assert_eq!(flip_bits, expected);
+        }
+    }
+
+    #[test]
     fn bitbec_from_into_test() {
         let mut input = bitvec_for_m256();
         input.set(5, true);
@@ -410,6 +442,149 @@ mod test {
             '1',
             "raw {}",
             formatted
+        );
+    }
+
+    #[test]
+    fn equal_test_simple() {
+        assert_eq!(
+            any_bit_equal_m256_bool(&Vec::from([create_flip(1)]), &Vec::from([create_flip(0)])),
+            false
+        );
+
+        assert_eq!(
+            any_bit_equal_m256_bool(&Vec::from([create_flip(1)]), &Vec::from([create_flip(1)])),
+            true
+        );
+    }
+
+    #[test]
+    fn equal_test_random_false() {
+        assert_eq!(
+            any_bit_equal_m256_bool(
+                &Vec::from([
+                    create_flip(1),
+                    create_flip(56),
+                    create_flip(99),
+                    create_flip(200)
+                ]),
+                &Vec::from([
+                    create_flip(0),
+                    create_flip(1),
+                    create_flip(2),
+                    create_flip(3)
+                ])
+            ),
+            false
+        );
+    }
+
+    #[test]
+    fn equal_test_first_true() {
+        assert_eq!(
+            any_bit_equal_m256_bool(
+                &Vec::from([
+                    create_flip(1),
+                    create_flip(56),
+                    create_flip(99),
+                    create_flip(200)
+                ]),
+                &Vec::from([
+                    create_flip(1),
+                    create_flip(1),
+                    create_flip(2),
+                    create_flip(3)
+                ])
+            ),
+            true
+        );
+    }
+
+    #[test]
+    fn equal_test_last_true() {
+        assert_eq!(
+            any_bit_equal_m256_bool(
+                &Vec::from([
+                    create_flip(1),
+                    create_flip(56),
+                    create_flip(99),
+                    create_flip(200)
+                ]),
+                &Vec::from([
+                    create_flip(0),
+                    create_flip(1),
+                    create_flip(2),
+                    create_flip(200)
+                ])
+            ),
+            true
+        );
+    }
+
+    #[test]
+    fn equal_test_all_true() {
+        assert_eq!(
+            any_bit_equal_m256_bool(
+                &Vec::from([
+                    create_flip(1),
+                    create_flip(56),
+                    create_flip(99),
+                    create_flip(200)
+                ]),
+                &Vec::from([
+                    create_flip(1),
+                    create_flip(56),
+                    create_flip(99),
+                    create_flip(200)
+                ])
+            ),
+            true
+        );
+    }
+
+    #[test]
+    fn equal_test_same_bit_true() {
+        assert_eq!(
+            any_bit_equal_m256_bool(
+                &Vec::from([
+                    create_flip(5),
+                    create_flip(5),
+                    create_flip(5),
+                    create_flip(5)
+                ]),
+                &Vec::from([
+                    create_flip(5),
+                    create_flip(5),
+                    create_flip(5),
+                    create_flip(99)
+                ])
+            ),
+            true
+        );
+    }
+
+    #[test]
+    fn equal_test_noisy_basic() {
+        let mut source = create_flip(1);
+        source = unsafe { _mm256_or_si256(source, create_flip(56)) };
+        source = unsafe { _mm256_or_si256(source, create_flip(99)) };
+        source = unsafe { _mm256_or_si256(source, create_flip(200)) };
+
+        let mut mask = create_flip(7);
+        mask = unsafe { _mm256_or_si256(mask, create_flip(77)) };
+        mask = unsafe { _mm256_or_si256(mask, create_flip(75)) };
+        mask = unsafe { _mm256_or_si256(mask, create_flip(170)) };
+
+        assert_eq!(
+            any_bit_equal_m256_bool(&Vec::from([source]), &Vec::from([mask])),
+            false
+        );
+
+        let extra = mask.clone();
+        mask = unsafe { _mm256_or_si256(mask, create_flip(99)) };
+        assert_eq!(
+            any_bit_equal_m256_bool(&Vec::from([source, source]), &Vec::from([mask, extra])),
+            true
         );
     }
 }
