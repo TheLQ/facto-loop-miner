@@ -1,6 +1,6 @@
 use crate::simd::{
     any_bit_equal_m256_bool, apply_any_u8_iter_to_m256_buffer, apply_positions_iter_to_m256_buffer,
-    m256_zero_vec, SseUnit, SSE_BITS,
+    m256_zero, m256_zero_vec, SseUnit, SSE_BITS,
 };
 use crate::surface::surface::Surface;
 use std::mem::transmute;
@@ -19,7 +19,9 @@ impl SurfaceDiff {
 
         let mut working = m256_zero_vec(source.len());
 
-        SurfaceDiff { source, working }
+        let res = SurfaceDiff { source, working };
+
+        res
     }
 
     pub fn is_positions_free(&mut self, positions: Vec<usize>) -> bool {
@@ -27,8 +29,16 @@ impl SurfaceDiff {
 
         let found = any_bit_equal_m256_bool(&self.source, &self.working);
 
-        apply_positions_iter_to_m256_buffer(&positions, &mut self.working, false);
+        self.reset_source();
+        // apply_positions_iter_to_m256_buffer(&positions, &mut self.working, false);
+
         !found
+    }
+
+    fn reset_source(&mut self) {
+        for source in self.source.iter_mut() {
+            *source = m256_zero();
+        }
     }
 }
 

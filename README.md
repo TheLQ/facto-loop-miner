@@ -8,14 +8,14 @@ A loop of unintersected rail avoids bottleneck problems in other designs at scal
 Cost is significant, repetitive spaghetti building time. 
 Automation makes this feasible.
 
-Puzzle is building a base capable of handling so much throughput, 
+Puzzle is building a base capable of processing so much throughput, 
 best network design parameters suitable for base, 
 megabase stress testing the Factorio engine,
 and benchmarking designs.
 Internally, puzzle is optimal path finding, optimal outpost design, and performance. 
 
-`loop-miner-exporter` Factorio mod only collects map data from a save into JSON.
-`loop-miner` generates loop network from map data.
+`loop-miner-exporter` Factorio mod only collects map data JSON from save.
+`loop-miner` generates loop network from map data and input parameters.
 Output is a standalone mod to build network via Lua API.
 Mod works on any Save with same map seed and base generation settings. 
 Mods may be disabled after. Save works on any vanilla game. 
@@ -37,7 +37,7 @@ Scaled up application of known megabase best practices
   * Longer trains reduce effect of _train change at stop delay_ (Best Throughput)
   * Balances mining outposts to aggregation outposts 
 * Optional smelt-on-site mining outposts
-  * Drill > Smelter > Train, Direct Insertion reduces handling costs (Best UPS)
+  * Drill > Smelter > Train, Direct Insertion roughly halves handling costs smelting elsewhere (Best UPS)
   * Doubles amount of ore patches required to replace ore inaccessible under smelters 
 * Design testing and benchmarking
   * Rebuilding the network is cheap when generated instead of tens of hours when manually laid.
@@ -73,22 +73,25 @@ to mine.
 
 ### Parameters
 
-Determines resource requirements. Drives the necessary
-aggregation/furnace outpost count >
-drill count >
-mining outpost count
+Primary parameter is resource throughput expected. Specified as (wagons per train) * (base rail loop count) = (calculated expected resources per minute).
+* Number of aggregators = (base rail loop count)
+* Add patches until aggregator expected output is satisfied.
+  `(resources per minute per wagon) * (wagons in train) * (overproduction percent) = (resources per minute of outpost) * (outpost count)`
 
-* Per-Ore options
-  * `Wagon Count` - Each wagon adds X,xxx ore/minute. 
-  More wagons increase density and reduce train change delay impact.
-  Too many wagons are difficult to unload and pathfind.
-  Estimate 10-50.
-  * `Train Count` - Each train has configured wagon count and sufficient engines.
-  Estimate 5-20.
+To solve, used measured timing data from Factorio 1.1.1.1
+
+* An _ore_ wagon loaded/unloaded by green arms directly from boxes will complete in ___ ticks, or ___ resources/minute
+* Drill > Wagon Direct Insertion will fill in ___ ticks, or ___ resource/minute
+* Drill > Smelter > Wagon Direct Insertion will fill in ___ ticks, or ___ resource/minute
+* Train change delay between previous train emptying and new train starting is ___ ticks
+* Average ore per minute per wagon = (resources) / (unload_ticks + delay_ticks) / 60
+
+Additional options
+
 * Base Aggregator options
-* `Use Aggregator Outposts` with it's options
-* `Use Furnace Outposts` with it's options
-* Per-ore `Furnace Outposts Percent` if both Aggregator and Furnace are enabled.
+    * `Use Aggregator Outposts` with it's options
+    * `Use Furnace Outposts` with it's options
+    * Per-ore `Furnace Outposts Percent` if both Aggregator and Furnace are enabled.
 Aggregator Outposts deliver ore to base for certain recipes. 
 * Per aggregation and base types, Station Design relative to delivery edge
   * `Parallel` stacks stations. Optimal for many wagon, train 2 logistic 2 train.

@@ -159,12 +159,17 @@ pub fn any_bit_equal_m256_bool<'a>(mut a: &Vec<SseUnit>, mut b: &Vec<SseUnit>) -
 
 fn create_flip(count: usize) -> SseUnit {
     // todo: seemingly no shift 128/256 avx2 intrinsics available?
+
+    // if count > 64 {
+    //     panic!("too big {}", count);
+    // }
+
     let inner_pos = count;
     match inner_pos {
         0..64 => unsafe { _mm256_set_epi64x(0, 0, 0, 1 << count) },
-        64..128 => unsafe { _mm256_set_epi64x(0, 0, 1 << count, 0) },
-        128..192 => unsafe { _mm256_set_epi64x(0, 1 << count, 0, 0) },
-        192..256 => unsafe { _mm256_set_epi64x(1 << count, 0, 0, 0) },
+        64..128 => unsafe { _mm256_set_epi64x(0, 0, 1 << (count - 64), 0) },
+        128..192 => unsafe { _mm256_set_epi64x(0, 1 << (count - 128), 0, 0) },
+        192..256 => unsafe { _mm256_set_epi64x(1 << (count - 192), 0, 0, 0) },
         x => panic!("value {}", x),
     }
     // slow....
@@ -182,7 +187,7 @@ lazy_static! {
 }
 
 #[inline]
-fn m256_zero() -> SseUnit {
+pub fn m256_zero() -> SseUnit {
     // unsafe { _mm256_set_epi64x(0, 0, 0, 0) }
     unsafe { _mm256_setzero_si256() }
 }
@@ -257,8 +262,9 @@ mod test {
     use crate::simd::{
         apply_any_u8_iter_to_m256_buffer, apply_positions_iter_to_m256_buffer, bitslice_popcnt,
         bitvec_for_m256, bitvec_into_m256, compare_m256_count, create_flip, format_m256,
-        m256_into_bitvec, m256_into_slice_usize, m256_zero, m256_zero_vec,
+        m256_into_bitvec, m256_into_slice_usize, m256_zero, m256_zero_vec, SSE_BITS,
     };
+    use crate::surface::pixel::Pixel;
     use bitvec::order::Lsb0;
     use bitvec::prelude::*;
     use bitvec::vec::BitVec;
@@ -317,6 +323,42 @@ mod test {
             expected, actual,
             "Bit compare failed. left = expected, right = actual"
         );
+    }
+
+    #[test]
+    fn flip_test_big() {
+        // const SSE_UNIT_COUNT: usize = 20;
+        const SSE_UNIT_COUNT: usize = 4;
+        let mut buffer = m256_zero_vec(SSE_UNIT_COUNT);
+
+        let needles = [
+            // 2290, 3184, 2609, 4159, 1221, 2598, 4311, 1702, 206, 3239, 1220, 4472, 194, 3677, 3803,
+            // 2144, 1034, 2707, 1116, 970,
+            290, 184, 609, 159, 221, 598, 431, 170, 20, 323, 122, 447, 19, 367, 380, 214, 103, 270,
+            111, 97,
+        ];
+        let mut needles_applied_to_array = vec![0u8; SSE_UNIT_COUNT * SSE_BITS];
+        for needle in needles {
+            needles_applied_to_array[needle] = Pixel::IronOre as u8;
+        }
+        apply_any_u8_iter_to_m256_buffer(needles_applied_to_array.iter(), &mut buffer);
+
+        let mut bit_actual: BitVec = {
+            let mut res = BitVec::new();
+            for inner in buffer {
+                res.extend_from_bitslice(&m256_into_bitvec(inner));
+            }
+            res
+        };
+
+        let mut bit_expected: BitVec = BitVec::new();
+        bit_expected.resize(SSE_UNIT_COUNT * SSE_BITS, false);
+
+        for needle in needles {
+            bit_expected.set(needle as usize, true);
+        }
+
+        assert_eq!(bit_actual, bit_expected);
     }
 
     #[test]

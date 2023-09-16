@@ -1,5 +1,6 @@
 use crate::navigator::resource_cloud::point_to_slice_f32;
 use crate::state::machine::{Step, StepParams};
+use crate::surface::game_locator::GameLocator;
 use crate::surface::metric::Metrics;
 use crate::surface::patch::{map_patch_map_to_kdtree, DiskPatch};
 use crate::surface::pixel::Pixel;
@@ -27,6 +28,8 @@ impl Step for Step10 {
         let mut patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
 
         draw_mega_box(&mut surface, &mut params.metrics.borrow_mut(), &mut patches);
+        // draw_resource_exclude(&mut surface, &mut params.metrics.borrow_mut(), &mut patches);
+        exclude_patches(&mut surface, &mut params.metrics.borrow_mut(), &mut patches);
 
         surface.save(&params.step_out_dir);
         patches.save(&params.step_out_dir);
@@ -43,28 +46,25 @@ pub const REMOVE_RESOURCE_BORDER_TILES: i32 =
     REMOVE_RESOURCE_BORDER_CHUNKS * TILES_PER_CHUNK as i32;
 
 pub fn draw_mega_box(img: &mut Surface, metrics: &mut Metrics, patches: &mut DiskPatch) {
-    let tiles: i32 = CENTRAL_BASE_TILES;
-    let banner_width = 50;
-    let edge_neg = -tiles - banner_width;
-    let edge_pos = tiles + banner_width;
-    println!("edge {} to {}", edge_neg, edge_pos);
-    // lazy way
-    for root_x in edge_neg..edge_pos {
-        for root_y in edge_neg..edge_pos {
-            if !((root_x > -tiles && root_x < tiles) && (root_y > -tiles && root_y < tiles)) {
-                img.set_pixel(
-                    Pixel::EdgeWall,
-                    img.area_box.game_centered_x_i32(root_x as i32),
-                    img.area_box.game_centered_y_i32(root_y as i32),
-                );
-                metrics.increment("base-box");
-            }
+    let tiles = CENTRAL_BASE_TILES;
+    for (root_x, root_y) in points_in_centered_box(tiles, &img.area_box) {
+        let root_x = root_x as i32;
+        let root_y = root_y as i32;
+        if !((root_x > -tiles && root_x < tiles) && (root_y > -tiles && root_y < tiles)) {
+            img.set_pixel(Pixel::EdgeWall, root_x as u32, root_y as u32);
+            metrics.increment("base-box");
         }
     }
 
-    draw_resource_exclude(img, metrics, patches);
-
     println!("megabox?")
+}
+
+fn exclude_patches(img: &mut Surface, metrics: &mut Metrics, disk_patches: &mut DiskPatch) {
+    // base remove
+    let tiles = REMOVE_RESOURCE_BASE_TILES;
+    for (root_x, root_y) in points_in_centered_box(tiles, &img.area_box) {
+        let test = disk_patches.patches.get(&Pixel::IronOre).unwrap();
+    }
 }
 
 fn draw_resource_exclude(img: &mut Surface, metrics: &mut Metrics, disk_patches: &mut DiskPatch) {
@@ -160,4 +160,23 @@ where
     N: Mul<Output = N> + Add<Output = N>,
 {
     width * y + x
+}
+
+fn points_in_centered_box(tiles: i32, area_box: &GameLocator) -> Vec<(u32, u32)> {
+    let mut res = Vec::new();
+
+    let banner_width = 50;
+    let edge_neg = -tiles - banner_width;
+    let edge_pos = tiles + banner_width;
+    // lazy way
+    for root_x in edge_neg..edge_pos {
+        for root_y in edge_neg..edge_pos {
+            res.push((
+                area_box.game_centered_x_i32(root_x),
+                area_box.game_centered_y_i32(root_y),
+            ))
+        }
+    }
+
+    res
 }

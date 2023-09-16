@@ -350,13 +350,13 @@ impl Rail {
 
         {
             let cur = METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
-            if cur % 100_000 == 0 {
-                println!(
-                    "successor {} spot parents {}",
-                    cur.to_formatted_string(&LOCALE),
-                    parents.len()
-                );
-            }
+            // if cur % 100_000 == 0 {
+            println!(
+                "successor {} spot parents {}",
+                cur.to_formatted_string(&LOCALE),
+                parents.len()
+            );
+            // }
         }
 
         let mut res = Vec::new();
@@ -404,19 +404,31 @@ impl Rail {
         if self.endpoint.x < 4000 {
             None
         } else {
-            match 1 {
-                1 => self.into_buildable_sequential(surface),
-                2 => self.into_buildable_parallel(surface),
-                3 => self.into_buildable_avx(surface, working_buffer),
-                _ => panic!("0"),
+            // match 3 {
+            //     1 => self.into_buildable_sequential(surface),
+            //     2 => self.into_buildable_parallel(surface),
+            //     3 => self.into_buildable_avx(surface, working_buffer),
+            //     _ => panic!("0"),
+            // }
+            let seq = self.clone().into_buildable_sequential(surface);
+            let avx = self.clone().into_buildable_avx(surface, working_buffer);
+            match (seq, avx) {
+                (None, None) => None,
+                (Some(left), Some(right)) => {
+                    if left != right {
+                        panic!("UNEQUAL left {:?} right {:?}", left, right);
+                    }
+                    Some(left)
+                }
+                (left, right) => panic!("self {:?} left {:?} right {:?}", self, left, right),
             }
         }
     }
 
     fn into_buildable_sequential(self, surface: &Surface) -> Option<Self> {
         if let Some(area) = self.area() {
-            area.iter()
-                .filter_map(|v| filter_buildable_points(v, surface))
+            area.into_iter()
+                .filter_map(|v| filter_buildable_points(&v, surface))
                 .flatten()
                 .map(|game_pont| is_buildable_point_u32_take(surface, game_pont))
                 .reduce(|total, is_buildable| total.and(is_buildable))
@@ -454,8 +466,8 @@ impl Rail {
     ) -> Option<Self> {
         if let Some(area) = self.area() {
             let points = area
-                .iter()
-                .filter_map(|v| filter_buildable_points(v, surface))
+                .into_iter()
+                .filter_map(|v| filter_buildable_points(&v, surface))
                 .flatten()
                 .map(|v| surface.xy_to_index_point_u32(v))
                 .collect();

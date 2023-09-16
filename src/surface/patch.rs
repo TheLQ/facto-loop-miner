@@ -1,5 +1,5 @@
 use crate::state::machine::search_step_history_dirs;
-use crate::surface::easybox::EasyBox;
+use crate::surface::game_locator::GameLocator;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::PixelKdTree;
@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 #[derive(Serialize, Deserialize, Default)]
 pub struct DiskPatch {
     pub patches: HashMap<Pixel, Vec<Patch>>,
-    pub area_box: EasyBox,
+    pub area_box: GameLocator,
 }
 
 impl DiskPatch {

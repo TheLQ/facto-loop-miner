@@ -1,6 +1,6 @@
 use crate::gamedata::lua::{LuaData, LuaEntity};
 use crate::state::machine::{Step, StepParams};
-use crate::surface::easybox::EasyBox;
+use crate::surface::game_locator::GameLocator;
 use crate::surface::surface::Surface;
 use std::path::Path;
 
@@ -23,7 +23,7 @@ impl Step for Step00 {
             &lua_dir.join("filtered-resources.json"),
             &lua_dir.join("filtered-tiles.json"),
         );
-        let mut area_box = EasyBox::default();
+        let mut area_box = GameLocator::default();
         area_box.expand_to(&data.resource);
         area_box.expand_to(&data.tile);
 

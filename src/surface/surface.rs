@@ -1,7 +1,7 @@
 use crate::simd::{apply_any_u8_iter_to_m256_buffer, m256_zero_vec, SSE_BITS};
 use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::search_step_history_dirs;
-use crate::surface::easybox::EasyBox;
+use crate::surface::game_locator::GameLocator;
 use crate::surface::pixel::Pixel;
 use crate::{PixelKdTree, LOCALE};
 use image::codecs::png::PngEncoder;
@@ -29,7 +29,7 @@ pub type PointU32 = Point_<u32>;
 pub struct Surface {
     pub width: u32,
     pub height: u32,
-    pub area_box: EasyBox,
+    pub area_box: GameLocator,
     #[serde(skip)]
     pub buffer: Vec<Pixel>,
     #[serde(skip)]
@@ -48,7 +48,7 @@ impl Surface {
             buffer,
             width,
             height,
-            area_box: EasyBox::default(),
+            area_box: GameLocator::default(),
             collision_mask: Vec::new(),
         }
     }
@@ -276,7 +276,7 @@ impl Surface {
         } else if cropped.cols() != expected_size {
             panic!("expected cols {} got {}", expected_size, cropped.cols());
         }
-        let crop_box = EasyBox {
+        let crop_box = GameLocator {
             min_x: -crop_radius_from_center,
             max_x: crop_radius_from_center,
             min_y: -crop_radius_from_center,
