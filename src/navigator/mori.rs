@@ -16,7 +16,7 @@ use std::time::Instant;
 
 /// Pathfinder v1, Mori Calliope
 ///
-/// Makes a dual rail, 3x rail wide, 90 degree turning, path from start to end.
+/// Makes a dual rail + spacing, +6 straight or 90 degree turning, path of rail from start to end.
 /// Without collisions into any point on the Surface.
 pub fn mori_start(
     surface: &Surface,
@@ -45,6 +45,7 @@ pub fn mori_start(
     let mut working_buffer = surface.surface_diff();
 
     println!("Mori start {:?} end {:?}", start, end);
+    // Forked function only passes on the parents, used for limits
     let pathfind = astar_mori(
         &start,
         |(p, parents, total_cost)| {

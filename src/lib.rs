@@ -6,6 +6,8 @@
 #![feature(slice_pattern)]
 #![feature(iterator_try_collect)]
 #![feature(iterator_try_reduce)]
+#![feature(slice_flatten)]
+#![feature(array_chunks)]
 #![allow(unused)]
 
 extern crate core;
