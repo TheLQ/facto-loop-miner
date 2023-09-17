@@ -17,6 +17,7 @@ impl Step for Step03 {
         "step03-crop".to_string()
     }
 
+    /// Temporarily reduce surface size for easier development
     fn transformer(&self, params: StepParams) {
         let surface_dir = params.step_history_out_dirs.last().unwrap();
         let mut surface = Surface::load(&surface_dir);

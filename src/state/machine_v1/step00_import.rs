@@ -17,6 +17,8 @@ impl Step for Step00 {
         "step00-import".to_string()
     }
 
+    /// Load Factorio Mod's exported map data JSON into a huge single image
+    /// representing the whole map.
     fn transformer(&self, params: StepParams) {
         let lua_dir = Path::new("work/chunk500");
         let data = LuaData::open(

@@ -32,6 +32,7 @@ impl Step for Step04 {
         "step04-contours".to_string()
     }
 
+    /// Detect resource patches in image with OpenCV.
     fn transformer(&self, params: StepParams) {
         let previous_step_dir = params.step_history_out_dirs.last().unwrap();
 

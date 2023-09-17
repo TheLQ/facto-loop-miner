@@ -15,11 +15,14 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 /// Pathfinder v1, Mori Calliope
+///
+/// Makes a dual rail, 3x rail wide, 90 degree turning, path from start to end.
+/// Without collisions into any point on the Surface.
 pub fn mori_start(
     surface: &Surface,
     mut start: Rail,
     mut end: Rail,
-    params: &StepParams,
+    step_params: &StepParams,
 ) -> Option<Vec<Rail>> {
     let start_time = Instant::now();
 
@@ -36,7 +39,7 @@ pub fn mori_start(
         }
     }
 
-    let patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
+    let patches = DiskPatch::load_from_step_history(&step_params.step_history_out_dirs);
     let resource_cloud = ResourceCloud::from_patches(&patches);
 
     let mut working_buffer = surface.surface_diff();
