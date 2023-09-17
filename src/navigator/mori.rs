@@ -1,4 +1,4 @@
-use crate::navigator::mori_bias::{calculate_bias_for_point, RailAction};
+use crate::navigator::mori_cost::{calculate_cost_for_point, RailAction};
 use crate::navigator::resource_cloud::ResourceCloud;
 use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::StepParams;
@@ -367,7 +367,7 @@ impl Rail {
             .and_then(|v| v.into_buildable(surface, working_buffer))
         {
             let cost =
-                calculate_bias_for_point(RailAction::Straight, self, &rail, end, resource_cloud);
+                calculate_cost_for_point(RailAction::Straight, self, &rail, end, resource_cloud);
             if !(rail.distance(end) < 400 && rail.direction != end.direction) {
                 res.push((rail, cost))
             }
@@ -378,7 +378,7 @@ impl Rail {
             .and_then(|v| v.into_buildable(surface, working_buffer))
         {
             let cost =
-                calculate_bias_for_point(RailAction::TurnLeft, self, &rail, end, resource_cloud);
+                calculate_cost_for_point(RailAction::TurnLeft, self, &rail, end, resource_cloud);
             if !(rail.distance(end) < 400 && rail.direction != end.direction) {
                 res.push((rail, cost))
             }
@@ -388,7 +388,7 @@ impl Rail {
             .and_then(|v| v.into_buildable(surface, working_buffer))
         {
             let cost =
-                calculate_bias_for_point(RailAction::TurnRight, self, &rail, end, resource_cloud);
+                calculate_cost_for_point(RailAction::TurnRight, self, &rail, end, resource_cloud);
             if !(rail.distance(end) < 400 && rail.direction != end.direction) {
                 res.push((rail, cost))
             }

@@ -15,7 +15,7 @@ pub enum RailAction {
     Straight,
 }
 
-pub fn calculate_bias_for_point(
+pub fn calculate_cost_for_point(
     action: RailAction,
     start: &Rail,
     next: &Rail,
