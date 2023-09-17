@@ -21,7 +21,7 @@ impl<'a> Navigator<'a> {
                 winning_direction = direction;
             }
         }
-        println!("most valuable direction {:?}", winning_direction)
+        tracing::debug("most valuable direction {:?}", winning_direction)
     }
 }
 
@@ -90,7 +90,7 @@ fn route_patch(surface: &mut Surface, patch: &Patch) {
                 surface.set_pixel_point_i32(Pixel::Rail, pos);
             }
             existing => {
-                println!("stopping at {} offset {}", existing.as_ref(), offset);
+                tracing::debug("stopping at {} offset {}", existing.as_ref(), offset);
                 break;
             }
         }

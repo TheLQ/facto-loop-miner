@@ -34,7 +34,7 @@ pub type PixelKdTree = KdTree<f32, 2>;
 pub const LOCALE: Locale = Locale::en;
 pub const TILES_PER_CHUNK: usize = 32;
 pub fn inner_main() {
-    println!("hello");
+    tracing::debug("hello");
     let root_dir = Path::new("work");
 
     match 1 {

@@ -56,7 +56,7 @@ pub fn draw_mega_box(img: &mut Surface, metrics: &mut Metrics, patches: &mut Dis
         }
     }
 
-    println!("megabox?")
+    tracing::debug("megabox?")
 }
 
 fn exclude_patches(img: &mut Surface, metrics: &mut Metrics, disk_patches: &mut DiskPatch) {

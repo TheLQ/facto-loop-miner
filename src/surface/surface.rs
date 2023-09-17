@@ -43,7 +43,7 @@ impl Surface {
         height = height + 1;
         let size = width * height;
         let buffer = (0..size).map(|_| Pixel::Empty).collect();
-        println!("Image buffer size {}", size.to_formatted_string(&LOCALE));
+        tracing::debug("Image buffer size {}", size.to_formatted_string(&LOCALE));
         Surface {
             buffer,
             width,
@@ -88,7 +88,7 @@ impl Surface {
     pub fn set_pixel(&mut self, pixel: Pixel, x: u32, y: u32) {
         let _old = self.replace_pixel(pixel, x, y);
         // if old != Pixel::Empty {
-        //     println!(
+        //     tracing::debug(
         //         "[warn] unexpected existing pixel {}x{} data {:?} trying {:?}",
         //         x, y, old, pixel
         //     )
@@ -150,7 +150,7 @@ impl Surface {
 
         let dat_path = dat_path(&out_dir);
         let buffer = read(&dat_path).unwrap();
-        println!("read buffer from {}", &dat_path.display());
+        tracing::debug("read buffer from {}", &dat_path.display());
 
         // compress [15,0,99,0] to 0b1010
 
@@ -162,13 +162,13 @@ impl Surface {
         let meta_path = meta_path(&out_dir);
         let meta_reader = BufReader::new(File::open(&meta_path).unwrap());
         let surface: Surface = simd_json::serde::from_reader(meta_reader).unwrap();
-        println!("read size from {}", &meta_path.display());
+        tracing::debug("read size from {}", &meta_path.display());
 
         surface
     }
 
     pub fn save(&self, out_dir: &Path) {
-        println!("Saving RGB dump image to {}", out_dir.display());
+        tracing::debug("Saving RGB dump image to {}", out_dir.display());
         if !out_dir.is_dir() {
             panic!("dir does not exist {}", out_dir.display());
         }
@@ -181,11 +181,11 @@ impl Surface {
         let bytes: &Vec<u8> = unsafe { transmute(&self.buffer) };
 
         let dat_path = dat_path(&out_dir);
-        println!("writing to {}", dat_path.display());
+        tracing::debug("writing to {}", dat_path.display());
         write(&dat_path, bytes).unwrap();
 
         let meta_path = meta_path(&out_dir);
-        println!("writing to {}", &meta_path.display());
+        tracing::debug("writing to {}", &meta_path.display());
         let meta_writer = BufWriter::new(File::create(&meta_path).unwrap());
         simd_json::serde::to_writer(meta_writer, self).unwrap();
     }
@@ -214,10 +214,10 @@ impl Surface {
     fn save_rgb(&self, rgb: &[u8], path: &Path) {
         fs::write(path, rgb).unwrap();
 
-        println!(
+        tracing::debug(
             "Saved {} byte RGB array to {}",
             rgb.len().to_formatted_string(&LOCALE),
-            path.display()
+            path.display(),
         );
     }
 
@@ -230,10 +230,10 @@ impl Surface {
             .write_image(&rgb, self.width, self.height, ColorType::Rgb8)
             .unwrap();
         let size = file.metadata().unwrap().len();
-        println!(
+        tracing::debug(
             "Saved {} byte image to {}",
             size.to_formatted_string(&LOCALE),
-            path.display()
+            path.display(),
         );
     }
 
@@ -361,7 +361,7 @@ fn anti_bad_pixel_i32(x: i32, y: i32) {
 }
 
 pub fn draw_text_cv(img: &mut Mat, text: &str, origin: Point) {
-    println!("drawing {} at {:?}", text, origin);
+    tracing::debug("drawing {} at {:?}", text, origin);
     put_text(
         img,
         text,
@@ -377,7 +377,7 @@ pub fn draw_text_cv(img: &mut Mat, text: &str, origin: Point) {
 }
 
 pub fn draw_text_vertical_cv(_img: &mut Mat, text: &str, origin: Point) {
-    println!("drawing {} at {:?}", text, origin);
+    tracing::debug("drawing {} at {:?}", text, origin);
     // "cv(0,0)" is roughly 500x150
     let mut text_img = unsafe { Mat::new_rows_cols(500, 1000, 0).unwrap() };
     put_text(

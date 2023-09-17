@@ -37,13 +37,13 @@ impl Machine {
         let state = Rc::new(RefCell::new(State::new(&work_dir.join("state.json"))));
 
         let step_names: Vec<String> = self.steps.iter().map(|v| v.name()).collect();
-        println!("[Machine] Steps {}", step_names.join(","));
+        tracing::debug("[Machine] Steps {}", step_names.join(","));
 
         let mut step_history_out_dirs = Vec::new();
         for step in &self.steps {
-            println!("=== {}", step.name());
+            tracing::debug("=== {}", step.name());
             if step.name() == DEATH_STEP_NAME {
-                println!("RIP");
+                tracing::debug("RIP");
                 break;
             }
 
@@ -54,7 +54,7 @@ impl Machine {
             let changed = state.borrow_mut().update_modified(&step_out_dir);
             if changed {
                 let metrics = Rc::new(RefCell::new(Metrics::new(step.name())));
-                println!("=== Found changes, transforming");
+                tracing::debug("=== Found changes, transforming");
 
                 let start = Instant::now();
 
@@ -69,19 +69,19 @@ impl Machine {
                 RefCell::into_inner(Rc::into_inner(metrics).unwrap()).log_final();
 
                 if read_dir(&step_out_dir).unwrap().count() == 0 {
-                    println!("=== detected empty dir, removing for future re-processing");
+                    tracing::debug("=== detected empty dir, removing for future re-processing");
                     remove_dir(&step_out_dir).unwrap();
                 } else {
                     // dir modify date updated after writing to folder
                     state.borrow_mut().update_modified(&step_out_dir);
                 }
 
-                println!(
+                tracing::debug(
                     "Step Elapsed {}",
-                    (end - start).as_millis().to_formatted_string(&LOCALE)
+                    (end - start).as_millis().to_formatted_string(&LOCALE),
                 );
             } else {
-                println!("=== No Changes Found")
+                tracing::debug("=== No Changes Found")
             }
             step_history_out_dirs.push(step_out_dir.clone());
         }
@@ -96,7 +96,7 @@ where
 {
     for dir in step_history_out_dirs.rev() {
         let file = dir.join(name);
-        println!("search {}", file.display());
+        tracing::debug("search {}", file.display());
         if file.exists() {
             return file;
         }

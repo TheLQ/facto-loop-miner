@@ -29,11 +29,11 @@ impl Metrics {
             .iter()
             .sorted_by_key(|(name, _count)| (**name).clone())
         {
-            println!(
+            tracing::debug(
                 "-- {} {}\t\t{} ",
                 self.new_item_log_prefix,
                 name,
-                count.to_formatted_string(&LOCALE)
+                count.to_formatted_string(&LOCALE),
             );
         }
     }

@@ -26,14 +26,14 @@ impl State {
     pub fn new(path: &Path) -> Self {
         let mut state = match read_to_string(path) {
             Ok(v) => {
-                println!("[State] Reading {}", path.display());
+                tracing::debug("[State] Reading {}", path.display());
                 serde_json::from_str(&v)
             }
             Err(e) => {
-                println!(
+                tracing::debug(
                     "[State] No existing state ({}) {}",
                     e.kind(),
-                    path.display()
+                    path.display(),
                 );
                 match e.kind() {
                     ErrorKind::NotFound => Ok(State::default()),
@@ -49,7 +49,7 @@ impl State {
     }
 
     pub fn disk_write(&self) {
-        println!("Writing to {}", self.path.display());
+        tracing::debug("Writing to {}", self.path.display());
         let file = File::create(&self.path).unwrap();
         serde_json::to_writer(BufWriter::new(file), self).unwrap();
     }
@@ -67,11 +67,11 @@ impl State {
             .and_modify(|modified_old| {
                 if modified_new_milli != modified_old.clone() {
                     force_rebuild = true;
-                    println!(
+                    tracing::debug(
                         "[State] found change on {} old {} new {}",
                         path.display(),
                         modified_old,
-                        modified_new_milli
+                        modified_new_milli,
                     );
                     *modified_old = modified_new_milli;
                 }

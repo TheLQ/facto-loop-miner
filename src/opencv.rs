@@ -38,7 +38,7 @@ pub fn load_cv_from_buffer_filtered(
         // let mut found_ids: Vec<u8> = Vec::new();
         for pixel_raw in buffer.iter_mut() {
             // if !found_ids.contains(pixel_raw) {
-            //     println!("found {}", pixel_raw);
+            //     tracing::debug("found {}", pixel_raw);
             //     found_ids.push(pixel_raw.clone());
             // }
             if pixel_id != *pixel_raw {

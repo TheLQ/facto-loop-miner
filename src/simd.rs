@@ -107,7 +107,7 @@ pub fn any_bit_equal_m256_bool<'a>(mut a: &Vec<SseUnit>, mut b: &Vec<SseUnit>) -
             let matches = _mm256_and_si256(a[i], b[i]);
             total = _mm256_or_si256(matches, total);
 
-            // println!(
+            // tracing::debug(
             //     "{}{}\n{}{}\n{}{}\n{}{}",
             //     "a       ",
             //     format_m256(a[i].clone()),
@@ -140,7 +140,7 @@ pub fn any_bit_equal_m256_bool<'a>(mut a: &Vec<SseUnit>, mut b: &Vec<SseUnit>) -
     // let res = and_is_zero == 1;
     let cmp = unsafe { _mm256_cmpeq_epi32(total, *COMMON_ZERO) };
     let mask = unsafe { _mm256_movemask_epi8(cmp) };
-    // println!(
+    // tracing::debug(
     //     "{}{}\n{}{}\n{}{:b}\n",
     //     "total   ",
     //     format_m256(total.clone()),
@@ -150,7 +150,7 @@ pub fn any_bit_equal_m256_bool<'a>(mut a: &Vec<SseUnit>, mut b: &Vec<SseUnit>) -
     //     mask,
     // );
 
-    // println!(
+    // tracing::debug(
     //     "{}{}\n{}{:b}\n",
     //     "cmp     ",
     //     format_m256(cmp.clone()),
@@ -161,7 +161,7 @@ pub fn any_bit_equal_m256_bool<'a>(mut a: &Vec<SseUnit>, mut b: &Vec<SseUnit>) -
     // mask
     mask != 0xFF_FF_FF_FFu32 as i32
     //
-    // println!("is zero {}", res);
+    // tracing::debug("is zero {}", res);
     // res
     // let parts: i64x4 = total.into();
     // (parts[0] + parts[1] + parts[2] + parts[3]) != 0
