@@ -21,7 +21,7 @@ pub struct DiskPatch {
 impl DiskPatch {
     pub fn save(&self, dir: &Path) {
         let path = &dir.join("patches.json");
-        tracing::debug("Wrote output patch dump to {}", path.display());
+        tracing::debug!("Wrote output patch dump to {}", path.display());
         let file = File::create(path).unwrap();
         simd_json::to_writer(BufWriter::new(file), self).unwrap();
     }
@@ -44,7 +44,7 @@ impl DiskPatch {
         let io = BufReader::new(
             File::open(new)
                 .map_err(|e| {
-                    tracing::debug("failed for {}", dir.display());
+                    tracing::debug!("failed for {}", dir.display());
                     e
                 })
                 .unwrap(),

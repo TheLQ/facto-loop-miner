@@ -32,10 +32,10 @@ impl Step for Step00 {
         let mut surface = Surface::new(area_box.width + 1, area_box.height);
         surface.area_box = area_box;
 
-        tracing::debug("Loading {} resources...", data.resource.len());
+        tracing::debug!("Loading {} resources...", data.resource.len());
         translate_entities_to_image(&data.resource, &mut surface, &params);
 
-        tracing::debug("Loading {} tiles...", data.tile.len());
+        tracing::debug!("Loading {} tiles...", data.tile.len());
         translate_entities_to_image(&data.tile, &mut surface, &params);
 
         surface.save(&params.step_out_dir);

@@ -44,7 +44,7 @@ pub fn mori_start(
 
     let mut working_buffer = surface.surface_diff();
 
-    tracing::debug("Mori start {:?} end {:?}", start, end);
+    tracing::debug!("Mori start {:?} end {:?}", start, end);
     // Forked function only passes on the parents, used for limits
     let pathfind = astar_mori(
         &start,
@@ -64,21 +64,21 @@ pub fn mori_start(
     let mut result = None;
     if let Some(pathfind) = pathfind {
         let (path, path_size) = pathfind;
-        tracing::debug("built path {} long with {}", path.len(), path_size);
+        tracing::debug!("built path {} long with {}", path.len(), path_size);
 
         result = Some(path);
     } else {
-        tracing::debug("failed to pathfind from {:?} to {:?}", start, end);
+        tracing::debug!("failed to pathfind from {:?} to {:?}", start, end);
     }
 
     let end_time = Instant::now();
     let duration = end_time - start_time;
-    tracing::debug(
+    tracing::debug!(
         "+++ Mori duration {}",
         duration.as_millis().to_formatted_string(&LOCALE),
     );
 
-    tracing::debug(
+    tracing::debug!(
         "metric successors called {}",
         METRIC_SUCCESSOR
             .swap(0, Ordering::Relaxed)
@@ -166,23 +166,23 @@ impl Rail {
                     direction: source_direction.clone(),
                     mode: RailMode::Straight,
                 };
-                // tracing::debug("source {:?}", source_rail);
+                // tracing::debug!("source {:?}", source_rail);
 
                 let first_leg = source_rail.move_forward()?;
-                // tracing::debug("first_leg {:?}", first_leg);
+                // tracing::debug!("first_leg {:?}", first_leg);
 
                 let is_left_turn =
                     source_rail.move_force_rotate_clockwise(1).direction == self.direction;
                 if is_left_turn {
                     let dog_leg = first_leg.move_force_forward(DUAL_RAIL_SIZE - 1);
                     res.extend(dog_leg.area()?);
-                    // tracing::debug("dog_leg {:?}", dog_leg);
+                    // tracing::debug!("dog_leg {:?}", dog_leg);
                 }
 
                 let mut second_leg = first_leg.clone();
                 second_leg.direction = self.direction.clone();
                 second_leg = second_leg.move_forward()?;
-                // tracing::debug("second_leg {:?}", second_leg);
+                // tracing::debug!("second_leg {:?}", second_leg);
 
                 res.extend(first_leg.area()?);
 
@@ -273,7 +273,7 @@ impl Rail {
         // full step again for spacing (eg in a cove)
         next = next.move_forward().unwrap();
 
-        tracing::debug("move backwards {} from {:?} to {:?}", counter, self, next);
+        tracing::debug!("move backwards {} from {:?} to {:?}", counter, self, next);
 
         next
     }
@@ -350,12 +350,12 @@ impl Rail {
         // if parents.len() > 400 {
         //     return Vec::new();
         // }
-        // tracing::debug("testing {:?}", self);
+        // tracing::debug!("testing {:?}", self);
 
         {
             let cur = METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
             if cur % 100_000 == 0 {
-                tracing::debug(
+                tracing::debug!(
                     "successor {} spot parents {} size {}x{}",
                     cur.to_formatted_string(&LOCALE),
                     parents.len(),
@@ -397,7 +397,7 @@ impl Rail {
                 res.push((rail, cost))
             }
         }
-        // tracing::debug(
+        // tracing::debug!(
         //     "for {:?} found {}",
         //     &self,
         //     res.iter().map(|(rail, _)| format!("{:?}", rail)).join("|")
@@ -615,7 +615,7 @@ fn is_buildable_point_u32_take(surface: &Surface, point: PointU32) -> Option<Poi
     match surface.get_pixel_point_u32(&point) {
         Pixel::Empty => Some(point),
         _existing => {
-            // tracing::debug("blocked at {:?} by {:?}", &position, existing);
+            // tracing::debug!("blocked at {:?} by {:?}", &position, existing);
             None
         }
     }
@@ -628,7 +628,7 @@ fn is_buildable_point_u32<'p>(surface: &Surface, point: &'p PointU32) -> Option<
     match surface.get_pixel_point_u32(point) {
         Pixel::Empty => Some(point),
         _existing => {
-            // tracing::debug("blocked at {:?} by {:?}", &position, existing);
+            // tracing::debug!("blocked at {:?} by {:?}", &position, existing);
             None
         }
     }
@@ -648,7 +648,7 @@ pub fn write_rail(surface: &mut Surface, path: &Vec<Rail>) {
                 for path_area_game_point in path_area_rail_point.to_game_points(surface) {
                     let mut new_pixel = match surface.get_pixel_point_u32(&path_area_game_point) {
                         Pixel::Rail => {
-                            tracing::debug(
+                            tracing::debug!(
                                 "existing Rail at {:?} total {}",
                                 path_area_game_point,
                                 total_rail,

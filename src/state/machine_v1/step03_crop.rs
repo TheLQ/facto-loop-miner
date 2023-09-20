@@ -31,7 +31,7 @@ impl Step for Step03 {
                 count = count + 1;
             }
         }
-        tracing::debug("wiped out {} water", count);
+        tracing::debug!("wiped out {} water", count);
 
         surface.save(&params.step_out_dir);
     }

@@ -17,8 +17,10 @@ use crate::surface::pixel::generate_lookup_image;
 use kiddo::KdTree;
 use num_format::Locale;
 use num_traits::PrimInt;
+use std::fmt;
 use std::ops::{Rem, Sub};
 use std::path::Path;
+use tracing::Level;
 
 mod gamedata;
 pub mod navigator;
@@ -34,7 +36,14 @@ pub type PixelKdTree = KdTree<f32, 2>;
 pub const LOCALE: Locale = Locale::en;
 pub const TILES_PER_CHUNK: usize = 32;
 pub fn inner_main() {
-    tracing::debug("hello");
+    let tracing_format = tracing_subscriber::fmt::format().compact();
+
+    tracing_subscriber::fmt()
+        .with_max_level(Level::TRACE)
+        .compact()
+        .init();
+
+    tracing::debug!("hello");
     let root_dir = Path::new("work");
 
     match 1 {

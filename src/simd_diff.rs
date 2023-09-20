@@ -39,8 +39,8 @@ impl SurfaceDiff {
         // let mut talked = false;
         // for pos in &positions {
         //     if !talked && self.surface_copy[pos] != 0 {
-        //         // tracing::debug("expect {:?} at {}", self.surface_copy[pos], pos);
-        //         // tracing::debug(
+        //         // tracing::debug!("expect {:?} at {}", self.surface_copy[pos], pos);
+        //         // tracing::debug!(
         //         //     "{}{}\n{}{}",
         //         //     "source  ",
         //         //     format_m256(*self.source.get(bucket_div(pos, SSE_BITS)).unwrap()),
@@ -53,7 +53,7 @@ impl SurfaceDiff {
         let found = any_bit_equal_m256_bool(&self.source, &self.working);
 
         // self.reset_buffer();
-        // tracing::debug("found {}", found);
+        // tracing::debug!("found {}", found);
         apply_positions_iter_to_m256_buffer(&positions, &mut self.working, false);
 
         !found
@@ -108,7 +108,7 @@ mod test {
             false
         );
 
-        tracing::debug("-----");
+        tracing::debug!("-----");
 
         for pos in &pixel_positions_test {
             let slice = surface.buffer.as_mut_slice();

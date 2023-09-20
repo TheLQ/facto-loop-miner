@@ -15,7 +15,7 @@ pub fn get_patch_main() {
         .filter(|v| v.height + v.width > 50)
         .next()
         .unwrap();
-    tracing::debug("dumping {:?}", first_patch);
+    tracing::debug!("dumping {:?}", first_patch);
 
     let mut img = surface.get_buffer_to_cv();
     img = img

@@ -23,9 +23,9 @@ impl LuaData {
         };
 
         let duration = Instant::now() - start_time;
-        tracing::debug("-- Opened Data file in {} seconds", duration.as_secs());
-        tracing::debug("-- {} Tile", data.tile.len().to_formatted_string(&LOCALE));
-        tracing::debug(
+        tracing::debug!("-- Opened Data file in {} seconds", duration.as_secs());
+        tracing::debug!("-- {} Tile", data.tile.len().to_formatted_string(&LOCALE));
+        tracing::debug!(
             "-- {} Resource",
             data.resource.len().to_formatted_string(&LOCALE),
         );
@@ -34,14 +34,14 @@ impl LuaData {
         // for tile in &data.tile {
         //     let name = tile.name().to_string();
         //     if !printed.contains(&name) {
-        //         tracing::debug("type {}", &name);
+        //         tracing::debug!("type {}", &name);
         //         printed.push(name);
         //     }
         // }
         // for tile in &data.resource {
         //     let name = tile.lua_type.to_string();
         //     if !printed.contains(&name) {
-        //         tracing::debug("type {}", &name);
+        //         tracing::debug!("type {}", &name);
         //         printed.push(name);
         //     }
         // }
@@ -97,7 +97,7 @@ fn open_data_file<T>(path: &Path) -> T
 where
     T: DeserializeOwned,
 {
-    tracing::debug("Reading entity data {} ...", path.display());
+    tracing::debug!("Reading entity data {} ...", path.display());
     // let file = File::open(path).unwrap();
     // let buf_reader = BufReader::new(file);
     // let result = simd_json::serde::from_reader(buf_reader).unwrap();

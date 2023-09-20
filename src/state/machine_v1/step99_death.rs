@@ -15,6 +15,6 @@ impl Step for Step99Death {
     }
 
     fn transformer(&self, _: StepParams) {
-        tracing::debug("UNEXPECTED DEATH RUN");
+        tracing::debug!("UNEXPECTED DEATH RUN");
     }
 }

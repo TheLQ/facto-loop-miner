@@ -39,7 +39,7 @@ impl Step for Step04 {
         let surface = Surface::load(&previous_step_dir);
 
         let surface_raw_path = previous_step_dir.join("surface-raw.dat");
-        tracing::debug("Loading {}", surface_raw_path.display());
+        tracing::debug!("Loading {}", surface_raw_path.display());
         let disk_patches = detector(&surface_raw_path, &surface, &params.step_out_dir);
 
         disk_patches.save(&params.step_out_dir);
@@ -64,7 +64,7 @@ fn write_surface_with_all_patches_wrapped(surface: &mut Surface, disk_patches: &
 }
 
 fn write_png(path: &Path, img: &Mat) {
-    tracing::debug("Wrote debug image {}", path.display());
+    tracing::debug!("Wrote debug image {}", path.display());
     imwrite(path.to_str().unwrap(), img, &Vector::new()).unwrap();
 }
 
@@ -88,7 +88,7 @@ fn detect_pixel(
 ) -> Vec<Patch> {
     let mut img = load_raw_image_with_surface(surface_raw_path, surface_meta, Some(pixel));
     let size = img.size().unwrap();
-    tracing::debug(
+    tracing::debug!(
         "Read {} size {}x{} type {}",
         surface_raw_path.display(),
         size.width,
@@ -126,11 +126,11 @@ fn detect_patch_rectangles(base: &Mat) -> Vec<Rect> {
     )
     .unwrap();
 
-    tracing::debug("found contours {}", contours.len());
+    tracing::debug!("found contours {}", contours.len());
     // metricify("contour sizes", contours.iter().map(|v| v.len()));
 
     // let first_debug = contours.get(0).unwrap();
-    // tracing::debug(
+    // tracing::debug!(
     //     "countour 1 {}",
     //     first_debug
     //         .iter()
@@ -213,32 +213,32 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree,
         }
         let super_rect = bounding_rect(&Vector::from_slice(&corners)).unwrap();
 
-        // tracing::debug("====");
-        // tracing::debug(
+        // tracing::debug!("====");
+        // tracing::debug!(
         //     "for {}",
         //     (&nearby_rects)
         //         .iter()
         //         .map(|rect| rect_to_string((rect)))
         //         .join(", ")
         // );
-        // tracing::debug("got super {}", rect_to_string(&super_rect));
+        // tracing::debug!("got super {}", rect_to_string(&super_rect));
 
         combine_replacements.push(super_rect);
     }
 
-    tracing::debug("patches init {}", patch_rects.len());
+    tracing::debug!("patches init {}", patch_rects.len());
     for (pos, mask) in combine_mask.iter().enumerate().rev() {
         if *mask {
             patch_rects.remove(pos);
         }
     }
-    tracing::debug("patches with mergeable removed {}", patch_rects.len());
+    tracing::debug!("patches with mergeable removed {}", patch_rects.len());
 
     // patch_rects.clear();
     for super_rect in combine_replacements {
         patch_rects.push(super_rect);
     }
-    tracing::debug("patches with merge replacements {}", patch_rects.len());
+    tracing::debug!("patches with merge replacements {}", patch_rects.len());
 }
 
 fn draw_patch_border(img: &mut Mat, rects: Vec<Rect>) {
@@ -256,7 +256,7 @@ where
     let mut found: Vec<T> = Vec::new();
     for val in input {
         if !found.contains(&val) {
-            tracing::debug("{} {}", name, &val);
+            tracing::debug!("{} {}", name, &val);
             found.push(val.clone());
         }
     }

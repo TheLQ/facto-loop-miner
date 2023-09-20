@@ -29,7 +29,7 @@ impl Metrics {
             .iter()
             .sorted_by_key(|(name, _count)| (**name).clone())
         {
-            tracing::debug(
+            tracing::debug!(
                 "-- {} {}\t\t{} ",
                 self.new_item_log_prefix,
                 name,

@@ -120,7 +120,7 @@ mod test {
         };
         assert_eq!(surface.buffer.len(), 100);
         let lookup = SectorLookup::new_from_surface(&surface, 4);
-        tracing::debug("{:?}", lookup);
+        tracing::debug!("{:?}", lookup);
 
         let expected: [&[u8; 10]; 10] = [
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -136,12 +136,12 @@ mod test {
         ];
 
         let test_box = lookup.get_side_box(SectorSide::Right);
-        tracing::debug("box {:?}", test_box);
+        tracing::debug!("box {:?}", test_box);
 
         let mut actual: Vec<u8> = vec![0u8; 10 * 10];
         for i in 0..surface.buffer.len() {
             let point = surface.index_to_xy(i);
-            tracing::debug("testing point {:?}", point);
+            tracing::debug!("testing point {:?}", point);
             if test_box.contains_point_u32(point) {
                 actual[i] = 1;
             }

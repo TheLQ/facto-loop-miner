@@ -47,7 +47,7 @@ impl ResourceCloud {
                 _ => {}
             }
         }
-        tracing::debug("built total {}", positions.len());
+        tracing::debug!("built total {}", positions.len());
         // positions.sort();
         positions.dedup();
 

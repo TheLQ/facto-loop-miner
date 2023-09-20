@@ -81,7 +81,7 @@ fn navigate_patches_to_base(
         return surface;
     }
 
-    // tracing::debug("found {} patch {} away", pixel.as_ref(), patch_distance);
+    // tracing::debug!("found {} patch {} away", pixel.as_ref(), patch_distance);
 
     // TODO: Speculation
     enum SpeculationTypes {
@@ -99,7 +99,7 @@ fn navigate_patches_to_base(
         .into_iter()
         .enumerate()
     {
-        tracing::debug(
+        tracing::debug!(
             "path {} of {} - actually made {} max {:?}",
             nearest_count,
             NEAREST_COUNT,
@@ -111,20 +111,20 @@ fn navigate_patches_to_base(
             && y_start < patch_start.y
             && y_end > patch_start.y
         {
-            tracing::debug("[Warn] broken patch in the remove area {:?}", patch_start);
+            tracing::debug!("[Warn] broken patch in the remove area {:?}", patch_start);
             continue;
         }
 
         if let Some(limit) = PATH_LIMIT {
             if limit == made_paths {
-                tracing::debug("path limit");
+                tracing::debug!("path limit");
                 break;
             }
         }
         let destination = match destinations.next() {
             Some(v) => v,
             None => {
-                tracing::debug("Out of destinations, stopping");
+                tracing::debug!("Out of destinations, stopping");
                 break;
             }
         };
