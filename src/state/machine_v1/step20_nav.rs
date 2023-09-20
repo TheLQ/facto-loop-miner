@@ -36,6 +36,10 @@ impl Step for Step20 {
 
         surface = navigate_patches_to_base(surface, patches, &mut params);
 
+        for dest in main_base_destinations() {
+            surface.draw_square(&Pixel::Stone, 20, &dest);
+        }
+
         surface.save(&params.step_out_dir);
     }
 }

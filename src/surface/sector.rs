@@ -106,7 +106,9 @@ mod test {
     use crate::surface::sector::{SectorLookup, SectorSide};
     use crate::surface::surface::Surface;
     use itertools::Itertools;
+    use tracing_test::traced_test;
 
+    #[traced_test]
     #[test]
     fn test() {
         let mut surface = Surface::new(10, 10 - 1);
@@ -119,17 +121,17 @@ mod test {
             height: 10,
         };
         assert_eq!(surface.buffer.len(), 100);
-        let lookup = SectorLookup::new_from_surface(&surface, 4);
+        let lookup = SectorLookup::new_from_surface(&surface, 2);
         tracing::debug!("{:?}", lookup);
 
         let expected: [&[u8; 10]; 10] = [
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             &[0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
             &[0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
-            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            &[0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
+            &[0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
