@@ -1,7 +1,9 @@
+use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::rail_line::RailLineGenerator;
 use crate::admiral::lua_command::{
     FacDestroy, FacLog, FacSurfaceCreateEntity, FacSurfaceCreateEntitySafe, LuaCommand,
 };
+use num_format::Grouping::Posix;
 use opencv::core::{Point, Point2f};
 use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONError, RCONRequest};
 use std::collections::HashMap;
@@ -37,6 +39,9 @@ impl FactoCommands {
 
     fn execute_lua(&mut self, lua: impl LuaCommand) -> Result<String, RCONError> {
         let lua_text = lua.make_lua();
+        if lua_text.trim().is_empty() {
+            return Err(RCONError::TypeError("empty command".to_string()));
+        }
 
         // Execute command request to RCON server (SERVERDATA_EXECCOMMAND)
         let request = RCONRequest::new(format!("/c {}", lua_text));
@@ -105,12 +110,12 @@ pub fn inner_admiral() -> Result<(), RCONError> {
 
     admiral.execute_lua_safe(FacDestroy {})?;
 
-    admiral.execute_lua_empty(RailLineGenerator {
-        length: 200,
-        rail_loops: 20,
-        start: Point2f { x: 1f32, y: 1f32 },
-        separator_every_num: 8,
-    });
+    let res = admiral.execute_lua_safe(BeaconFarmGenerator {
+        cell_size: 3,
+        width: 5,
+        height: 5,
+        start: Point2f { x: 0.5, y: 0.5 },
+    })?;
 
     Ok(())
 }
@@ -128,5 +133,13 @@ fn _generate_mega_block(admiral: &mut FactoCommands) -> Result<(), RCONError> {
             })?;
         }
     }
+
+    admiral.execute_lua_empty(RailLineGenerator {
+        length: 200,
+        rail_loops: 20,
+        start: Point2f { x: 1f32, y: 1f32 },
+        separator_every_num: 8,
+    });
+
     Ok(())
 }

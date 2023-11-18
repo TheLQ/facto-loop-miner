@@ -53,12 +53,16 @@ impl LuaCommand for FacSurfaceCreateEntitySafe {
 local admiral_create = {}
 if admiral_create == nil then
     rcon.print('create_entity_failed')
+elseif admiral_create.position.x ~= {} or admiral_create.position.y ~= {} then
+     rcon.print('create_entity_bad_position')
 else
     rcon.print('create_entity_success')
 end
 end
 FacSurfaceCreateEntitySafe()"#,
-            self.inner.make_lua()
+            self.inner.make_lua(),
+            self.inner.position.x,
+            self.inner.position.y,
         )
     }
 }
