@@ -1,5 +1,7 @@
 use crate::surface::surface::PointU32;
+use itertools::Itertools;
 use opencv::core::{Point, Point2f};
+use std::collections::HashMap;
 use std::fmt::format;
 
 pub const DEFAULT_SURFACE_VAR: &str = "game.surfaces[1]";
@@ -10,20 +12,32 @@ pub trait LuaCommand {
 }
 
 pub struct FacSurfaceCreateEntity {
-    pub(crate) surface_var: String,
-    pub(crate) name: String,
-    pub(crate) position: Point2f,
+    pub surface_var: String,
+    pub name: String,
+    pub position: Point2f,
+    pub params: HashMap<String, String>,
 }
 
 impl LuaCommand for FacSurfaceCreateEntity {
     fn make_lua(&self) -> String {
+        let params_str = self
+            .params
+            .iter()
+            .map(|(key, value)| format!("{}={}", key, value))
+            .join(",");
         format!(
             "{}.create_entity{{ \
             name=\"{}\", \
             position={{ x={},y={} }}, \
-            force={},
+            force={},\
+            {}\
             }};",
-            self.surface_var, self.name, self.position.x, self.position.y, DEFAULT_FORCE_VAR
+            self.surface_var,
+            self.name,
+            self.position.x,
+            self.position.y,
+            DEFAULT_FORCE_VAR,
+            params_str
         )
     }
 }

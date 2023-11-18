@@ -2,6 +2,7 @@ use crate::admiral::lua_command::{
     FacSurfaceCreateEntity, FacSurfaceCreateEntitySafe, LuaCommand, DEFAULT_SURFACE_VAR,
 };
 use opencv::core::{Point, Point2f};
+use std::collections::HashMap;
 use tracing::debug;
 
 pub struct RailLineGenerator {
@@ -31,13 +32,11 @@ impl LuaCommand for RailLineGenerator {
                 // separator_x = separator_x / self.separator_every_num;
                 // start_x = start_x + separator_x as f32;
 
-                let mut start_x = self.start.x;
-                debug!("start_x init           {}", start_x);
-                start_x = start_x + (rail_loop as f32 * 2f32 * 3f32);
-                debug!("start_x with rail_loop {}", start_x);
-                start_x = start_x
-                    + ((rail_loop - (rail_loop % self.separator_every_num))
-                        / self.separator_every_num) as f32;
+                if rail_loop % self.separator_every_num == 0 {
+                    continue;
+                }
+
+                let mut start_x = self.start.x + (rail_loop as f32 * 2f32 * 3f32);
                 debug!("start_x tota rail_loop {}", start_x);
 
                 // debug!("sep {} for {}", separator_x, start_x);
@@ -52,6 +51,7 @@ impl LuaCommand for RailLineGenerator {
                             y: start_y,
                         },
                         surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                        params: HashMap::new(),
                     },
                 }));
 
@@ -63,8 +63,45 @@ impl LuaCommand for RailLineGenerator {
                             y: start_y,
                         },
                         surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                        params: HashMap::new(),
                     },
                 }));
+
+                if length % 32 == 0 {
+                    let mut params = HashMap::new();
+                    params.insert(
+                        "direction".to_string(),
+                        "defines.direction.south".to_string(),
+                    );
+                    creation_commands.push(Box::new(FacSurfaceCreateEntitySafe {
+                        inner: FacSurfaceCreateEntity {
+                            name: "rail-signal".to_string(),
+                            position: Point2f {
+                                x: start_x + 1.5,
+                                y: start_y - 0.5,
+                            },
+                            surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                            params,
+                        },
+                    }));
+
+                    let mut params = HashMap::new();
+                    params.insert(
+                        "direction".to_string(),
+                        "defines.direction.north".to_string(),
+                    );
+                    creation_commands.push(Box::new(FacSurfaceCreateEntitySafe {
+                        inner: FacSurfaceCreateEntity {
+                            name: "rail-signal".to_string(),
+                            position: Point2f {
+                                x: start_x + 2.5,
+                                y: start_y - 0.5,
+                            },
+                            surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                            params,
+                        },
+                    }));
+                }
             }
         }
 

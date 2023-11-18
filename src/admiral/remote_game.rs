@@ -4,6 +4,7 @@ use crate::admiral::lua_command::{
 };
 use opencv::core::{Point, Point2f};
 use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONError, RCONRequest};
+use std::collections::HashMap;
 use std::fmt::format;
 use tracing::{debug, info};
 
@@ -105,10 +106,10 @@ pub fn inner_admiral() -> Result<(), RCONError> {
     admiral.execute_lua_safe(FacDestroy {})?;
 
     admiral.execute_lua_empty(RailLineGenerator {
-        length: 1,
+        length: 200,
         rail_loops: 20,
         start: Point2f { x: 1f32, y: 1f32 },
-        separator_every_num: 7,
+        separator_every_num: 8,
     });
 
     Ok(())
@@ -122,6 +123,7 @@ fn _generate_mega_block(admiral: &mut FactoCommands) -> Result<(), RCONError> {
                     surface_var: "game.surfaces[1]".to_string(),
                     position: Point2f::new(1f32 + (x as f32 * 2.0), 1f32 + (y as f32 * 2.0)),
                     name: "straight-rail".to_string(),
+                    params: HashMap::new(),
                 },
             })?;
         }
