@@ -347,7 +347,7 @@ impl Rail {
         resource_cloud: &ResourceCloud,
         working_buffer: &mut SurfaceDiff,
     ) -> Vec<(Self, u32)> {
-        // if parents.len() > 400 {
+        // if parents.len() > 100 {
         //     return Vec::new();
         // }
         // tracing::debug!("testing {:?}", self);
