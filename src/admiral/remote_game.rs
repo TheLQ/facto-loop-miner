@@ -53,13 +53,13 @@ impl FactoCommands {
     }
 
     fn execute_lua_empty(&mut self, lua: impl LuaCommand) -> Result<(), RCONError> {
-        let lua_text = lua.make_lua();
+        // let lua_text = lua.make_lua();
         match self.execute_lua(lua) {
             Ok(v) => {
                 if v.is_empty() {
                     Ok(())
                 } else {
-                    Err(RCONError::TypeError(format!("not empty for {}", lua_text)))
+                    Err(RCONError::TypeError(format!("not empty")))
                 }
             }
             Err(e) => Err(e),
@@ -105,10 +105,10 @@ pub fn inner_admiral() -> Result<(), RCONError> {
     admiral.execute_lua_safe(FacDestroy {})?;
 
     admiral.execute_lua_empty(RailLineGenerator {
-        length: 200,
-        lines: 20,
+        length: 1,
+        rail_loops: 20,
         start: Point2f { x: 1f32, y: 1f32 },
-        separator_every_num: 0,
+        separator_every_num: 7,
     });
 
     Ok(())

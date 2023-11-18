@@ -3,6 +3,7 @@ use opencv::core::{Point, Point2f};
 use std::fmt::format;
 
 pub const DEFAULT_SURFACE_VAR: &str = "game.surfaces[1]";
+pub const DEFAULT_FORCE_VAR: &str = "game.forces[1]";
 
 pub trait LuaCommand {
     fn make_lua(&self) -> String;
@@ -20,9 +21,9 @@ impl LuaCommand for FacSurfaceCreateEntity {
             "{}.create_entity{{ \
             name=\"{}\", \
             position={{ x={},y={} }}, \
-            force=game.forcess[1],
+            force={},
             }};",
-            self.surface_var, self.name, self.position.x, self.position.y
+            self.surface_var, self.name, self.position.x, self.position.y, DEFAULT_FORCE_VAR
         )
     }
 }
@@ -34,7 +35,7 @@ pub struct FacSurfaceCreateEntitySafe {
 impl LuaCommand for FacSurfaceCreateEntitySafe {
     fn make_lua(&self) -> String {
         format!(
-            r#"function inner_create()
+            r#"function FacSurfaceCreateEntitySafe()
 local admiral_create = {}
 if admiral_create == nil then
     rcon.print('create_entity_failed')
@@ -42,7 +43,7 @@ else
     rcon.print('create_entity_success')
 end
 end
-inner_create()"#,
+FacSurfaceCreateEntitySafe()"#,
             self.inner.make_lua()
         )
     }
