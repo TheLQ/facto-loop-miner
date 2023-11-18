@@ -22,6 +22,7 @@ use std::ops::{Rem, Sub};
 use std::path::Path;
 use tracing::Level;
 
+mod admiral;
 mod gamedata;
 pub mod navigator;
 mod opencv;
@@ -46,10 +47,11 @@ pub fn inner_main() {
     tracing::debug!("hello");
     let root_dir = Path::new("work");
 
-    match 1 {
+    match 5 {
         1 => new_v1_machine().start(root_dir),
         3 => generate_lookup_image(),
         4 => crate::self_bin::get_patch::get_patch_main(),
+        5 => admiral::remote_game::admiral(),
         _ => panic!("wtf"),
     }
 }
