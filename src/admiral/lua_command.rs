@@ -7,6 +7,16 @@ use std::fmt::format;
 pub const DEFAULT_SURFACE_VAR: &str = "game.surfaces[1]";
 pub const DEFAULT_FORCE_VAR: &str = "game.forces[1]";
 
+pub fn direction_params(direction: &str) -> HashMap<String, String> {
+    direction_params_exact(&format!("defines.direction.{}", direction))
+}
+
+pub fn direction_params_exact(direction: &str) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    map.insert("direction".to_string(), direction.to_string());
+    map
+}
+
 pub trait LuaCommand {
     fn make_lua(&self) -> String;
 }

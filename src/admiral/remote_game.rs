@@ -1,5 +1,7 @@
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
+use crate::admiral::generators::rail_beacon_farm::RailBeaconFarmGenerator;
 use crate::admiral::generators::rail_line::RailLineGenerator;
+use crate::admiral::generators::rail_station::RailStationGenerator;
 use crate::admiral::lua_command::{
     FacDestroy, FacLog, FacSurfaceCreateEntity, FacSurfaceCreateEntitySafe, LuaCommand,
 };
@@ -46,7 +48,7 @@ impl FactoCommands {
 
         // Execute command request to RCON server (SERVERDATA_EXECCOMMAND)
         let request = RCONRequest::new(format!("/c {}", lua_text));
-        debug!("executing\n{}", lua_text);
+        // debug!("executing\n{}", lua_text);
 
         let execute = self.client.execute(request)?;
         debug!(
@@ -117,11 +119,9 @@ pub fn inner_admiral() -> Result<(), RCONError> {
 
     admiral.execute_lua_safe(FacDestroy {})?;
 
-    let res = admiral.execute_lua_safe(BeaconFarmGenerator {
-        cell_size: 3,
-        width: 5,
-        height: 5,
-        start: Point2f { x: 0.5, y: 0.5 },
+    let res = admiral.execute_lua_safe(RailStationGenerator {
+        wagon_size: 8,
+        start: Point2f { x: 200.5, y: 200.5 },
     })?;
 
     Ok(())
@@ -147,6 +147,15 @@ fn _generate_mega_block(admiral: &mut FactoCommands) -> Result<(), RCONError> {
         start: Point2f { x: 1f32, y: 1f32 },
         separator_every_num: 8,
     });
+
+    admiral.execute_lua_safe(RailBeaconFarmGenerator {
+        inner: BeaconFarmGenerator {
+            cell_size: 3,
+            width: 20,
+            height: 15,
+            start: Point2f { x: 200.5, y: 200.5 },
+        },
+    })?;
 
     Ok(())
 }

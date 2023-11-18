@@ -108,10 +108,7 @@ impl LuaCommand for RailLineGenerator {
         debug!("generated {} rails", creation_commands.len());
 
         let mut result = "function railgen()".to_string();
-        for command in creation_commands {
-            result.push_str(&command.make_lua());
-            result.push('\n');
-        }
+
         result.push_str("end\n");
         result.push_str("railgen()");
         result
