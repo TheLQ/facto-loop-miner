@@ -1,4 +1,4 @@
-use crate::admiral::generators::RailLineGenerator;
+use crate::admiral::generators::rail_line::RailLineGenerator;
 use crate::admiral::lua_command::{
     FacDestroy, FacLog, FacSurfaceCreateEntity, FacSurfaceCreateEntitySafe, LuaCommand,
 };
