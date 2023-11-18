@@ -15,10 +15,10 @@ pub struct BeaconFarmGenerator {
 impl LuaCommand for BeaconFarmGenerator {
     fn make_lua(&self) -> String {
         let mut lua_commands: Vec<Box<dyn LuaCommand>> = Vec::new();
-        // TODO: why is magic 2 needed
-        for x in 0..(self.cell_size * self.width + 2) {
-            for y in 0..(self.cell_size * self.height + 2) {
-                if y % 4 == 0 || x % 4 == 0 {
+        // TODO: why is magic 1 needed
+        for x in 0..(self.cell_size * self.width + 1) {
+            for y in 0..(self.cell_size * self.height + 1) {
+                if y % self.cell_size == 0 || x % self.cell_size == 0 {
                     lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
                         inner: FacSurfaceCreateEntity {
                             name: "beacon".to_string(),

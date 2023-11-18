@@ -3,6 +3,7 @@ use crate::admiral::generators::rail_line::RailLineGenerator;
 use crate::admiral::lua_command::{
     FacDestroy, FacLog, FacSurfaceCreateEntity, FacSurfaceCreateEntitySafe, LuaCommand,
 };
+use crate::surface::metric::Metrics;
 use num_format::Grouping::Posix;
 use opencv::core::{Point, Point2f};
 use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONError, RCONRequest};
@@ -78,17 +79,23 @@ impl FactoCommands {
             Ok(v) => {
                 let v = v.trim();
                 if v.is_empty() {
-                    Err(RCONError::TypeError(format!(
+                    return Err(RCONError::TypeError(format!(
                         "expected _success metric got empty"
-                    )))
-                } else if v.ends_with("_success") {
-                    Ok(())
-                } else {
-                    Err(RCONError::TypeError(format!(
-                        "expected _success metric got {}",
-                        v
-                    )))
+                    )));
                 }
+                let mut metric = Metrics::new("ExecuteResult".to_string());
+                for part in v.split(",") {
+                    metric.increment(part);
+                    if !v.ends_with("_success") {
+                        return Err(RCONError::TypeError(format!(
+                            "expected _success metric got {}",
+                            v
+                        )));
+                    }
+                }
+                // metric.log_final();
+
+                Ok(())
             }
             Err(e) => Err(e),
         }
