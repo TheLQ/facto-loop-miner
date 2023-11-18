@@ -1,3 +1,4 @@
+use crate::admiral::generators::RailLineGenerator;
 use crate::admiral::lua_command::{
     FacDestroy, FacLog, FacSurfaceCreateEntity, FacSurfaceCreateEntitySafe, LuaCommand,
 };
@@ -103,6 +104,17 @@ pub fn inner_admiral() -> Result<(), RCONError> {
 
     admiral.execute_lua_safe(FacDestroy {})?;
 
+    admiral.execute_lua_empty(RailLineGenerator {
+        length: 200,
+        lines: 20,
+        start: Point2f { x: 1f32, y: 1f32 },
+        separator_every_num: 0,
+    });
+
+    Ok(())
+}
+
+fn _generate_mega_block(admiral: &mut FactoCommands) -> Result<(), RCONError> {
     for x in 0..50 {
         for y in 0..50 {
             let text = admiral.execute_lua_safe(FacSurfaceCreateEntitySafe {
@@ -114,6 +126,5 @@ pub fn inner_admiral() -> Result<(), RCONError> {
             })?;
         }
     }
-
     Ok(())
 }

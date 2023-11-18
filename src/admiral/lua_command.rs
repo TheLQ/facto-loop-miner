@@ -2,6 +2,8 @@ use crate::surface::surface::PointU32;
 use opencv::core::{Point, Point2f};
 use std::fmt::format;
 
+pub const DEFAULT_SURFACE_VAR: &str = "game.surfaces[1]";
+
 pub trait LuaCommand {
     fn make_lua(&self) -> String;
 }
@@ -17,7 +19,8 @@ impl LuaCommand for FacSurfaceCreateEntity {
         format!(
             "{}.create_entity{{ \
             name=\"{}\", \
-            position={{ x={},y={} }} \
+            position={{ x={},y={} }}, \
+            force=game.forcess[1],
             }};",
             self.surface_var, self.name, self.position.x, self.position.y
         )
@@ -31,12 +34,15 @@ pub struct FacSurfaceCreateEntitySafe {
 impl LuaCommand for FacSurfaceCreateEntitySafe {
     fn make_lua(&self) -> String {
         format!(
-            r#"local admiral_create = {}
+            r#"function inner_create()
+local admiral_create = {}
 if admiral_create == nil then
     rcon.print('create_entity_failed')
 else
     rcon.print('create_entity_success')
-end"#,
+end
+end
+inner_create()"#,
             self.inner.make_lua()
         )
     }
