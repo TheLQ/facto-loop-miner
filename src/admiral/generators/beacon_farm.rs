@@ -5,6 +5,7 @@ use crate::gamedata::lua::LuaEntity;
 use opencv::core::{Point2f, Point_};
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub struct BeaconFarmGenerator {
     pub start: Point2f,
     pub cell_size: u32,

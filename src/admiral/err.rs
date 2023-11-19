@@ -17,9 +17,16 @@ pub enum AdmiralError {
     #[error("LuaBlankCommand")]
     LuaBlankCommand { backtrace: Backtrace },
     #[error("LuaResultNotEmpty {body}")]
-    LuaResultNotEmpty { body: String, backtrace: Backtrace },
+    LuaResultNotEmpty {
+        command: String,
+        body: String,
+        backtrace: Backtrace,
+    },
     #[error("LuaResultEmpty")]
-    LuaResultEmpty { backtrace: Backtrace },
+    LuaResultEmpty {
+        command: String,
+        backtrace: Backtrace,
+    },
     #[error("DestroyFailed")]
     DestroyFailed { backtrace: Backtrace },
 }

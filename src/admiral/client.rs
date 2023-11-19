@@ -4,7 +4,7 @@ use crate::admiral::generators::rail_beacon_farm::RailBeaconFarmGenerator;
 use crate::admiral::generators::rail_line::RailLineGenerator;
 use crate::admiral::generators::rail_station::RailStationGenerator;
 use crate::admiral::lua_command::{
-    FacDestroy, FacExectionDefine, FacExectionRun, FacLog, FacSurfaceCreateEntity,
+    BasicLuaBatch, FacDestroy, FacExectionDefine, FacExectionRun, FacLog, FacSurfaceCreateEntity,
     FacSurfaceCreateEntitySafe, LuaCommand, LuaCommandBatch,
 };
 use crate::surface::metric::Metrics;
@@ -13,8 +13,8 @@ use opencv::core::{Point, Point2f};
 use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONError, RCONRequest};
 use std::backtrace::Backtrace;
 use std::collections::HashMap;
-use std::fmt::format;
-use tracing::{debug, error, info};
+use std::fmt::{format, Debug};
+use tracing::{debug, error, info, warn};
 
 pub fn admiral() {
     if let Err(e) = inner_admiral() {
@@ -45,7 +45,10 @@ impl AdmiralClient {
         Ok(())
     }
 
-    fn execute_statement(&mut self, lua: impl LuaCommand) -> AdmiralResult<String> {
+    fn _execute_statement<L>(&mut self, lua: L) -> AdmiralResult<(String, L)>
+    where
+        L: LuaCommand,
+    {
         let lua_text = lua.make_lua();
         if lua_text.trim().is_empty() {
             return Err(AdmiralError::LuaBlankCommand {
@@ -71,16 +74,16 @@ impl AdmiralClient {
             execute.body.len()
         );
 
-        Ok(execute.body)
+        Ok((execute.body, lua))
     }
 
-    fn execute_statement_empty(&mut self, lua: impl LuaCommand) -> AdmiralResult<()> {
-        // let lua_text = lua.make_lua();
-        self.execute_statement(lua).and_then(|v| {
+    fn _execute_statement_empty(&mut self, lua: impl LuaCommand + Debug) -> AdmiralResult<()> {
+        self._execute_statement(lua).and_then(|(v, lua)| {
             if v.is_empty() {
                 Ok(())
             } else {
                 Err(AdmiralError::LuaResultNotEmpty {
+                    command: format!("{:#?}", lua),
                     body: v,
                     backtrace: Backtrace::capture(),
                 })
@@ -88,40 +91,45 @@ impl AdmiralClient {
         })
     }
 
-    fn execute_block(&mut self, lua: impl LuaCommandBatch) -> AdmiralResult<()> {
-        self.execute_statement_empty(FacExectionDefine {
-            commands: lua.make_lua(),
-        })?;
-
-        self.log("starting megacall...")?;
+    fn execute_block(&mut self, lua: impl LuaCommandBatch + Debug) -> AdmiralResult<()> {
+        let commands = lua.make_lua_batch();
+        let command_num = commands.len();
+        debug!("Execute Block with {} commands", command_num);
+        self._execute_statement_empty(FacExectionDefine { commands })?;
 
         let lua_text = "megacall()";
-        self.execute_statement(FacExectionRun {}).and_then(|v| {
-            let v = v.trim();
-            if v.is_empty() {
-                return Err(AdmiralError::LuaResultEmpty {
-                    backtrace: Backtrace::capture(),
-                });
-            }
-            let mut metric = Metrics::new("ExecuteResult".to_string());
-            for part in v.split("\n") {
-                metric.increment(part);
-                // if !v.ends_with("_success") {
-                //     return Err(RCONError::TypeError(format!(
-                //         "expected _success metric got {}",
-                //         v
-                //     )));
-                // }
-            }
-            metric.log_final();
+        self._execute_statement(FacExectionRun {})
+            .and_then(|(v, lua)| {
+                let v = v.trim();
+                if v.is_empty() {
+                    return Err(AdmiralError::LuaResultEmpty {
+                        command: format!("{:?}", lua),
+                        backtrace: Backtrace::capture(),
+                    });
+                }
+                let mut metric = Metrics::new("ExecuteResult".to_string());
+                for part in v.split("\n") {
+                    if part.contains(" ") {
+                        warn!("[lua_log] {}", part);
+                    } else {
+                        metric.increment(part);
+                    }
+                    // if !v.ends_with("_success") {
+                    //     return Err(RCONError::TypeError(format!(
+                    //         "expected _success metric got {}",
+                    //         v
+                    //     )));
+                    // }
+                }
+                metric.log_final();
 
-            Ok(())
-        })
+                Ok(())
+            })
     }
 
     fn log(&mut self, line: &str) -> AdmiralResult<()> {
         info!("[Game Log] {}", line);
-        self.execute_statement_empty(FacLog {
+        self._execute_statement_empty(FacLog {
             message: line.to_string(),
         })
     }
@@ -133,12 +141,9 @@ pub fn inner_admiral() -> AdmiralResult<()> {
     admiral.auth()?;
     admiral.log("init admiral")?;
 
-    let destroy_result = admiral.execute_statement(FacDestroy {})?;
-    if destroy_result != "destroy_success\n" {
-        return Err(AdmiralError::DestroyFailed {
-            backtrace: Backtrace::capture(),
-        });
-    }
+    admiral.execute_block(BasicLuaBatch {
+        commands: vec![Box::new(FacDestroy {})],
+    })?;
 
     let res = admiral.execute_block(RailStationGenerator {
         wagon_size: 8,

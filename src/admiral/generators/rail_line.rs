@@ -5,6 +5,7 @@ use opencv::core::{Point, Point2f};
 use std::collections::HashMap;
 use tracing::debug;
 
+#[derive(Debug)]
 pub struct RailLineGenerator {
     pub(crate) start: Point2f,
     pub(crate) length: u32,

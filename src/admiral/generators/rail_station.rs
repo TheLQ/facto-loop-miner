@@ -7,13 +7,14 @@ use crate::admiral::lua_command::{
 use crate::admiral::{must_even_number, must_odd_number, must_whole_number};
 use opencv::core::{Point2f, Point_};
 
+#[derive(Debug)]
 pub struct RailStationGenerator {
     pub start: Point2f,
     pub wagon_size: u32,
 }
 
 impl LuaCommandBatch for RailStationGenerator {
-    fn make_lua(&self) -> Vec<Box<dyn LuaCommand>> {
+    fn make_lua_batch(self) -> Vec<Box<dyn LuaCommand>> {
         must_whole_number(self.start);
         must_even_number(self.start);
 

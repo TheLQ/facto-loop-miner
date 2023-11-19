@@ -11,6 +11,7 @@ use opencv::core::Point2f;
 use std::collections::HashMap;
 use tracing::info;
 
+#[derive(Debug)]
 pub struct RailBeaconFarmGenerator {
     pub inner: BeaconFarmGenerator,
 }

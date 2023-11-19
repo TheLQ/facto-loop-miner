@@ -3,7 +3,7 @@ use crate::surface::surface::PointU32;
 use itertools::Itertools;
 use opencv::core::{Point, Point2f};
 use std::collections::HashMap;
-use std::fmt::format;
+use std::fmt::{format, Debug, Formatter};
 
 pub const DEFAULT_SURFACE_VAR: &str = "game.surfaces[1]";
 pub const DEFAULT_FORCE_VAR: &str = "game.forces[1]";
@@ -19,14 +19,15 @@ pub fn direction_params_exact(direction: &str) -> HashMap<String, String> {
 }
 
 /// Main Generator - Nestable commands
-pub trait LuaCommand {
+pub trait LuaCommand: Debug {
     fn make_lua(&self) -> String;
 }
 
 pub trait LuaCommandBatch {
-    fn make_lua(&self) -> Vec<Box<dyn LuaCommand>>;
+    fn make_lua_batch(self) -> Vec<Box<dyn LuaCommand>>;
 }
 
+#[derive(Debug)]
 pub struct FacSurfaceCreateEntity {
     pub surface_var: String,
     pub name: String,
@@ -58,6 +59,7 @@ impl LuaCommand for FacSurfaceCreateEntity {
     }
 }
 
+#[derive(Debug)]
 pub struct FacSurfaceCreateEntitySafe {
     pub inner: FacSurfaceCreateEntity,
 }
@@ -85,6 +87,7 @@ FacSurfaceCreateEntitySafe()"#,
     }
 }
 
+#[derive(Debug)]
 pub struct FacLog {
     pub message: String,
 }
@@ -95,6 +98,7 @@ impl LuaCommand for FacLog {
     }
 }
 
+#[derive(Debug)]
 pub struct FacDestroy {}
 
 impl LuaCommand for FacDestroy {
@@ -104,7 +108,7 @@ impl LuaCommand for FacDestroy {
             r#"
 local entities = game.surfaces[1].find_entities({{ {{ 0,0 }} , {{ 1000, 1000 }} }})
 for _, entity in ipairs(entities) do
-    log('destroying ' .. tostring(entity.object_name) )
+    rcon.print('destroy_' .. entity.name )
     entity.destroy()
 end
 rcon.print('destroy_success')
@@ -113,6 +117,7 @@ rcon.print('destroy_success')
     }
 }
 
+#[derive(Debug)]
 pub struct FacExectionDefine {
     pub commands: Vec<Box<dyn LuaCommand>>,
 }
@@ -128,7 +133,8 @@ impl LuaCommand for FacExectionDefine {
             .map(|(i, v)| {
                 let mut inner_function = format!("local chunk = {} function megachunk()\n", i);
                 inner_function.push_str(&join_commands(self.commands.iter()));
-                inner_function.push_str("\nend\n");
+                inner_function.push_str("\nend");
+                inner_function.push_str("\nmegachunk()\n");
                 inner_function
             })
             .join("\n");
@@ -143,10 +149,22 @@ end
     }
 }
 
+#[derive(Debug)]
 pub struct FacExectionRun {}
 
 impl LuaCommand for FacExectionRun {
     fn make_lua(&self) -> String {
         "megacall()".to_string()
+    }
+}
+
+#[derive(Debug)]
+pub struct BasicLuaBatch {
+    pub commands: Vec<Box<dyn LuaCommand>>,
+}
+
+impl LuaCommandBatch for BasicLuaBatch {
+    fn make_lua_batch(self) -> Vec<Box<dyn LuaCommand>> {
+        self.commands
     }
 }
