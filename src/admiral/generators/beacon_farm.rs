@@ -12,11 +12,11 @@ pub struct BeaconFarmGenerator {
     pub cell_size: u32,
     pub width: u32,
     pub height: u32,
+    pub module: String,
 }
 
 impl LuaCommandBatch for BeaconFarmGenerator {
-    fn make_lua_batch(self) -> Vec<Box<dyn LuaCommand>> {
-        let mut lua_commands: Vec<Box<dyn LuaCommand>> = Vec::new();
+    fn make_lua_batch(self, lua_commands: &mut Vec<Box<dyn LuaCommand>>) {
         // TODO: why is magic 1 needed
         for x in 0..(self.cell_size * self.width + 1) {
             for y in 0..(self.cell_size * self.height + 1) {
@@ -30,12 +30,14 @@ impl LuaCommandBatch for BeaconFarmGenerator {
                                 y: self.start.y + y as f32 * 3f32,
                             },
                             surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                            extra: Vec::new(),
+                            extra: vec![format!(
+                                "admiral_create.get_module_inventory().insert(\"{}\")",
+                                self.module
+                            )],
                         },
                     }));
                 }
             }
         }
-        lua_commands
     }
 }

@@ -14,16 +14,12 @@ pub struct RailStationGenerator {
 }
 
 impl LuaCommandBatch for RailStationGenerator {
-    fn make_lua_batch(self) -> Vec<Box<dyn LuaCommand>> {
+    fn make_lua_batch(self, lua_commands: &mut Vec<Box<dyn LuaCommand>>) {
         must_whole_number(self.start);
         must_even_number(self.start);
 
-        let mut creation_commands: Vec<Box<dyn LuaCommand>> = Vec::new();
-
-        self.make_pocket_rail_loop(&mut creation_commands);
-        self.make_station(&mut creation_commands);
-
-        creation_commands
+        self.make_pocket_rail_loop(lua_commands);
+        self.make_station(lua_commands);
     }
 }
 

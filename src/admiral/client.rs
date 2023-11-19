@@ -93,7 +93,8 @@ impl AdmiralClient {
     }
 
     fn execute_block(&mut self, lua: impl LuaCommandBatch + Debug) -> AdmiralResult<()> {
-        let commands = lua.make_lua_batch();
+        let mut commands: Vec<Box<dyn LuaCommand>> = Vec::new();
+        lua.make_lua_batch(&mut commands);
         let command_num = commands.len();
         debug!("Execute Block with {} commands", command_num);
         self._execute_statement_empty(FacExectionDefine { commands })?;
@@ -157,6 +158,7 @@ pub fn inner_admiral() -> AdmiralResult<()> {
             width: 5,
             height: 5,
             start: Point2f { x: 200.5, y: 200.5 },
+            module: "speed-module-3".to_string(),
         },
     })?;
 

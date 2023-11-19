@@ -13,19 +13,11 @@ pub struct AssemblerFarmGenerator {
 }
 
 impl LuaCommandBatch for AssemblerFarmGenerator {
-    fn make_lua_batch(self) -> Vec<Box<dyn LuaCommand>> {
-        let mut lua_commands: Vec<Box<dyn LuaCommand>> = Vec::new();
-
-        self.make_assemblers(&mut lua_commands);
-        self.make_power(&mut lua_commands);
-        self.make_power_interface(&mut lua_commands);
-
-        self.inner
-            .make_lua_batch()
-            .into_iter()
-            .for_each(|v| lua_commands.push(v));
-
-        lua_commands
+    fn make_lua_batch(self, lua_commands: &mut Vec<Box<dyn LuaCommand>>) {
+        self.make_assemblers(lua_commands);
+        self.make_power(lua_commands);
+        self.make_power_interface(lua_commands);
+        self.inner.make_lua_batch(lua_commands);
     }
 }
 

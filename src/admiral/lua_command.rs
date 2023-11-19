@@ -37,7 +37,7 @@ pub trait LuaCommand: Debug {
 }
 
 pub trait LuaCommandBatch {
-    fn make_lua_batch(self) -> Vec<Box<dyn LuaCommand>>;
+    fn make_lua_batch(self, lua_commands: &mut Vec<Box<dyn LuaCommand>>);
 }
 
 #[derive(Debug)]
@@ -177,7 +177,9 @@ pub struct BasicLuaBatch {
 }
 
 impl LuaCommandBatch for BasicLuaBatch {
-    fn make_lua_batch(self) -> Vec<Box<dyn LuaCommand>> {
-        self.commands
+    fn make_lua_batch(self, lua_commands: &mut Vec<Box<dyn LuaCommand>>) {
+        for command in self.commands {
+            lua_commands.push(command);
+        }
     }
 }
