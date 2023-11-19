@@ -37,8 +37,8 @@ impl RailStationGenerator {
         let x_end = self.x_end();
 
         // Parallel lines
-        for y in [self.start.y as i32, self.start.y as i32 + 24] {
-            for x in (self.start.x as i32..x_end).step_by(2) {
+        for y in [self.start.y as i32, self.start.y as i32 + 22] {
+            for x in (self.start.x as i32..x_end + 2).step_by(2) {
                 creation_commands.push(Box::new(FacSurfaceCreateEntitySafe {
                     inner: FacSurfaceCreateEntity {
                         name: "straight-rail".to_string(),
@@ -55,13 +55,12 @@ impl RailStationGenerator {
         }
 
         // Curve up
-        // rail_degrees_360(Point2f {
-        //     x: x_end as f32,
-        //     y: self.start.y + 10.0,
-        // })
-        // .into_iter()
-        // .skip(1)
-        // .for_each(|e| creation_commands.push(e));
+        rail_degrees_360(Point2f {
+            x: x_end as f32,
+            y: self.start.y + 10.0,
+        })
+        .into_iter()
+        .for_each(|e| creation_commands.push(e));
 
         // Curve down
         rail_degrees_270(Point2f {
@@ -70,19 +69,6 @@ impl RailStationGenerator {
         })
         .into_iter()
         .for_each(|e| creation_commands.push(e));
-
-        // Fill missing
-        creation_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-            inner: FacSurfaceCreateEntity {
-                name: "straight-rail".to_string(),
-                position: Point2f {
-                    x: x_end as f32,
-                    y: self.start.y,
-                },
-                surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                params: direction_params("east"),
-            },
-        }));
     }
 
     /// ---------------------
@@ -96,8 +82,9 @@ impl RailStationGenerator {
             inner: FacSurfaceCreateEntity {
                 name: "train-stop".to_string(),
                 position: Point2f {
-                    x: x_end as f32,
-                    y: self.start.y + 2.0,
+                    // must be odd
+                    x: x_end as f32 + 1.0,
+                    y: self.start.y + 3.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
                 params: direction_params("east"),

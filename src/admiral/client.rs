@@ -58,7 +58,7 @@ impl AdmiralClient {
 
         // Execute command request to RCON server (SERVERDATA_EXECCOMMAND)
         let request = RCONRequest::new(format!("/c {}", lua_text));
-        // debug!("executing\n{}", lua_text);
+        debug!("executing\n{}", lua_text);
 
         let execute = self
             .client
@@ -68,7 +68,7 @@ impl AdmiralClient {
                 backtrace: Backtrace::capture(),
             })?;
         debug!(
-            "id {} type {} body {}",
+            "Execute Result id {} type {} body {}",
             execute.id,
             execute.response_type,
             execute.body.len()
