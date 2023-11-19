@@ -39,7 +39,7 @@ impl LuaCommandBatch for AssemblerRoboFarmGenerator {
             column_robo_length_count - (column_robo_length_count % ROBOPORT_SIZE);
         column_robo_length_count = column_robo_length_count / ROBOPORT_SIZE;
         let column_assembly_width = ((self.assembler_height - 1) * BEACON_SIZE * 4);
-        for column in 0..self.column_count {
+        for column in 0..=self.column_count {
             let column_size: i32 = (column * (column_robo_width + column_assembly_width)) as i32;
             debug!("column_size {}", column_size);
 
@@ -54,34 +54,36 @@ impl LuaCommandBatch for AssemblerRoboFarmGenerator {
 
             let assembler_start_y =
                 self.start.y as f32 - 0.5 + column_robo_width as f32 + column_size as f32;
-            AssemblerFarmGenerator {
-                inner: BeaconFarmGenerator {
-                    width: self.assembler_width,
-                    height: self.assembler_height,
-                    start: Point2f {
-                        x: self.start.x as f32 - 0.5,
-                        y: assembler_start_y,
+            if column != self.column_count {
+                AssemblerFarmGenerator {
+                    inner: BeaconFarmGenerator {
+                        width: self.assembler_width,
+                        height: self.assembler_height,
+                        start: Point2f {
+                            x: self.start.x as f32 - 0.5,
+                            y: assembler_start_y,
+                        },
+                        cell_size: 4,
+                        module: "speed-module-3".to_string(),
                     },
-                    cell_size: 4,
-                    module: "speed-module-3".to_string(),
-                },
-                chests: self.chests.clone(),
-            }
-            .make_lua_batch(lua_commands);
+                    chests: self.chests.clone(),
+                }
+                .make_lua_batch(lua_commands);
 
-            // big pole connects top of assembly to robo's big pole
-            lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                inner: FacSurfaceCreateEntity {
-                    name: "big-electric-pole".to_string(),
-                    params: HashMap::new(),
-                    position: Point2f {
-                        x: self.start.x as f32 - 3.0,
-                        y: assembler_start_y,
+                // big pole connects top of assembly to robo's big pole
+                lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
+                    inner: FacSurfaceCreateEntity {
+                        name: "big-electric-pole".to_string(),
+                        params: HashMap::new(),
+                        position: Point2f {
+                            x: self.start.x as f32 - 3.0,
+                            y: assembler_start_y,
+                        },
+                        surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                        extra: Vec::new(),
                     },
-                    surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                    extra: Vec::new(),
-                },
-            }));
+                }));
+            }
         }
     }
 }
