@@ -187,9 +187,9 @@ pub fn inner_admiral() -> AdmiralResult<()> {
     admiral.execute_block(AssemblerRoboFarmGenerator {
         start: Point { x: 200, y: 200 },
         column_count: 2,
-        robo_width: 5,
-        assembler_width: 5,
-        assembler_height: 9,
+        robo_depth: 5,
+        assembler_width: 9,
+        assembler_height: 5,
         chests: vec![
             AssemblerChest::Output { is_purple: false },
             AssemblerChest::Output { is_purple: true },

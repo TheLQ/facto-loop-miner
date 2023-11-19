@@ -21,7 +21,7 @@ const ROBO_POLE_STEP_MIDDLE: u32 = ROBO_POLE_STEP.div_ceil(2);
 pub struct AssemblerRoboFarmGenerator {
     pub start: Point,
     pub column_count: u32,
-    pub robo_width: u32,
+    pub robo_depth: u32,
     pub assembler_width: u32,
     pub assembler_height: u32,
     pub chests: Vec<AssemblerChest>,
@@ -33,20 +33,20 @@ impl LuaCommandBatch for AssemblerRoboFarmGenerator {
         let height = 5;
         trace!("div {} div {}", 5_u32.div_ceil(2), 3_u32.div_ceil(2));
 
-        let column_robo_width = self.robo_width * ROBOPORT_SIZE;
-        let mut column_robo_height_count = ((self.assembler_height - 1) * BEACON_SIZE * 4);
-        column_robo_height_count =
-            column_robo_height_count - (column_robo_height_count % ROBOPORT_SIZE);
-        column_robo_height_count = column_robo_height_count / ROBOPORT_SIZE;
-        let column_assembly_width = ((self.assembler_width - 1) * BEACON_SIZE * 4);
+        let column_robo_width = self.robo_depth * ROBOPORT_SIZE;
+        let mut column_robo_length_count = ((self.assembler_width - 1) * BEACON_SIZE * 4);
+        column_robo_length_count =
+            column_robo_length_count - (column_robo_length_count % ROBOPORT_SIZE);
+        column_robo_length_count = column_robo_length_count / ROBOPORT_SIZE;
+        let column_assembly_width = ((self.assembler_height - 1) * BEACON_SIZE * 4);
         for column in 0..self.column_count {
             let column_size: i32 = (column * (column_robo_width + column_assembly_width)) as i32;
             debug!("column_size {}", column_size);
             make_robo_square(
-                self.start.x + column_size,
-                self.start.y,
-                self.robo_width,
-                column_robo_height_count,
+                self.start.x,
+                self.start.y + column_size,
+                column_robo_length_count,
+                self.robo_depth,
                 lua_commands,
             );
             AssemblerFarmGenerator {
@@ -54,9 +54,10 @@ impl LuaCommandBatch for AssemblerRoboFarmGenerator {
                     width: self.assembler_width,
                     height: self.assembler_height,
                     start: Point2f {
-                        x: self.start.x as f32 + (ROBOPORT_SIZE * 5) as f32 - 0.5
+                        x: self.start.x as f32 - 0.5,
+                        y: self.start.y as f32 - 0.5
+                            + column_robo_width as f32
                             + column_size as f32,
-                        y: self.start.y as f32 + 0.5,
                     },
                     cell_size: 4,
                     module: "speed-module-3".to_string(),
