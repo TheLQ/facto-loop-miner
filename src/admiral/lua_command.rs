@@ -12,9 +12,22 @@ pub fn direction_params(direction: &str) -> HashMap<String, String> {
     direction_params_exact(&format!("defines.direction.{}", direction))
 }
 
-pub fn direction_params_exact(direction: &str) -> HashMap<String, String> {
+pub fn direction_params_exact(value: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
-    map.insert("direction".to_string(), direction.to_string());
+    map.insert("direction".to_string(), value.to_string());
+    map
+}
+
+pub fn recipe_params_exact(value: &str) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    map.insert("recipe".to_string(), format!("\"{}\"", value.to_string()));
+    map
+}
+
+pub fn recipe_module_params_exact(value: &str, module: &str) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    map.insert("recipe".to_string(), format!("\"{}\"", value.to_string()));
+    map.insert("modules".to_string(), format!("\"{}\"", module.to_string()));
     map
 }
 
@@ -33,6 +46,7 @@ pub struct FacSurfaceCreateEntity {
     pub name: String,
     pub position: Point2f,
     pub params: HashMap<String, String>,
+    pub extra: Vec<String>,
 }
 
 impl LuaCommand for FacSurfaceCreateEntity {
@@ -69,15 +83,17 @@ impl LuaCommand for FacSurfaceCreateEntitySafe {
         format!(
             r#"
 local admiral_create = {}
+{}
 if admiral_create == nil then
     rcon.print('create_entity_failed')
 elseif admiral_create.position.x ~= {} or admiral_create.position.y ~= {} then
     rcon.print('create_entity_bad_position')
-    rcon.print("created at {1}x{2} placed at " .. admiral_create.position.x .. "x" .. admiral_create.position.y .. "y")
+    rcon.print("created at {2}x{3} placed at " .. admiral_create.position.x .. "x" .. admiral_create.position.y .. "y")
 else
     rcon.print('create_entity_success')
 end"#,
             self.inner.make_lua(),
+            self.inner.extra.join("\n"),
             self.inner.position.x,
             self.inner.position.y,
         )
@@ -124,12 +140,12 @@ impl LuaCommand for FacExectionDefine {
         let all_function_chunks = self
             .commands
             .iter()
-            .chunks(100)
+            .chunks(75)
             .into_iter()
             .enumerate()
             .map(|(i, v)| {
                 let mut inner_function = format!("local chunk = {} function megachunk()\n", i);
-                inner_function.push_str(&join_commands(self.commands.iter()));
+                inner_function.push_str(&join_commands(v));
                 inner_function.push_str("\nend");
                 inner_function.push_str("\nmegachunk()\n");
                 inner_function

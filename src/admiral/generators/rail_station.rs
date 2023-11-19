@@ -48,6 +48,7 @@ impl RailStationGenerator {
                             y: y as f32 + 1.0,
                         },
                         surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                        extra: Vec::new(),
                         params: direction_params("east"),
                     },
                 }));
@@ -87,6 +88,7 @@ impl RailStationGenerator {
                     y: self.start.y + 3.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
                 params: direction_params("east"),
             },
         }));

@@ -1,4 +1,5 @@
 use crate::admiral::err::{AdmiralError, AdmiralResult};
+use crate::admiral::generators::assembler_farm::AssemblerFarmGenerator;
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::rail_beacon_farm::RailBeaconFarmGenerator;
 use crate::admiral::generators::rail_line::RailLineGenerator;
@@ -31,8 +32,8 @@ impl AdmiralClient {
         let client = RCONClient::new(RCONConfig {
             url: "192.168.66.73:28016".to_string(),
             // Optional
-            read_timeout: Some(13),
-            write_timeout: Some(37),
+            read_timeout: Some(900),
+            write_timeout: Some(900),
         })?;
 
         Ok(AdmiralClient { client })
@@ -58,7 +59,7 @@ impl AdmiralClient {
 
         // Execute command request to RCON server (SERVERDATA_EXECCOMMAND)
         let request = RCONRequest::new(format!("/c {}", lua_text));
-        debug!("executing\n{}", lua_text);
+        // debug!("executing\n{}", lua_text);
 
         let execute = self
             .client
@@ -145,9 +146,18 @@ pub fn inner_admiral() -> AdmiralResult<()> {
         commands: vec![Box::new(FacDestroy {})],
     })?;
 
-    let res = admiral.execute_block(RailStationGenerator {
-        wagon_size: 8,
-        start: Point2f { x: 200.0, y: 200.0 },
+    // let res = admiral.execute_block(RailStationGenerator {
+    //     wagon_size: 8,
+    //     start: Point2f { x: 200.0, y: 200.0 },
+    // })?;
+
+    admiral.execute_block(AssemblerFarmGenerator {
+        inner: BeaconFarmGenerator {
+            cell_size: 3,
+            width: 5,
+            height: 5,
+            start: Point2f { x: 200.5, y: 200.5 },
+        },
     })?;
 
     Ok(())

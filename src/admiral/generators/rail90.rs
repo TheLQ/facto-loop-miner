@@ -17,6 +17,7 @@ pub fn rail_degrees_90(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
                     y: start.y + 1.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -28,6 +29,7 @@ pub fn rail_degrees_90(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
                     y: start.y + 6.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -39,6 +41,7 @@ pub fn rail_degrees_90(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
                     y: start.y + 9.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -50,6 +53,7 @@ pub fn rail_degrees_90(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
                     y: start.y + 12.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -61,6 +65,7 @@ pub fn rail_degrees_90(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
                     y: start.y + 13.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
     ]
@@ -77,6 +82,7 @@ pub fn rail_degrees_180(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
                     y: start.y + 2.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -88,6 +94,7 @@ pub fn rail_degrees_180(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
                     y: start.y + 1.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -99,6 +106,7 @@ pub fn rail_degrees_180(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
                     y: start.y + 5.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -110,6 +118,7 @@ pub fn rail_degrees_180(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
                     y: start.y + 8.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -121,6 +130,7 @@ pub fn rail_degrees_180(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
                     y: start.y + 13.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
     ]
@@ -137,6 +147,7 @@ pub fn rail_degrees_270(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
                     y: start.y + 2.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -148,6 +159,7 @@ pub fn rail_degrees_270(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
                     y: start.y + 5.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -159,6 +171,7 @@ pub fn rail_degrees_270(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
                     y: start.y + 8.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
     ]
@@ -174,7 +187,7 @@ pub fn rail_degrees_360(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
         //             x: start.x + 13.0,
         //             y: start.y + 1.0,
         //         },
-        //         surface_var: DEFAULT_SURFACE_VAR.to_string(),
+        //         surface_var: DEFAULT_SURFACE_VAR.to_string(), extra: Vec::new()
         //     },
         // }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -186,6 +199,7 @@ pub fn rail_degrees_360(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
                     y: start.y + 6.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -197,6 +211,7 @@ pub fn rail_degrees_360(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
                     y: start.y + 12.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         Box::new(FacSurfaceCreateEntitySafe {
@@ -208,6 +223,7 @@ pub fn rail_degrees_360(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
                     y: start.y + 9.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                extra: Vec::new(),
             },
         }),
         // Box::new(FacSurfaceCreateEntitySafe {
@@ -218,7 +234,7 @@ pub fn rail_degrees_360(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
         //             x: start.x + 1.0,
         //             y: start.y + 13.0,
         //         },
-        //         surface_var: DEFAULT_SURFACE_VAR.to_string(),
+        //         surface_var: DEFAULT_SURFACE_VAR.to_string(), extra: Vec::new()
         //     },
         // }),
     ]

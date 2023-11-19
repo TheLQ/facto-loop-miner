@@ -38,6 +38,7 @@ impl LuaCommand for RailBeaconFarmGenerator {
                             y: self.inner.start.y + y as f32,
                         },
                         surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                        extra: Vec::new(),
                         params: direction_params("east"),
                     },
                 }));

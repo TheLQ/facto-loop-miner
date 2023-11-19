@@ -52,6 +52,7 @@ impl LuaCommand for RailLineGenerator {
                             y: start_y,
                         },
                         surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                        extra: Vec::new(),
                         params: HashMap::new(),
                     },
                 }));
@@ -64,6 +65,7 @@ impl LuaCommand for RailLineGenerator {
                             y: start_y,
                         },
                         surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                        extra: Vec::new(),
                         params: HashMap::new(),
                     },
                 }));
@@ -82,6 +84,7 @@ impl LuaCommand for RailLineGenerator {
                                 y: start_y - 0.5,
                             },
                             surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                            extra: Vec::new(),
                             params,
                         },
                     }));
@@ -99,6 +102,7 @@ impl LuaCommand for RailLineGenerator {
                                 y: start_y - 0.5,
                             },
                             surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                            extra: Vec::new(),
                             params,
                         },
                     }));
