@@ -42,22 +42,25 @@ impl LuaCommandBatch for AssemblerRoboFarmGenerator {
         for column in 0..self.column_count {
             let column_size: i32 = (column * (column_robo_width + column_assembly_width)) as i32;
             debug!("column_size {}", column_size);
+
+            let robo_start_y = self.start.y + column_size;
             make_robo_square(
                 self.start.x,
-                self.start.y + column_size,
+                robo_start_y,
                 column_robo_length_count,
                 self.robo_depth,
                 lua_commands,
             );
+
+            let assembler_start_y =
+                self.start.y as f32 - 0.5 + column_robo_width as f32 + column_size as f32;
             AssemblerFarmGenerator {
                 inner: BeaconFarmGenerator {
                     width: self.assembler_width,
                     height: self.assembler_height,
                     start: Point2f {
                         x: self.start.x as f32 - 0.5,
-                        y: self.start.y as f32 - 0.5
-                            + column_robo_width as f32
-                            + column_size as f32,
+                        y: assembler_start_y,
                     },
                     cell_size: 4,
                     module: "speed-module-3".to_string(),
@@ -65,9 +68,21 @@ impl LuaCommandBatch for AssemblerRoboFarmGenerator {
                 chests: self.chests.clone(),
             }
             .make_lua_batch(lua_commands);
-        }
 
-        // self.inner.make_lua_batch(lua_commands);
+            // big pole connects top of assembly to robo's big pole
+            lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
+                inner: FacSurfaceCreateEntity {
+                    name: "big-electric-pole".to_string(),
+                    params: HashMap::new(),
+                    position: Point2f {
+                        x: self.start.x as f32 - 3.0,
+                        y: assembler_start_y,
+                    },
+                    surface_var: DEFAULT_SURFACE_VAR.to_string(),
+                    extra: Vec::new(),
+                },
+            }));
+        }
     }
 }
 
