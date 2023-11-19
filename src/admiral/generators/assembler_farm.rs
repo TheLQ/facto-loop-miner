@@ -8,7 +8,7 @@ use opencv::core::Point2f;
 use std::collections::HashMap;
 use tracing::debug;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AssemblerChest {
     Input { name: String, count: u32 },
     Output { is_purple: bool },

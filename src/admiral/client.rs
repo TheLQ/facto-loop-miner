@@ -1,5 +1,6 @@
 use crate::admiral::err::{AdmiralError, AdmiralResult};
 use crate::admiral::generators::assembler_farm::{AssemblerChest, AssemblerFarmGenerator};
+use crate::admiral::generators::assembler_robo_farm::AssemblerRoboFarmGenerator;
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::rail_beacon_farm::RailBeaconFarmGenerator;
 use crate::admiral::generators::rail_line::RailLineGenerator;
@@ -94,6 +95,7 @@ impl AdmiralClient {
 
     fn execute_block(&mut self, lua: impl LuaCommandBatch + Debug) -> AdmiralResult<()> {
         let mut commands: Vec<Box<dyn LuaCommand>> = Vec::new();
+        info!("Executing {:?}", lua);
         lua.make_lua_batch(&mut commands);
         let command_num = commands.len();
         debug!("Execute Block with {} commands", command_num);
@@ -152,14 +154,42 @@ pub fn inner_admiral() -> AdmiralResult<()> {
     //     start: Point2f { x: 200.0, y: 200.0 },
     // })?;
 
-    admiral.execute_block(AssemblerFarmGenerator {
-        inner: BeaconFarmGenerator {
-            cell_size: 3,
-            width: 5,
-            height: 5,
-            start: Point2f { x: 200.5, y: 200.5 },
-            module: "speed-module-3".to_string(),
-        },
+    // admiral.execute_block(AssemblerFarmGenerator {
+    //     inner: BeaconFarmGenerator {
+    //         cell_size: 3,
+    //         width: 5,
+    //         height: 5,
+    //         start: Point2f { x: 200.5, y: 200.5 },
+    //         module: "speed-module-3".to_string(),
+    //     },
+    //     chests: vec![
+    //         AssemblerChest::Output { is_purple: false },
+    //         AssemblerChest::Output { is_purple: true },
+    //         AssemblerChest::Input {
+    //             name: "plastic-bar".to_string(),
+    //             count: 500,
+    //         },
+    //         AssemblerChest::Input {
+    //             name: "steel-chest".to_string(),
+    //             count: 500,
+    //         },
+    //         AssemblerChest::Buffer {
+    //             name: "plastic-bar".to_string(),
+    //             count: 500,
+    //         },
+    //         AssemblerChest::Buffer {
+    //             name: "steel-chest".to_string(),
+    //             count: 500,
+    //         },
+    //     ],
+    // })?;
+
+    admiral.execute_block(AssemblerRoboFarmGenerator {
+        start: Point { x: 200, y: 200 },
+        column_count: 1,
+        robo_width: 5,
+        assembler_width: 4,
+        assembler_height: 8,
         chests: vec![
             AssemblerChest::Output { is_purple: false },
             AssemblerChest::Output { is_purple: true },
@@ -180,7 +210,7 @@ pub fn inner_admiral() -> AdmiralResult<()> {
                 count: 500,
             },
         ],
-    })?;
+    });
 
     Ok(())
 }

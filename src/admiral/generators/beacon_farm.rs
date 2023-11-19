@@ -18,9 +18,9 @@ pub struct BeaconFarmGenerator {
 impl LuaCommandBatch for BeaconFarmGenerator {
     fn make_lua_batch(self, lua_commands: &mut Vec<Box<dyn LuaCommand>>) {
         // TODO: why is magic 1 needed
-        for x in 0..(self.cell_size * self.width + 1) {
-            for y in 0..(self.cell_size * self.height + 1) {
-                if y % self.cell_size == 0 || x % self.cell_size == 0 {
+        for x in 0..(self.cell_size * self.width) {
+            for y in 0..(self.cell_size * self.height) {
+                if y % (self.cell_size - 1) == 0 || x % (self.cell_size - 1) == 0 {
                     lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
                         inner: FacSurfaceCreateEntity {
                             name: "beacon".to_string(),
