@@ -1,3 +1,4 @@
+use crate::admiral::generators::join_commands;
 use crate::surface::surface::PointU32;
 use itertools::Itertools;
 use opencv::core::{Point, Point2f};
@@ -17,8 +18,13 @@ pub fn direction_params_exact(direction: &str) -> HashMap<String, String> {
     map
 }
 
+/// Main Generator - Nestable commands
 pub trait LuaCommand {
     fn make_lua(&self) -> String;
+}
+
+pub trait LuaCommandBatch {
+    fn make_lua(&self) -> Vec<Box<dyn LuaCommand>>;
 }
 
 pub struct FacSurfaceCreateEntity {
@@ -108,18 +114,31 @@ rcon.print('destroy_success')
 }
 
 pub struct FacExectionDefine {
-    pub body: String,
+    pub commands: Vec<Box<dyn LuaCommand>>,
 }
 
 impl LuaCommand for FacExectionDefine {
     fn make_lua(&self) -> String {
+        let all_function_chunks = self
+            .commands
+            .iter()
+            .chunks(100)
+            .into_iter()
+            .enumerate()
+            .map(|(i, v)| {
+                let mut inner_function = format!("local chunk = {} function megachunk()\n", i);
+                inner_function.push_str(&join_commands(self.commands.iter()));
+                inner_function.push_str("\nend\n");
+                inner_function
+            })
+            .join("\n");
         format!(
             r#"
 function megacall()
 {}
 end
         "#,
-            self.body
+            all_function_chunks
         )
     }
 }

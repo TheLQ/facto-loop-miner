@@ -6,7 +6,9 @@ pub mod rail_beacon_farm;
 pub mod rail_line;
 pub mod rail_station;
 
-fn join_commands<'a>(creation_commands: impl Iterator<Item = &'a Box<dyn LuaCommand>>) -> String {
+pub fn join_commands<'a>(
+    creation_commands: impl Iterator<Item = &'a Box<dyn LuaCommand>>,
+) -> String {
     let mut result = "".to_string();
     for command in creation_commands {
         result.push_str(&command.make_lua());

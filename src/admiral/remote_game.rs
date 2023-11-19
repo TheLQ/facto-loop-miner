@@ -5,7 +5,7 @@ use crate::admiral::generators::rail_line::RailLineGenerator;
 use crate::admiral::generators::rail_station::RailStationGenerator;
 use crate::admiral::lua_command::{
     FacDestroy, FacExectionDefine, FacExectionRun, FacLog, FacSurfaceCreateEntity,
-    FacSurfaceCreateEntitySafe, LuaCommand,
+    FacSurfaceCreateEntitySafe, LuaCommand, LuaCommandBatch,
 };
 use crate::surface::metric::Metrics;
 use num_format::Grouping::Posix;
@@ -14,17 +14,19 @@ use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONError, RCONRequest};
 use std::backtrace::Backtrace;
 use std::collections::HashMap;
 use std::fmt::format;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 pub fn admiral() {
-    inner_admiral().unwrap()
+    if let Err(e) = inner_admiral() {
+        error!("Admiral failed! {:#?}", e);
+    }
 }
 
-struct FactoCommands {
+struct AdmiralClient {
     client: RCONClient,
 }
 
-impl FactoCommands {
+impl AdmiralClient {
     fn new() -> Result<Self, RCONError> {
         let client = RCONClient::new(RCONConfig {
             url: "192.168.66.73:28016".to_string(),
@@ -33,7 +35,7 @@ impl FactoCommands {
             write_timeout: Some(37),
         })?;
 
-        Ok(FactoCommands { client })
+        Ok(AdmiralClient { client })
     }
 
     fn auth(&mut self) -> AdmiralResult<()> {
@@ -43,7 +45,7 @@ impl FactoCommands {
         Ok(())
     }
 
-    fn execute_lua(&mut self, lua: impl LuaCommand) -> AdmiralResult<String> {
+    fn execute_statement(&mut self, lua: impl LuaCommand) -> AdmiralResult<String> {
         let lua_text = lua.make_lua();
         if lua_text.trim().is_empty() {
             return Err(AdmiralError::LuaBlankCommand {
@@ -72,9 +74,9 @@ impl FactoCommands {
         Ok(execute.body)
     }
 
-    fn execute_lua_empty(&mut self, lua: impl LuaCommand) -> AdmiralResult<()> {
+    fn execute_statement_empty(&mut self, lua: impl LuaCommand) -> AdmiralResult<()> {
         // let lua_text = lua.make_lua();
-        self.execute_lua(lua).and_then(|v| {
+        self.execute_statement(lua).and_then(|v| {
             if v.is_empty() {
                 Ok(())
             } else {
@@ -86,14 +88,15 @@ impl FactoCommands {
         })
     }
 
-    fn execute_lua_safe(&mut self, lua: impl LuaCommand) -> AdmiralResult<()> {
-        let lua_text = lua.make_lua();
-        self.execute_lua_empty(FacExectionDefine { body: lua_text })?;
+    fn execute_block(&mut self, lua: impl LuaCommandBatch) -> AdmiralResult<()> {
+        self.execute_statement_empty(FacExectionDefine {
+            commands: lua.make_lua(),
+        })?;
 
         self.log("starting megacall...")?;
 
         let lua_text = "megacall()";
-        self.execute_lua(FacExectionRun {}).and_then(|v| {
+        self.execute_statement(FacExectionRun {}).and_then(|v| {
             let v = v.trim();
             if v.is_empty() {
                 return Err(AdmiralError::LuaResultEmpty {
@@ -118,21 +121,26 @@ impl FactoCommands {
 
     fn log(&mut self, line: &str) -> AdmiralResult<()> {
         info!("[Game Log] {}", line);
-        self.execute_lua_empty(FacLog {
+        self.execute_statement_empty(FacLog {
             message: line.to_string(),
         })
     }
 }
 
 pub fn inner_admiral() -> AdmiralResult<()> {
-    let mut admiral = FactoCommands::new()?;
+    let mut admiral = AdmiralClient::new()?;
 
     admiral.auth()?;
     admiral.log("init admiral")?;
 
-    admiral.execute_lua_safe(FacDestroy {})?;
+    let destroy_result = admiral.execute_statement(FacDestroy {})?;
+    if destroy_result != "destroy_success\n" {
+        return Err(AdmiralError::DestroyFailed {
+            backtrace: Backtrace::capture(),
+        });
+    }
 
-    let res = admiral.execute_lua_safe(RailStationGenerator {
+    let res = admiral.execute_block(RailStationGenerator {
         wagon_size: 8,
         start: Point2f { x: 200.0, y: 200.0 },
     })?;
@@ -140,35 +148,35 @@ pub fn inner_admiral() -> AdmiralResult<()> {
     Ok(())
 }
 
-fn _generate_mega_block(admiral: &mut FactoCommands) -> AdmiralResult<()> {
-    for x in 0..50 {
-        for y in 0..50 {
-            let text = admiral.execute_lua_safe(FacSurfaceCreateEntitySafe {
-                inner: FacSurfaceCreateEntity {
-                    surface_var: "game.surfaces[1]".to_string(),
-                    position: Point2f::new(1f32 + (x as f32 * 2.0), 1f32 + (y as f32 * 2.0)),
-                    name: "straight-rail".to_string(),
-                    params: HashMap::new(),
-                },
-            })?;
-        }
-    }
-
-    admiral.execute_lua_empty(RailLineGenerator {
-        length: 200,
-        rail_loops: 20,
-        start: Point2f { x: 1f32, y: 1f32 },
-        separator_every_num: 8,
-    })?;
-
-    admiral.execute_lua_safe(RailBeaconFarmGenerator {
-        inner: BeaconFarmGenerator {
-            cell_size: 3,
-            width: 20,
-            height: 15,
-            start: Point2f { x: 200.5, y: 200.5 },
-        },
-    })?;
+fn _generate_mega_block(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    // for x in 0..50 {
+    //     for y in 0..50 {
+    //         let text = admiral.execute_block(FacSurfaceCreateEntitySafe {
+    //             inner: FacSurfaceCreateEntity {
+    //                 surface_var: "game.surfaces[1]".to_string(),
+    //                 position: Point2f::new(1f32 + (x as f32 * 2.0), 1f32 + (y as f32 * 2.0)),
+    //                 name: "straight-rail".to_string(),
+    //                 params: HashMap::new(),
+    //             },
+    //         })?;
+    //     }
+    // }
+    //
+    // admiral.execute_lua_empty(RailLineGenerator {
+    //     length: 200,
+    //     rail_loops: 20,
+    //     start: Point2f { x: 1f32, y: 1f32 },
+    //     separator_every_num: 8,
+    // })?;
+    //
+    // admiral.execute_block(RailBeaconFarmGenerator {
+    //     inner: BeaconFarmGenerator {
+    //         cell_size: 3,
+    //         width: 20,
+    //         height: 15,
+    //         start: Point2f { x: 200.5, y: 200.5 },
+    //     },
+    // })?;
 
     Ok(())
 }

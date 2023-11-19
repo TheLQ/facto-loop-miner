@@ -2,7 +2,7 @@ use crate::admiral::generators::join_commands;
 use crate::admiral::generators::rail90::{rail_degrees_270, rail_degrees_360};
 use crate::admiral::lua_command::{
     direction_params, FacSurfaceCreateEntity, FacSurfaceCreateEntitySafe, LuaCommand,
-    DEFAULT_SURFACE_VAR,
+    LuaCommandBatch, DEFAULT_SURFACE_VAR,
 };
 use crate::admiral::{must_even_number, must_odd_number, must_whole_number};
 use opencv::core::{Point2f, Point_};
@@ -12,8 +12,8 @@ pub struct RailStationGenerator {
     pub wagon_size: u32,
 }
 
-impl LuaCommand for RailStationGenerator {
-    fn make_lua(&self) -> String {
+impl LuaCommandBatch for RailStationGenerator {
+    fn make_lua(&self) -> Vec<Box<dyn LuaCommand>> {
         must_whole_number(self.start);
         must_even_number(self.start);
 
@@ -22,7 +22,7 @@ impl LuaCommand for RailStationGenerator {
         self.make_pocket_rail_loop(&mut creation_commands);
         self.make_station(&mut creation_commands);
 
-        join_commands(creation_commands.iter())
+        creation_commands
     }
 }
 
