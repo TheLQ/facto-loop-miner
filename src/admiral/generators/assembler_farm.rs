@@ -8,6 +8,8 @@ use opencv::core::Point2f;
 use std::collections::HashMap;
 use tracing::debug;
 
+pub const ASSEMBLER_SIZE: u32 = 3;
+
 #[derive(Debug, Clone)]
 pub enum AssemblerChest {
     Input { name: String, count: u32 },
@@ -43,8 +45,8 @@ impl AssemblerFarmGenerator {
                         name: "assembling-machine-3".to_string(),
                         params: recipe_params_exact("beacon"),
                         position: Point2f {
-                            x: self.inner.start.x + (x as f32 * 9f32) + 3.0,
-                            y: self.inner.start.y + (y as f32 * 9f32) + 3.0,
+                            x: self.inner.start.x + (x as f32 * 9f32) + ASSEMBLER_SIZE as f32,
+                            y: self.inner.start.y + (y as f32 * 9f32) + ASSEMBLER_SIZE as f32,
                         },
                         surface_var: DEFAULT_SURFACE_VAR.to_string(),
                         extra: vec![
@@ -95,7 +97,6 @@ impl AssemblerFarmGenerator {
                             },
                         }));
                         total = total + 1.0;
-                        debug!("insert {}", total)
                     }
                 }
             }
@@ -137,7 +138,6 @@ impl AssemblerFarmGenerator {
                             },
                         }));
                         total = total + 1.0;
-                        debug!("insert {}", total)
                     }
                 }
             }
@@ -166,7 +166,6 @@ impl AssemblerFarmGenerator {
                             },
                         }));
                         total = total + 1.0;
-                        debug!("insert {}", total)
                     }
                 }
             }

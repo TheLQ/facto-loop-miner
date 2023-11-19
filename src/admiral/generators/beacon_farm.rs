@@ -2,9 +2,12 @@ use crate::admiral::lua_command::{
     FacSurfaceCreateEntity, FacSurfaceCreateEntitySafe, LuaCommand, LuaCommandBatch,
     DEFAULT_SURFACE_VAR,
 };
+use crate::admiral::must_half_number;
 use crate::gamedata::lua::LuaEntity;
 use opencv::core::{Point2f, Point_};
 use std::collections::HashMap;
+
+pub const BEACON_SIZE: u32 = 3;
 
 #[derive(Debug)]
 pub struct BeaconFarmGenerator {
@@ -17,10 +20,11 @@ pub struct BeaconFarmGenerator {
 
 impl LuaCommandBatch for BeaconFarmGenerator {
     fn make_lua_batch(self, lua_commands: &mut Vec<Box<dyn LuaCommand>>) {
-        // TODO: why is magic 1 needed
-        for x in 0..(self.cell_size * self.width) {
-            for y in 0..(self.cell_size * self.height) {
-                if y % (self.cell_size - 1) == 0 || x % (self.cell_size - 1) == 0 {
+        must_half_number(self.start);
+        let zero_cell_size = self.cell_size - 1;
+        for x in 0..(zero_cell_size * self.width) + 1 {
+            for y in 0..(zero_cell_size * self.height) + 1 {
+                if y % zero_cell_size == 0 || x % zero_cell_size == 0 {
                     lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
                         inner: FacSurfaceCreateEntity {
                             name: "beacon".to_string(),

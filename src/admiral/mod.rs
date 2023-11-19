@@ -26,3 +26,11 @@ pub fn must_even_number(point: Point2f) {
         panic!("Point is odd {:?}", point);
     }
 }
+
+pub fn must_half_number(point: Point2f) {
+    let dec_x = point.x.floor() - point.x;
+    let dec_y = point.y.floor() - point.y;
+    if dec_x > 0.4 && dec_x < 0.6 && dec_y > 0.4 && dec_y < 0.6 {
+        panic!("Point isn't half {:?}", point);
+    }
+}
