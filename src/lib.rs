@@ -58,7 +58,7 @@ pub fn inner_main() {
         1 => new_v1_machine().start(root_dir),
         3 => generate_lookup_image(),
         4 => crate::self_bin::get_patch::get_patch_main(),
-        5 => admiral::remote_game::admiral(),
+        5 => admiral::client::admiral(),
         _ => panic!("wtf"),
     }
 }

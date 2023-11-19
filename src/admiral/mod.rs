@@ -1,9 +1,9 @@
 use opencv::core::Point2f;
 
+pub mod client;
 mod err;
 mod generators;
 mod lua_command;
-pub mod remote_game;
 
 pub fn must_whole_number(point: Point2f) {
     let rounded = Point2f {
