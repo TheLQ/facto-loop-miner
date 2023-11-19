@@ -64,7 +64,9 @@ local admiral_create = {}
 if admiral_create == nil then
     rcon.print('create_entity_failed')
 elseif admiral_create.position.x ~= {} or admiral_create.position.y ~= {} then
-     rcon.print('create_entity_bad_position')
+    rcon.print('create_entity_bad_position')
+    log("created at {1}x{2} placed at " .. admiral_create.position.x .. "x" .. admiral_create.position.y .. "y")
+    print("created at {1}x{2} placed at " .. admiral_create.position.x .. "x" .. admiral_create.position.y .. "y")
 else
     rcon.print('create_entity_success')
 end
@@ -102,5 +104,30 @@ end
 rcon.print('destroy_success')
         "#
         )
+    }
+}
+
+pub struct FacExectionDefine {
+    pub body: String,
+}
+
+impl LuaCommand for FacExectionDefine {
+    fn make_lua(&self) -> String {
+        format!(
+            r#"
+function megacall()
+{}
+end
+        "#,
+            self.body
+        )
+    }
+}
+
+pub struct FacExectionRun {}
+
+impl LuaCommand for FacExectionRun {
+    fn make_lua(&self) -> String {
+        "megacall()".to_string()
     }
 }

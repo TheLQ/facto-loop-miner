@@ -126,25 +126,25 @@ pub fn rail_degrees_180(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
     ]
 }
 
-pub fn rail_degrees_270(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
+pub fn rail_degrees_270(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
     [
-        Box::new(FacSurfaceCreateEntitySafe {
-            inner: FacSurfaceCreateEntity {
-                name: "straight-rail".to_string(),
-                params: direction_params_exact("2"),
-                position: Point2f {
-                    x: start.x + 1.0,
-                    y: start.y + 1.0,
-                },
-                surface_var: DEFAULT_SURFACE_VAR.to_string(),
-            },
-        }),
+        // Box::new(FacSurfaceCreateEntitySafe {
+        //     inner: FacSurfaceCreateEntity {
+        //         name: "straight-rail".to_string(),
+        //         params: direction_params_exact("2"),
+        //         position: Point2f {
+        //             x: start.x + 1.0,
+        //             y: start.y + 1.0,
+        //         },
+        //         surface_var: DEFAULT_SURFACE_VAR.to_string(),
+        //     },
+        // }),
         Box::new(FacSurfaceCreateEntitySafe {
             inner: FacSurfaceCreateEntity {
                 name: "curved-rail".to_string(),
                 params: direction_params_exact("3"),
                 position: Point2f {
-                    x: start.x + 6.0,
+                    x: start.x + 4.0,
                     y: start.y + 2.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
@@ -155,7 +155,7 @@ pub fn rail_degrees_270(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
                 name: "straight-rail".to_string(),
                 params: direction_params_exact("1"),
                 position: Point2f {
-                    x: start.x + 9.0,
+                    x: start.x + 7.0,
                     y: start.y + 5.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
@@ -166,23 +166,23 @@ pub fn rail_degrees_270(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
                 name: "curved-rail".to_string(),
                 params: HashMap::new(),
                 position: Point2f {
-                    x: start.x + 12.0,
+                    x: start.x + 10.0,
                     y: start.y + 8.0,
                 },
                 surface_var: DEFAULT_SURFACE_VAR.to_string(),
             },
         }),
-        Box::new(FacSurfaceCreateEntitySafe {
-            inner: FacSurfaceCreateEntity {
-                name: "straight-rail".to_string(),
-                params: HashMap::new(),
-                position: Point2f {
-                    x: start.x + 13.0,
-                    y: start.y + 13.0,
-                },
-                surface_var: DEFAULT_SURFACE_VAR.to_string(),
-            },
-        }),
+        // Box::new(FacSurfaceCreateEntitySafe {
+        //     inner: FacSurfaceCreateEntity {
+        //         name: "straight-rail".to_string(),
+        //         params: HashMap::new(),
+        //         position: Point2f {
+        //             x: start.x + 13.0,
+        //             y: start.y + 13.0,
+        //         },
+        //         surface_var: DEFAULT_SURFACE_VAR.to_string(),
+        //     },
+        // }),
     ]
 }
 
