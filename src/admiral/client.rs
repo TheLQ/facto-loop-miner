@@ -1,5 +1,5 @@
 use crate::admiral::err::{AdmiralError, AdmiralResult};
-use crate::admiral::generators::assembler_farm::AssemblerFarmGenerator;
+use crate::admiral::generators::assembler_farm::{AssemblerChest, AssemblerFarmGenerator};
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::rail_beacon_farm::RailBeaconFarmGenerator;
 use crate::admiral::generators::rail_line::RailLineGenerator;
@@ -160,6 +160,26 @@ pub fn inner_admiral() -> AdmiralResult<()> {
             start: Point2f { x: 200.5, y: 200.5 },
             module: "speed-module-3".to_string(),
         },
+        chests: vec![
+            AssemblerChest::Output { is_purple: false },
+            AssemblerChest::Output { is_purple: true },
+            AssemblerChest::Input {
+                name: "plastic-bar".to_string(),
+                count: 500,
+            },
+            AssemblerChest::Input {
+                name: "steel-chest".to_string(),
+                count: 500,
+            },
+            AssemblerChest::Buffer {
+                name: "plastic-bar".to_string(),
+                count: 500,
+            },
+            AssemblerChest::Buffer {
+                name: "steel-chest".to_string(),
+                count: 500,
+            },
+        ],
     })?;
 
     Ok(())
