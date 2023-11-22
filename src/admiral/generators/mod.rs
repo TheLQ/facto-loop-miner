@@ -7,7 +7,9 @@ pub mod beacon_farm;
 pub mod rail90;
 pub mod rail_beacon_farm;
 pub mod rail_line;
+pub mod rail_pan;
 pub mod rail_station;
+pub mod rail_station_pathfound;
 
 pub fn join_commands<'a>(
     creation_commands: impl Iterator<Item = &'a Box<dyn LuaCommand>>,

@@ -11,6 +11,7 @@
 #![allow(unused)]
 #![feature(adt_const_params)]
 #![feature(error_generic_member_access)]
+#![feature(int_roundings)]
 // #![feature()]
 // #![feature()]
 // #![feature()]

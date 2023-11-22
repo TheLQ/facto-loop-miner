@@ -4,14 +4,17 @@ use crate::admiral::generators::assembler_robo_farm::AssemblerRoboFarmGenerator;
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::rail_beacon_farm::RailBeaconFarmGenerator;
 use crate::admiral::generators::rail_line::RailLineGenerator;
+use crate::admiral::generators::rail_pan::RailPanGenerator;
 use crate::admiral::generators::rail_station::RailStationGenerator;
+use crate::admiral::generators::rail_station_pathfound::RailStationPathfoundGenerator;
 use crate::admiral::lua_command::{
     BasicLuaBatch, FacDestroy, FacExectionDefine, FacExectionRun, FacLog, FacSurfaceCreateEntity,
     FacSurfaceCreateEntitySafe, LuaCommand, LuaCommandBatch,
 };
 use crate::surface::metric::Metrics;
+use crate::surface::surface::PointU32;
 use num_format::Grouping::Posix;
-use opencv::core::{Point, Point2f};
+use opencv::core::{Point, Point2f, Point_};
 use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONError, RCONRequest};
 use std::backtrace::Backtrace;
 use std::collections::HashMap;
@@ -184,12 +187,15 @@ pub fn inner_admiral() -> AdmiralResult<()> {
     //     ],
     // })?;
 
+    let origin = Point2f { x: 200.0, y: 200.0 };
+
+    let assembler_width = 9;
     admiral.execute_block(AssemblerRoboFarmGenerator {
-        start: Point { x: 200, y: 200 },
-        column_count: 2,
-        robo_depth: 5,
-        assembler_width: 9,
-        assembler_height: 5,
+        start: origin,
+        row_count: 2,
+        robo_height: 1,
+        assembler_width,
+        assembler_height: 4,
         chests: vec![
             AssemblerChest::Output { is_purple: false },
             AssemblerChest::Output { is_purple: true },
@@ -210,7 +216,31 @@ pub fn inner_admiral() -> AdmiralResult<()> {
                 count: 500,
             },
         ],
-    });
+    })?;
+
+    admiral.execute_block(RailPanGenerator {
+        width: 15,
+        height: 25,
+        start: PointU32 {
+            x: origin.x as u32,
+            y: origin.y as u32 - 5,
+        },
+    })?;
+
+    // admiral.execute_block(RailStationPathfoundGenerator {
+    //     start: Point2f {
+    //         x: origin.x + (assembler_width * 9) as f32,
+    //         y: origin.y - 10.0,
+    //     },
+    //     station: Point2f {
+    //         x: origin.x - 40.0,
+    //         y: origin.y - 10.0,
+    //     },
+    //     pan: Point2f {
+    //         x: origin.x + 50.0,
+    //         y: origin.y + 160.0,
+    //     },
+    // })?;
 
     Ok(())
 }

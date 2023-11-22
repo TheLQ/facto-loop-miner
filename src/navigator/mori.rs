@@ -232,7 +232,7 @@ impl Rail {
         a.x.abs_diff(b.x) + a.y.abs_diff(b.y)
     }
 
-    fn move_force_rotate_clockwise(&self, rotations: usize) -> Self {
+    pub fn move_force_rotate_clockwise(&self, rotations: usize) -> Self {
         let mut directions = RAIL_DIRECTION_CLOCKWISE.iter().cycle();
 
         while directions.next().unwrap() != &self.direction {}
@@ -289,7 +289,7 @@ impl Rail {
         }
     }
 
-    fn move_force_forward(&self, steps: u32) -> Rail {
+    pub fn move_force_forward(&self, steps: u32) -> Rail {
         let mut cur = self.clone();
         cur.move_force_forward_mut(steps);
         cur
