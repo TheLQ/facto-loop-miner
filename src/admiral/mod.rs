@@ -2,6 +2,7 @@ use opencv::core::Point2f;
 
 pub mod client;
 mod err;
+mod flexbox;
 mod generators;
 mod lua_command;
 

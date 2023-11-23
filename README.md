@@ -277,3 +277,31 @@ Research areas include
 1. Export map data from in-game map
 2. Build a rough equivelent to LuaSurface
 3. 
+
+# FactorioXML
+
+For base generators, HTML/CSS already does the math to place boxes
+on a screen. Well an Assembly Machine is a 3x3 box. A stack of 4 assemblers 
+is a 12x3 box. An array of stacks, some assembly others oil, 
+some with extra boxes on top, is ??x?? but easily queryable. 
+
+Define with custom HTML elements, add a text editor, and it looks basically XML
+
+```xml
+<factorioXML>
+  <station wagons="5">
+    <roboport-wall width="1" height="7" celldepth="5"/>
+    <beacon celldepth="4">
+      <assembly-robo>
+        <chest-blue count="2" request=" "/>
+        <chest-green count="5"/>
+        <chest-green count="5"/>
+      </assembly-robo>
+    </beacon>
+  </station>
+</factorioXML>
+```
+
+I'm writing a base generator. I realized HTML/CSS already solved how to 
+
+While writing a base generator, I realized HTML/CSS already solved 

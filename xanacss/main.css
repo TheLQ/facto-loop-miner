@@ -1,0 +1,46 @@
+html {
+    /* base unit for unit scaling */
+    font-size: 50px;
+}
+
+body {
+    /* reset font */
+    font-size: initial;
+}
+
+.editor {
+    width: 100%;
+    height: 100%;
+}
+
+.container {
+    border: 1px solid black;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    row-gap: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.block-beacon {
+    width: 12.1rem;
+    height: 12.1rem;
+    /*width: 12rem;*/
+    /*height: 12rem;*/
+}
+
+.block-beacon-center {
+    width: 6rem;
+    height: 6rem;
+}
+
+.unit-beacon {
+    width: 3rem;
+    height: 3rem;
+
+}
+
+.unit-beacon::before {
+    content: 'beacon';
+}
