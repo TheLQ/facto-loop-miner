@@ -7,23 +7,26 @@ use crate::admiral::generators::rail_line::RailLineGenerator;
 use crate::admiral::generators::rail_pan::RailPanGenerator;
 use crate::admiral::generators::rail_station::RailStationGenerator;
 use crate::admiral::generators::rail_station_pathfound::RailStationPathfoundGenerator;
+use crate::admiral::generators::terapower::Terapower;
 use crate::admiral::lua_command::{
     BasicLuaBatch, FacDestroy, FacExectionDefine, FacExectionRun, FacLog, FacSurfaceCreateEntity,
     FacSurfaceCreateEntitySafe, LuaCommand, LuaCommandBatch,
 };
 use crate::surface::metric::Metrics;
 use crate::surface::surface::PointU32;
+use crate::LOCALE;
 use num_format::Grouping::Posix;
+use num_format::ToFormattedString;
 use opencv::core::{Point, Point2f, Point_};
 use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONError, RCONRequest};
 use std::backtrace::Backtrace;
 use std::collections::HashMap;
 use std::fmt::{format, Debug};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 pub fn admiral() {
     if let Err(e) = inner_admiral() {
-        error!("Admiral failed! {:#?}", e);
+        error!("Admiral failed! {}\n{}", e, e.my_backtrace());
     }
 }
 
@@ -50,7 +53,7 @@ impl AdmiralClient {
         Ok(())
     }
 
-    fn _execute_statement<L>(&mut self, lua: L) -> AdmiralResult<(String, L)>
+    fn _execute_statement<L>(&mut self, lua: L) -> AdmiralResult<ExecuteResponse<L>>
     where
         L: LuaCommand,
     {
@@ -59,7 +62,8 @@ impl AdmiralClient {
             return Err(AdmiralError::LuaBlankCommand {
                 backtrace: Backtrace::capture(),
             });
-        }
+        };
+        trace!("Characters {}", lua_text.len().to_formatted_string(&LOCALE));
 
         // Execute command request to RCON server (SERVERDATA_EXECCOMMAND)
         let request = RCONRequest::new(format!("/c {}", lua_text));
@@ -79,17 +83,22 @@ impl AdmiralClient {
             execute.body.len()
         );
 
-        Ok((execute.body, lua))
+        // Ok((execute.body, lua, lua_text))
+        Ok(ExecuteResponse {
+            lua_text,
+            lua,
+            body: execute.body,
+        })
     }
 
     fn _execute_statement_empty(&mut self, lua: impl LuaCommand + Debug) -> AdmiralResult<()> {
-        self._execute_statement(lua).and_then(|(v, lua)| {
-            if v.is_empty() {
+        self._execute_statement(lua).and_then(|response| {
+            if response.body.is_empty() {
                 Ok(())
             } else {
                 Err(AdmiralError::LuaResultNotEmpty {
-                    command: format!("{:#?}", lua),
-                    body: v,
+                    command: format!("{:#?}", response.lua),
+                    body: response.body,
                     backtrace: Backtrace::capture(),
                 })
             }
@@ -102,15 +111,33 @@ impl AdmiralClient {
         lua.make_lua_batch(&mut commands);
         let command_num = commands.len();
         debug!("Execute Block with {} commands", command_num);
-        self._execute_statement_empty(FacExectionDefine { commands })?;
+        self._execute_statement(FacExectionDefine { commands })
+            .and_then(|response| {
+                let v = response.body.trim();
+                if v.is_empty() {
+                    Err(AdmiralError::DefineFailed {
+                        lua_text: response.lua_text,
+                        backtrace: Backtrace::capture(),
+                    })
+                } else if v == "facexecution_define" {
+                    trace!("succesfully defined ");
+                    Ok(())
+                } else {
+                    Err(AdmiralError::LuaResultNotEmpty {
+                        command: format!("{:?}", response.lua),
+                        body: v.to_string(),
+                        backtrace: Backtrace::capture(),
+                    })
+                }
+            })?;
 
         let lua_text = "megacall()";
         self._execute_statement(FacExectionRun {})
-            .and_then(|(v, lua)| {
-                let v = v.trim();
+            .and_then(|response| {
+                let v = response.body.trim();
                 if v.is_empty() {
                     return Err(AdmiralError::LuaResultEmpty {
-                        command: format!("{:?}", lua),
+                        command: format!("{:?}", response.lua),
                         backtrace: Backtrace::capture(),
                     });
                 }
@@ -142,6 +169,12 @@ impl AdmiralClient {
     }
 }
 
+pub struct ExecuteResponse<L: LuaCommand> {
+    body: String,
+    lua: L,
+    lua_text: String,
+}
+
 pub fn inner_admiral() -> AdmiralResult<()> {
     let mut admiral = AdmiralClient::new()?;
 
@@ -157,37 +190,46 @@ pub fn inner_admiral() -> AdmiralResult<()> {
     //     start: Point2f { x: 200.0, y: 200.0 },
     // })?;
 
-    // admiral.execute_block(AssemblerFarmGenerator {
-    //     inner: BeaconFarmGenerator {
-    //         cell_size: 3,
-    //         width: 5,
-    //         height: 5,
-    //         start: Point2f { x: 200.5, y: 200.5 },
-    //         module: "speed-module-3".to_string(),
-    //     },
-    //     chests: vec![
-    //         AssemblerChest::Output { is_purple: false },
-    //         AssemblerChest::Output { is_purple: true },
-    //         AssemblerChest::Input {
-    //             name: "plastic-bar".to_string(),
-    //             count: 500,
-    //         },
-    //         AssemblerChest::Input {
-    //             name: "steel-chest".to_string(),
-    //             count: 500,
-    //         },
-    //         AssemblerChest::Buffer {
-    //             name: "plastic-bar".to_string(),
-    //             count: 500,
-    //         },
-    //         AssemblerChest::Buffer {
-    //             name: "steel-chest".to_string(),
-    //             count: 500,
-    //         },
-    //     ],
-    // })?;
+    admiral.execute_block(Terapower {
+        start: Point { x: 0, y: 0 },
+        height: 600,
+        width: 600,
+    })?;
 
-    let origin = Point2f { x: 200.0, y: 200.0 };
+    admiral.execute_block(AssemblerFarmGenerator {
+        inner: BeaconFarmGenerator {
+            cell_size: 3,
+            width: 5,
+            height: 5,
+            start: Point2f { x: 200.5, y: 200.5 },
+            module: "speed-module-3".to_string(),
+        },
+        chests: vec![
+            AssemblerChest::Output { is_purple: false },
+            AssemblerChest::Output { is_purple: true },
+            AssemblerChest::Input {
+                name: "plastic-bar".to_string(),
+                count: 500,
+            },
+            AssemblerChest::Input {
+                name: "steel-chest".to_string(),
+                count: 500,
+            },
+            AssemblerChest::Buffer {
+                name: "plastic-bar".to_string(),
+                count: 500,
+            },
+            AssemblerChest::Buffer {
+                name: "steel-chest".to_string(),
+                count: 500,
+            },
+        ],
+    })?;
+
+    let origin = Point2f {
+        x: 1000.0,
+        y: 1000.0,
+    };
 
     let assembler_width = 9;
     admiral.execute_block(AssemblerRoboFarmGenerator {

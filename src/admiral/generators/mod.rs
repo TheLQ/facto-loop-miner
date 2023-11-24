@@ -10,6 +10,7 @@ pub mod rail_line;
 pub mod rail_pan;
 pub mod rail_station;
 pub mod rail_station_pathfound;
+pub mod terapower;
 
 pub fn join_commands<'a>(
     creation_commands: impl Iterator<Item = &'a Box<dyn LuaCommand>>,
@@ -22,7 +23,7 @@ pub fn join_commands<'a>(
     result
 }
 
-struct XyGridPosition {
+pub struct XyGridPosition {
     x: i32,
     y: i32,
     ix: u32,

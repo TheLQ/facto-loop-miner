@@ -4,7 +4,7 @@ use crate::admiral::flexbox::model::{FlexSize, Flexbox, FlexboxBuilder};
 struct BeaconFlexbox {
     size: FlexSize,
     cell_size: u32,
-    cell_content: dyn FlexboxBuilder,
+    // cell_content: Box<dyn FlexboxBuilder>,
 }
 
 impl FlexboxBuilder for BeaconFlexbox {

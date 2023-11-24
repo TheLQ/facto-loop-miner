@@ -36,8 +36,9 @@ impl LuaCommandBatch for AssemblerRoboFarmGenerator {
         trace!("div {} div {}", 5_u32.div_ceil(2), 3_u32.div_ceil(2));
 
         let row_assembly_width = ((self.assembler_width - 1) * BEACON_SIZE * ASSEMBLER_CELL_COUNT);
-        let row_assembly_height =
-            ((self.assembler_height - 1) * BEACON_SIZE * ASSEMBLER_CELL_COUNT) as f32;
+        let row_assembly_height = ((self.assembler_height - 1) * BEACON_SIZE * ASSEMBLER_CELL_COUNT)
+            as f32
+            + BEACON_SIZE as f32;
 
         let row_robo_width_count = row_assembly_width.div_floor(ROBOPORT_BLOCK_SIZE);
         let row_robo_height_count = self.robo_height;

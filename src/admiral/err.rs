@@ -1,4 +1,5 @@
 use rcon_client::RCONError;
+use serde::__private::de::AdjacentlyTaggedEnumVariantSeed;
 use std::backtrace::Backtrace;
 use std::io;
 use std::marker::ConstParamTy;
@@ -29,4 +30,43 @@ pub enum AdmiralError {
     },
     #[error("DestroyFailed")]
     DestroyFailed { backtrace: Backtrace },
+    #[error("DefineFailed {}", truncate_huge_lua(lua_text))]
+    // #[error("DefineFailed")]
+    DefineFailed {
+        lua_text: String,
+        backtrace: Backtrace,
+    },
+}
+
+impl AdmiralError {
+    pub fn my_backtrace(&self) -> &Backtrace {
+        match self {
+            AdmiralError::Rcon { backtrace, source } => backtrace,
+            AdmiralError::LuaBlankCommand { backtrace } => backtrace,
+            AdmiralError::LuaResultNotEmpty {
+                backtrace,
+                body,
+                command,
+            } => backtrace,
+            AdmiralError::LuaResultEmpty { backtrace, command } => backtrace,
+            AdmiralError::DestroyFailed { backtrace } => backtrace,
+            AdmiralError::DefineFailed {
+                backtrace,
+                lua_text,
+            } => backtrace,
+        }
+    }
+}
+
+fn truncate_huge_lua(input: &str) -> String {
+    if input.len() < 100 {
+        input.to_string()
+    } else {
+        format!(
+            "{}...truncate {} chars....{}",
+            &input[0..100],
+            input.len() - 200,
+            &input[(input.len() - 100)..]
+        )
+    }
 }

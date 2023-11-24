@@ -1,6 +1,6 @@
 html {
     /* base rem unit's visual size */
-    font-size: 50px;
+    font-size: 10px;
 }
 
 body {
@@ -15,60 +15,6 @@ body {
 
 .container {
     border: 1px solid black;
-    display: grid;
-    row-gap: 0;
     margin: 0;
     padding: 0;
-}
-
-.block-5x5 {
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(5, 1fr);
-    grid-template-areas:
-    "5x5-1x1 5x5-1x2 5x5-1x3 5x5-1x4 5x5-1x5"
-    "5x5-2x1 5x5-2x2 5x5-2x3 5x5-2x4 5x5-2x5"
-    "5x5-3x1 5x5-3x2 5x5-3x3 5x5-3x4 5x5-3x5"
-    "5x5-4x1 5x5-4x2 5x5-4x3 5x5-4x4 5x5-4x5"
-    "5x5-5x1 5x5-5x2 5x5-5x3 5x5-5x4 5x5-5x5";
-}
-
-.bp-beacon-5cube {
-    width: 15em;
-    height: 15em;
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(5, 1fr);
-    grid-template-areas:
-    "5x5-1x1 5x5-1x2 5x5-1x3 5x5-1x4 5x5-1x5"
-    "5x5-2x1 5x5-cen 5x5-cen 5x5-cen 5x5-2x5"
-    "5x5-3x1 5x5-cen 5x5-cen 5x5-cen 5x5-3x5"
-    "5x5-4x1 5x5-cen 5x5-cen 5x5-cen 5x5-4x5"
-    "5x5-5x1 5x5-5x2 5x5-5x3 5x5-5x4 5x5-5x5";
-}
-
-.bp-beacon-5cube-1x1 {
-
-}
-
-
-
-.block-beacon {
-    width: 12.1rem;
-    height: 12.1rem;
-    /*width: 12rem;*/
-    /*height: 12rem;*/
-}
-
-.block-beacon-center {
-    width: 6rem;
-    height: 6rem;
-}
-
-.unit-beacon {
-    width: 3rem;
-    height: 3rem;
-
-}
-
-.unit-beacon::before {
-    content: 'beacon';
 }

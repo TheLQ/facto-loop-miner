@@ -9,6 +9,7 @@ pub struct Flexbox {
     children: Vec<Flexbox>,
 }
 
+#[derive(Debug, Clone)]
 pub struct FlexSize {
     width: u32,
     height: u32,

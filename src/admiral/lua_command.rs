@@ -83,7 +83,7 @@ impl LuaCommand for FacSurfaceCreateEntitySafe {
         let lua_text = self.inner.make_lua();
         format!(
             r#"
-local admiral_create = {}
+admiral_create = {}
 {}
 if admiral_create == nil then
     rcon.print('create_entity_failed')
@@ -91,7 +91,7 @@ elseif admiral_create.position.x ~= {} or admiral_create.position.y ~= {} then
     rcon.print('create_entity_bad_position')
     rcon.print("created at {2}x{3} placed at " .. admiral_create.position.x .. "x" .. admiral_create.position.y .. "y entity {}")
 else
-    rcon.print('create_entity_success')
+    rcon.print('create_entity_success_{}')
 end"#,
             self.inner.make_lua(),
             self.inner.extra.join("\n"),
@@ -99,7 +99,8 @@ end"#,
             self.inner.position.y,
             format!("{:?}", self.inner)
                 .replace("\\\"", "")
-                .replace("\"", "")
+                .replace("\"", ""),
+            self.inner.name
         )
     }
 }
@@ -123,13 +124,13 @@ impl LuaCommand for FacDestroy {
         // for entity in
         format!(
             r#"
-local entities = game.surfaces[1].find_entities({{ {{ 0,0 }} , {{ 1000, 1000 }} }})
+local entities = game.surfaces[1].find_entities({{ {{ 0,0 }} , {{ 10000, 10000 }} }})
 for _, entity in ipairs(entities) do
     rcon.print('destroy_' .. entity.name )
     entity.destroy()
 end
 rcon.print('destroy_success')
-        "#
+        "# // game.players[1].teleport({{ 1000, 1000 }})
         )
     }
 }
@@ -148,18 +149,20 @@ impl LuaCommand for FacExectionDefine {
             .into_iter()
             .enumerate()
             .map(|(i, v)| {
-                let mut inner_function = format!("local chunk = {} function megachunk()\n", i);
+                let mut inner_function = format!("chunk = {} function megachunk()\n", i);
+                inner_function.push_str("\nlocal admiral_create = nil");
                 inner_function.push_str(&join_commands(v));
                 inner_function.push_str("\nend");
                 inner_function.push_str("\nmegachunk()\n");
                 inner_function
             })
-            .join("\n");
+            .join("\n")
+            .replace("\n", " ");
         format!(
             r#"
 function megacall()
 {}
-end
+end rcon.print('facexecution_define')
         "#,
             all_function_chunks
         )
