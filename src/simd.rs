@@ -374,7 +374,7 @@ mod test {
         bit_expected.resize(SSE_UNIT_COUNT * SSE_BITS, false);
 
         for needle in needles {
-            bit_expected.set(needle as usize, true);
+            bit_expected.set(needle, true);
         }
 
         assert_eq!(bit_actual, bit_expected);

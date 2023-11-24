@@ -25,14 +25,14 @@ pub fn direction_params_exact(value: &str) -> HashMap<String, String> {
 
 pub fn recipe_params_exact(value: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
-    map.insert("recipe".to_string(), format!("\"{}\"", value.to_string()));
+    map.insert("recipe".to_string(), format!("\"{}\"", value));
     map
 }
 
 pub fn recipe_module_params_exact(value: &str, module: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
-    map.insert("recipe".to_string(), format!("\"{}\"", value.to_string()));
-    map.insert("modules".to_string(), format!("\"{}\"", module.to_string()));
+    map.insert("recipe".to_string(), format!("\"{}\"", value));
+    map.insert("modules".to_string(), format!("\"{}\"", module));
     map
 }
 

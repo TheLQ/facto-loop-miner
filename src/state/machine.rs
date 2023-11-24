@@ -92,7 +92,7 @@ impl Machine {
 
 pub fn search_step_history_dirs<I>(step_history_out_dirs: I, name: &str) -> PathBuf
 where
-    I: Iterator<Item = PathBuf> + std::iter::DoubleEndedIterator,
+    I: Iterator<Item = PathBuf> + DoubleEndedIterator,
 {
     for dir in step_history_out_dirs.rev() {
         let file = dir.join(name);

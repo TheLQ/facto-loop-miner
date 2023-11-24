@@ -65,7 +65,7 @@ impl State {
         self.files_to_last_modified
             .entry(PathBuf::from(path))
             .and_modify(|modified_old| {
-                if modified_new_milli != modified_old.clone() {
+                if &modified_new_milli != modified_old {
                     force_rebuild = true;
                     tracing::debug!(
                         "[State] found change on {} old {} new {}",
@@ -81,6 +81,6 @@ impl State {
                 modified_new_milli
             });
 
-        return force_rebuild;
+        force_rebuild
     }
 }

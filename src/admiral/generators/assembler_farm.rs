@@ -105,7 +105,7 @@ impl AssemblerFarmGenerator {
                             extra: Vec::new(),
                         },
                     }));
-                    total = total + 1.0;
+                    total += 1.0;
                 }
             }
         }
@@ -148,7 +148,7 @@ impl AssemblerFarmGenerator {
                             ],
                         },
                     }));
-                    total = total + 1.0;
+                    total += 1.0;
                 }
             }
         }
@@ -174,7 +174,7 @@ impl AssemblerFarmGenerator {
                             )],
                         },
                     }));
-                    total = total + 1.0;
+                    total += 1.0;
                 }
             }
         }
@@ -182,7 +182,7 @@ impl AssemblerFarmGenerator {
 
     fn make_power(&self, lua_commands: &mut Vec<Box<dyn LuaCommand>>) {
         for pos in self.assembler_xy_grid() {
-            if !(pos.ix % 2 == 0) {
+            if pos.ix % 2 != 0 {
                 continue;
             }
             lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {

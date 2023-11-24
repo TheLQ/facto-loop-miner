@@ -2,7 +2,6 @@ use rcon_client::RCONError;
 use serde::__private::de::AdjacentlyTaggedEnumVariantSeed;
 use std::backtrace::Backtrace;
 use std::io;
-use std::marker::ConstParamTy;
 use thiserror::Error;
 
 pub type AdmiralResult<T> = Result<T, AdmiralError>;

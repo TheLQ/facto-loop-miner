@@ -9,7 +9,6 @@
 #![feature(slice_flatten)]
 #![feature(array_chunks)]
 #![allow(unused)]
-#![feature(adt_const_params)]
 #![feature(error_generic_member_access)]
 #![feature(int_roundings)]
 // #![feature()]
@@ -58,7 +57,7 @@ pub fn inner_main() {
     match 5 {
         1 => new_v1_machine().start(root_dir),
         3 => generate_lookup_image(),
-        4 => crate::self_bin::get_patch::get_patch_main(),
+        4 => self_bin::get_patch::get_patch_main(),
         5 => admiral::client::admiral(),
         _ => panic!("wtf"),
     }

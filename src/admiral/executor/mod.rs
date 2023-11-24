@@ -71,8 +71,8 @@ pub trait LuaCompiler {
                     });
                 }
                 let mut metric = Metrics::new("ExecuteResult".to_string());
-                for part in v.split("\n") {
-                    if part.contains(" ") {
+                for part in v.split('\n') {
+                    if part.contains(' ') {
                         warn!("[lua_log] {}", part);
                     } else {
                         metric.increment(part);

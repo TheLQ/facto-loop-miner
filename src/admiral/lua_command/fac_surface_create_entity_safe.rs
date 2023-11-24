@@ -27,7 +27,7 @@ end"#,
             self.inner.position.y,
             format!("{:?}", self.inner)
                 .replace("\\\"", "")
-                .replace("\"", ""),
+                .replace('\"', ""),
             self.inner.name
         )
     }

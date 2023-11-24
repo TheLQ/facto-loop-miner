@@ -25,7 +25,7 @@ impl LuaCommand for FacExectionDefine {
                 inner_function
             })
             .join("\n")
-            .replace("\n", " ")
+            .replace('\n', " ")
             .to_string();
 
         let regex = Regex::new("( \\s+)");

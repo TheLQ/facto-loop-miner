@@ -63,7 +63,7 @@ impl NavDirection {
 
         let good = distance_after < distance_before as i32;
         if good {
-            distance_after as i32
+            distance_after
         } else {
             -distance_after
         }
@@ -94,6 +94,6 @@ fn route_patch(surface: &mut Surface, patch: &Patch) {
                 break;
             }
         }
-        offset = offset - 1;
+        offset -= 1;
     }
 }

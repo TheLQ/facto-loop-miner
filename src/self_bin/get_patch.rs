@@ -10,7 +10,7 @@ pub fn get_patch_main() {
     let mut surface = Surface::load(Path::new("work/out0/step03-crop"));
     let patches = DiskPatch::load_from_dir(Path::new("work/out0/step04-contours"));
 
-    let first_patch: &Patch = &patches.patches[&Pixel::IronOre]
+    let first_patch: &Patch = patches.patches[&Pixel::IronOre]
         .iter()
         .filter(|v| v.height + v.width > 50)
         .next()
@@ -31,5 +31,5 @@ pub fn get_patch_main() {
     surface.set_buffer_from_cv(img);
 
     let out = Path::new("work/test3");
-    surface.save(&out);
+    surface.save(out);
 }

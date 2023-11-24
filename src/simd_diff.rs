@@ -19,7 +19,8 @@ impl SurfaceDiff {
         let mut source = m256_zero_vec((len - (len % SSE_BITS)) / SSE_BITS);
         let surface_buffer = surface.buffer.clone();
         let raw_buffer: &[u8] = unsafe { transmute(surface_buffer.as_slice()) };
-        let raw_buffer2 = raw_buffer.clone();
+        // TODO: was raw_buffer.clone()
+        let raw_buffer2 = raw_buffer;
         apply_any_u8_iter_to_m256_buffer((*raw_buffer).into_iter(), &mut source);
 
         let mut working = m256_zero_vec(source.len());

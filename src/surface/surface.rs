@@ -212,7 +212,7 @@ impl Surface {
 
     #[allow(dead_code)]
     fn save_rgb(&self, rgb: &[u8], path: &Path) {
-        fs::write(path, rgb).unwrap();
+        write(path, rgb).unwrap();
 
         tracing::debug!(
             "Saved {} byte RGB array to {}",
