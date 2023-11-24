@@ -1,174 +1,29 @@
 use crate::admiral::err::{AdmiralError, AdmiralResult};
+use crate::admiral::executor::rcon::AdmiralClient;
 use crate::admiral::generators::assembler_farm::{AssemblerChest, AssemblerFarmGenerator};
 use crate::admiral::generators::assembler_robo_farm::AssemblerRoboFarmGenerator;
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::rail_pan::RailPanGenerator;
 use crate::admiral::generators::terapower::Terapower;
+use crate::admiral::lua_command::compiler::{ExecuteResponse, LuaCompiler};
 use crate::admiral::lua_command::fac_destroy::FacDestroy;
-use crate::admiral::lua_command::fac_execution_define::FacExectionDefine;
-use crate::admiral::lua_command::fac_execution_run::FacExectionRun;
 use crate::admiral::lua_command::fac_log::FacLog;
 use crate::admiral::lua_command::lua_batch::BasicLuaBatch;
-use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
-use crate::surface::metric::Metrics;
+use crate::admiral::lua_command::LuaCommand;
 use crate::surface::surface::PointU32;
 use crate::LOCALE;
 use num_format::ToFormattedString;
 use opencv::core::{Point, Point2f};
-use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONError, RCONRequest};
+use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONRequest};
 use std::backtrace::Backtrace;
 use std::fmt::Debug;
-use tracing::{debug, error, info, trace, warn};
+use std::fs::File;
+use tracing::{debug, error, info, trace};
 
 pub fn admiral() {
     if let Err(e) = inner_admiral() {
         error!("Admiral failed! {}\n{}", e, e.my_backtrace());
     }
-}
-
-struct AdmiralClient {
-    client: RCONClient,
-}
-
-impl AdmiralClient {
-    fn new() -> Result<Self, RCONError> {
-        let client = RCONClient::new(RCONConfig {
-            url: "192.168.66.73:28016".to_string(),
-            // Optional
-            read_timeout: Some(900),
-            write_timeout: Some(900),
-        })?;
-
-        Ok(AdmiralClient { client })
-    }
-
-    fn auth(&mut self) -> AdmiralResult<()> {
-        // Auth request to RCON server (SERVERDATA_AUTH)
-        let auth_result = self.client.auth(AuthRequest::new("xana".to_string()))?;
-        assert!(auth_result.is_success());
-        Ok(())
-    }
-
-    fn _execute_statement<L>(&mut self, lua: L) -> AdmiralResult<ExecuteResponse<L>>
-    where
-        L: LuaCommand,
-    {
-        let lua_text = lua.make_lua();
-        if lua_text.trim().is_empty() {
-            return Err(AdmiralError::LuaBlankCommand {
-                backtrace: Backtrace::capture(),
-            });
-        };
-        trace!("Characters {}", lua_text.len().to_formatted_string(&LOCALE));
-
-        // Execute command request to RCON server (SERVERDATA_EXECCOMMAND)
-        let request = RCONRequest::new(format!("/c {}", lua_text));
-        // debug!("executing\n{}", lua_text);
-
-        let execute = self
-            .client
-            .execute(request)
-            .map_err(|e| AdmiralError::Rcon {
-                source: e,
-                backtrace: Backtrace::capture(),
-            })?;
-        debug!(
-            "Execute Result id {} type {} body {}",
-            execute.id,
-            execute.response_type,
-            execute.body.len()
-        );
-
-        // Ok((execute.body, lua, lua_text))
-        Ok(ExecuteResponse {
-            lua_text,
-            lua,
-            body: execute.body,
-        })
-    }
-
-    fn _execute_statement_empty(&mut self, lua: impl LuaCommand + Debug) -> AdmiralResult<()> {
-        self._execute_statement(lua).and_then(|response| {
-            if response.body.is_empty() {
-                Ok(())
-            } else {
-                Err(AdmiralError::LuaResultNotEmpty {
-                    command: format!("{:#?}", response.lua),
-                    body: response.body,
-                    backtrace: Backtrace::capture(),
-                })
-            }
-        })
-    }
-
-    fn execute_block(&mut self, lua: impl LuaCommandBatch + Debug) -> AdmiralResult<()> {
-        let mut commands: Vec<Box<dyn LuaCommand>> = Vec::new();
-        info!("Executing {:?}", lua);
-        lua.make_lua_batch(&mut commands);
-        let command_num = commands.len();
-        debug!("Execute Block with {} commands", command_num);
-        self._execute_statement(FacExectionDefine { commands })
-            .and_then(|response| {
-                let v = response.body.trim();
-                if v.is_empty() {
-                    Err(AdmiralError::DefineFailed {
-                        lua_text: response.lua_text,
-                        backtrace: Backtrace::capture(),
-                    })
-                } else if v == "facexecution_define" {
-                    trace!("succesfully defined ");
-                    Ok(())
-                } else {
-                    Err(AdmiralError::LuaResultNotEmpty {
-                        command: format!("{:?}", response.lua),
-                        body: v.to_string(),
-                        backtrace: Backtrace::capture(),
-                    })
-                }
-            })?;
-
-        let lua_text = "megacall()";
-        self._execute_statement(FacExectionRun {})
-            .and_then(|response| {
-                let v = response.body.trim();
-                if v.is_empty() {
-                    return Err(AdmiralError::LuaResultEmpty {
-                        command: format!("{:?}", response.lua),
-                        backtrace: Backtrace::capture(),
-                    });
-                }
-                let mut metric = Metrics::new("ExecuteResult".to_string());
-                for part in v.split("\n") {
-                    if part.contains(" ") {
-                        warn!("[lua_log] {}", part);
-                    } else {
-                        metric.increment(part);
-                    }
-                    // if !v.ends_with("_success") {
-                    //     return Err(RCONError::TypeError(format!(
-                    //         "expected _success metric got {}",
-                    //         v
-                    //     )));
-                    // }
-                }
-                metric.log_final();
-
-                Ok(())
-            })
-    }
-
-    fn log(&mut self, line: &str) -> AdmiralResult<()> {
-        info!("[Game Log] {}", line);
-        self._execute_statement_empty(FacLog {
-            message: line.to_string(),
-        })
-    }
-}
-
-pub struct ExecuteResponse<L: LuaCommand> {
-    body: String,
-    lua: L,
-    lua_text: String,
 }
 
 pub fn inner_admiral() -> AdmiralResult<()> {

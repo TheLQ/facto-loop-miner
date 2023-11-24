@@ -36,6 +36,17 @@ pub enum AdmiralError {
         lua_text: String,
         backtrace: Backtrace,
     },
+    #[error("TooLargeRequest {}", truncate_huge_lua(lua_text))]
+    TooLargeRequest {
+        lua_text: String,
+        backtrace: Backtrace,
+    },
+    #[error("IoError {path} {e}")]
+    IoError {
+        path: String,
+        e: io::Error,
+        backtrace: Backtrace,
+    },
 }
 
 impl AdmiralError {
@@ -54,6 +65,11 @@ impl AdmiralError {
                 backtrace,
                 lua_text,
             } => backtrace,
+            AdmiralError::TooLargeRequest {
+                backtrace,
+                lua_text,
+            } => backtrace,
+            AdmiralError::IoError { backtrace, path, e } => backtrace,
         }
     }
 }
