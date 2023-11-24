@@ -6,16 +6,19 @@ use crate::admiral::lua_command::LuaCommand;
 use std::backtrace::Backtrace;
 use std::fs::File;
 use std::io::Write;
+use tracing::debug;
 
 pub struct AdmiralFile {
+    path: String,
     pub output_file: File,
 }
 
 impl AdmiralFile {
     pub fn new() -> AdmiralResult<Self> {
-        let path = "/home/desk/factorio/mods/megacalc/megacall_auto.lua";
+        let path = "/home/desk/factorio/mods/megacalc/megacall_auto.lua".to_string();
         Ok(AdmiralFile {
-            output_file: File::open(path).map_err(|e| AdmiralError::IoError {
+            path: path.clone(),
+            output_file: File::open(path.clone()).map_err(|e| AdmiralError::IoError {
                 e,
                 backtrace: Backtrace::capture(),
                 path: path.to_string(),
@@ -37,7 +40,15 @@ impl LuaCompiler for AdmiralFile {
         &mut self,
         lua_define: FacExectionDefine,
     ) -> AdmiralResult<ExecuteResponse<FacExectionDefine>> {
-        self.output_file.write_all();
+        let lua_text = lua_define.make_lua();
+        self.output_file
+            .write_all(lua_text.as_bytes())
+            .map_err(|e| AdmiralError::IoError {
+                e,
+                backtrace: Backtrace::capture(),
+                path: self.path.clone(),
+            });
+        debug!("wrote {} bytes", lua_text.len());
 
         Ok(ExecuteResponse {
             lua_text: "".to_string(),
