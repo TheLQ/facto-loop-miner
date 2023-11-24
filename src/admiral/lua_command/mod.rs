@@ -2,7 +2,6 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-pub mod compiler;
 pub mod fac_destroy;
 pub mod fac_execution_define;
 pub mod fac_execution_run;

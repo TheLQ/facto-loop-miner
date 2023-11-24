@@ -1,24 +1,15 @@
-use crate::admiral::err::{AdmiralError, AdmiralResult};
+use crate::admiral::err::AdmiralResult;
+use crate::admiral::executor::file::AdmiralFile;
 use crate::admiral::executor::rcon::AdmiralClient;
+use crate::admiral::executor::LuaCompiler;
 use crate::admiral::generators::assembler_farm::{AssemblerChest, AssemblerFarmGenerator};
-use crate::admiral::generators::assembler_robo_farm::AssemblerRoboFarmGenerator;
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
-use crate::admiral::generators::rail_pan::RailPanGenerator;
 use crate::admiral::generators::terapower::Terapower;
-use crate::admiral::lua_command::compiler::{ExecuteResponse, LuaCompiler};
 use crate::admiral::lua_command::fac_destroy::FacDestroy;
-use crate::admiral::lua_command::fac_log::FacLog;
 use crate::admiral::lua_command::lua_batch::BasicLuaBatch;
-use crate::admiral::lua_command::LuaCommand;
-use crate::surface::surface::PointU32;
-use crate::LOCALE;
-use num_format::ToFormattedString;
 use opencv::core::{Point, Point2f};
-use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONRequest};
-use std::backtrace::Backtrace;
 use std::fmt::Debug;
-use std::fs::File;
-use tracing::{debug, error, info, trace};
+use tracing::error;
 
 pub fn admiral() {
     if let Err(e) = inner_admiral() {
@@ -27,10 +18,11 @@ pub fn admiral() {
 }
 
 pub fn inner_admiral() -> AdmiralResult<()> {
-    let mut admiral = AdmiralClient::new()?;
+    // let mut admiral = AdmiralClient::new()?;
+    // admiral.auth()?;
+    // admiral.log("init admiral")?;
 
-    admiral.auth()?;
-    admiral.log("init admiral")?;
+    let mut admiral = AdmiralFile::new()?;
 
     admiral.execute_block(BasicLuaBatch {
         commands: vec![Box::new(FacDestroy {})],
@@ -77,48 +69,48 @@ pub fn inner_admiral() -> AdmiralResult<()> {
         ],
     })?;
 
-    let origin = Point2f {
-        x: 1000.0,
-        y: 1000.0,
-    };
-
-    let assembler_width = 9;
-    admiral.execute_block(AssemblerRoboFarmGenerator {
-        start: origin,
-        row_count: 2,
-        robo_height: 1,
-        assembler_width,
-        assembler_height: 4,
-        chests: vec![
-            AssemblerChest::Output { is_purple: false },
-            AssemblerChest::Output { is_purple: true },
-            AssemblerChest::Input {
-                name: "plastic-bar".to_string(),
-                count: 500,
-            },
-            AssemblerChest::Input {
-                name: "steel-chest".to_string(),
-                count: 500,
-            },
-            AssemblerChest::Buffer {
-                name: "plastic-bar".to_string(),
-                count: 500,
-            },
-            AssemblerChest::Buffer {
-                name: "steel-chest".to_string(),
-                count: 500,
-            },
-        ],
-    })?;
-
-    admiral.execute_block(RailPanGenerator {
-        width: 15,
-        height: 25,
-        start: PointU32 {
-            x: origin.x as u32,
-            y: origin.y as u32 - 5,
-        },
-    })?;
+    // let origin = Point2f {
+    //     x: 1000.0,
+    //     y: 1000.0,
+    // };
+    //
+    // let assembler_width = 9;
+    // admiral.execute_block(AssemblerRoboFarmGenerator {
+    //     start: origin,
+    //     row_count: 2,
+    //     robo_height: 1,
+    //     assembler_width,
+    //     assembler_height: 4,
+    //     chests: vec![
+    //         AssemblerChest::Output { is_purple: false },
+    //         AssemblerChest::Output { is_purple: true },
+    //         AssemblerChest::Input {
+    //             name: "plastic-bar".to_string(),
+    //             count: 500,
+    //         },
+    //         AssemblerChest::Input {
+    //             name: "steel-chest".to_string(),
+    //             count: 500,
+    //         },
+    //         AssemblerChest::Buffer {
+    //             name: "plastic-bar".to_string(),
+    //             count: 500,
+    //         },
+    //         AssemblerChest::Buffer {
+    //             name: "steel-chest".to_string(),
+    //             count: 500,
+    //         },
+    //     ],
+    // })?;
+    //
+    // admiral.execute_block(RailPanGenerator {
+    //     width: 15,
+    //     height: 25,
+    //     start: PointU32 {
+    //         x: origin.x as u32,
+    //         y: origin.y as u32 - 5,
+    //     },
+    // })?;
 
     // admiral.execute_block(RailStationPathfoundGenerator {
     //     start: Point2f {
