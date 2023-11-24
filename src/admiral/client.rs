@@ -2,26 +2,22 @@ use crate::admiral::err::{AdmiralError, AdmiralResult};
 use crate::admiral::generators::assembler_farm::{AssemblerChest, AssemblerFarmGenerator};
 use crate::admiral::generators::assembler_robo_farm::AssemblerRoboFarmGenerator;
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
-use crate::admiral::generators::rail_beacon_farm::RailBeaconFarmGenerator;
-use crate::admiral::generators::rail_line::RailLineGenerator;
 use crate::admiral::generators::rail_pan::RailPanGenerator;
-use crate::admiral::generators::rail_station::RailStationGenerator;
-use crate::admiral::generators::rail_station_pathfound::RailStationPathfoundGenerator;
 use crate::admiral::generators::terapower::Terapower;
-use crate::admiral::lua_command::{
-    BasicLuaBatch, FacDestroy, FacExectionDefine, FacExectionRun, FacLog, FacSurfaceCreateEntity,
-    FacSurfaceCreateEntitySafe, LuaCommand, LuaCommandBatch,
-};
+use crate::admiral::lua_command::fac_destroy::FacDestroy;
+use crate::admiral::lua_command::fac_execution_define::FacExectionDefine;
+use crate::admiral::lua_command::fac_execution_run::FacExectionRun;
+use crate::admiral::lua_command::fac_log::FacLog;
+use crate::admiral::lua_command::lua_batch::BasicLuaBatch;
+use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
 use crate::surface::metric::Metrics;
 use crate::surface::surface::PointU32;
 use crate::LOCALE;
-use num_format::Grouping::Posix;
 use num_format::ToFormattedString;
-use opencv::core::{Point, Point2f, Point_};
+use opencv::core::{Point, Point2f};
 use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONError, RCONRequest};
 use std::backtrace::Backtrace;
-use std::collections::HashMap;
-use std::fmt::{format, Debug};
+use std::fmt::Debug;
 use tracing::{debug, error, info, trace, warn};
 
 pub fn admiral() {
