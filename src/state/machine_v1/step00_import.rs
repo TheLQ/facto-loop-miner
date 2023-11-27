@@ -20,7 +20,9 @@ impl Step for Step00 {
     /// Load Factorio Mod's exported map data JSON into a huge single image
     /// representing the whole map.
     fn transformer(&self, params: StepParams) {
-        let lua_dir = Path::new("work/chunk500");
+        let lua_dir = Path::new("work/chunk1000");
+        let input_path = lua_dir.join("mega-dump.json");
+
         let data = LuaData::open(
             &lua_dir.join("filtered-resources.json"),
             &lua_dir.join("filtered-tiles.json"),

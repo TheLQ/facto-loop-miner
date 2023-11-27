@@ -1,5 +1,5 @@
 use crate::surface::pixel::Pixel;
-use crate::surfacev::VEntityBuffer::{VEntityBuffer, VEntityXY};
+use crate::surfacev::ventity_buffer::{VEntityBuffer, VEntityXY};
 use opencv::core::Point;
 
 /// An i32 based collection of Points and Pixels

@@ -38,7 +38,7 @@ pub mod simd;
 pub mod simd_diff;
 pub mod state;
 pub mod surface;
-mod surfacev;
+pub mod surfacev;
 
 pub type PixelKdTree = KdTree<f32, 2>;
 
