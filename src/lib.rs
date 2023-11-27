@@ -38,6 +38,7 @@ pub mod simd;
 pub mod simd_diff;
 pub mod state;
 pub mod surface;
+mod surfacev;
 
 pub type PixelKdTree = KdTree<f32, 2>;
 
@@ -54,7 +55,7 @@ pub fn inner_main() {
     tracing::debug!("hello");
     let root_dir = Path::new("work");
 
-    match 5 {
+    match 1 {
         1 => new_v1_machine().start(root_dir),
         3 => generate_lookup_image(),
         4 => self_bin::get_patch::get_patch_main(),

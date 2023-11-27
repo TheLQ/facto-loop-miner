@@ -28,7 +28,7 @@ impl Step for Step03 {
         for val in &mut surface.buffer {
             if val == &Pixel::Water {
                 *val = Pixel::Empty;
-                count = count + 1;
+                count += 1;
             }
         }
         tracing::debug!("wiped out {} water", count);

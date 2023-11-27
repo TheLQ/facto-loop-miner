@@ -127,6 +127,7 @@ pub fn inner_admiral() -> AdmiralResult<()> {
     //     },
     // })?;
 
+    admiral.end_file();
     Ok(())
 }
 
