@@ -1,10 +1,11 @@
 use crate::surface::surface::PointU32;
 use crate::surfacev::err::{VError, VResult};
 use bitvec::macros::internal::funty::Fundamental;
-use opencv::core::Point;
+use opencv::core::Point2f;
+use crate::surfacev::vpoint::VPoint;
 
 pub trait VEntityXY {
-    fn get_xy(&self) -> Vec<Point>;
+    fn get_xy(&self) -> Vec<VPoint>;
 }
 
 pub struct VEntityBuffer<E> {
@@ -56,13 +57,13 @@ where
     //</editor-fold>
 
     //<editor-fold desc="point">
-    pub fn is_point_out_of_bounds(&self, point: &Point) -> bool {
+    pub fn is_point_out_of_bounds(&self, point: &VPoint) -> bool {
         self.is_xy_out_of_bounds(point.x, point.y)
     }
 
     pub fn is_points_out_of_bounds_iter<'a>(
         &self,
-        points: impl Iterator<Item = &'a Point>,
+        points: impl Iterator<Item = &'a VPoint>,
     ) -> VResult<()> {
         let mut bad = Vec::new();
         for point in points {
@@ -77,7 +78,7 @@ where
         }
     }
 
-    pub fn is_points_out_of_bounds_vec(&self, points: Vec<Point>) -> VResult<Vec<Point>> {
+    pub fn is_points_out_of_bounds_vec(&self, points: Vec<VPoint>) -> VResult<Vec<VPoint>> {
         self.is_points_out_of_bounds_iter(points.iter())
             .map(|_| points)
     }

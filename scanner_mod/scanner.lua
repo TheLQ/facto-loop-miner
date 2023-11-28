@@ -1,19 +1,29 @@
 -- Dumps everything into
 -- /c
 
-local size = 25000
 local output = {}
-
 output.entities = {}
-local all_entities = game.player.surface.find_entities({ { -size, -size }, { size, size } })
-for _, entity in pairs(all_entities) do
-    local out_entry = {
-        type = entity.type,
-        name = entity.name,
-        pos = entity.position,
-    }
-    table.insert(output.entities, out_entry)
-end
+output.tiles = {}
+
+
+    local all_entities = game.player.surface.find_entities({ {-32000, -32000},{32000, 32000} })
+    for _, entity in pairs(all_entities) do
+        local out_entry = {
+            name = entity.name,
+            pos = entity.position,
+        }
+        table.insert(output.entities, out_entry)
+    end
+
+    local all_tiles = game.player.surface.find_tiles_filtered({ {-32000, -32000},{32000, 32000} }, nil, nil, {"water"} )
+    for _, entity in pairs(all_tiles) do
+        local out_entry = {
+            name = entity.name,
+            position = entity.position,
+        }
+        table.insert(output.tiles, out_entry)
+    end
+
 game.write_file("mega-dump.json", game.table_to_json(output))
 
 --output.prototypes = {}

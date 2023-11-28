@@ -1,4 +1,4 @@
-use crate::gamedata::lua::LuaEntity;
+use crate::gamedata::lua::LuaThing;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
 
@@ -44,7 +44,7 @@ impl GameLocator {
 
     pub fn expand_to<E>(&mut self, entities: &[E])
     where
-        E: LuaEntity,
+        E: LuaThing,
     {
         for entity in entities {
             self.max_x = max(self.max_x, entity.position().x.floor() as i32);

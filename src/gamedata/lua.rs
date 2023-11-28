@@ -1,6 +1,8 @@
 use crate::surface::pixel::Pixel;
+use crate::surfacev::vpoint::VPoint;
 use crate::LOCALE;
 use num_format::ToFormattedString;
+use opencv::core::Point2f;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fs::read;
@@ -9,25 +11,22 @@ use std::time::Instant;
 
 #[derive(Serialize, Deserialize)]
 pub struct LuaData {
-    pub resource: Vec<LuaResource>,
-    pub tile: Vec<LuaTile>,
+    pub entities: Vec<LuaEntity>,
+    pub tiles: Vec<LuaTile>,
 }
 
 impl LuaData {
-    pub fn open(resource: &Path, tile: &Path) -> Self {
+    pub fn open(input_path: &Path) -> Self {
         let start_time = Instant::now();
 
-        let data = LuaData {
-            resource: open_data_file(resource),
-            tile: open_data_file(tile),
-        };
+        let data: LuaData = open_data_file(input_path);
 
         let duration = Instant::now() - start_time;
         tracing::debug!("-- Opened Data file in {} seconds", duration.as_secs());
-        tracing::debug!("-- {} Tile", data.tile.len().to_formatted_string(&LOCALE));
+        tracing::debug!("-- {} Tile", data.tiles.len().to_formatted_string(&LOCALE));
         tracing::debug!(
             "-- {} Resource",
-            data.resource.len().to_formatted_string(&LOCALE),
+            data.entities.len().to_formatted_string(&LOCALE),
         );
 
         // let mut printed: Vec<String> = Vec::new();
@@ -50,24 +49,24 @@ impl LuaData {
     }
 }
 
-pub trait LuaEntity {
+pub trait LuaThing {
     fn name(&self) -> &Pixel;
-    fn position(&self) -> &Position;
+    fn position(&self) -> &LuaPoint;
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct LuaResource {
+pub struct LuaEntity {
     // #[serde(rename = "type")]
     // pub lua_type: String,
     pub name: Pixel,
-    pub position: Position,
+    pub position: LuaPoint,
 }
 
-impl LuaEntity for LuaResource {
+impl LuaThing for LuaEntity {
     fn name(&self) -> &Pixel {
         &self.name
     }
-    fn position(&self) -> &Position {
+    fn position(&self) -> &LuaPoint {
         &self.position
     }
 }
@@ -75,22 +74,31 @@ impl LuaEntity for LuaResource {
 #[derive(Serialize, Deserialize)]
 pub struct LuaTile {
     pub name: Pixel,
-    pub position: Position,
+    pub position: LuaPoint,
 }
 
-impl LuaEntity for LuaTile {
+impl LuaThing for LuaTile {
     fn name(&self) -> &Pixel {
         &self.name
     }
-    fn position(&self) -> &Position {
+    fn position(&self) -> &LuaPoint {
         &self.position
     }
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Position {
+pub struct LuaPoint {
     pub x: f32,
     pub y: f32,
+}
+
+impl LuaPoint {
+    pub fn to_point2f(&self) -> Point2f {
+        Point2f {
+            x: self.x,
+            y: self.y,
+        }
+    }
 }
 
 fn open_data_file<T>(path: &Path) -> T

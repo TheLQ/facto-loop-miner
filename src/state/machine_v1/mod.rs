@@ -17,11 +17,11 @@ pub fn new_v1_machine() -> Machine {
     Machine {
         steps: Vec::from([
             Step00::new(),
+            Step99Death::new(),
             Step03::new(),
             Step04::new(),
             Step10::new(),
             Step20::new(),
-            Step99Death::new(),
         ]),
     }
 }
