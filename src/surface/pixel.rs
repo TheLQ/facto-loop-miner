@@ -1,11 +1,13 @@
+use crate::surfacev::err::{VError, VResult};
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
 use opencv::core::{Scalar, Vec3b};
 use serde::{Deserialize, Serialize};
+use std::backtrace::Backtrace;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
-use strum::{AsRefStr, EnumIter};
+use strum::{AsRefStr, EnumIter, EnumString};
 
 #[derive(Serialize, Deserialize, AsRefStr, EnumIter, Debug, PartialEq, Clone, Eq, Hash)]
 #[repr(u8)]
@@ -40,6 +42,22 @@ impl Pixel {
             Pixel::EdgeWall => [0xBD, 0x5F, 0x5F],
             Pixel::Rail => [0xB9, 0x7A, 0x57],
             Pixel::Highlighter => [0x3C, 0xB6, 0xDE],
+        }
+    }
+
+    pub fn from_string(input: &str) -> VResult<Self> {
+        match input {
+            "iron-ore" => Ok(Pixel::IronOre),
+            "copper-ore" => Ok(Pixel::CopperOre),
+            "stone" => Ok(Pixel::Stone),
+            "coal" => Ok(Pixel::Coal),
+            "uranium-ore" => Ok(Pixel::UraniumOre),
+            "water" => Ok(Pixel::Water),
+            "crude-oil" => Ok(Pixel::CrudeOil),
+            _ => Err(VError::UnknownName {
+                name: input.to_string(),
+                backtrace: Backtrace::force_capture(),
+            }),
         }
     }
 

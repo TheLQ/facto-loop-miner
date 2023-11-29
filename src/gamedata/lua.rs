@@ -1,3 +1,4 @@
+use crate::gamedata::compressed_export::ExportCompressedVec;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vpoint::VPoint;
 use crate::LOCALE;
@@ -8,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::read;
 use std::path::Path;
 use std::time::Instant;
+use tracing::{debug, info};
 
 #[derive(Serialize, Deserialize)]
 pub struct LuaData {
@@ -16,10 +18,17 @@ pub struct LuaData {
 }
 
 impl LuaData {
-    pub fn open(input_path: &Path) -> Self {
+    pub fn open(input_dir: &Path) -> Self {
         let start_time = Instant::now();
 
-        let data: LuaData = open_data_file(input_path);
+        let input_path = input_dir.join("big-entities-a.json");
+        let data_inner: ExportCompressedVec = open_data_file(&input_path);
+
+        let data = LuaData {
+            tiles: Vec::new(),
+            entities: data_inner.item_chunks().collect(),
+        };
+        info!("Read {} items", data.entities.len());
 
         let duration = Instant::now() - start_time;
         tracing::debug!("-- Opened Data file in {} seconds", duration.as_secs());
@@ -28,6 +37,8 @@ impl LuaData {
             "-- {} Resource",
             data.entities.len().to_formatted_string(&LOCALE),
         );
+        debug!("-- sample 0 {:?}", data.entities[0]);
+        debug!("-- sample 1 {:?}", data.entities[1]);
 
         // let mut printed: Vec<String> = Vec::new();
         // for tile in &data.tile {
@@ -54,11 +65,12 @@ pub trait LuaThing {
     fn position(&self) -> &LuaPoint;
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct LuaEntity {
     // #[serde(rename = "type")]
     // pub lua_type: String,
     pub name: Pixel,
+    #[serde(rename = "pos")]
     pub position: LuaPoint,
 }
 
@@ -86,7 +98,7 @@ impl LuaThing for LuaTile {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct LuaPoint {
     pub x: f32,
     pub y: f32,

@@ -1,13 +1,15 @@
 use crate::surface::surface::PointU32;
 use crate::surfacev::err::{VError, VResult};
+use crate::surfacev::vpoint::VPoint;
 use bitvec::macros::internal::funty::Fundamental;
 use opencv::core::Point2f;
-use crate::surfacev::vpoint::VPoint;
+use serde::{Deserialize, Serialize};
 
 pub trait VEntityXY {
     fn get_xy(&self) -> Vec<VPoint>;
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct VEntityBuffer<E> {
     entities: Vec<E>,
     xy_to_entity: Vec<usize>,
@@ -31,7 +33,6 @@ where
     pub fn xy_to_index_unchecked(&self, x: i32, y: i32) -> usize {
         let radius = self.radius as i32;
         let diameter = (self.radius * 2) as usize;
-        // todo: convert to `as usize`
         let abs_x: usize = (x + radius) as usize;
         let abs_y: usize = (y + radius) as usize;
         diameter * abs_y + abs_x

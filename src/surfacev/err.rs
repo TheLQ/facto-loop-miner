@@ -1,3 +1,5 @@
+use std::backtrace::Backtrace;
+use std::io;
 use crate::surfacev::vpoint::VPoint;
 use itertools::Itertools;
 use opencv::core::{Point, Point2f};
@@ -11,6 +13,17 @@ pub enum VError {
     XYOutOfBounds { positions: Vec<VPoint> },
     #[error("XYNotInteger point {}", position_to_strings_f32(position))]
     XYNotInteger { position: Point2f },
+    #[error("IoError {path} {e}")]
+    IoError {
+        path: String,
+        e: io::Error,
+        backtrace: Backtrace,
+    },
+    #[error("UnknownName {name}")]
+    UnknownName {
+        name: String,
+        backtrace: Backtrace,
+    }
 }
 
 fn positions_to_strings(positions: &[VPoint]) -> String {

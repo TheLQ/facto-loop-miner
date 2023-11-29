@@ -1,30 +1,82 @@
 -- Dumps everything into
 -- /c
-
-local output = {}
-output.entities = {}
-output.tiles = {}
-
-
-    local all_entities = game.player.surface.find_entities({ {-32000, -32000},{32000, 32000} })
-    for _, entity in pairs(all_entities) do
-        local out_entry = {
-            name = entity.name,
-            pos = entity.position,
+local size = 32000
+local function megacall()
+    local sectors = {
+        { { -size, -size }, { 0, 0 } },
+        { { 0, 0 }, { size, size } },
+        { { -size, 0 }, { 0, size } },
+        { { 0, -size }, { size, 0 } },
+    }
+    for i, sector in ipairs(sectors) do
+        local file = "big-tiles" .. i .. ".json"
+        log("write " .. file .. "...")
+        local output = {}
+        local all_tiles = game.player.surface.find_tiles_filtered {
+            area = sector,
+            name = { "water" }
         }
-        table.insert(output.entities, out_entry)
+        for _, entity in ipairs(all_tiles) do
+            table.insert(output, entity.name)
+            table.insert(output, entity.position.x)
+            table.insert(output, entity.position.y)
+        end
+        game.write_file(file, game.table_to_json(output))
+    end
+end
+megacall()
+
+-- /c
+local size = 32000
+local function megacall()
+    local sectors = {
+        { { -size, -size }, { 0, 0 } },
+    }
+    for i, sector in ipairs(sectors) do
+        local file = "big-tiles" .. i .. ".json"
+        log("write " .. file .. "...")
+        local output = {}
+        local all_tiles = game.player.surface.find_tiles_filtered {
+            area = sector,
+            name = { "water" }
+        }
+        for j, entity in ipairs(all_tiles) do
+            local out_entry = {
+                name = entity.name,
+                pos = entity.position,
+            }
+            table.insert(output, out_entry)
+        end
     end
 
-    local all_tiles = game.player.surface.find_tiles_filtered({ {-32000, -32000},{32000, 32000} }, nil, nil, {"water"} )
-    for _, entity in pairs(all_tiles) do
-        local out_entry = {
-            name = entity.name,
-            position = entity.position,
-        }
-        table.insert(output.tiles, out_entry)
-    end
+    game.write_file(file, game.table_to_json(output))
+end
+megacall()
 
-game.write_file("mega-dump.json", game.table_to_json(output))
+-- /c
+local function inner()
+    local file = "big-entities-a.json"
+    log("write " .. file .. "...")
+    local output = {}
+    local all_entities = game.player.surface.find_entities_filtered {
+        area = { { -32000, -32000 }, { 32000, 32000 } },
+        name = { "iron-ore", "copper-ore", "stone", "coal", "uranium-ore", "crude-oil" }
+    }
+    for _, entity in ipairs(all_entities) do
+        table.insert(output, entity.name)
+        table.insert(output, entity.position.x)
+        table.insert(output, entity.position.y)
+    end
+    game.write_file(file, game.table_to_json(output))
+end
+inner()
+
+
+
+
+
+
+
 
 --output.prototypes = {}
 --for k, entity in pairs(game.entity_prototypes) do
