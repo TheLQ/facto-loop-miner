@@ -1,13 +1,9 @@
 use crate::gamedata::lua::{LuaData, LuaPoint, LuaThing};
+use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
-use crate::surface::easier_box::EasierBox;
-use crate::surface::game_locator::GameLocator;
-use crate::surface::surface::Surface;
 use crate::surfacev::err::VResult;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
-use opencv::core::{Point, Point2f};
-use std::cell::Cell;
 use std::path::Path;
 use tracing::info;
 
@@ -26,7 +22,7 @@ impl Step for Step00 {
 
     /// Load Factorio Mod's exported map data JSON into a huge single image
     /// representing the whole map.
-    fn transformer(&self, params: StepParams) {
+    fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let lua_dir = Path::new("work/chunk1000");
 
         let data = LuaData::open(lua_dir);
@@ -34,12 +30,14 @@ impl Step for Step00 {
         let mut surface = VSurface::new(radius);
 
         tracing::debug!("Loading {} resources...", data.entities.len());
-        translate_entities_to_image(&data.entities, &mut surface, &params);
+        translate_entities_to_image(&data.entities, &mut surface, &params)?;
 
         tracing::debug!("Loading {} tiles...", data.tiles.len());
-        translate_entities_to_image(&data.tiles, &mut surface, &params);
+        translate_entities_to_image(&data.tiles, &mut surface, &params)?;
 
-        surface.save(&params.step_out_dir);
+        surface.save(&params.step_out_dir)?;
+
+        Ok(())
     }
 }
 
@@ -95,7 +93,7 @@ where
         surface.set_pixel(
             VPoint::from_f32_with_offset(entity.position().to_point2f(), 0.5)?,
             entity.name().clone(),
-        );
+        )?;
         params
             .metrics
             .borrow_mut()

@@ -1,3 +1,4 @@
+use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
@@ -18,7 +19,7 @@ impl Step for Step03 {
     }
 
     /// Temporarily reduce surface size for easier development
-    fn transformer(&self, params: StepParams) {
+    fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let surface_dir = params.step_history_out_dirs.last().unwrap();
         let mut surface = Surface::load(&surface_dir);
 
@@ -34,5 +35,7 @@ impl Step for Step03 {
         tracing::debug!("wiped out {} water", count);
 
         surface.save(&params.step_out_dir);
+
+        Ok(())
     }
 }

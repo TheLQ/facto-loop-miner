@@ -1,5 +1,5 @@
+use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams, DEATH_STEP_NAME};
-use std::process::exit;
 
 pub struct Step99Death {}
 
@@ -14,7 +14,7 @@ impl Step for Step99Death {
         DEATH_STEP_NAME.to_string()
     }
 
-    fn transformer(&self, _: StepParams) {
-        tracing::debug!("UNEXPECTED DEATH RUN");
+    fn transformer(&self, _: StepParams) -> XMachineResult<()> {
+        panic!("UNEXPECTED DEATH RUN");
     }
 }

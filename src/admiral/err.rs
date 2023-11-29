@@ -1,5 +1,4 @@
 use rcon_client::RCONError;
-use serde::__private::de::AdjacentlyTaggedEnumVariantSeed;
 use std::backtrace::Backtrace;
 use std::io;
 use thiserror::Error;

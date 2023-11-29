@@ -1,4 +1,5 @@
 use crate::navigator::mori::{mori_start, write_rail, Rail, RailDirection};
+use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::state::machine_v1::step10_base::REMOVE_RESOURCE_BASE_TILES;
 use crate::surface::patch::{map_patch_corners_to_kdtree, DiskPatch, Patch};
@@ -22,7 +23,7 @@ impl Step for Step20 {
         "step20-nav".to_string()
     }
 
-    fn transformer(&self, mut params: StepParams) {
+    fn transformer(&self, mut params: StepParams) -> XMachineResult<()> {
         let mut surface = Surface::load_from_step_history(&params.step_history_out_dirs);
         let patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
 
@@ -41,6 +42,8 @@ impl Step for Step20 {
         }
 
         surface.save(&params.step_out_dir);
+
+        Ok(())
     }
 }
 
@@ -50,7 +53,7 @@ const PATH_LIMIT: Option<u8> = Some(10);
 
 /// Vastly improve performance utilizing free CPU cores to try other paths.
 fn navigate_patches_to_base_speculation(
-    mut surface: Surface,
+    surface: Surface,
     disk_patches: DiskPatch,
     params: &mut StepParams,
 ) -> Surface {
@@ -125,12 +128,9 @@ fn navigate_patches_to_base(
                 break;
             }
         }
-        let destination = match destinations.next() {
-            Some(v) => v,
-            None => {
-                tracing::debug!("Out of destinations, stopping");
-                break;
-            }
+        let Some(destination) = destinations.next() else {
+            tracing::debug!("Out of destinations, stopping");
+            break;
         };
 
         let patch_corner = patch_start.corner_point_u32();

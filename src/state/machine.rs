@@ -1,4 +1,5 @@
 use crate::state::disk::State;
+use crate::state::err::XMachineResult;
 use crate::surface::metric::Metrics;
 use crate::LOCALE;
 use num_format::ToFormattedString;
@@ -24,7 +25,7 @@ pub struct StepParams {
 
 pub trait Step {
     fn name(&self) -> String;
-    fn transformer(&self, params: StepParams);
+    fn transformer(&self, params: StepParams) -> XMachineResult<()>;
 }
 
 impl Machine {
@@ -63,7 +64,8 @@ impl Machine {
                     metrics: metrics.clone(),
                     step_history_out_dirs: step_history_out_dirs.clone(),
                     state: state.clone(),
-                });
+                })
+                .unwrap();
                 let end = Instant::now();
 
                 RefCell::into_inner(Rc::into_inner(metrics).unwrap()).log_final();

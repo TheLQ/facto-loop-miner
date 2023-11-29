@@ -1,6 +1,5 @@
 use crate::gamedata::compressed_export::ExportCompressedVec;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vpoint::VPoint;
 use crate::LOCALE;
 use num_format::ToFormattedString;
 use opencv::core::Point2f;
@@ -31,9 +30,9 @@ impl LuaData {
         info!("Read {} items", data.entities.len());
 
         let duration = Instant::now() - start_time;
-        tracing::debug!("-- Opened Data file in {} seconds", duration.as_secs());
-        tracing::debug!("-- {} Tile", data.tiles.len().to_formatted_string(&LOCALE));
-        tracing::debug!(
+        debug!("-- Opened Data file in {} seconds", duration.as_secs());
+        debug!("-- {} Tile", data.tiles.len().to_formatted_string(&LOCALE));
+        debug!(
             "-- {} Resource",
             data.entities.len().to_formatted_string(&LOCALE),
         );

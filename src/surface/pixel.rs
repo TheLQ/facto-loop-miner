@@ -7,7 +7,7 @@ use std::backtrace::Backtrace;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
-use strum::{AsRefStr, EnumIter, EnumString};
+use strum::{AsRefStr, EnumIter};
 
 #[derive(Serialize, Deserialize, AsRefStr, EnumIter, Debug, PartialEq, Clone, Eq, Hash)]
 #[repr(u8)]

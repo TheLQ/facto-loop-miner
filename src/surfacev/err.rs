@@ -1,9 +1,10 @@
-use std::backtrace::Backtrace;
-use std::io;
 use crate::surfacev::vpoint::VPoint;
 use itertools::Itertools;
-use opencv::core::{Point, Point2f};
+use opencv::core::Point2f;
+use std::backtrace::Backtrace;
+use std::io;
 use thiserror::Error;
+use tracing::error;
 
 pub type VResult<R> = Result<R, VError>;
 
@@ -20,10 +21,14 @@ pub enum VError {
         backtrace: Backtrace,
     },
     #[error("UnknownName {name}")]
-    UnknownName {
-        name: String,
+    UnknownName { name: String, backtrace: Backtrace },
+    #[error("SimdJsonFail {e}")]
+    SimdJsonFail {
+        e: simd_json::Error,
         backtrace: Backtrace,
-    }
+    },
+    #[error("NotADirectory {path}")]
+    NotADirectory { path: String, backtrace: Backtrace },
 }
 
 fn positions_to_strings(positions: &[VPoint]) -> String {

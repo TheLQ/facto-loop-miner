@@ -1,4 +1,3 @@
-use crate::simd::{apply_any_u8_iter_to_m256_buffer, m256_zero_vec, SSE_BITS};
 use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::search_step_history_dirs;
 use crate::surface::game_locator::GameLocator;
@@ -6,22 +5,17 @@ use crate::surface::pixel::Pixel;
 use crate::{PixelKdTree, LOCALE};
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
-use num_format::Locale::wo;
 use num_format::ToFormattedString;
 use opencv::core::{rotate, Mat, Point, Point_, Range, ROTATE_90_COUNTERCLOCKWISE};
 use opencv::imgproc::{get_font_scale_from_height, put_text, FONT_HERSHEY_SIMPLEX, LINE_8};
 use opencv::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::arch::x86_64::{
-    __m128i, __m256i, _mm256_and_si256, _mm256_load_si256, _mm256_or_si256, _popcnt64,
-};
+use std::arch::x86_64::__m256i;
 use std::fs::{read, write, File};
 use std::io::{BufReader, BufWriter};
+use std::mem;
 use std::mem::transmute;
-use std::ops::BitXor;
 use std::path::{Path, PathBuf};
-use std::simd::{i64x4, Simd};
-use std::{fs, mem};
 
 pub type PointU32 = Point_<u32>;
 
@@ -195,7 +189,7 @@ impl Surface {
         for (i, pixel) in self.buffer.iter().enumerate() {
             let color = &pixel.color();
             let start = i * color.len();
-            output[start + 0] = color[0];
+            output[start] = color[0];
             output[start + 1] = color[1];
             output[start + 2] = color[2];
         }

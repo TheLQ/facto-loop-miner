@@ -1,4 +1,5 @@
 use crate::opencv::load_raw_image_with_surface;
+use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::patch::{map_patch_corners_to_kdtree, DiskPatch, Patch};
@@ -33,7 +34,7 @@ impl Step for Step04 {
     }
 
     /// Detect resource patches in image with OpenCV.
-    fn transformer(&self, params: StepParams) {
+    fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let previous_step_dir = params.step_history_out_dirs.last().unwrap();
 
         let surface = Surface::load(previous_step_dir);
@@ -46,6 +47,8 @@ impl Step for Step04 {
 
         // write_surface_with_all_patches_wrapped(&mut surface, &disk_patches);
         // surface.save(&params.step_out_dir);
+
+        Ok(())
     }
 }
 

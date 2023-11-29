@@ -1,4 +1,5 @@
 use crate::navigator::resource_cloud::point_to_slice_f32;
+use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::game_locator::GameLocator;
 use crate::surface::metric::Metrics;
@@ -23,7 +24,7 @@ impl Step for Step10 {
         "step10-base".to_string()
     }
 
-    fn transformer(&self, params: StepParams) {
+    fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let mut surface = Surface::load_from_step_history(&params.step_history_out_dirs);
         let mut patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
 
@@ -33,6 +34,8 @@ impl Step for Step10 {
 
         surface.save(&params.step_out_dir);
         patches.save(&params.step_out_dir);
+
+        Ok(())
     }
 }
 
@@ -96,7 +99,7 @@ fn draw_resource_exclude(img: &mut Surface, metrics: &mut Metrics, disk_patches:
                         .expect(format!("match not found {:?}", existing).as_str());
                     let nearby_patches = patch_cloud[&existing].within_unsorted(
                         &point_to_slice_f32(point),
-                        1000000f32,
+                        1_000_000_f32,
                         &kiddo::distance::squared_euclidean,
                     );
 

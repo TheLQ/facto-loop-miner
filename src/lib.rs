@@ -1,14 +1,13 @@
-#![feature(cell_update)]
-#![feature(convert_float_to_int)]
+// #![feature(cell_update)]
+// #![feature(convert_float_to_int)]
 #![feature(iter_array_chunks)]
 #![feature(portable_simd)]
 #![feature(exclusive_range_pattern)]
-#![feature(slice_pattern)]
+// #![feature(slice_pattern)]
 #![feature(iterator_try_collect)]
-#![feature(iterator_try_reduce)]
-#![feature(slice_flatten)]
-#![feature(array_chunks)]
-#![allow(unused)]
+// #![feature(iterator_try_reduce)]
+// #![feature(slice_flatten)]
+// #![feature(array_chunks)]
 #![feature(error_generic_member_access)]
 #![feature(int_roundings)]
 // #![feature()]
@@ -17,6 +16,17 @@
 // #![feature()]
 // #![feature()]
 
+// lints
+#![allow(unused_variables)]
+#![allow(dead_code)]
+#![allow(clippy::missing_errors_doc)]
+#![deny(clippy::pedantic)]
+#![deny(clippy::all)]
+
+// TODO #![deny(future-incompatible)]
+// TODO #![deny(let-underscore)]
+// TODO #![deny(nonstandard-style)]
+
 extern crate core;
 
 use crate::state::machine_v1::new_v1_machine;
@@ -24,8 +34,6 @@ use crate::surface::pixel::generate_lookup_image;
 use kiddo::KdTree;
 use num_format::Locale;
 use num_traits::PrimInt;
-use std::fmt;
-use std::ops::{Rem, Sub};
 use std::path::Path;
 use tracing::Level;
 

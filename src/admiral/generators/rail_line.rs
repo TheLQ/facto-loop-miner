@@ -15,12 +15,18 @@ pub struct RailLineGenerator {
 
 impl LuaCommand for RailLineGenerator {
     fn make_lua(&self) -> String {
-        if self.start.x % 2f32 != 1f32 {
-            panic!("invalid x start {}", self.start.x)
-        }
-        if self.start.y % 2f32 != 1f32 {
-            panic!("invalid y start {}", self.start.y)
-        }
+        assert_ne!(
+            self.start.x % 2f32,
+            1f32,
+            "invalid x start {}",
+            self.start.x
+        );
+        assert_ne!(
+            self.start.y % 2f32,
+            1f32,
+            "invalid y start {}",
+            self.start.y
+        );
 
         let mut creation_commands: Vec<Box<dyn LuaCommand>> = Vec::new();
         for rail_loop in 0..self.rail_loops {
@@ -37,7 +43,7 @@ impl LuaCommand for RailLineGenerator {
                     continue;
                 }
 
-                let mut start_x = self.start.x + (rail_loop as f32 * 2f32 * 3f32);
+                let start_x = self.start.x + (rail_loop as f32 * 2f32 * 3f32);
                 debug!("start_x tota rail_loop {}", start_x);
 
                 // debug!("sep {} for {}", separator_x, start_x);

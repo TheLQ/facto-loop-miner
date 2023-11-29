@@ -1,9 +1,8 @@
 use crate::surfacev::err::{VError, VResult};
-use crate::surfacev::vsurface::VPixel;
 use opencv::core::Point2f;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, Copy, Clone, Default, PartialEq, Eq, PartialOrd)]
+#[derive(Debug, Serialize, Deserialize, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Hash)]
 pub struct VPoint {
     pub x: i32,
     pub y: i32,

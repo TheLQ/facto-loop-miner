@@ -7,10 +7,7 @@ use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::LOCALE;
 use num_format::ToFormattedString;
-use opencv::prelude::*;
 use pathfinding::prelude::astar_mori;
-use rayon::prelude::*;
-use std::arch::x86_64::__m256i;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
@@ -254,7 +251,6 @@ impl Rail {
     ) -> Self {
         // // come in as far away as possible
         // // optimize area around base
-        let mut counter = 0;
         let mut next = self.clone();
         next = next.move_force_rotate_clockwise(2);
         // TODO
@@ -273,7 +269,7 @@ impl Rail {
         // full step again for spacing (eg in a cove)
         next = next.move_forward().unwrap();
 
-        tracing::debug!("move backwards {} from {:?} to {:?}", counter, self, next);
+        tracing::debug!("move backwards from {:?} to {:?}", self, next);
 
         next
     }

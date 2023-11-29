@@ -1,6 +1,5 @@
 use crate::admiral::generators::xy_grid;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
-use crate::admiral::lua_command::fac_surface_create_entity_safe::FacSurfaceCreateEntitySafe;
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch, DEFAULT_SURFACE_VAR};
 use opencv::core::{Point, Point2f};
 use std::collections::HashMap;

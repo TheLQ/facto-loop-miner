@@ -1,9 +1,8 @@
-use crate::surface::surface::PointU32;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::vpoint::VPoint;
-use bitvec::macros::internal::funty::Fundamental;
-use opencv::core::Point2f;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::hash::Hash;
 
 pub trait VEntityXY {
     fn get_xy(&self) -> Vec<VPoint>;
@@ -18,17 +17,18 @@ pub struct VEntityBuffer<E> {
 
 impl<E> VEntityBuffer<E>
 where
-    E: VEntityXY,
+    E: VEntityXY + Clone + Eq + Hash,
 {
     pub fn new(radius: u32) -> Self {
+        let diameter = radius as usize * 2;
         VEntityBuffer {
             entities: Vec::new(),
-            xy_to_entity: Vec::new(),
+            xy_to_entity: vec![0; diameter * diameter],
             radius,
         }
     }
 
-    //<editor-fold desc="get xy">
+    //<editor-fold desc="query xy">
     /// Fast Get index in xy_to_entity buffer
     pub fn xy_to_index_unchecked(&self, x: i32, y: i32) -> usize {
         let radius = self.radius as i32;
@@ -57,7 +57,7 @@ where
     }
     //</editor-fold>
 
-    //<editor-fold desc="point">
+    //<editor-fold desc="query point">
     pub fn is_point_out_of_bounds(&self, point: &VPoint) -> bool {
         self.is_xy_out_of_bounds(point.x, point.y)
     }
@@ -97,5 +97,17 @@ where
         }
 
         Ok(())
+    }
+
+    pub fn new_entity_array(&self) -> Vec<E> {
+        self.xy_to_entity
+            .iter()
+            .map(|index| self.entities[*index].clone())
+            .unique()
+            .collect()
+    }
+
+    pub fn diameter(&self) -> usize {
+        self.radius as usize * 2
     }
 }

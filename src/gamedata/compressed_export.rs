@@ -1,10 +1,8 @@
-use crate::gamedata::lua::{LuaData, LuaEntity, LuaPoint};
+use crate::gamedata::lua::{LuaEntity, LuaPoint};
 use crate::surface::pixel::Pixel;
-use opencv::core::Point2f;
 use serde::{Deserialize, Serialize};
 use std::io;
 use std::io::ErrorKind;
-use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]

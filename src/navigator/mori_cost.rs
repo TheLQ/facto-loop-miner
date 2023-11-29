@@ -2,7 +2,6 @@ use crate::navigator::mori::Rail;
 use crate::navigator::resource_cloud::ResourceCloud;
 use kiddo::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
-use num_traits::Pow;
 
 const DIRECTION_BIAS_EFFECT: f32 = 2f32;
 const TURN_BIAS_EFFECT: f32 = 5f32;

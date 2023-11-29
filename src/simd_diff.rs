@@ -1,9 +1,7 @@
-use crate::bucket_div;
 use crate::simd::{
     any_bit_equal_m256_bool, apply_any_u8_iter_to_m256_buffer, apply_positions_iter_to_m256_buffer,
-    format_m256, m256_zero, m256_zero_vec, SseUnit, SSE_BITS,
+    m256_zero, m256_zero_vec, SseUnit, SSE_BITS,
 };
-use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
 use std::mem::transmute;
 
@@ -23,7 +21,7 @@ impl SurfaceDiff {
         let raw_buffer2 = raw_buffer;
         apply_any_u8_iter_to_m256_buffer((*raw_buffer).into_iter(), &mut source);
 
-        let mut working = m256_zero_vec(source.len());
+        let working = m256_zero_vec(source.len());
 
         let res = SurfaceDiff {
             source,

@@ -17,7 +17,7 @@ pub struct AdmiralFile {
 impl AdmiralFile {
     pub fn new() -> AdmiralResult<Self> {
         let path = "/home/desk/factorio/mods/megacalc/megacall_auto.lua".to_string();
-        let mut output_file = OpenOptions::new()
+        let output_file = OpenOptions::new()
             .write(true)
             .truncate(true)
             .open(path.clone())

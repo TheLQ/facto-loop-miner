@@ -8,7 +8,6 @@ use crate::admiral::generators::terapower::Terapower;
 use crate::admiral::lua_command::fac_destroy::FacDestroy;
 use crate::admiral::lua_command::lua_batch::BasicLuaBatch;
 use opencv::core::{Point, Point2f};
-use std::fmt::Debug;
 use tracing::error;
 
 pub fn admiral() {
@@ -127,7 +126,7 @@ pub fn inner_admiral() -> AdmiralResult<()> {
     //     },
     // })?;
 
-    admiral.end_file();
+    admiral.end_file()?;
     Ok(())
 }
 

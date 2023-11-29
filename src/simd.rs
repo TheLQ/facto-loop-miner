@@ -12,22 +12,18 @@
 // Create mask from the most significant bit of each 8-bit element in a, and store the result in dst.
 //!
 
+use std::arch::x86_64::{
+    __m256i, _mm256_and_si256, _mm256_cmpeq_epi32, _mm256_loadu_si256, _mm256_movemask_epi8,
+    _mm256_or_si256, _mm256_set_epi64x, _mm256_setzero_si256, _mm256_storeu_si256,
+    _mm256_xor_si256, _popcnt64,
+};
+use std::mem::transmute;
+use std::simd::i64x4;
+
 use bitvec::bitvec;
 use bitvec::slice::BitSlice;
 use bitvec::vec::BitVec;
-use itertools::Itertools;
 use lazy_static::lazy_static;
-use pathfinding::prelude::Common;
-use std::arch::x86_64::{
-    __m128i, __m256i, _mm256_and_si256, _mm256_cmpeq_epi32, _mm256_cmpeq_epi64, _mm256_load_si256,
-    _mm256_loadu_si256, _mm256_movemask_epi8, _mm256_or_si256, _mm256_set_epi64x,
-    _mm256_setzero_si256, _mm256_slli_si256, _mm256_srli_si256, _mm256_storeu_si256,
-    _mm256_testc_si256, _mm256_testz_si256, _mm256_xor_si256, _mm_and_si128, _mm_cmpeq_epi32,
-    _mm_or_si128, _mm_set_epi64x, _popcnt64,
-};
-use std::mem::transmute;
-use std::process::exit;
-use std::simd::i64x4;
 
 pub const SSE_BITS: usize = 256;
 pub type SseUnit = __m256i;
@@ -99,7 +95,7 @@ pub fn compare_m256_count(
     total
 }
 
-pub fn any_bit_equal_m256_bool<'a>(mut a: &Vec<SseUnit>, mut b: &Vec<SseUnit>) -> bool {
+pub fn any_bit_equal_m256_bool<'a>(a: &Vec<SseUnit>, b: &Vec<SseUnit>) -> bool {
     let mut total: SseUnit = m256_zero();
 
     for i in 0..a.len() {
@@ -243,7 +239,7 @@ unsafe fn m256_into_slice_usize(input: __m256i) -> [usize; 4] {
 }
 
 fn bitvec_into_m256(input: BitVec) -> __m256i {
-    let mut raw = input.as_raw_slice();
+    let raw = input.as_raw_slice();
     let mut as_64 = [0u64; USIZE_COUNT_M256];
     as_64[0] = raw[0] as u64;
     as_64[1] = raw[1] as u64;
@@ -275,18 +271,19 @@ fn format_i64(i: i64) -> String {
 
 #[cfg(test)]
 mod test {
+    use std::arch::x86_64::_mm256_or_si256;
+
+    use bitvec::order::Lsb0;
+    use bitvec::prelude::*;
+    use bitvec::vec::BitVec;
+
     use crate::simd::{
         any_bit_equal_m256_bool, apply_any_u8_iter_to_m256_buffer,
         apply_positions_iter_to_m256_buffer, bitslice_popcnt, bitvec_for_m256, bitvec_into_m256,
         compare_m256_count, create_flip, format_m256, m256_into_bitvec, m256_into_slice_usize,
-        m256_zero, m256_zero_vec, SSE_BITS,
+        m256_zero_vec, SSE_BITS,
     };
     use crate::surface::pixel::Pixel;
-    use bitvec::order::Lsb0;
-    use bitvec::prelude::*;
-    use bitvec::vec::BitVec;
-    use opencv::core::exp;
-    use std::arch::x86_64::_mm256_or_si256;
 
     // probably needed...
     #[test]
