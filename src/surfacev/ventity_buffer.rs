@@ -2,6 +2,7 @@ use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::vpoint::VPoint;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::backtrace::Backtrace;
 use std::hash::Hash;
 
 pub trait VEntityXY {
@@ -43,7 +44,10 @@ where
         if self.is_xy_out_of_bounds(x, y) {
             panic!(
                 "Cannot make index {}",
-                VError::XYOutOfBounds { positions: vec![] }
+                VError::XYOutOfBounds {
+                    positions: vec![],
+                    backtrace: Backtrace::capture()
+                }
             )
         }
         self.xy_to_index_unchecked(x, y)
@@ -75,7 +79,10 @@ where
         if bad.is_empty() {
             Ok(())
         } else {
-            Err(VError::XYOutOfBounds { positions: bad })
+            Err(VError::XYOutOfBounds {
+                positions: bad,
+                backtrace: Backtrace::capture(),
+            })
         }
     }
 

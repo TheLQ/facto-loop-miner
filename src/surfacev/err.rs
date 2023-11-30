@@ -11,9 +11,15 @@ pub type VResult<R> = Result<R, VError>;
 #[derive(Error, Debug)]
 pub enum VError {
     #[error("XYOutOfBounds positions {}", positions_to_strings(positions))]
-    XYOutOfBounds { positions: Vec<VPoint> },
+    XYOutOfBounds {
+        positions: Vec<VPoint>,
+        backtrace: Backtrace,
+    },
     #[error("XYNotInteger point {}", position_to_strings_f32(position))]
-    XYNotInteger { position: Point2f },
+    XYNotInteger {
+        position: Point2f,
+        backtrace: Backtrace,
+    },
     #[error("IoError {path} {e}")]
     IoError {
         path: String,
@@ -29,6 +35,19 @@ pub enum VError {
     },
     #[error("NotADirectory {path}")]
     NotADirectory { path: String, backtrace: Backtrace },
+}
+
+impl VError {
+    pub fn my_backtrace(&self) -> &Backtrace {
+        match self {
+            VError::XYOutOfBounds { backtrace, .. }
+            | VError::XYNotInteger { backtrace, .. }
+            | VError::IoError { backtrace, .. }
+            | VError::UnknownName { backtrace, .. }
+            | VError::SimdJsonFail { backtrace, .. }
+            | VError::NotADirectory { backtrace, .. } => backtrace,
+        }
+    }
 }
 
 fn positions_to_strings(positions: &[VPoint]) -> String {

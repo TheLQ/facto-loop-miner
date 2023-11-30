@@ -1,6 +1,7 @@
 use crate::surfacev::err::{VError, VResult};
 use opencv::core::Point2f;
 use serde::{Deserialize, Serialize};
+use std::backtrace::Backtrace;
 
 #[derive(Debug, Serialize, Deserialize, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Hash)]
 pub struct VPoint {
@@ -20,7 +21,10 @@ impl VPoint {
                 y: new_point.y as i32,
             })
         } else {
-            Err(VError::XYNotInteger { position: point })
+            Err(VError::XYNotInteger {
+                position: point,
+                backtrace: Backtrace::capture(),
+            })
         }
     }
 }

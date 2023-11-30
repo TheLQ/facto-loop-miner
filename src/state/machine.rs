@@ -8,6 +8,7 @@ use std::fs::{create_dir, read_dir, remove_dir};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Instant;
+use tracing::error;
 
 type StepBox = Box<dyn Step>;
 pub const DEATH_STEP_NAME: &str = "step99-death";
@@ -59,13 +60,16 @@ impl Machine {
 
                 let start = Instant::now();
 
-                step.transformer(StepParams {
+                let transformer_result = step.transformer(StepParams {
                     step_out_dir: step_out_dir.clone(),
                     metrics: metrics.clone(),
                     step_history_out_dirs: step_history_out_dirs.clone(),
                     state: state.clone(),
-                })
-                .unwrap();
+                });
+                if let Err(e) = transformer_result {
+                    error!("Machine failed! {}\n{}", e, e.my_backtrace());
+                    return;
+                }
                 let end = Instant::now();
 
                 RefCell::into_inner(Rc::into_inner(metrics).unwrap()).log_final();
