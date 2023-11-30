@@ -14,7 +14,7 @@ use std::ops::{Add, Mul};
 pub struct Step10 {}
 
 impl Step10 {
-    pub fn new() -> Box<dyn Step> {
+    pub fn new_boxed() -> Box<dyn Step> {
         Box::new(Step10 {})
     }
 }

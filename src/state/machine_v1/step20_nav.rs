@@ -13,8 +13,8 @@ use opencv::core::Point;
 pub struct Step20 {}
 
 impl Step20 {
-    pub fn new() -> Box<dyn Step> {
-        Box::new(Step20 {})
+    pub fn new_boxed() -> Box<dyn Step> {
+        Box::new_boxed(Step20 {})
     }
 }
 

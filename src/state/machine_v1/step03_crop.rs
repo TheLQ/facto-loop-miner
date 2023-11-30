@@ -6,7 +6,7 @@ use crate::surface::surface::Surface;
 pub struct Step03 {}
 
 impl Step03 {
-    pub fn new() -> Box<dyn Step> {
+    pub fn new_boxed() -> Box<dyn Step> {
         Box::new(Step03 {})
     }
 }

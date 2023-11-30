@@ -10,7 +10,7 @@ use tracing::info;
 pub struct Step00 {}
 
 impl Step00 {
-    pub(crate) fn new() -> Box<dyn Step> {
+    pub(crate) fn new_boxed() -> Box<dyn Step> {
         Box::new(Step00 {})
     }
 }

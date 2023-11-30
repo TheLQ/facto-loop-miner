@@ -4,7 +4,7 @@ use crate::state::machine::{Step, StepParams, DEATH_STEP_NAME};
 pub struct Step99Death {}
 
 impl Step99Death {
-    pub fn new() -> Box<dyn Step> {
+    pub fn new_boxed() -> Box<dyn Step> {
         Box::new(Step99Death {})
     }
 }

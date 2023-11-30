@@ -22,7 +22,7 @@ use strum::IntoEnumIterator;
 pub struct Step04 {}
 
 impl Step04 {
-    pub fn new() -> Box<dyn Step> {
+    pub fn new_boxed() -> Box<dyn Step> {
         Box::new(Step04 {})
     }
 }
