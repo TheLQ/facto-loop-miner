@@ -1,7 +1,18 @@
--- Dumps everything into
+-- Exports all relevant entities and tiles positions into JSON. Consumer can reconstruct the Factorio map
+--
+-- Uses compressed one-big-array format: [name1, x1, y1, name2, ...]
+-- Scales to
+-- this avoids significant JSON overhead from [{name: "coal", position: { x: -5.5, y: -5.5 }, ...]
+--
+-- Splits area into 4 sectors going to separate files.
+-- On extremely large 2000x2000 chunk plus maps,
+-- Factorio game.table_to_json() silently(!) won't write more than 4.2gb (u32::MAX) of JSON. Though JSON is valid.
+--
+-- Local everything and wrapper function to hopefully make the Lua GC happy
+--
 -- /c
-local size = 32000
 local function megacall()
+    local size = 32000
     local sectors = {
         { { -size, -size }, { 0, 0 } },
         { { 0, 0 }, { size, size } },
@@ -27,8 +38,8 @@ end
 megacall()
 
 -- /c
-local size = 32000
 local function megacall()
+    local size = 32000
     local sectors = {
         { { -size, -size }, { 0, 0 } },
     }

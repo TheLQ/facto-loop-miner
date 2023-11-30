@@ -11,7 +11,7 @@ use std::backtrace::Backtrace;
 use std::fs::{File, OpenOptions};
 use std::io::BufWriter;
 use std::path::Path;
-use tracing::debug;
+use tracing::{debug, trace};
 
 /// A collection of background/pixels and the large entities on top
 ///
@@ -78,7 +78,8 @@ impl VSurface {
     fn save_pixel_img_colorized(&self, out_dir: &Path) -> VResult<()> {
         let pixel_map_path = out_dir.join("pixel-map.png");
         debug!("Saving RGB dump image to {}", pixel_map_path.display());
-        let entities = self.pixels.new_entity_array();
+        let entities = self.pixels.new_xv_entity_array();
+        trace!("built entity array of {}", entities.len());
         let mut output: Vec<u8> = vec![0; entities.len() * 3];
         for (i, pixel) in entities.iter().enumerate() {
             let color = &pixel.pixel.color();
@@ -87,15 +88,11 @@ impl VSurface {
             output[start + 1] = color[1];
             output[start + 2] = color[2];
         }
+        trace!("built entity array of {}", output.len());
 
         // &out_dir.join(format!("{}full.png", name_prefix))
-        let size = self.entities.diameter();
-        save_png(
-            &pixel_map_path,
-            &output,
-            self.pixels.diameter() as u32,
-            self.pixels.diameter() as u32,
-        );
+        let size = self.pixels.diameter() as u32;
+        save_png(&pixel_map_path, &output, size, size);
         Ok(())
     }
 }

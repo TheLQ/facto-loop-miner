@@ -47,19 +47,19 @@ fn find_radius(data: &LuaData) -> f32 {
     find_radius_max(&data.entities, &mut bottom_left, &mut top_right);
     find_radius_max(&data.tiles, &mut bottom_left, &mut top_right);
 
-    info!(
-        "Defined box top_right {:?} bottom_left {:?}",
-        top_right, bottom_left
-    );
-
     let mut max_radius = 0.0f32;
     max_radius = max_radius.max(bottom_left.x.abs());
     max_radius = max_radius.max(bottom_left.y.abs());
-    max_radius = max_radius.max(top_right.x);
-    max_radius = max_radius.max(top_right.y);
+    max_radius = max_radius.max(top_right.x.abs());
+    max_radius = max_radius.max(top_right.y.abs());
 
     // spacing
     max_radius += 10.0;
+
+    info!(
+        "Radius {} from top_right {:?} bottom_left {:?}",
+        max_radius, top_right, bottom_left
+    );
 
     max_radius
 }

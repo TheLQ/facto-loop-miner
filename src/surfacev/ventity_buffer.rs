@@ -106,11 +106,10 @@ where
         Ok(())
     }
 
-    pub fn new_entity_array(&self) -> Vec<E> {
+    pub fn new_xv_entity_array(&self) -> Vec<E> {
         self.xy_to_entity
             .iter()
             .map(|index| self.entities[*index].clone())
-            .unique()
             .collect()
     }
 
