@@ -96,7 +96,7 @@ fn draw_resource_exclude(img: &mut Surface, metrics: &mut Metrics, disk_patches:
                     let patches_for_resource = disk_patches
                         .patches
                         .get(&existing)
-                        .expect(format!("match not found {:?}", existing).as_str());
+                        .unwrap_or_else(|| panic!("match not found {:?}", existing));
                     let nearby_patches = patch_cloud[&existing].within_unsorted(
                         &point_to_slice_f32(point),
                         1_000_000_f32,

@@ -14,7 +14,7 @@ pub struct Step20 {}
 
 impl Step20 {
     pub fn new_boxed() -> Box<dyn Step> {
-        Box::new_boxed(Step20 {})
+        Box::new(Step20 {})
     }
 }
 
@@ -170,7 +170,7 @@ fn navigate_patches_to_base(
         } else {
             params.metrics.borrow_mut().increment("path-failure")
         }
-        made_paths = made_paths + 1;
+        made_paths += 1;
     }
 
     surface
@@ -213,12 +213,12 @@ fn ordered_patches_by_radial_base_corner(disk_patches: &DiskPatch) -> Vec<&Patch
 fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {
     let mut current = patch.corner_point_u32();
     while surface.get_pixel_point_u32(&current) != &Pixel::EdgeWall {
-        current.x = current.x - 1
+        current.x -= 1
     }
     //back away
-    current.x = current.x + 15;
+    current.x += 15;
 
-    current.into()
+    current
 }
 
 #[allow(unused)]

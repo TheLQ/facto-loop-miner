@@ -50,24 +50,14 @@ pub enum AdmiralError {
 impl AdmiralError {
     pub fn my_backtrace(&self) -> &Backtrace {
         match self {
-            AdmiralError::Rcon { backtrace, source } => backtrace,
-            AdmiralError::LuaBlankCommand { backtrace } => backtrace,
-            AdmiralError::LuaResultNotEmpty {
-                backtrace,
-                body,
-                command,
-            } => backtrace,
-            AdmiralError::LuaResultEmpty { backtrace, command } => backtrace,
-            AdmiralError::DestroyFailed { backtrace } => backtrace,
-            AdmiralError::DefineFailed {
-                backtrace,
-                lua_text,
-            } => backtrace,
-            AdmiralError::TooLargeRequest {
-                backtrace,
-                lua_text,
-            } => backtrace,
-            AdmiralError::IoError { backtrace, path, e } => backtrace,
+            AdmiralError::Rcon { backtrace, .. }
+            | AdmiralError::LuaBlankCommand { backtrace }
+            | AdmiralError::LuaResultNotEmpty { backtrace, .. }
+            | AdmiralError::LuaResultEmpty { backtrace, .. }
+            | AdmiralError::DestroyFailed { backtrace, .. }
+            | AdmiralError::DefineFailed { backtrace, .. }
+            | AdmiralError::TooLargeRequest { backtrace, .. }
+            | AdmiralError::IoError { backtrace, .. } => backtrace,
         }
     }
 }

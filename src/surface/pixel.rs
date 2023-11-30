@@ -77,20 +77,20 @@ impl Pixel {
     pub fn nearby_patch_search_distance(&self, search_area: i32) -> i32 {
         match self {
             Pixel::CrudeOil => 300,
-            _ => search_area * 1,
+            _ => search_area,
         }
     }
 
     pub fn is_resource(&self) -> bool {
-        match self {
+        matches!(
+            self,
             Pixel::IronOre
-            | Pixel::CopperOre
-            | Pixel::Stone
-            | Pixel::CrudeOil
-            | Pixel::Coal
-            | Pixel::UraniumOre => true,
-            _ => false,
-        }
+                | Pixel::CopperOre
+                | Pixel::Stone
+                | Pixel::CrudeOil
+                | Pixel::Coal
+                | Pixel::UraniumOre
+        )
     }
 }
 

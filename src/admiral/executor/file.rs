@@ -64,7 +64,7 @@ impl LuaCompiler for AdmiralFile {
         debug!("wrote {} bytes", lua_text.len());
 
         Ok(ExecuteResponse {
-            lua_text: "".to_string(),
+            lua_text: String::new(),
             body: "luafile_success".to_string(),
             lua,
         })
@@ -75,7 +75,7 @@ impl LuaCompiler for AdmiralFile {
         lua_define: FacExectionDefine,
     ) -> AdmiralResult<ExecuteResponse<FacExectionDefine>> {
         LuaCompiler::_execute_statement(self, lua_define).map(|r| ExecuteResponse {
-            lua_text: "".to_string(),
+            lua_text: String::new(),
             body: "facexecution_define".to_string(),
             lua: r.lua,
         })

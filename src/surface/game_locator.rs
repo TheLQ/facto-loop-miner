@@ -2,7 +2,7 @@ use crate::gamedata::lua::LuaThing;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct GameLocator {
     pub max_x: i32,
     pub max_y: i32,
@@ -10,19 +10,6 @@ pub struct GameLocator {
     pub min_y: i32,
     pub width: u32,
     pub height: u32,
-}
-
-impl Default for GameLocator {
-    fn default() -> Self {
-        GameLocator {
-            max_x: 0,
-            max_y: 0,
-            min_x: 0,
-            min_y: 0,
-            width: 0,
-            height: 0,
-        }
-    }
 }
 
 impl GameLocator {

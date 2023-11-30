@@ -11,6 +11,7 @@ pub enum ExportCompressedItem {
     Position(f32),
 }
 
+#[allow(clippy::match_wildcard_for_single_variants)]
 impl ExportCompressedItem {
     fn into_pixel(self) -> Pixel {
         match self {

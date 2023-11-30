@@ -55,11 +55,8 @@ impl Step for Step04 {
 #[allow(dead_code)]
 fn write_surface_with_all_patches_wrapped(surface: &mut Surface, disk_patches: &DiskPatch) {
     let mut img = surface.get_buffer_to_cv();
-    for (_pixel, patches) in &disk_patches.patches {
-        let vec: Vec<Rect> = patches
-            .into_iter()
-            .map(|patch| patch.patch_to_rect())
-            .collect();
+    for patches in disk_patches.patches.values() {
+        let vec: Vec<Rect> = patches.iter().map(|patch| patch.patch_to_rect()).collect();
         draw_patch_border(&mut img, vec);
     }
     let raw: &[Pixel] = unsafe { transmute(img.data_bytes().unwrap()) };
@@ -104,7 +101,7 @@ fn detect_pixel(
     let cloud = map_patch_corners_to_kdtree(patch_rects.iter().map(Patch::from));
     detect_merge_nearby_patches(&mut patch_rects, &cloud, pixel);
 
-    draw_patch_border(&mut img, patch_rects.iter().cloned().collect());
+    draw_patch_border(&mut img, patch_rects.clone());
     let debug_image_name = format!("cv-{}.png", pixel.as_ref());
     write_png(&out_dir.join(debug_image_name), &img);
 
@@ -155,7 +152,7 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree,
         search_square_size = search_square_size.max(patch.width);
         search_square_size = search_square_size.max(patch.height);
     }
-    search_square_size = search_square_size + 1;
+    search_square_size += 1;
     // arbitrary size, for some reason within 1 diameter for IronOre still finds max 5...
     search_square_size = pixel.nearby_patch_search_distance(search_square_size);
 

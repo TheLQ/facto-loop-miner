@@ -19,14 +19,20 @@
 // lints
 #![allow(unused_variables)]
 #![allow(dead_code)]
+// todo: This is for something() { Ok(()) } , only testing
+#![allow(clippy::unnecessary_wraps)]
+// styling
+#![allow(clippy::uninlined_format_args)]
 #![allow(clippy::missing_errors_doc)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::all)]
+// TODO: <<<< SHOULD REVIEW
+#![allow(clippy::cast_precision_loss)]
+// #![deny(clippy::pedantic)]
+// #![deny(clippy::all)]
+#![allow(clippy::let_and_return)]
 
 // TODO #![deny(future-incompatible)]
 // TODO #![deny(let-underscore)]
 // TODO #![deny(nonstandard-style)]
-
 extern crate core;
 
 use crate::state::machine_v1::new_v1_machine;

@@ -30,8 +30,8 @@ pub fn mori_start(
     for width in 0..RAIL_STEP_SIZE {
         for height in 0..RAIL_STEP_SIZE {
             let mut next = end.clone();
-            next.endpoint.x = &next.endpoint.x + (width as i32 * 2);
-            next.endpoint.y = &next.endpoint.y + (height as i32 * 2);
+            next.endpoint.x += width as i32 * 2;
+            next.endpoint.y += height as i32 * 2;
             valid_destinations.push(next);
         }
     }
@@ -295,10 +295,10 @@ impl Rail {
         // rail is 2x2
         let steps = steps * 2;
         match self.direction {
-            RailDirection::Up => self.endpoint.y = self.endpoint.y + steps as i32,
-            RailDirection::Down => self.endpoint.y = self.endpoint.y - steps as i32,
-            RailDirection::Left => self.endpoint.x = self.endpoint.x - steps as i32,
-            RailDirection::Right => self.endpoint.x = self.endpoint.x + steps as i32,
+            RailDirection::Up => self.endpoint.y += steps as i32,
+            RailDirection::Down => self.endpoint.y -= steps as i32,
+            RailDirection::Left => self.endpoint.x -= steps as i32,
+            RailDirection::Right => self.endpoint.x += steps as i32,
         };
     }
 
@@ -430,8 +430,7 @@ impl Rail {
     fn into_buildable_sequential(self, surface: &Surface) -> Option<Self> {
         if let Some(area) = self.area() {
             area.into_iter()
-                .map(|v| filter_available_points(&v, surface))
-                .flatten()
+                .flat_map(|v| filter_available_points(&v, surface))
                 .try_fold(Some(self), |acc, cur| {
                     acc.and_then(|acc| {
                         cur.and_then(|v| is_buildable_point_u32_take(surface, v).map(|_| Some(acc)))
@@ -479,9 +478,8 @@ impl Rail {
         if let Some(area) = self.area() {
             if let Some(points) = area
                 .into_iter()
-                .map(|v| filter_available_points(&v, surface))
-                .flatten()
-                .map(|v| v.and_then(|v| Some(surface.xy_to_index_point_u32(v))))
+                .flat_map(|v| filter_available_points(&v, surface))
+                .map(|v| v.map(|v| surface.xy_to_index_point_u32(v)))
                 .try_collect()
             {
                 if working_buffer.is_positions_free(points) {
@@ -504,14 +502,14 @@ fn filter_available_points<'r>(rail: &RailPoint, surface: &Surface) -> [Option<P
     let v1 = rail;
 
     let mut v2 = rail.clone();
-    v2.x = v2.x - 1;
+    v2.x -= 1;
 
     let mut v3 = rail.clone();
-    v3.y = v3.y - 1;
+    v3.y -= 1;
 
     let mut v4 = rail.clone();
-    v4.x = v4.x - 1;
-    v4.y = v4.y - 1;
+    v4.x -= 1;
+    v4.y -= 1;
 
     [
         v1.to_point_u32_surface(surface),
@@ -551,18 +549,18 @@ impl RailPoint {
             self.clone(),
             {
                 let mut v = self.clone();
-                v.x = v.x - 1;
+                v.x -= 1;
                 v
             },
             {
                 let mut v = self.clone();
-                v.y = v.y - 1;
+                v.y -= 1;
                 v
             },
             {
                 let mut v = self.clone();
-                v.x = v.x - 1;
-                v.y = v.y - 1;
+                v.x -= 1;
+                v.y -= 1;
                 v
             },
         ]
@@ -640,7 +638,7 @@ pub fn write_rail(surface: &mut Surface, path: &Vec<Rail>) {
     for path_rail in path {
         if let Some(path_area) = path_rail.area() {
             for path_area_rail_point in path_area {
-                total_rail = total_rail + 1;
+                total_rail += 1;
                 for path_area_game_point in path_area_rail_point.to_game_points(surface) {
                     let mut new_pixel = match surface.get_pixel_point_u32(&path_area_game_point) {
                         Pixel::Rail => {

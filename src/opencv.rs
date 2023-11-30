@@ -63,7 +63,7 @@ pub fn load_cv_from_buffer_filtered(
 }
 
 pub fn load_cv_from_buffer(buffer: &[u8], rows: usize, columns: usize) -> Mat {
-    Mat::from_slice_rows_cols(&buffer, rows, columns).unwrap()
+    Mat::from_slice_rows_cols(buffer, rows, columns).unwrap()
 }
 
 pub fn load_raw_image_from_slice(surface_meta: &Surface, raw: &[u8]) -> Mat {

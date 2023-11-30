@@ -12,8 +12,7 @@ pub fn get_patch_main() {
 
     let first_patch: &Patch = patches.patches[&Pixel::IronOre]
         .iter()
-        .filter(|v| v.height + v.width > 50)
-        .next()
+        .find(|v| v.height + v.width > 50)
         .unwrap();
     tracing::debug!("dumping {:?}", first_patch);
 

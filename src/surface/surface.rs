@@ -34,7 +34,7 @@ const NAME_PREFIX: &str = "surface-";
 
 impl Surface {
     pub fn new(width: u32, mut height: u32) -> Self {
-        height = height + 1;
+        height += 1;
         let size = width * height;
         let buffer = (0..size).map(|_| Pixel::Empty).collect();
         tracing::debug!("Image buffer size {}", size.to_formatted_string(&LOCALE));
@@ -99,13 +99,7 @@ impl Surface {
     }
 
     pub fn xy_in_range(&self, x: u32, y: u32) -> bool {
-        if x >= self.width {
-            false
-        } else if y >= self.height {
-            false
-        } else {
-            true
-        }
+        x < self.width && y < self.height
     }
 
     pub fn xy_to_index_point_u32(&self, point: PointU32) -> usize {
@@ -130,11 +124,9 @@ impl Surface {
         PointU32 { x, y }
     }
 
-    pub fn load_from_step_history(step_history_out_dirs: &Vec<PathBuf>) -> Self {
-        let recent_surface = search_step_history_dirs(
-            step_history_out_dirs.clone().into_iter(),
-            "surface-full.png",
-        );
+    pub fn load_from_step_history(step_history_out_dirs: &[PathBuf]) -> Self {
+        let recent_surface =
+            search_step_history_dirs(step_history_out_dirs.iter().cloned(), "surface-full.png");
         Surface::load(recent_surface.parent().unwrap())
     }
 
@@ -142,7 +134,7 @@ impl Surface {
     pub fn load(out_dir: &Path) -> Self {
         let mut surface = Surface::load_meta(out_dir);
 
-        let dat_path = dat_path(&out_dir);
+        let dat_path = dat_path(out_dir);
         let buffer = read(&dat_path).unwrap();
         tracing::debug!("read buffer from {}", &dat_path.display());
 
@@ -153,7 +145,7 @@ impl Surface {
     }
 
     pub fn load_meta(out_dir: &Path) -> Self {
-        let meta_path = meta_path(&out_dir);
+        let meta_path = meta_path(out_dir);
         let meta_reader = BufReader::new(File::open(&meta_path).unwrap());
         let surface: Surface = simd_json::serde::from_reader(meta_reader).unwrap();
         tracing::debug!("read size from {}", &meta_path.display());
@@ -174,11 +166,11 @@ impl Surface {
     fn save_raw(&self, out_dir: &Path) {
         let bytes: &Vec<u8> = unsafe { transmute(&self.buffer) };
 
-        let dat_path = dat_path(&out_dir);
+        let dat_path = dat_path(out_dir);
         tracing::debug!("writing to {}", dat_path.display());
         write(&dat_path, bytes).unwrap();
 
-        let meta_path = meta_path(&out_dir);
+        let meta_path = meta_path(out_dir);
         tracing::debug!("writing to {}", &meta_path.display());
         let meta_writer = BufWriter::new(File::create(&meta_path).unwrap());
         simd_json::serde::to_writer(meta_writer, self).unwrap();
@@ -221,7 +213,7 @@ impl Surface {
 
         let encoder = PngEncoder::new(writer);
         encoder
-            .write_image(&rgb, self.width, self.height, ColorType::Rgb8)
+            .write_image(rgb, self.width, self.height, ColorType::Rgb8)
             .unwrap();
         let size = file.metadata().unwrap().len();
         tracing::debug!(
@@ -233,7 +225,7 @@ impl Surface {
 
     pub fn get_buffer_to_cv(&self) -> Mat {
         let raw_buffer: &[u8] = unsafe { transmute(self.buffer.as_slice()) };
-        Mat::from_slice_rows_cols(&raw_buffer, self.height as usize, self.width as usize).unwrap()
+        Mat::from_slice_rows_cols(raw_buffer, self.height as usize, self.width as usize).unwrap()
     }
 
     pub fn slice_u8_to_pixel(img: &[u8]) -> &[Pixel] {

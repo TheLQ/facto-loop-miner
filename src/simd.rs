@@ -52,7 +52,7 @@ pub fn apply_any_u8_iter_to_m256_buffer<'a>(
 /// Apply buffer array positions to PRE-ALLOCATED working buffer
 pub fn apply_positions_iter_to_m256_buffer(
     position: &Vec<usize>,
-    working_buffer: &mut Vec<SseUnit>,
+    working_buffer: &mut [SseUnit],
     enable: bool,
 ) {
     for pos in position {
@@ -95,7 +95,7 @@ pub fn compare_m256_count(
     total
 }
 
-pub fn any_bit_equal_m256_bool<'a>(a: &Vec<SseUnit>, b: &Vec<SseUnit>) -> bool {
+pub fn any_bit_equal_m256_bool<'a>(a: &Vec<SseUnit>, b: &[SseUnit]) -> bool {
     let mut total: SseUnit = m256_zero();
 
     for i in 0..a.len() {
@@ -590,7 +590,7 @@ fn bitslice_popcnt(bits: &BitSlice) -> u32 {
     let mut total = 0;
     for x in bits {
         if *x {
-            total = total + 1
+            total += 1
         }
     }
     total

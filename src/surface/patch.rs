@@ -30,9 +30,9 @@ impl DiskPatch {
 const JSON_NAME: &str = "patches.json";
 
 impl DiskPatch {
-    pub fn load_from_step_history(step_history_out_dirs: &Vec<PathBuf>) -> Self {
+    pub fn load_from_step_history(step_history_out_dirs: &[PathBuf]) -> Self {
         let recent_surface =
-            search_step_history_dirs(step_history_out_dirs.clone().into_iter(), JSON_NAME);
+            search_step_history_dirs(step_history_out_dirs.iter().cloned(), JSON_NAME);
         Self::load_from_dir(&recent_surface)
     }
 
@@ -68,15 +68,15 @@ impl Patch {
 
     pub fn corner_point_i32(&self) -> Point {
         Point {
-            x: self.x.clone(),
-            y: self.y.clone(),
+            x: self.x,
+            y: self.y,
         }
     }
 
     pub fn corner_point_u32(&self) -> PointU32 {
         PointU32 {
-            x: self.x.clone() as u32,
-            y: self.y.clone() as u32,
+            x: self.x as u32,
+            y: self.y as u32,
         }
     }
 
@@ -101,7 +101,7 @@ impl Patch {
                 let remove_y = remove_y as u32;
                 if surface.get_pixel(remove_x, remove_y) == pixel {
                     surface.set_pixel(Pixel::Empty, remove_x, remove_y);
-                    metric = metric + 1;
+                    metric += 1;
                 }
             }
         }
@@ -158,20 +158,16 @@ pub fn map_patch_corners_to_kdtree_ref<'a>(
     patch_rects: impl Iterator<Item = &'a Patch>,
 ) -> PixelKdTree {
     let mut tree: PixelKdTree = KdTree::new();
-    let mut patch_counter = 0;
-    for patch_rect in patch_rects {
+    for (patch_counter, patch_rect) in patch_rects.enumerate() {
         tree.add(&patch_rect.corner_slice(), patch_counter);
-        patch_counter = patch_counter + 1;
     }
     tree
 }
 
 pub fn map_patch_corners_to_kdtree(patch_rects: impl Iterator<Item = Patch>) -> PixelKdTree {
     let mut tree: PixelKdTree = KdTree::new();
-    let mut patch_counter = 0;
-    for patch_rect in patch_rects {
+    for (patch_counter, patch_rect) in patch_rects.enumerate() {
         tree.add(&patch_rect.corner_slice(), patch_counter);
-        patch_counter = patch_counter + 1;
     }
     tree
 }
