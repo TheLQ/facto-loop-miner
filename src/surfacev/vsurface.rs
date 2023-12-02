@@ -1,3 +1,4 @@
+use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::ventity_buffer::{VEntityBuffer, VEntityXY};
@@ -9,8 +10,8 @@ use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::fs::{File, OpenOptions};
-use std::io::BufWriter;
-use std::path::Path;
+use std::io::{BufReader, BufWriter};
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tracing::{debug, trace};
 
@@ -25,6 +26,13 @@ pub struct VSurface {
 }
 
 impl VSurface {
+    pub fn set_pixel(&mut self, start: VPoint, pixel: Pixel) -> VResult<()> {
+        self.pixels.add(VPixel { start, pixel })?;
+        Ok(())
+    }
+
+    //<editor-fold desc="io load">
+
     pub fn new(radius: u32) -> Self {
         VSurface {
             pixels: VEntityBuffer::new(radius),
@@ -32,27 +40,53 @@ impl VSurface {
         }
     }
 
-    pub fn set_pixel(&mut self, start: VPoint, pixel: Pixel) -> VResult<()> {
-        self.pixels.add(VPixel { start, pixel })?;
+    pub fn load(out_dir: &Path) -> VResult<Self> {
+        let mut surface = Self::load_state(out_dir)?;
+        surface.load_entity_buffers(out_dir)?;
+        Ok(surface)
+    }
+
+    fn load_state(out_dir: &Path) -> VResult<Self> {
+        let path = path_state(out_dir);
+        let file = File::open(&path).map_err(|e| VError::IoError {
+            e,
+            path: path.to_string_lossy().to_string(),
+            backtrace: Backtrace::capture(),
+        })?;
+        let surface = simd_json::serde::from_reader(BufReader::new(file)).map_err(|e| {
+            VError::SimdJsonFail {
+                e,
+                backtrace: Backtrace::capture(),
+            }
+        })?;
+        Ok(surface)
+    }
+
+    fn load_entity_buffers(&mut self, out_dir: &Path) -> VResult<()> {
+        let pixel_path = &path_pixel_buffer(out_dir);
+        debug!("writing pixel buffer to {}", pixel_path.display());
+        self.pixels.load_xy_file(pixel_path)?;
+
+        let entity_path = &path_entity_buffer(out_dir);
+        debug!("writing entity buffer to {}", entity_path.display());
+        self.entities.load_xy_file(entity_path)?;
+
         Ok(())
     }
 
+    pub fn load_from_last_step(params: &StepParams) -> VResult<Self> {
+        Self::load(params.previous_step_dir())
+    }
+
+    //</editor-fold>
+
+    //<editor-fold desc="io save">
+
     pub fn save(&self, out_dir: &Path) -> VResult<()> {
-        if !out_dir.is_dir() {
-            Err(VError::NotADirectory {
-                path: format!("dir does not exist {}", out_dir.display()),
-                backtrace: Backtrace::force_capture(),
-            })
-        } else {
-            self.save_state(out_dir)?;
-            self.save_pixel_img_colorized(out_dir)?;
-            self.save_entity_buffers(out_dir)?;
-
-            // self.save_raw(out_dir);
-            // self.save_colorized(out_dir, NAME_PREFIX);
-
-            Ok(())
-        }
+        self.save_state(out_dir)?;
+        self.save_pixel_img_colorized(out_dir)?;
+        self.save_entity_buffers(out_dir)?;
+        Ok(())
     }
 
     fn save_state(&self, out_dir: &Path) -> VResult<()> {
@@ -104,17 +138,21 @@ impl VSurface {
     }
 
     fn save_entity_buffers(&self, out_dir: &Path) -> VResult<()> {
-        let pixel_path = &out_dir.join("pixel-buffer.dat");
+        let pixel_path = &path_pixel_buffer(out_dir);
         debug!("writing pixel buffer to {}", pixel_path.display());
         self.pixels.save_xy_file(pixel_path)?;
 
-        let entity_path = out_dir.join("entity-buffer.dat");
+        let entity_path = &path_entity_buffer(out_dir);
         debug!("writing entity buffer to {}", entity_path.display());
-        self.entities.save_xy_file(&entity_path)?;
+        self.entities.save_xy_file(entity_path)?;
 
         Ok(())
     }
+
+    //</editor-fold>
 }
+
+//<editor-fold desc="io common">
 
 fn save_png(path: &Path, rgb: &[u8], width: u32, height: u32) {
     let file = File::create(path).unwrap();
@@ -131,6 +169,20 @@ fn save_png(path: &Path, rgb: &[u8], width: u32, height: u32) {
         path.display(),
     );
 }
+
+fn path_state(out_dir: &Path) -> PathBuf {
+    out_dir.join("vsurface-state.json")
+}
+
+fn path_pixel_buffer(out_dir: &Path) -> PathBuf {
+    out_dir.join("pixel-buffer.dat")
+}
+
+fn path_entity_buffer(out_dir: &Path) -> PathBuf {
+    out_dir.join("entity-buffer.dat")
+}
+
+//</editor-fold>
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct VPixel {

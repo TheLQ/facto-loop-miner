@@ -3,6 +3,7 @@ use itertools::Itertools;
 use opencv::core::Point2f;
 use std::backtrace::Backtrace;
 use std::io;
+use std::path::Path;
 use thiserror::Error;
 use tracing::error;
 
@@ -46,6 +47,15 @@ impl VError {
             | VError::UnknownName { backtrace, .. }
             | VError::SimdJsonFail { backtrace, .. }
             | VError::NotADirectory { backtrace, .. } => backtrace,
+        }
+    }
+
+    /// IoError factory. Use like `read().map_err(VError::io_error)`
+    pub fn io_error(path: &Path) -> impl FnOnce(io::Error) -> Self + '_ {
+        |e| VError::IoError {
+            e,
+            path: path.to_string_lossy().to_string(),
+            backtrace: Backtrace::capture(),
         }
     }
 }

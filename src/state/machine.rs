@@ -56,11 +56,9 @@ impl Machine {
             }
 
             let step_out_dir = output_dir.join(step.name());
-            if !step_out_dir.is_dir() {
-                create_dir(&step_out_dir).unwrap();
-            }
             let changed = state.borrow_mut().update_modified(&step_out_dir);
             if changed {
+                create_dir(&step_out_dir).unwrap();
                 let metrics = Rc::new(RefCell::new(Metrics::new(step.name())));
                 tracing::info!("=== Found changes, transforming");
 

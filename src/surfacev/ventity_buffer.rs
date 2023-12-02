@@ -4,12 +4,17 @@ use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::fs::File;
 use std::hash::Hash;
+use std::io::{BufReader, BufWriter, Read, Write};
+use std::mem::transmute;
 use std::path::Path;
 
 pub trait VEntityXY {
     fn get_xy(&self) -> Vec<VPoint>;
 }
 
+/// Collection of entities and xy positions they cover
+///
+/// For example, ore tiles cover 1 positions. Assembly machines cover 9 positions
 #[derive(Serialize, Deserialize)]
 pub struct VEntityBuffer<E> {
     entities: Vec<E>,
@@ -117,7 +122,29 @@ where
     }
 
     pub fn save_xy_file(&self, path: &Path) -> VResult<()> {
-        File::create(path).map_err(|e| VError::IoError {
+        let file = File::create(path).map_err(|e| VError::IoError {
+            e,
+            path: path.to_string_lossy().to_string(),
+            backtrace: Backtrace::capture(),
+        })?;
+        let mut writer = BufWriter::new(file);
+        for entry in &self.xy_to_entity {
+            let bytes = entry.to_ne_bytes();
+            writer.write(&bytes).map_err(|e| VError::IoError {
+                e,
+                path: path.to_string_lossy().to_string(),
+                backtrace: Backtrace::capture(),
+            })?;
+        }
+
+        Ok(())
+    }
+
+    pub fn load_xy_file(&mut self, path: &Path) -> VResult<()> {
+        let mut file = File::open(path).map_err(VError::io_error(path))?;
+
+        let working_u8: &mut [u8] = unsafe { transmute(self.xy_to_entity.as_mut_slice()) };
+        file.read_exact(working_u8).map_err(|e| VError::IoError {
             e,
             path: path.to_string_lossy().to_string(),
             backtrace: Backtrace::capture(),

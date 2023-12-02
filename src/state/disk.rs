@@ -55,6 +55,10 @@ impl State {
     }
 
     pub fn update_modified(&mut self, path: &Path) -> bool {
+        !path.exists()
+    }
+
+    pub fn update_modified_old(&mut self, path: &Path) -> bool {
         let metadata = match fs::metadata(path) {
             Ok(v) => v,
             Err(e) => panic!("Path {} e {}", path.display(), e),

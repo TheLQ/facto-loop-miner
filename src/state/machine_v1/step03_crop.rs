@@ -2,6 +2,7 @@ use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
+use crate::surfacev::vsurface::VSurface;
 
 pub struct Step03 {}
 
@@ -20,7 +21,7 @@ impl Step for Step03 {
 
     /// Temporarily reduce surface size for easier development
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
-        let mut surface = Surface::load_from_step_history(&params);
+        let mut surface = VSurface::load_from_last_step(&params)?;
 
         surface = surface.crop(CROP_RADIUS);
 
