@@ -2,7 +2,9 @@ use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::vpoint::VPoint;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
+use std::fs::File;
 use std::hash::Hash;
+use std::path::Path;
 
 pub trait VEntityXY {
     fn get_xy(&self) -> Vec<VPoint>;
@@ -11,6 +13,8 @@ pub trait VEntityXY {
 #[derive(Serialize, Deserialize)]
 pub struct VEntityBuffer<E> {
     entities: Vec<E>,
+    /// More efficient to store a (radius * 2)^2 length Array as file instead of JSON  
+    #[serde(skip_serializing)]
     xy_to_entity: Vec<usize>,
     radius: u32,
 }
@@ -20,12 +24,24 @@ where
     E: VEntityXY + Clone + Eq + Hash,
 {
     pub fn new(radius: u32) -> Self {
-        let diameter = radius as usize * 2;
         VEntityBuffer {
             entities: Vec::new(),
-            xy_to_entity: vec![0; diameter * diameter],
+            xy_to_entity: vec![0; Self::_xy_array_length_from_radius(radius)],
             radius,
         }
+    }
+
+    pub fn diameter(&self) -> usize {
+        self.radius as usize * 2
+    }
+
+    pub fn xy_array_length_from_radius(&self) -> usize {
+        Self::_xy_array_length_from_radius(self.radius)
+    }
+
+    fn _xy_array_length_from_radius(radius: u32) -> usize {
+        let dia = radius as usize * 2;
+        dia * dia
     }
 
     //<editor-fold desc="query xy">
@@ -67,7 +83,7 @@ where
 
     pub fn is_points_out_of_bounds_iter<'a>(
         &self,
-        points: impl Iterator<Item = &'a VPoint>,
+        points: impl IntoIterator<Item = &'a VPoint>,
     ) -> VResult<()> {
         let mut bad = Vec::new();
         for point in points {
@@ -105,14 +121,19 @@ where
         Ok(())
     }
 
-    pub fn new_xv_entity_array(&self) -> Vec<E> {
+    pub fn new_xv_entity_array(&self) -> impl Iterator<Item = E> + '_ {
         self.xy_to_entity
             .iter()
             .map(|index| self.entities[*index].clone())
-            .collect()
     }
 
-    pub fn diameter(&self) -> usize {
-        self.radius as usize * 2
+    pub fn save_xy_file(&self, path: &Path) -> VResult<()> {
+        File::create(path).map_err(|e| VError::IoError {
+            e,
+            path: path.to_string_lossy().to_string(),
+            backtrace: Backtrace::capture(),
+        })?;
+
+        Ok(())
     }
 }

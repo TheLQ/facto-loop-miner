@@ -11,6 +11,7 @@ use std::backtrace::Backtrace;
 use std::fs::{File, OpenOptions};
 use std::io::BufWriter;
 use std::path::Path;
+use std::time::Instant;
 use tracing::{debug, trace};
 
 /// A collection of background pixels (eg resources, water) and the large entities on top
@@ -45,6 +46,7 @@ impl VSurface {
         } else {
             self.save_state(out_dir)?;
             self.save_pixel_img_colorized(out_dir)?;
+            self.save_entity_buffers(out_dir)?;
 
             // self.save_raw(out_dir);
             // self.save_colorized(out_dir, NAME_PREFIX);
@@ -75,23 +77,41 @@ impl VSurface {
     }
 
     fn save_pixel_img_colorized(&self, out_dir: &Path) -> VResult<()> {
+        let start_time = Instant::now();
         let pixel_map_path = out_dir.join("pixel-map.png");
         debug!("Saving RGB dump image to {}", pixel_map_path.display());
         let entities = self.pixels.new_xv_entity_array();
-        trace!("built entity array of {}", entities.len());
-        let mut output: Vec<u8> = vec![0; entities.len() * 3];
-        for (i, pixel) in entities.iter().enumerate() {
+        // trace!("built entity array of {}", entities.len());
+        let mut output: Vec<u8> = vec![0; self.pixels.xy_array_length_from_radius() * 3];
+        for (i, pixel) in entities.enumerate() {
             let color = &pixel.pixel.color();
             let start = i * color.len();
             output[start] = color[0];
             output[start + 1] = color[1];
             output[start + 2] = color[2];
         }
-        trace!("built entity array of {}", output.len());
+        let duration = Instant::now() - start_time;
+        trace!(
+            "built entity array of {} in {} seconds",
+            output.len().to_formatted_string(&LOCALE),
+            duration.as_secs()
+        );
 
         // &out_dir.join(format!("{}full.png", name_prefix))
         let size = self.pixels.diameter() as u32;
         save_png(&pixel_map_path, &output, size, size);
+        Ok(())
+    }
+
+    fn save_entity_buffers(&self, out_dir: &Path) -> VResult<()> {
+        let pixel_path = &out_dir.join("pixel-buffer.dat");
+        debug!("writing pixel buffer to {}", pixel_path.display());
+        self.pixels.save_xy_file(pixel_path)?;
+
+        let entity_path = out_dir.join("entity-buffer.dat");
+        debug!("writing entity buffer to {}", entity_path.display());
+        self.entities.save_xy_file(&entity_path)?;
+
         Ok(())
     }
 }

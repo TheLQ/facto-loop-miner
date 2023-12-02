@@ -1,4 +1,4 @@
-use crate::gamedata::compressed_export::ExportCompressedVec;
+use crate::gamedata::compressed_export::{parse_exported_lua_data, ExportCompressedv2};
 use crate::surface::pixel::Pixel;
 use crate::LOCALE;
 use num_format::ToFormattedString;
@@ -10,7 +10,7 @@ use std::path::Path;
 use std::time::Instant;
 use tracing::{debug, info};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct LuaData {
     pub entities: Vec<LuaEntity>,
     pub tiles: Vec<LuaTile>,
@@ -19,25 +19,32 @@ pub struct LuaData {
 impl LuaData {
     pub fn open(input_dir: &Path) -> Self {
         let start_time = Instant::now();
-
         let input_path = input_dir.join("big-entities-a.json");
-        let data_inner: ExportCompressedVec = open_data_file(&input_path);
+        let mut raw_input = read(&input_path).unwrap();
+        debug!(
+            "-- Read Lua export file {} in {} seconds",
+            input_path.display(),
+            (Instant::now() - start_time).as_secs()
+        );
+
+        let start_time = Instant::now();
+        // let data_inner: ExportCompressedVec = open_data_file(&input_path);
+        // let data_inner: ExportCompressedv2 = open_data_file(&input_path, raw_input);
+        let entities = parse_exported_lua_data(&mut raw_input).unwrap();
 
         let data = LuaData {
             tiles: Vec::new(),
-            entities: data_inner.item_chunks().collect(),
+            entities,
         };
-        info!("Read {} items", data.entities.len());
-
         let duration = Instant::now() - start_time;
-        debug!("-- Opened Data file in {} seconds", duration.as_secs());
-        debug!("-- {} Tile", data.tiles.len().to_formatted_string(&LOCALE));
-        debug!(
-            "-- {} Resource",
+        info!(
+            "-- Loaded Lua {} tiles {} entities in {} seconds",
+            data.tiles.len().to_formatted_string(&LOCALE),
             data.entities.len().to_formatted_string(&LOCALE),
+            duration.as_secs()
         );
-        debug!("-- sample 0 {:?}", data.entities[0]);
-        debug!("-- sample 1 {:?}", data.entities[1]);
+        // debug!("-- sample 0 {:?}", data.entities[0]);
+        // debug!("-- sample 1 {:?}", data.entities[1]);
 
         // let mut printed: Vec<String> = Vec::new();
         // for tile in &data.tile {
@@ -112,7 +119,7 @@ impl LuaPoint {
     }
 }
 
-fn open_data_file<T>(path: &Path) -> T
+fn open_data_file<T>(path: &Path, mut raw_input: Vec<u8>) -> T
 where
     T: DeserializeOwned,
 {
@@ -124,7 +131,6 @@ where
     // nope, slice is mutated
     // let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
 
-    let mut raw = read(path).unwrap();
-    let result = simd_json::serde::from_slice(raw.as_mut_slice()).unwrap();
+    let result = simd_json::serde::from_slice(raw_input.as_mut_slice()).unwrap();
     result
 }

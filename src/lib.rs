@@ -7,7 +7,7 @@
 #![feature(iterator_try_collect)]
 // #![feature(iterator_try_reduce)]
 // #![feature(slice_flatten)]
-// #![feature(array_chunks)]
+#![feature(array_chunks)]
 #![feature(error_generic_member_access)]
 #![feature(int_roundings)]
 // #![feature()]
