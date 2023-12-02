@@ -13,11 +13,10 @@ use std::io::BufWriter;
 use std::path::Path;
 use tracing::{debug, trace};
 
-/// A collection of background/pixels and the large entities on top
+/// A collection of background pixels (eg resources, water) and the large entities on top
 ///
-/// Position is i32 relative to the bottom right (3x3 entity has start=0,0)
+/// Position is i32 relative to bottom right (3x3 entity has start=0,0) for simpler math.
 /// Converted from Factorio/Lua style of f32 relative to center (3x3 entity has start=1.5,1.5).
-/// i32 is much saner math.
 #[derive(Serialize, Deserialize)]
 pub struct VSurface {
     pixels: VEntityBuffer<VPixel>,

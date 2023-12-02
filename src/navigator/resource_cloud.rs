@@ -33,13 +33,11 @@ impl ResourceCloud {
         for (i, pixel) in surface.buffer.iter().enumerate() {
             match pixel {
                 Pixel::IronOre
-                // | Pixel::CopperOre
-                // | Pixel::Stone
-                // | Pixel::CrudeOil
-                // | Pixel::Coal
-                // | Pixel::UraniumOre
-
-                => {
+                | Pixel::CopperOre
+                | Pixel::Stone
+                | Pixel::CrudeOil
+                | Pixel::Coal
+                | Pixel::UraniumOre => {
                     let point = surface.index_to_xy(i);
                     positions.push(point_to_slice_f32(point));
                     pixels.push(pixel.clone());

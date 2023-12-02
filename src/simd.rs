@@ -31,7 +31,7 @@ pub type SseUnit = __m256i;
 /// Apply any non-zero changes to PRE-ALLOCATED working buffer
 pub fn apply_any_u8_iter_to_m256_buffer<'a>(
     changes: impl Iterator<Item = &'a u8>,
-    working_buffer: &mut Vec<SseUnit>,
+    working_buffer: &mut [SseUnit],
 ) {
     for (pos, change_id) in changes.enumerate() {
         let buffer_row = working_buffer

@@ -128,15 +128,15 @@ impl From<&Rect_<i32>> for Patch {
 
 impl PartialOrd<Self> for Patch {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let a = self.x as u64 * self.y as u64 * self.width as u64 * self.height as u64;
-        let b = other.x as u64 * other.y as u64 * other.width as u64 * self.height as u64;
-        Some(a.cmp(&b))
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for Patch {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        let a = self.x as u64 * self.y as u64 * self.width as u64 * self.height as u64;
+        let b = other.x as u64 * other.y as u64 * other.width as u64 * self.height as u64;
+        a.cmp(&b)
     }
 }
 

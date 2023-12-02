@@ -1,6 +1,5 @@
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::vpoint::VPoint;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::hash::Hash;

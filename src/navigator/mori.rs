@@ -491,7 +491,7 @@ impl Rail {
     }
 }
 
-fn filter_available_points<'r>(rail: &RailPoint, surface: &Surface) -> [Option<PointU32>; 4] {
+fn filter_available_points(rail: &RailPoint, surface: &Surface) -> [Option<PointU32>; 4] {
     // let game_points: Vec<PointU32> = rail.to_game_points(surface);
     // if game_points.len() == 4 {
     //     Some(game_points)
