@@ -24,8 +24,8 @@ impl Step for Step20 {
     }
 
     fn transformer(&self, mut params: StepParams) -> XMachineResult<()> {
-        let mut surface = Surface::load_from_step_history(&params.step_history_out_dirs);
-        let patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
+        let mut surface = Surface::load_from_step_history(&params);
+        let patches = DiskPatch::load_from_step_history(&params);
 
         // let mut counter: usize = 0;
         // for item in surface.buffer {

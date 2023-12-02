@@ -25,8 +25,8 @@ impl Step for Step10 {
     }
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
-        let mut surface = Surface::load_from_step_history(&params.step_history_out_dirs);
-        let mut patches = DiskPatch::load_from_step_history(&params.step_history_out_dirs);
+        let mut surface = Surface::load_from_step_history(&params);
+        let mut patches = DiskPatch::load_from_step_history(&params);
 
         draw_mega_box(&mut surface, &mut params.metrics.borrow_mut(), &mut patches);
         // draw_resource_exclude(&mut surface, &mut params.metrics.borrow_mut(), &mut patches);

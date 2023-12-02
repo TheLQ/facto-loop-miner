@@ -20,8 +20,7 @@ impl Step for Step03 {
 
     /// Temporarily reduce surface size for easier development
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
-        let surface_dir = params.step_history_out_dirs.last().unwrap();
-        let mut surface = Surface::load(surface_dir);
+        let mut surface = Surface::load_from_step_history(&params);
 
         surface = surface.crop(CROP_RADIUS);
 

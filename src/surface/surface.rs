@@ -1,5 +1,5 @@
 use crate::simd_diff::SurfaceDiff;
-use crate::state::machine::search_step_history_dirs;
+use crate::state::machine::StepParams;
 use crate::surface::game_locator::GameLocator;
 use crate::surface::pixel::Pixel;
 use crate::{PixelKdTree, LOCALE};
@@ -124,10 +124,12 @@ impl Surface {
         PointU32 { x, y }
     }
 
-    pub fn load_from_step_history(step_history_out_dirs: &[PathBuf]) -> Self {
-        let recent_surface =
-            search_step_history_dirs(step_history_out_dirs.iter().cloned(), "surface-full.png");
-        Surface::load(recent_surface.parent().unwrap())
+    pub fn load_from_step_history(step_params: &StepParams) -> Self {
+        // let recent_surface =
+        //     search_step_history_dirs(step_history_out_dirs.iter().cloned(), "surface-full.png");
+        // let recent_surface = step_params.previous_step_dir().join("surface-full.png")
+        // Surface::load(recent_surface.parent().unwrap())
+        todo!("sadf");
     }
 
     #[allow(dead_code)]

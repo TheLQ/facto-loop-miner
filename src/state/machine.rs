@@ -20,8 +20,14 @@ pub struct Machine {
 pub struct StepParams {
     pub step_out_dir: PathBuf,
     pub metrics: Rc<RefCell<Metrics>>,
-    pub step_history_out_dirs: Vec<PathBuf>,
+    step_history_out_dirs: Vec<PathBuf>,
     pub state: Rc<RefCell<State>>,
+}
+
+impl StepParams {
+    pub fn previous_step_dir(&self) -> &Path {
+        self.step_history_out_dirs.last().unwrap()
+    }
 }
 
 pub trait Step {

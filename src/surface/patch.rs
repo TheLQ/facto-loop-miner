@@ -1,4 +1,4 @@
-use crate::state::machine::search_step_history_dirs;
+use crate::state::machine::StepParams;
 use crate::surface::game_locator::GameLocator;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
@@ -10,7 +10,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct DiskPatch {
@@ -30,9 +30,13 @@ impl DiskPatch {
 const JSON_NAME: &str = "patches.json";
 
 impl DiskPatch {
-    pub fn load_from_step_history(step_history_out_dirs: &[PathBuf]) -> Self {
-        let recent_surface =
-            search_step_history_dirs(step_history_out_dirs.iter().cloned(), JSON_NAME);
+    pub fn load_from_step_history(step_history_out_dirs: &StepParams) -> Self {
+        // let recent_surface =
+        //     search_step_history_dirs(step_history_out_dirs.iter().cloned(), JSON_NAME);
+        let recent_surface = step_history_out_dirs.previous_step_dir().join(JSON_NAME);
+        if !recent_surface.exists() {
+            panic!("missing file {}", recent_surface.display());
+        }
         Self::load_from_dir(&recent_surface)
     }
 

@@ -35,7 +35,7 @@ impl Step for Step04 {
 
     /// Detect resource patches in image with OpenCV.
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
-        let previous_step_dir = params.step_history_out_dirs.last().unwrap();
+        let previous_step_dir = params.previous_step_dir();
 
         let surface = Surface::load(previous_step_dir);
 

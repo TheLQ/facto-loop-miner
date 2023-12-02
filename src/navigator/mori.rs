@@ -36,7 +36,7 @@ pub fn mori_start(
         }
     }
 
-    let patches = DiskPatch::load_from_step_history(&step_params.step_history_out_dirs);
+    let patches = DiskPatch::load_from_step_history(step_params);
     let resource_cloud = ResourceCloud::from_patches(&patches);
 
     let mut working_buffer = surface.surface_diff();
