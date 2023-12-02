@@ -5,6 +5,7 @@ use crate::surfacev::err::VResult;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use std::path::Path;
+use std::time::Instant;
 use tracing::info;
 
 pub struct Step00 {}
@@ -24,16 +25,17 @@ impl Step for Step00 {
     /// representing the whole map.
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let lua_dir = Path::new("work/chunk1000");
-
         let data = LuaData::open(lua_dir);
+
+        let start_time = Instant::now();
         let radius = find_radius(&data) as u32;
         let mut surface = VSurface::new(radius);
-
-        tracing::debug!("Loading {} resources...", data.entities.len());
         translate_entities_to_image(&data.entities, &mut surface, &params)?;
-
-        tracing::debug!("Loading {} tiles...", data.tiles.len());
         translate_entities_to_image(&data.tiles, &mut surface, &params)?;
+        info!(
+            "Converted in {} seconds",
+            (Instant::now() - start_time).as_secs()
+        );
 
         surface.save(&params.step_out_dir)?;
 

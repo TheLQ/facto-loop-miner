@@ -13,7 +13,7 @@ pub trait VEntityXY {
 #[derive(Serialize, Deserialize)]
 pub struct VEntityBuffer<E> {
     entities: Vec<E>,
-    /// More efficient to store a (radius * 2)^2 length Array as file instead of JSON  
+    /// More efficient to store a (radius * 2)^2 length Array as a raw file instead of JSON  
     #[serde(skip_serializing)]
     xy_to_entity: Vec<usize>,
     radius: u32,
@@ -33,15 +33,6 @@ where
 
     pub fn diameter(&self) -> usize {
         self.radius as usize * 2
-    }
-
-    pub fn xy_array_length_from_radius(&self) -> usize {
-        Self::_xy_array_length_from_radius(self.radius)
-    }
-
-    fn _xy_array_length_from_radius(radius: u32) -> usize {
-        let dia = radius as usize * 2;
-        dia * dia
     }
 
     //<editor-fold desc="query xy">
@@ -121,10 +112,8 @@ where
         Ok(())
     }
 
-    pub fn new_xv_entity_array(&self) -> impl Iterator<Item = E> + '_ {
-        self.xy_to_entity
-            .iter()
-            .map(|index| self.entities[*index].clone())
+    pub fn new_xy_entity_array(&self) -> impl Iterator<Item = &E> {
+        self.xy_to_entity.iter().map(|index| &self.entities[*index])
     }
 
     pub fn save_xy_file(&self, path: &Path) -> VResult<()> {
@@ -135,5 +124,14 @@ where
         })?;
 
         Ok(())
+    }
+
+    pub fn xy_array_length_from_radius(&self) -> usize {
+        Self::_xy_array_length_from_radius(self.radius)
+    }
+
+    fn _xy_array_length_from_radius(radius: u32) -> usize {
+        let dia = radius as usize * 2;
+        dia * dia
     }
 }

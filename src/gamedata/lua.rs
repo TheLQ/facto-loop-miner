@@ -1,4 +1,4 @@
-use crate::gamedata::compressed_export::{parse_exported_lua_data, ExportCompressedv2};
+use crate::gamedata::compressed_export::parse_exported_lua_data;
 use crate::surface::pixel::Pixel;
 use crate::LOCALE;
 use num_format::ToFormattedString;
@@ -30,7 +30,11 @@ impl LuaData {
         let start_time = Instant::now();
         // let data_inner: ExportCompressedVec = open_data_file(&input_path);
         // let data_inner: ExportCompressedv2 = open_data_file(&input_path, raw_input);
-        let entities = parse_exported_lua_data(&mut raw_input).unwrap();
+        let entities = parse_exported_lua_data(&mut raw_input, |name, x, y| LuaEntity {
+            name: Pixel::from_string(name).unwrap(),
+            position: LuaPoint { x, y },
+        })
+        .unwrap();
 
         let data = LuaData {
             tiles: Vec::new(),
@@ -117,20 +121,4 @@ impl LuaPoint {
             y: self.y,
         }
     }
-}
-
-fn open_data_file<T>(path: &Path, mut raw_input: Vec<u8>) -> T
-where
-    T: DeserializeOwned,
-{
-    tracing::debug!("Reading entity data {} ...", path.display());
-    // let file = File::open(path).unwrap();
-    // let buf_reader = BufReader::new(file);
-    // let result = simd_json::serde::from_reader(buf_reader).unwrap();
-
-    // nope, slice is mutated
-    // let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
-
-    let result = simd_json::serde::from_slice(raw_input.as_mut_slice()).unwrap();
-    result
 }

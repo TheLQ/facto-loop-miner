@@ -16,7 +16,7 @@ use tracing::{debug, trace};
 
 /// A collection of background pixels (eg resources, water) and the large entities on top
 ///
-/// Position is i32 relative to bottom right (3x3 entity has start=0,0) for simpler math.
+/// Position is i32 relative to top right (3x3 entity has start=0,0) for simpler math.
 /// Converted from Factorio/Lua style of f32 relative to center (3x3 entity has start=1.5,1.5).
 #[derive(Serialize, Deserialize)]
 pub struct VSurface {
@@ -80,7 +80,7 @@ impl VSurface {
         let start_time = Instant::now();
         let pixel_map_path = out_dir.join("pixel-map.png");
         debug!("Saving RGB dump image to {}", pixel_map_path.display());
-        let entities = self.pixels.new_xv_entity_array();
+        let entities = self.pixels.new_xy_entity_array();
         // trace!("built entity array of {}", entities.len());
         let mut output: Vec<u8> = vec![0; self.pixels.xy_array_length_from_radius() * 3];
         for (i, pixel) in entities.enumerate() {
