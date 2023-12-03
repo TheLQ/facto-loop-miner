@@ -29,9 +29,10 @@ pub enum VError {
     },
     #[error("UnknownName {name}")]
     UnknownName { name: String, backtrace: Backtrace },
-    #[error("SimdJsonFail {e}")]
+    #[error("SimdJsonFail {e} for {path}")]
     SimdJsonFail {
         e: simd_json::Error,
+        path: Box<Path>,
         backtrace: Backtrace,
     },
     #[error("NotADirectory {path}")]

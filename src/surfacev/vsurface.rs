@@ -3,6 +3,7 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::ventity_buffer::{VEntityBuffer, VEntityXY};
 use crate::surfacev::vpoint::VPoint;
+use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
@@ -13,11 +14,11 @@ use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
-use tracing::{debug, trace};
+use tracing::{debug, info, trace};
 
-/// A collection of background pixels (eg resources, water) and the large entities on top
+/// A map of background pixels (eg resources, water) and the large entities on top
 ///
-/// Position is i32 relative to top right (3x3 entity has start=0,0) for simpler math.
+/// Entity Position is i32 relative to top left (3x3 entity has start=0,0) for simpler math.
 /// Converted from Factorio/Lua style of f32 relative to center (3x3 entity has start=1.5,1.5).
 #[derive(Serialize, Deserialize)]
 pub struct VSurface {
@@ -26,11 +27,6 @@ pub struct VSurface {
 }
 
 impl VSurface {
-    pub fn set_pixel(&mut self, start: VPoint, pixel: Pixel) -> VResult<()> {
-        self.pixels.add(VPixel { start, pixel })?;
-        Ok(())
-    }
-
     //<editor-fold desc="io load">
 
     pub fn new(radius: u32) -> Self {
@@ -41,21 +37,24 @@ impl VSurface {
     }
 
     pub fn load(out_dir: &Path) -> VResult<Self> {
+        let load_time = BasicWatch::new();
         let mut surface = Self::load_state(out_dir)?;
         surface.load_entity_buffers(out_dir)?;
+        info!(
+            "Loaded VSurface from {} in {} seconds",
+            out_dir.display(),
+            load_time.get_duration_seconds()
+        );
         Ok(surface)
     }
 
     fn load_state(out_dir: &Path) -> VResult<Self> {
         let path = path_state(out_dir);
-        let file = File::open(&path).map_err(|e| VError::IoError {
-            e,
-            path: path.to_string_lossy().to_string(),
-            backtrace: Backtrace::capture(),
-        })?;
+        let file = File::open(&path).map_err(VError::io_error(&path))?;
         let surface = simd_json::serde::from_reader(BufReader::new(file)).map_err(|e| {
             VError::SimdJsonFail {
                 e,
+                path: path.into_boxed_path(),
                 backtrace: Backtrace::capture(),
             }
         })?;
@@ -64,11 +63,11 @@ impl VSurface {
 
     fn load_entity_buffers(&mut self, out_dir: &Path) -> VResult<()> {
         let pixel_path = &path_pixel_buffer(out_dir);
-        debug!("writing pixel buffer to {}", pixel_path.display());
+        debug!("loading pixel buffer from {}", pixel_path.display());
         self.pixels.load_xy_file(pixel_path)?;
 
         let entity_path = &path_entity_buffer(out_dir);
-        debug!("writing entity buffer to {}", entity_path.display());
+        debug!("loading entity buffer from {}", entity_path.display());
         self.entities.load_xy_file(entity_path)?;
 
         Ok(())
@@ -96,15 +95,12 @@ impl VSurface {
             .create_new(true)
             .write(true)
             .open(state_path.clone())
-            .map_err(|e| VError::IoError {
-                e,
-                path: state_path.to_string_lossy().to_string(),
-                backtrace: Backtrace::capture(),
-            })?;
+            .map_err(VError::io_error(&state_path))?;
         let writer = BufWriter::new(file);
         simd_json::to_writer(writer, self).map_err(|e| VError::SimdJsonFail {
             e,
-            backtrace: Backtrace::force_capture(),
+            path: state_path.into_boxed_path(),
+            backtrace: Backtrace::capture(),
         })?;
 
         Ok(())
@@ -150,6 +146,17 @@ impl VSurface {
     }
 
     //</editor-fold>
+
+    pub fn set_pixel(&mut self, start: VPoint, pixel: Pixel) -> VResult<()> {
+        self.pixels.add(VPixel { start, pixel })?;
+        Ok(())
+    }
+
+    pub fn crop(&mut self, new_radius: u32) {
+        info!("Crop from {} to {}", self.entities.radius(), new_radius);
+        self.entities.crop(new_radius);
+        self.pixels.crop(new_radius);
+    }
 }
 
 //<editor-fold desc="io common">

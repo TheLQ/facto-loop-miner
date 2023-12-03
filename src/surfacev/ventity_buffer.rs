@@ -4,9 +4,10 @@ use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::fs::File;
 use std::hash::Hash;
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::{BufWriter, Read, Write};
 use std::mem::transmute;
 use std::path::Path;
+use tracing::debug;
 
 pub trait VEntityXY {
     fn get_xy(&self) -> Vec<VPoint>;
@@ -19,7 +20,7 @@ pub trait VEntityXY {
 pub struct VEntityBuffer<E> {
     entities: Vec<E>,
     /// More efficient to store a (radius * 2)^2 length Array as a raw file instead of JSON  
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     xy_to_entity: Vec<usize>,
     radius: u32,
 }
@@ -36,6 +37,10 @@ where
         }
     }
 
+    pub fn radius(&self) -> u32 {
+        self.radius
+    }
+
     pub fn diameter(&self) -> usize {
         self.radius as usize * 2
     }
@@ -43,11 +48,23 @@ where
     //<editor-fold desc="query xy">
     /// Fast Get index in xy_to_entity buffer
     pub fn xy_to_index_unchecked(&self, x: i32, y: i32) -> usize {
-        let radius = self.radius as i32;
-        let diameter = (self.radius * 2) as usize;
-        let abs_x: usize = (x + radius) as usize;
-        let abs_y: usize = (y + radius) as usize;
-        diameter * abs_y + abs_x
+        let radius = self.radius as i64;
+        let abs_x = (x as i64 + radius) as usize;
+        let abs_y = (y as i64 + radius) as usize;
+        self.diameter() * abs_y + abs_x
+        // let mut value = self.diameter();
+        // value = if let Some(v) = value.checked_mul(abs_y) {
+        //     v
+        // } else {
+        //     panic!(
+        //         "can't multiply diameter {} and {} (orig {} radius {})",
+        //         self.diameter(),
+        //         abs_y,
+        //         y,
+        //         radius
+        //     );
+        // };
+        // value + abs_x
     }
 
     /// Get index in xy_to_entity buffer
@@ -77,7 +94,7 @@ where
         self.is_xy_out_of_bounds(point.x, point.y)
     }
 
-    pub fn is_points_out_of_bounds_iter<'a>(
+    pub fn check_points_if_in_range_iter<'a>(
         &self,
         points: impl IntoIterator<Item = &'a VPoint>,
     ) -> VResult<()> {
@@ -97,30 +114,58 @@ where
         }
     }
 
-    pub fn is_points_out_of_bounds_vec(&self, points: Vec<VPoint>) -> VResult<Vec<VPoint>> {
-        self.is_points_out_of_bounds_iter(points.iter())
+    pub fn get_points_if_in_range_vec(&self, points: Vec<VPoint>) -> VResult<Vec<VPoint>> {
+        self.check_points_if_in_range_iter(points.iter())
             .map(|_| points)
     }
     //</editor-fold>
 
     pub fn add(&mut self, entity: E) -> VResult<()> {
-        let positions = self.is_points_out_of_bounds_vec(entity.get_xy())?;
+        let positions = self.get_points_if_in_range_vec(entity.get_xy())?;
 
         self.entities.push(entity);
         let entity_index = self.entities.len() - 1;
-
-        for position in positions {
-            let xy_index = self.xy_to_index_unchecked(position.x, position.y);
-            self.xy_to_entity[xy_index] = entity_index;
-        }
+        self.add_positions(entity_index, positions);
 
         Ok(())
     }
 
-    pub fn new_xy_entity_array(&self) -> impl Iterator<Item = &E> {
-        self.xy_to_entity.iter().map(|index| &self.entities[*index])
+    pub fn add_positions(&mut self, entity_index: usize, positions: Vec<VPoint>) {
+        for position in positions {
+            let xy_index = self.xy_to_index_unchecked(position.x, position.y);
+            self.xy_to_entity[xy_index] = entity_index;
+        }
     }
 
+    /// crop entities then rebuild xy_to_entity lookup
+    pub fn crop(&mut self, new_radius: u32) {
+        self.radius = new_radius;
+
+        let old_entity_length = self.entities.len();
+        let old_xy_length = self.xy_to_entity.len();
+        self.entities.retain(|e| {
+            e.get_xy()
+                .iter()
+                .all(|i| i.x.unsigned_abs() < new_radius && i.y.unsigned_abs() < new_radius)
+        });
+
+        let new_xy_length = self.xy_array_length_from_radius();
+        debug!(
+            "Reduce entities from {} to {}, xy_map from {} to {}",
+            old_entity_length,
+            self.entities.len(),
+            old_xy_length,
+            new_xy_length
+        );
+
+        self.xy_to_entity = vec![0usize; new_xy_length];
+
+        for i in 0..self.entities.len() {
+            self.add_positions(i, self.entities[i].get_xy());
+        }
+    }
+
+    //<editor-fold desc="io">
     pub fn save_xy_file(&self, path: &Path) -> VResult<()> {
         let file = File::create(path).map_err(|e| VError::IoError {
             e,
@@ -153,12 +198,16 @@ where
         Ok(())
     }
 
+    pub fn new_xy_entity_array(&self) -> impl Iterator<Item = &E> {
+        self.xy_to_entity.iter().map(|index| &self.entities[*index])
+    }
+
     pub fn xy_array_length_from_radius(&self) -> usize {
         Self::_xy_array_length_from_radius(self.radius)
     }
 
     fn _xy_array_length_from_radius(radius: u32) -> usize {
-        let dia = radius as usize * 2;
-        dia * dia
+        (radius as usize * 2).pow(2)
     }
+    //</editor-fold>
 }

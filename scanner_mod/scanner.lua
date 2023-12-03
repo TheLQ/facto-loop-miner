@@ -82,12 +82,19 @@ local function inner()
 end
 inner()
 
+-- /c
+local function hyper()
+    local size = 3000
+    log('start game chunk generate with ' .. size .. " chunks...")
+    game.surfaces[1].request_to_generate_chunks({0,0}, size)
+    log('force_generate....')
+    game.surfaces[1].force_generate_chunk_requests()
+    log('exit function')
+end
+hyper()
 
-
-
-
-
-
+--log('chart_all...')
+--game.forces[1].chart_all()
 
 --output.prototypes = {}
 --for k, entity in pairs(game.entity_prototypes) do

@@ -29,6 +29,7 @@
 // #![deny(clippy::pedantic)]
 // #![deny(clippy::all)]
 #![allow(clippy::let_and_return)]
+#![allow(clippy::result_large_err)]
 
 // TODO #![deny(future-incompatible)]
 // TODO #![deny(let-underscore)]
@@ -53,6 +54,7 @@ pub mod simd_diff;
 pub mod state;
 pub mod surface;
 pub mod surfacev;
+pub mod util;
 
 pub type PixelKdTree = KdTree<f32, 2>;
 

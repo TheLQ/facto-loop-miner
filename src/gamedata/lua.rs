@@ -3,7 +3,6 @@ use crate::surface::pixel::Pixel;
 use crate::LOCALE;
 use num_format::ToFormattedString;
 use opencv::core::Point2f;
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fs::read;
 use std::path::Path;
