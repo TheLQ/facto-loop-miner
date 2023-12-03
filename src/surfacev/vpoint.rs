@@ -1,5 +1,5 @@
 use crate::surfacev::err::{VError, VResult};
-use opencv::core::Point2f;
+use opencv::core::{Point, Point2f};
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 
@@ -11,6 +11,10 @@ pub struct VPoint {
 }
 
 impl VPoint {
+    pub fn new(x: i32, y: i32) -> Self {
+        VPoint { x, y }
+    }
+
     /// Factorio import. Offset is half the entity width
     pub fn from_f32_with_offset(point: Point2f, offset: f32) -> VResult<Self> {
         let new_point = Point2f {
@@ -35,6 +39,13 @@ impl VPoint {
         Point2f {
             x: self.x as f32 + offset,
             y: self.y as f32 + offset,
+        }
+    }
+
+    pub fn to_cv_point(&self) -> Point {
+        Point {
+            x: self.x,
+            y: self.y,
         }
     }
 }

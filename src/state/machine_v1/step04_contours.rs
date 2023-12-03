@@ -1,10 +1,12 @@
-use crate::opencv::load_raw_image_with_surface;
+use crate::opencv::get_cv_bounding_rect;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
-use crate::surface::patch::{map_patch_corners_to_kdtree, DiskPatch, Patch};
+use crate::surface::patch::{map_patch_corners_to_kdtree, Patch};
 use crate::surface::pixel::Pixel;
-use crate::surface::surface::Surface;
+use crate::surfacev::vpatch::VPatch;
+use crate::surfacev::vpoint::VPoint;
+use crate::surfacev::vsurface::VSurface;
 use crate::PixelKdTree;
 use kiddo::float::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
@@ -15,10 +17,12 @@ use opencv::imgproc::{
 };
 use opencv::prelude::*;
 use std::fmt::Display;
-use std::mem::transmute;
 use std::path::Path;
 use strum::IntoEnumIterator;
 
+const WRITE_DEBUG_IMAGE: bool = true;
+
+/// For fun, detect resource patches in image with OpenCV.
 pub struct Step04 {}
 
 impl Step04 {
@@ -33,34 +37,30 @@ impl Step for Step04 {
         "step04-contours".to_string()
     }
 
-    /// Detect resource patches in image with OpenCV.
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
-        let previous_step_dir = params.previous_step_dir();
+        let mut surface = VSurface::load_from_last_step(&params)?;
 
-        let surface = Surface::load(previous_step_dir);
-
-        let surface_raw_path = previous_step_dir.join("surface-raw.dat");
+        let surface_raw_path = VSurface::path_pixel_buffer_from_last_step(&params);
         tracing::debug!("Loading {}", surface_raw_path.display());
-        let disk_patches = detector(&surface_raw_path, &surface, &params.step_out_dir);
+        let disk_patches = detector(&surface, &params.step_out_dir);
+        surface.add_patches(disk_patches);
 
-        disk_patches.save(&params.step_out_dir);
-
-        // write_surface_with_all_patches_wrapped(&mut surface, &disk_patches);
-        // surface.save(&params.step_out_dir);
+        if WRITE_DEBUG_IMAGE {
+            write_surface_with_all_patches_wrapped(&mut surface);
+        }
+        surface.save(&params.step_out_dir)?;
 
         Ok(())
     }
 }
 
 #[allow(dead_code)]
-fn write_surface_with_all_patches_wrapped(surface: &mut Surface, disk_patches: &DiskPatch) {
-    let mut img = surface.get_buffer_to_cv();
-    for patches in disk_patches.patches.values() {
-        let vec: Vec<Rect> = patches.iter().map(|patch| patch.patch_to_rect()).collect();
-        draw_patch_border(&mut img, vec);
-    }
-    let raw: &[Pixel] = unsafe { transmute(img.data_bytes().unwrap()) };
-    surface.buffer = Vec::from(raw);
+fn write_surface_with_all_patches_wrapped(surface: &mut VSurface) {
+    let mut img = surface.to_entity_cv_image(None);
+    draw_patch_border(
+        &mut img,
+        surface.get_patches_iter().into_iter().map(|e| e.to_rect()),
+    );
 }
 
 fn write_png(path: &Path, img: &Mat) {
@@ -68,29 +68,22 @@ fn write_png(path: &Path, img: &Mat) {
     imwrite(path.to_str().unwrap(), img, &Vector::new()).unwrap();
 }
 
-fn detector(surface_raw_path: &Path, surface_meta: &Surface, out_dir: &Path) -> DiskPatch {
-    let mut disk = DiskPatch::default();
+fn detector(surface_meta: &VSurface, out_dir: &Path) -> Vec<VPatch> {
+    let mut patches: Vec<VPatch> = Vec::new();
     for pixel in Pixel::iter() {
         if pixel.is_resource() {
-            let patches = detect_pixel(surface_raw_path, surface_meta, out_dir, &pixel);
-            disk.patches.insert(pixel, patches);
+            let detected_patches = detect_pixel(surface_meta, out_dir, &pixel);
+            patches.extend(detected_patches.into_iter());
         }
     }
-    disk.area_box = surface_meta.area_box.clone();
-    disk
+    patches
 }
 
-fn detect_pixel(
-    surface_raw_path: &Path,
-    surface_meta: &Surface,
-    out_dir: &Path,
-    pixel: &Pixel,
-) -> Vec<Patch> {
-    let mut img = load_raw_image_with_surface(surface_raw_path, surface_meta, Some(pixel));
+fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: &Pixel) -> Vec<VPatch> {
+    let mut img = surface_meta.to_entity_cv_image(Some(pixel.clone()));
     let size = img.size().unwrap();
     tracing::debug!(
-        "Read {} size {}x{} type {}",
-        surface_raw_path.display(),
+        "Read size {}x{} type {}",
         size.width,
         size.height,
         img.typ(),
@@ -98,14 +91,17 @@ fn detect_pixel(
 
     let mut patch_rects = detect_patch_rectangles(&img);
 
-    let cloud = map_patch_corners_to_kdtree(patch_rects.iter().map(Patch::from));
-    detect_merge_nearby_patches(&mut patch_rects, &cloud, pixel);
+    let patch_corner_cloud = map_patch_corners_to_kdtree(patch_rects.iter());
+    detect_merge_nearby_patches(&mut patch_rects, &patch_corner_cloud, pixel);
 
-    draw_patch_border(&mut img, patch_rects.clone());
+    draw_patch_border(&mut img, patch_rects.iter().cloned());
     let debug_image_name = format!("cv-{}.png", pixel.as_ref());
     write_png(&out_dir.join(debug_image_name), &img);
 
-    patch_rects.into_iter().map(Patch::from).collect()
+    patch_rects
+        .into_iter()
+        .map(|e| VPatch::new_from_rect(e, pixel.clone()))
+        .collect()
 }
 
 fn detect_patch_rectangles(base: &Mat) -> Vec<Rect> {
@@ -145,6 +141,7 @@ fn detect_patch_rectangles(base: &Mat) -> Vec<Rect> {
     rects
 }
 
+/// Merge, for example Oil wells patches into a single Oil patch.   
 fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree, pixel: &Pixel) {
     let mut search_square_size = 0;
     // find largest size
@@ -205,13 +202,16 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree,
         // lazy opencv way
         let mut corners: Vec<Point> = Vec::new();
         for nearby_rect in &nearby_rects {
-            corners.push(Point::new(nearby_rect.x, nearby_rect.y));
-            corners.push(Point::new(
-                nearby_rect.x + nearby_rect.width,
-                nearby_rect.y + nearby_rect.height,
-            ));
+            corners.push(VPoint::new(nearby_rect.x, nearby_rect.y).to_cv_point());
+            corners.push(
+                VPoint::new(
+                    nearby_rect.x + nearby_rect.width,
+                    nearby_rect.y + nearby_rect.height,
+                )
+                .to_cv_point(),
+            );
         }
-        let super_rect = bounding_rect(&Vector::from_slice(&corners)).unwrap();
+        let super_rect = get_cv_bounding_rect(corners);
 
         // tracing::debug!("====");
         // tracing::debug!(
@@ -241,7 +241,7 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree,
     tracing::debug!("patches with merge replacements {}", patch_rects.len());
 }
 
-fn draw_patch_border(img: &mut Mat, rects: Vec<Rect>) {
+fn draw_patch_border(img: &mut Mat, rects: impl Iterator<Item = Rect>) {
     for rect in rects {
         rectangle(img, rect, Pixel::Highlighter.scalar_cv(), 2, LINE_8, 0).unwrap();
     }

@@ -1,23 +1,25 @@
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
-use opencv::core::Mat;
+use crate::surfacev::vsurface::VSurface;
+use opencv::core::{Mat, Point, Rect, Vector};
+use opencv::imgproc::bounding_rect;
 use std::fs::read;
 use std::path::Path;
+use tracing::debug;
 
 pub fn load_raw_image_with_surface(
     path: &Path,
-    surface_meta: &Surface,
+    surface_meta: &VSurface,
     pixel_opt: Option<&Pixel>,
 ) -> Mat {
-    load_cv_from_path_filtered(
-        path,
-        surface_meta.height as usize,
-        surface_meta.width as usize,
-        pixel_opt,
-    )
+    let side_length = surface_meta.xy_side_length();
+    debug!("side length {}", side_length);
+    debug!("Loading {}", surface_meta);
+    debug!("path {}", path.display());
+    load_cv_from_path_filtered(path, side_length, side_length, pixel_opt)
 }
 
-pub fn load_cv_from_path_filtered(
+fn load_cv_from_path_filtered(
     path: &Path,
     rows: usize,
     columns: usize,
@@ -27,12 +29,13 @@ pub fn load_cv_from_path_filtered(
     load_cv_from_buffer_filtered(&mut surface_raw, rows, columns, filter)
 }
 
-pub fn load_cv_from_buffer_filtered(
+fn load_cv_from_buffer_filtered(
     buffer: &mut [u8],
     rows: usize,
     columns: usize,
     filter: Option<&Pixel>,
 ) -> Mat {
+    debug!("buffer {}", buffer.len());
     if let Some(pixel) = filter {
         let pixel_id = pixel.clone() as u8;
         // let mut found_ids: Vec<u8> = Vec::new();
@@ -62,14 +65,18 @@ pub fn load_cv_from_buffer_filtered(
     load_cv_from_buffer(buffer, rows, columns)
 }
 
-pub fn load_cv_from_buffer(buffer: &[u8], rows: usize, columns: usize) -> Mat {
+fn load_cv_from_buffer(buffer: &[u8], rows: usize, columns: usize) -> Mat {
     Mat::from_slice_rows_cols(buffer, rows, columns).unwrap()
 }
 
-pub fn load_raw_image_from_slice(surface_meta: &Surface, raw: &[u8]) -> Mat {
+fn load_raw_image_from_slice(surface_meta: &Surface, raw: &[u8]) -> Mat {
     load_cv_from_buffer(
         raw,
         surface_meta.height as usize,
         surface_meta.width as usize,
     )
+}
+
+pub fn get_cv_bounding_rect(points: Vec<Point>) -> Rect {
+    bounding_rect(&Vector::from_slice(&points)).unwrap()
 }

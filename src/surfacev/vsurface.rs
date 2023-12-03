@@ -2,14 +2,17 @@ use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::ventity_buffer::{VEntityBuffer, VEntityXY};
+use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::VPoint;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
 use num_format::ToFormattedString;
+use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
+use std::fmt::{Display, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
@@ -23,6 +26,7 @@ use tracing::{debug, info, trace};
 pub struct VSurface {
     pixels: VEntityBuffer<VPixel>,
     entities: VEntityBuffer<VEntity>,
+    patches: Vec<VPatch>,
 }
 
 impl VSurface {
@@ -32,6 +36,7 @@ impl VSurface {
         VSurface {
             pixels: VEntityBuffer::new(radius),
             entities: VEntityBuffer::new(radius),
+            patches: Vec::new(),
         }
     }
 
@@ -61,11 +66,11 @@ impl VSurface {
     }
 
     fn load_entity_buffers(&mut self, out_dir: &Path) -> VResult<()> {
-        let pixel_path = &path_pixel_buffer(out_dir);
+        let pixel_path = &path_pixel_xy_indexes(out_dir);
         debug!("loading pixel buffer from {}", pixel_path.display());
         self.pixels.load_xy_file(pixel_path)?;
 
-        let entity_path = &path_entity_buffer(out_dir);
+        let entity_path = &path_entity_xy_indexes(out_dir);
         debug!("loading entity buffer from {}", entity_path.display());
         self.entities.load_xy_file(entity_path)?;
 
@@ -74,6 +79,10 @@ impl VSurface {
 
     pub fn load_from_last_step(params: &StepParams) -> VResult<Self> {
         Self::load(params.previous_step_dir())
+    }
+
+    pub fn path_pixel_buffer_from_last_step(params: &StepParams) -> PathBuf {
+        path_pixel_xy_indexes(params.previous_step_dir())
     }
 
     //</editor-fold>
@@ -132,15 +141,19 @@ impl VSurface {
     }
 
     fn save_entity_buffers(&self, out_dir: &Path) -> VResult<()> {
-        let pixel_path = &path_pixel_buffer(out_dir);
+        let pixel_path = path_pixel_xy_indexes(out_dir);
         debug!("writing pixel buffer to {}", pixel_path.display());
-        self.pixels.save_xy_file(pixel_path)?;
+        self.pixels.save_xy_file(&pixel_path)?;
 
-        let entity_path = &path_entity_buffer(out_dir);
+        let entity_path = path_entity_xy_indexes(out_dir);
         debug!("writing entity buffer to {}", entity_path.display());
-        self.entities.save_xy_file(entity_path)?;
+        self.entities.save_xy_file(&entity_path)?;
 
         Ok(())
+    }
+
+    pub fn to_entity_cv_image(&self, filter: Option<Pixel>) -> Mat {
+        self.pixels.pixel_map_xy_to_cv(filter)
     }
 
     //</editor-fold>
@@ -150,10 +163,34 @@ impl VSurface {
         Ok(())
     }
 
+    pub fn add_patches(&mut self, patches: Vec<VPatch>) {
+        self.patches.extend(patches)
+    }
+
+    pub fn get_patches_iter(&self) -> impl IntoIterator<Item = &VPatch> {
+        self.patches.iter()
+    }
+
     pub fn crop(&mut self, new_radius: u32) {
         info!("Crop from {} to {}", self.entities.radius(), new_radius);
         self.entities.crop(new_radius);
         self.pixels.crop(new_radius);
+    }
+
+    pub fn xy_side_length(&self) -> usize {
+        self.entities.diameter()
+    }
+}
+
+impl Display for VSurface {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "VSurface pixels {{ {} }} entities {{ {} }} patches {{ {} }}",
+            self.pixels,
+            self.entities,
+            self.patches.len()
+        )
     }
 }
 
@@ -175,16 +212,16 @@ fn save_png(path: &Path, rgb: &[u8], width: u32, height: u32) {
     );
 }
 
+fn path_pixel_xy_indexes(out_dir: &Path) -> PathBuf {
+    out_dir.join("pixel-xy-indexes.dat")
+}
+
+fn path_entity_xy_indexes(out_dir: &Path) -> PathBuf {
+    out_dir.join("entity-xy-indexes.dat")
+}
+
 fn path_state(out_dir: &Path) -> PathBuf {
     out_dir.join("vsurface-state.json")
-}
-
-fn path_pixel_buffer(out_dir: &Path) -> PathBuf {
-    out_dir.join("pixel-buffer.dat")
-}
-
-fn path_entity_buffer(out_dir: &Path) -> PathBuf {
-    out_dir.join("entity-buffer.dat")
 }
 
 //</editor-fold>
@@ -198,6 +235,12 @@ pub(crate) struct VPixel {
 impl VEntityXY for VPixel {
     fn get_xy(&self) -> Vec<VPoint> {
         vec![self.start]
+    }
+}
+
+impl VPixel {
+    pub fn pixel(&self) -> &Pixel {
+        &self.pixel
     }
 }
 

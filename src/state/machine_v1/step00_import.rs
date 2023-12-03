@@ -10,6 +10,7 @@ use tracing::info;
 
 pub struct Step00 {}
 
+/// Import loop-miner-scanner data into usable `VSurface`
 impl Step00 {
     pub(crate) fn new_boxed() -> Box<dyn Step> {
         Box::new(Step00 {})
@@ -21,8 +22,6 @@ impl Step for Step00 {
         "step00-import".to_string()
     }
 
-    /// Load Factorio Mod's exported map data JSON into a huge single image
-    /// representing the whole map.
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let lua_dir = Path::new("work/chunk1000");
         let data = LuaData::open(lua_dir);

@@ -4,6 +4,7 @@ use crate::surfacev::vsurface::VSurface;
 
 pub struct Step03 {}
 
+/// Temporarily reduce surface size for easier development
 impl Step03 {
     pub fn new_boxed() -> Box<dyn Step> {
         Box::new(Step03 {})
@@ -17,7 +18,6 @@ impl Step for Step03 {
         "step03-crop".to_string()
     }
 
-    /// Temporarily reduce surface size for easier development
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let mut surface = VSurface::load_from_last_step(&params)?;
 

@@ -67,14 +67,10 @@ impl SurfaceDiff {
 
 #[cfg(test)]
 mod test {
-    use crate::opencv::{load_cv_from_buffer, load_raw_image_from_slice};
     use crate::simd::SSE_BITS;
     use crate::simd_diff::SurfaceDiff;
     use crate::surface::pixel::Pixel;
     use crate::surface::surface::Surface;
-    use num_format::Locale::he;
-    use opencv::core::Mat;
-    use std::mem::transmute;
 
     #[test]
     fn test() {

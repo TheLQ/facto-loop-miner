@@ -2,13 +2,10 @@ use crate::state::disk::State;
 use crate::state::err::XMachineResult;
 use crate::surface::metric::Metrics;
 use crate::util::duration::BasicWatch;
-use crate::LOCALE;
-use num_format::ToFormattedString;
 use std::cell::RefCell;
 use std::fs::{create_dir, read_dir, remove_dir};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::time::Instant;
 use tracing::error;
 
 type StepBox = Box<dyn Step>;
@@ -57,8 +54,8 @@ impl Machine {
             }
 
             let step_out_dir = output_dir.join(step.name());
-            let changed = state.borrow_mut().update_modified(&step_out_dir);
-            if changed {
+            // let changed = state.borrow_mut().update_modified(&step_out_dir);
+            if !step_out_dir.exists() {
                 create_dir(&step_out_dir).unwrap();
                 let metrics = Rc::new(RefCell::new(Metrics::new(step.name())));
                 tracing::info!("=== Found changes, transforming");

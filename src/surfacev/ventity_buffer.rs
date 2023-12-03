@@ -1,13 +1,19 @@
+use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::vpoint::VPoint;
+use crate::surfacev::vsurface::VPixel;
+use crate::LOCALE;
+use num_format::ToFormattedString;
+use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
+use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::hash::Hash;
 use std::io::{BufWriter, Read, Write};
 use std::mem::transmute;
 use std::path::Path;
-use tracing::debug;
+use tracing::{debug, trace};
 
 pub trait VEntityXY {
     fn get_xy(&self) -> Vec<VPoint>;
@@ -22,6 +28,7 @@ pub struct VEntityBuffer<E> {
     /// More efficient to store a (radius * 2)^2 length Array as a raw file instead of JSON  
     #[serde(skip)]
     xy_to_entity: Vec<usize>,
+    /// A *square* centered on 0,0
     radius: u32,
 }
 
@@ -30,11 +37,17 @@ where
     E: VEntityXY + Clone + Eq + Hash,
 {
     pub fn new(radius: u32) -> Self {
-        VEntityBuffer {
+        let mut res = VEntityBuffer {
             entities: Vec::new(),
-            xy_to_entity: vec![0; Self::_xy_array_length_from_radius(radius)],
+            xy_to_entity: Vec::new(),
             radius,
-        }
+        };
+        res.init_xy_to_entity();
+        res
+    }
+
+    fn init_xy_to_entity(&mut self) {
+        self.xy_to_entity = vec![0; Self::_xy_array_length_from_radius(self.radius)]
     }
 
     pub fn radius(&self) -> u32 {
@@ -188,12 +201,20 @@ where
     pub fn load_xy_file(&mut self, path: &Path) -> VResult<()> {
         let mut file = File::open(path).map_err(VError::io_error(path))?;
 
+        // Serde does not use new() so this is still uninitialized
+        self.init_xy_to_entity();
+
         let working_u8: &mut [u8] = unsafe { transmute(self.xy_to_entity.as_mut_slice()) };
         file.read_exact(working_u8).map_err(|e| VError::IoError {
             e,
             path: path.to_string_lossy().to_string(),
             backtrace: Backtrace::capture(),
         })?;
+        trace!(
+            "working length {} backing length {}",
+            working_u8.len(),
+            self.xy_to_entity.len()
+        );
 
         Ok(())
     }
@@ -209,5 +230,107 @@ where
     fn _xy_array_length_from_radius(radius: u32) -> usize {
         (radius as usize * 2).pow(2)
     }
+
+    pub fn map_xy_to_vec<const MAPPED_SIZE: usize>(
+        &self,
+        mapper: impl Fn(&E) -> [u8; MAPPED_SIZE],
+    ) -> Vec<u8> {
+        match 1 {
+            0 => self._map_xy_to_vec_targeted(mapper),
+            1 => self._map_xy_to_vec_inlined(mapper),
+            _ => panic!("unknown"),
+        }
+    }
+
+    fn _map_xy_to_vec_inlined<const INLINED_MAPPED_SIZE: usize>(
+        &self,
+        mapper: impl Fn(&E) -> [u8; INLINED_MAPPED_SIZE],
+    ) -> Vec<u8> {
+        let result: Vec<u8> = self
+            .xy_to_entity
+            .iter()
+            .map(|index| &self.entities[*index])
+            .flat_map(mapper)
+            .collect();
+        assert_eq!(
+            result.len(),
+            self.xy_array_length_from_radius() * INLINED_MAPPED_SIZE,
+            "unexpected array size from base {} and mapper size {}",
+            self.xy_to_entity.len(),
+            INLINED_MAPPED_SIZE
+        );
+        result
+    }
+
+    fn _map_xy_to_vec_targeted<const TARGETED_MAPPED_SIZE: usize>(
+        &self,
+        mapper: impl Fn(&E) -> [u8; TARGETED_MAPPED_SIZE],
+    ) -> Vec<u8> {
+        let mut image = vec![0u8; self.xy_to_entity.len() * TARGETED_MAPPED_SIZE];
+        trace!("mapping {} total {}", TARGETED_MAPPED_SIZE, image.len());
+        for entity in &self.entities {
+            for entity_pos in entity.get_xy() {
+                let index = self.xy_to_index(entity_pos.x, entity_pos.y) * TARGETED_MAPPED_SIZE;
+                let color = mapper(entity);
+                if index + TARGETED_MAPPED_SIZE > image.len() {
+                    trace!("overflowing for index {}", index);
+                }
+                // todo recheck this for >1
+                if TARGETED_MAPPED_SIZE == 1 {
+                    image[index] = color[0];
+                } else {
+                    image[index..(index + TARGETED_MAPPED_SIZE)].copy_from_slice(&color);
+                }
+            }
+        }
+        trace!(
+            "mapped xy from {} to {}",
+            self.xy_to_entity.len(),
+            image.len()
+        );
+        image
+    }
+
     //</editor-fold>
+}
+
+impl<E> Display for VEntityBuffer<E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "VEntityBuffer radius {} entities {} xy {}",
+            self.radius,
+            self.entities.len().to_formatted_string(&LOCALE),
+            self.xy_to_entity.len().to_formatted_string(&LOCALE)
+        )
+    }
+}
+
+impl VEntityBuffer<VPixel> {
+    pub fn pixel_map_xy_to_cv(&self, filter: Option<Pixel>) -> Mat {
+        // let mapper = if let Some(filter) = filter {
+        //     move |e: &VPixel| {
+        //         if e.pixel() == &filter {
+        //             [e.pixel().to_owned() as u8]
+        //         } else {
+        //             [0]
+        //         }
+        //     }
+        // } else {
+        //     move |e: &VPixel| [e.pixel().to_owned() as u8]
+        // };
+        let output = self.map_xy_to_vec(|e| {
+            if let Some(filter) = &filter {
+                if e.pixel() == filter {
+                    [e.pixel().to_owned() as u8]
+                } else {
+                    [0]
+                }
+            } else {
+                [e.pixel().to_owned() as u8]
+            }
+        });
+        let side_length = self.diameter();
+        Mat::from_slice_rows_cols(&output, side_length, side_length).unwrap()
+    }
 }

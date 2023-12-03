@@ -2,10 +2,11 @@ use crate::navigator::mori::{mori_start, write_rail, Rail, RailDirection};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::state::machine_v1::step10_base::REMOVE_RESOURCE_BASE_TILES;
-use crate::surface::patch::{map_patch_corners_to_kdtree, DiskPatch, Patch};
+use crate::surface::patch::{DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
 use crate::surface::sector::SectorSide;
 use crate::surface::surface::{PointU32, Surface};
+use crate::PixelKdTree;
 use kiddo::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
 use opencv::core::Point;
@@ -197,7 +198,8 @@ fn ordered_patches_by_radial_base_corner(disk_patches: &DiskPatch) -> Vec<&Patch
     let pixel = Pixel::IronOre;
     let patches = disk_patches.patches.get(&pixel).unwrap();
 
-    let cloud = map_patch_corners_to_kdtree(patches.iter().cloned());
+    // let cloud = map_patch_corners_to_kdtree(patches.iter().map(|e| e.patch_to_rect()));
+    let cloud: PixelKdTree = todo!();
 
     let base_corner = base_bottom_right_corner();
     let needle = point_to_slice_f32(&base_corner);
