@@ -13,7 +13,6 @@ use std::backtrace::Backtrace;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
-use std::time::Instant;
 use tracing::{debug, info, trace};
 
 /// A map of background pixels (eg resources, water) and the large entities on top
@@ -37,13 +36,13 @@ impl VSurface {
     }
 
     pub fn load(out_dir: &Path) -> VResult<Self> {
-        let load_time = BasicWatch::new();
+        let load_time = BasicWatch::start();
         let mut surface = Self::load_state(out_dir)?;
         surface.load_entity_buffers(out_dir)?;
         info!(
-            "Loaded VSurface from {} in {} seconds",
+            "Loaded VSurface from {} in {}",
             out_dir.display(),
-            load_time.get_duration_seconds()
+            load_time
         );
         Ok(surface)
     }
@@ -107,7 +106,7 @@ impl VSurface {
     }
 
     fn save_pixel_img_colorized(&self, out_dir: &Path) -> VResult<()> {
-        let start_time = Instant::now();
+        let build_watch = BasicWatch::start();
         let pixel_map_path = out_dir.join("pixel-map.png");
         debug!("Saving RGB dump image to {}", pixel_map_path.display());
         let entities = self.pixels.new_xy_entity_array();
@@ -116,15 +115,14 @@ impl VSurface {
         for (i, pixel) in entities.enumerate() {
             let color = &pixel.pixel.color();
             let start = i * color.len();
-            output[start] = color[0];
+            output[start] = color[2];
             output[start + 1] = color[1];
-            output[start + 2] = color[2];
+            output[start + 2] = color[0];
         }
-        let duration = Instant::now() - start_time;
         trace!(
-            "built entity array of {} in {} seconds",
+            "built entity array of {} in {}",
             output.len().to_formatted_string(&LOCALE),
-            duration.as_secs()
+            build_watch
         );
 
         // &out_dir.join(format!("{}full.png", name_prefix))

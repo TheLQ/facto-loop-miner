@@ -1,6 +1,7 @@
 use crate::state::disk::State;
 use crate::state::err::XMachineResult;
 use crate::surface::metric::Metrics;
+use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use num_format::ToFormattedString;
 use std::cell::RefCell;
@@ -62,7 +63,7 @@ impl Machine {
                 let metrics = Rc::new(RefCell::new(Metrics::new(step.name())));
                 tracing::info!("=== Found changes, transforming");
 
-                let start = Instant::now();
+                let mut step_watch = BasicWatch::start();
 
                 let transformer_result = step.transformer(StepParams {
                     step_out_dir: step_out_dir.clone(),
@@ -74,7 +75,7 @@ impl Machine {
                     error!("Machine failed! {}\n{}", e, e.my_backtrace());
                     return;
                 }
-                let end = Instant::now();
+                step_watch.stop();
 
                 RefCell::into_inner(Rc::into_inner(metrics).unwrap()).log_final();
 
@@ -86,10 +87,7 @@ impl Machine {
                     state.borrow_mut().update_modified(&step_out_dir);
                 }
 
-                tracing::debug!(
-                    "Step Elapsed {}",
-                    (end - start).as_millis().to_formatted_string(&LOCALE),
-                );
+                tracing::debug!("Step Completed in {}", step_watch,);
             } else {
                 tracing::info!("=== No Changes Found")
             }
