@@ -12,7 +12,6 @@ use num_format::ToFormattedString;
 use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
-use std::cell::Cell;
 use std::fmt::{Display, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter};

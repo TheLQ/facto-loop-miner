@@ -3,10 +3,10 @@ use crate::state::err::XMachineResult;
 use crate::surface::metric::Metrics;
 use crate::util::duration::BasicWatch;
 use std::cell::RefCell;
-use std::fs::{create_dir, read_dir, remove_dir};
+use std::fs::{create_dir, read_dir, remove_dir, remove_dir_all};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use tracing::error;
+use tracing::{debug, error, info, warn};
 
 type StepBox = Box<dyn Step>;
 pub const DEATH_STEP_NAME: &str = "step99-death";
@@ -46,19 +46,27 @@ impl Machine {
         tracing::debug!("[Machine] Steps {}", step_names.join(","));
 
         let mut step_history_out_dirs = Vec::new();
+        let mut enabled = false;
         for step in &self.steps {
-            tracing::info!("=== {}", step.name());
+            let header_prefix = format!("=== {}", step.name());
             if step.name() == DEATH_STEP_NAME {
-                tracing::warn!("RIP");
+                warn!("{} - RIP", header_prefix);
                 break;
             }
 
             let step_out_dir = output_dir.join(step.name());
-            // let changed = state.borrow_mut().update_modified(&step_out_dir);
-            if !step_out_dir.exists() {
+            if !enabled {
+                // let changed = state.borrow_mut().update_modified(&step_out_dir);
+                enabled = !step_out_dir.exists();
+            }
+
+            if enabled {
+                if step_out_dir.exists() {
+                    remove_dir_all(&step_out_dir).unwrap()
+                }
                 create_dir(&step_out_dir).unwrap();
                 let metrics = Rc::new(RefCell::new(Metrics::new(step.name())));
-                tracing::info!("=== Found changes, transforming");
+                info!("{} - Transforming", header_prefix);
 
                 let mut step_watch = BasicWatch::start();
 
@@ -84,9 +92,9 @@ impl Machine {
                     state.borrow_mut().update_modified(&step_out_dir);
                 }
 
-                tracing::debug!("Step Completed in {}", step_watch,);
+                debug!("Step Completed in {}", step_watch,);
             } else {
-                tracing::info!("=== No Changes Found")
+                info!("{} - No Changes Found", header_prefix)
             }
             step_history_out_dirs.push(step_out_dir.clone());
         }

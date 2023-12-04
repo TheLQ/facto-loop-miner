@@ -78,7 +78,7 @@ fn detector(surface_meta: &VSurface, out_dir: &Path) -> Vec<VPatch> {
 }
 
 fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: &Pixel) -> Vec<VPatch> {
-    let mut img = surface_meta.to_pixel_cv_image(Some(pixel.clone()));
+    let img = surface_meta.to_pixel_cv_image(Some(pixel.clone()));
     let size = img.size().unwrap();
     tracing::debug!(
         "Read size {}x{} type {}",

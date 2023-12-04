@@ -1,5 +1,6 @@
 use crate::gamedata::compressed_export::parse_exported_lua_data;
 use crate::surface::pixel::Pixel;
+use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use num_format::ToFormattedString;
 use opencv::core::Point2f;
@@ -17,16 +18,16 @@ pub struct LuaData {
 
 impl LuaData {
     pub fn open(input_dir: &Path) -> Self {
-        let start_time = Instant::now();
+        let read_watch = BasicWatch::start();
         let input_path = input_dir.join("big-entities-a.json");
         let mut raw_input = read(&input_path).unwrap();
         debug!(
-            "-- Read Lua export file {} in {} seconds",
+            "-- Read Lua export JSON {} in {}",
             input_path.display(),
-            (Instant::now() - start_time).as_secs()
+            read_watch
         );
 
-        let start_time = Instant::now();
+        let load_watch = Instant::now();
         // let data_inner: ExportCompressedVec = open_data_file(&input_path);
         // let data_inner: ExportCompressedv2 = open_data_file(&input_path, raw_input);
         let entities = parse_exported_lua_data(&mut raw_input, |name, x, y| LuaEntity {
@@ -39,12 +40,11 @@ impl LuaData {
             tiles: Vec::new(),
             entities,
         };
-        let duration = Instant::now() - start_time;
         info!(
-            "-- Loaded Lua {} tiles {} entities in {} seconds",
+            "-- Loaded Lua {} tiles {} entities in {}",
             data.tiles.len().to_formatted_string(&LOCALE),
             data.entities.len().to_formatted_string(&LOCALE),
-            duration.as_secs()
+            read_watch
         );
         // debug!("-- sample 0 {:?}", data.entities[0]);
         // debug!("-- sample 1 {:?}", data.entities[1]);

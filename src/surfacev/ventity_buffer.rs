@@ -2,6 +2,7 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VPixel;
+use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use num_format::ToFormattedString;
 use opencv::core::Mat;
@@ -10,10 +11,11 @@ use std::backtrace::Backtrace;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::hash::Hash;
-use std::io::{BufWriter, Read, Write};
-use std::mem::transmute;
+use std::io::{Read, Write};
 use std::path::Path;
 use tracing::{debug, trace};
+
+const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
 
 pub trait VEntityXY {
     fn get_xy(&self) -> &[VPoint];
@@ -178,27 +180,23 @@ where
         self.xy_to_entity = vec![0usize; new_xy_length];
 
         for i in 0..self.entities.len() {
-            self.add_positions(i, &self.entities[i].get_xy().to_owned());
+            let xy_insertable = self.entities[i].get_xy().to_owned();
+            self.add_positions(i, &xy_insertable);
         }
     }
 
     //<editor-fold desc="io">
     pub fn save_xy_file(&self, path: &Path) -> VResult<()> {
-        let file = File::create(path).map_err(|e| VError::IoError {
-            e,
-            path: path.to_string_lossy().to_string(),
-            backtrace: Backtrace::capture(),
-        })?;
-        let mut writer = BufWriter::new(file);
-        for entry in &self.xy_to_entity {
-            let bytes = entry.to_ne_bytes();
-            writer.write(&bytes).map_err(|e| VError::IoError {
-                e,
-                path: path.to_string_lossy().to_string(),
-                backtrace: Backtrace::capture(),
-            })?;
-        }
-
+        let mut file = File::create(path).map_err(VError::io_error(path))?;
+        let serialize_watch = BasicWatch::start();
+        let big_xy_bytes: Vec<u8> = self
+            .xy_to_entity
+            .iter()
+            .flat_map(|e| e.to_ne_bytes())
+            .collect();
+        trace!("Serialized xy in {}", serialize_watch);
+        file.write_all(&big_xy_bytes)
+            .map_err(VError::io_error(path))?;
         Ok(())
     }
 
@@ -208,17 +206,21 @@ where
         // Serde does not use new() so this is still uninitialized
         self.init_xy_to_entity();
 
-        let working_u8: &mut [u8] = unsafe { transmute(self.xy_to_entity.as_mut_slice()) };
-        file.read_exact(working_u8).map_err(|e| VError::IoError {
-            e,
-            path: path.to_string_lossy().to_string(),
-            backtrace: Backtrace::capture(),
-        })?;
-        trace!(
-            "working length {} backing length {}",
-            working_u8.len(),
-            self.xy_to_entity.len()
-        );
+        let mut big_xy_bytes: Vec<u8> = Vec::new();
+        file.read_to_end(&mut big_xy_bytes)
+            .map_err(VError::io_error(path))?;
+
+        // TODO: Slow :-(
+        let deserialize_watch = BasicWatch::start();
+        for (i, xy_index) in big_xy_bytes
+            .into_iter()
+            .array_chunks::<USIZE_BYTES>()
+            .map(usize::from_ne_bytes)
+            .enumerate()
+        {
+            self.xy_to_entity[i] = xy_index;
+        }
+        trace!("Deserialized xy in {}", deserialize_watch);
 
         Ok(())
     }

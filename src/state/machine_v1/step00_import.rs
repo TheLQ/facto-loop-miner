@@ -4,8 +4,8 @@ use crate::state::machine::{Step, StepParams};
 use crate::surfacev::err::VResult;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
+use crate::util::duration::BasicWatch;
 use std::path::Path;
-use std::time::Instant;
 use tracing::info;
 
 pub struct Step00 {}
@@ -26,15 +26,12 @@ impl Step for Step00 {
         let lua_dir = Path::new("work/chunk1000");
         let data = LuaData::open(lua_dir);
 
-        let start_time = Instant::now();
+        let convert_watch = BasicWatch::start();
         let radius = find_radius(&data) as u32;
         let mut surface = VSurface::new(radius);
         translate_entities_to_image(&data.entities, &mut surface, &params)?;
         translate_entities_to_image(&data.tiles, &mut surface, &params)?;
-        info!(
-            "Converted in {} seconds",
-            (Instant::now() - start_time).as_secs()
-        );
+        info!("Converted in {}", convert_watch);
 
         surface.save(&params.step_out_dir)?;
 
