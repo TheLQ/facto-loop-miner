@@ -6,10 +6,14 @@ use crate::surface::metric::Metrics;
 use crate::surface::patch::{map_patch_map_to_kdtree, DiskPatch};
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
+use crate::surfacev::err::VResult;
+use crate::surfacev::vpoint::VPoint;
+use crate::surfacev::vsurface::VSurface;
 use crate::TILES_PER_CHUNK;
 use opencv::core::Point;
 use std::collections::HashMap;
 use std::ops::{Add, Mul};
+use tracing::debug;
 
 pub struct Step10 {}
 
@@ -25,15 +29,12 @@ impl Step for Step10 {
     }
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
-        let mut surface = Surface::load_from_step_history(&params);
-        let mut patches = DiskPatch::load_from_step_history(&params);
+        let mut surface = VSurface::load_from_last_step(&params)?;
 
-        draw_mega_box(&mut surface, &mut params.metrics.borrow_mut(), &mut patches);
+        draw_mega_box(&mut surface, &mut params.metrics.borrow_mut())?;
         // draw_resource_exclude(&mut surface, &mut params.metrics.borrow_mut(), &mut patches);
-        exclude_patches(&mut surface, &mut params.metrics.borrow_mut(), &mut patches);
-
-        surface.save(&params.step_out_dir);
-        patches.save(&params.step_out_dir);
+        // exclude_patches(&mut surface, &mut params.metrics.borrow_mut(), &mut patches);
+        surface.save(&params.step_out_dir)?;
 
         Ok(())
     }
@@ -48,26 +49,16 @@ pub const REMOVE_RESOURCE_BASE_TILES: i32 = REMOVE_RESOURCE_BASE_CHUNKS * TILES_
 pub const REMOVE_RESOURCE_BORDER_TILES: i32 =
     REMOVE_RESOURCE_BORDER_CHUNKS * TILES_PER_CHUNK as i32;
 
-pub fn draw_mega_box(img: &mut Surface, metrics: &mut Metrics, patches: &mut DiskPatch) {
+pub fn draw_mega_box(surface: &mut VSurface, metrics: &mut Metrics) -> VResult<()> {
     let tiles = CENTRAL_BASE_TILES;
-    for (root_x, root_y) in points_in_centered_box(tiles, &img.area_box) {
-        let root_x = root_x as i32;
-        let root_y = root_y as i32;
-        if !((root_x > -tiles && root_x < tiles) && (root_y > -tiles && root_y < tiles)) {
-            img.set_pixel(Pixel::EdgeWall, root_x as u32, root_y as u32);
+    for point in points_in_centered_box(tiles as u32, VPoint { x: 0, y: 0 }) {
+        if !point.is_within_center_area(tiles as u32) {
+            surface.set_pixel(point, Pixel::EdgeWall)?;
             metrics.increment("base-box");
         }
     }
-
-    tracing::debug!("megabox?")
-}
-
-fn exclude_patches(img: &mut Surface, metrics: &mut Metrics, disk_patches: &mut DiskPatch) {
-    // base remove
-    let tiles = REMOVE_RESOURCE_BASE_TILES;
-    for (root_x, root_y) in points_in_centered_box(tiles, &img.area_box) {
-        let test = disk_patches.patches.get(&Pixel::IronOre).unwrap();
-    }
+    debug!("megabox?");
+    Ok(())
 }
 
 fn draw_resource_exclude(img: &mut Surface, metrics: &mut Metrics, disk_patches: &mut DiskPatch) {
@@ -165,21 +156,21 @@ where
     width * y + x
 }
 
-fn points_in_centered_box(tiles: i32, area_box: &GameLocator) -> Vec<(u32, u32)> {
+fn points_in_centered_box(radius: u32, center: VPoint) -> Vec<VPoint> {
     let mut res = Vec::new();
 
-    let banner_width = 50;
-    let edge_neg = -tiles - banner_width;
-    let edge_pos = tiles + banner_width;
+    let radius = radius as i32;
+    let banner_width = 50i32;
+    let edge_neg: i32 = -radius - banner_width;
+    let edge_pos: i32 = radius + banner_width;
     // lazy way
     for root_x in edge_neg..edge_pos {
         for root_y in edge_neg..edge_pos {
-            res.push((
-                area_box.game_centered_x_i32(root_x),
-                area_box.game_centered_y_i32(root_y),
-            ))
+            res.push(VPoint {
+                x: center.x + root_x,
+                y: center.y + root_y,
+            })
         }
     }
-
     res
 }

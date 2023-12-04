@@ -14,6 +14,9 @@ impl VPoint {
     pub fn new(x: i32, y: i32) -> Self {
         VPoint { x, y }
     }
+    pub fn center() -> Self {
+        VPoint { x: 0, y: 0 }
+    }
 
     /// Factorio import. Offset is half the entity width
     pub fn from_f32_with_offset(point: Point2f, offset: f32) -> VResult<Self> {
@@ -47,6 +50,12 @@ impl VPoint {
             x: self.x,
             y: self.y,
         }
+    }
+
+    pub fn is_within_center_area(&self, center_radius: u32) -> bool {
+        let center_radius = center_radius as i32;
+        (self.x > -center_radius && self.x < center_radius)
+            && (self.y > -center_radius && self.y < center_radius)
     }
 }
 
