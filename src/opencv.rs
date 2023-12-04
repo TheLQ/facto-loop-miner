@@ -1,5 +1,6 @@
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
+use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use opencv::core::{Mat, Point, Rect, Vector};
 use opencv::imgproc::bounding_rect;
@@ -79,4 +80,19 @@ fn load_raw_image_from_slice(surface_meta: &Surface, raw: &[u8]) -> Mat {
 
 pub fn get_cv_bounding_rect(points: Vec<Point>) -> Rect {
     bounding_rect(&Vector::from_slice(&points)).unwrap()
+}
+
+pub fn combine_rects_into_big_rect<'a>(rects: impl IntoIterator<Item = &'a Rect>) -> Rect {
+    let mut corners: Vec<Point> = Vec::new();
+    for nearby_rect in rects {
+        corners.push(VPoint::new(nearby_rect.x, nearby_rect.y).to_cv_point());
+        corners.push(
+            VPoint::new(
+                nearby_rect.x + nearby_rect.width,
+                nearby_rect.y + nearby_rect.height,
+            )
+            .to_cv_point(),
+        );
+    }
+    get_cv_bounding_rect(corners)
 }

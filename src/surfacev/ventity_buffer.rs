@@ -327,7 +327,7 @@ impl VEntityBuffer<VPixel> {
         let output = self.map_xy_to_vec(|e| {
             if let Some(filter) = &filter {
                 if e.pixel() == filter {
-                    [e.pixel().to_owned() as u8]
+                    [Pixel::Highlighter as u8]
                 } else {
                     [0]
                 }

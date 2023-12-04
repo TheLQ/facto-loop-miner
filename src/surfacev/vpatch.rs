@@ -1,14 +1,14 @@
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vpoint::VPoint;
+use crate::surfacev::varea::VArea;
 use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
 #[derive(Serialize, Deserialize)]
 pub struct VPatch {
     pub resource: Pixel,
-    pub start: VPoint,
-    pub width: u32,
-    pub height: u32,
+    pub area: VArea,
+    pub pixel_indexes: Vec<usize>,
 }
 
 impl VPatch {
@@ -16,23 +16,19 @@ impl VPatch {
         if !resource.is_resource() {
             panic!("not a resource {:?}", resource);
         }
+        const ALERT: i32 = 1000;
+        // assert!(
+        //     rect.width < ALERT && rect.height < ALERT,
+        //     "rect probably too big {:?}",
+        //     rect
+        // );
+        if rect.width > ALERT || rect.height > ALERT {
+            warn!("rect probably too big {:?}", rect);
+        }
         VPatch {
             resource,
-            start: VPoint {
-                x: rect.x,
-                y: rect.y,
-            },
-            height: rect.height.try_into().unwrap(),
-            width: rect.width.try_into().unwrap(),
-        }
-    }
-
-    pub fn to_rect(&self) -> Rect {
-        Rect {
-            x: self.start.x,
-            y: self.start.y,
-            width: self.width as i32,
-            height: self.height as i32,
+            area: VArea::new_from_rect(&rect),
+            pixel_indexes: Vec::new(),
         }
     }
 }

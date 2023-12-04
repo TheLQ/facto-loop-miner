@@ -7,6 +7,7 @@ use std::backtrace::Backtrace;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
+use strum::IntoEnumIterator;
 use strum::{AsRefStr, EnumIter};
 
 #[derive(Serialize, Deserialize, AsRefStr, EnumIter, Debug, PartialEq, Clone, Eq, Hash)]
@@ -91,6 +92,10 @@ impl Pixel {
                 | Pixel::Coal
                 | Pixel::UraniumOre
         )
+    }
+
+    pub fn iter_resource() -> impl IntoIterator<Item = Self> {
+        Self::iter().filter(Pixel::is_resource)
     }
 }
 

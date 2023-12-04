@@ -32,7 +32,7 @@ pub enum VError {
     #[error("SimdJsonFail {e} for {path}")]
     SimdJsonFail {
         e: simd_json::Error,
-        path: Box<Path>,
+        path: String,
         backtrace: Backtrace,
     },
     #[error("NotADirectory {path}")]
@@ -51,7 +51,15 @@ impl VError {
         }
     }
 
-    /// IoError factory. Use like `read().map_err(VError::io_error)`
+    pub fn simd_json(path: &Path) -> impl FnOnce(simd_json::Error) -> Self + '_ {
+        |e| VError::SimdJsonFail {
+            e,
+            path: path.to_string_lossy().to_string(),
+            backtrace: Backtrace::capture(),
+        }
+    }
+
+    /// Use like `read().map_err(VError::io_error)`
     pub fn io_error(path: &Path) -> impl FnOnce(io::Error) -> Self + '_ {
         |e| VError::IoError {
             e,

@@ -55,13 +55,14 @@ impl VSurface {
     fn load_state(out_dir: &Path) -> VResult<Self> {
         let path = path_state(out_dir);
         let file = File::open(&path).map_err(VError::io_error(&path))?;
-        let surface = simd_json::serde::from_reader(BufReader::new(file)).map_err(|e| {
-            VError::SimdJsonFail {
-                e,
-                path: path.into_boxed_path(),
-                backtrace: Backtrace::capture(),
-            }
-        })?;
+        let load_watch = BasicWatch::start();
+        let surface = simd_json::serde::from_reader(BufReader::new(file))
+            .map_err(VError::simd_json(&path))?;
+        info!(
+            "Read and loaded surface state from {} in {}",
+            path.display(),
+            load_watch
+        );
         Ok(surface)
     }
 
@@ -99,18 +100,19 @@ impl VSurface {
 
     fn save_state(&self, out_dir: &Path) -> VResult<()> {
         let state_path = out_dir.join("vsurface-state.json");
-        debug!("Saving state JSON to {}", state_path.display());
+        let json_watch = BasicWatch::start();
         let file = OpenOptions::new()
             .create_new(true)
             .write(true)
             .open(state_path.clone())
             .map_err(VError::io_error(&state_path))?;
         let writer = BufWriter::new(file);
-        simd_json::to_writer(writer, self).map_err(|e| VError::SimdJsonFail {
-            e,
-            path: state_path.into_boxed_path(),
-            backtrace: Backtrace::capture(),
-        })?;
+        simd_json::to_writer(writer, self).map_err(VError::simd_json(&state_path))?;
+        debug!(
+            "Saving state JSON to {} in {}",
+            state_path.display(),
+            json_watch
+        );
 
         Ok(())
     }

@@ -52,6 +52,10 @@ impl VPoint {
         }
     }
 
+    pub fn to_slice_f32(&self) -> [f32; 2] {
+        [self.x as f32, self.y as f32]
+    }
+
     pub fn is_within_center_area(&self, center_radius: u32) -> bool {
         let center_radius = center_radius as i32;
         (self.x > -center_radius && self.x < center_radius)

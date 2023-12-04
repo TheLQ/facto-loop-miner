@@ -1,7 +1,6 @@
 use crate::navigator::resource_cloud::point_to_slice_f32;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
-use crate::surface::game_locator::GameLocator;
 use crate::surface::metric::Metrics;
 use crate::surface::patch::{map_patch_map_to_kdtree, DiskPatch};
 use crate::surface::pixel::Pixel;
