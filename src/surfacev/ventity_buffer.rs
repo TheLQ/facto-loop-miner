@@ -4,6 +4,7 @@ use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VPixel;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
+use itertools::*;
 use num_format::ToFormattedString;
 use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
@@ -156,6 +157,12 @@ where
         }
     }
 
+    pub fn remove_positions(&mut self, indexes: impl IntoIterator<Item = usize>) {
+        for index in indexes.into_iter().sorted().unique().rev() {
+            self.xy_to_entity.remove(index);
+        }
+    }
+
     /// crop entities then rebuild xy_to_entity lookup
     pub fn crop(&mut self, new_radius: u32) {
         self.radius = new_radius;
@@ -294,6 +301,10 @@ where
             image.len()
         );
         image
+    }
+
+    pub fn get_entity_by_index(&self, index: usize) -> &E {
+        &self.entities[index]
     }
 
     //</editor-fold>

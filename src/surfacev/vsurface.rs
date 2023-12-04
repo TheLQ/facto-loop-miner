@@ -8,10 +8,10 @@ use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
+use itertools::Itertools;
 use num_format::ToFormattedString;
 use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
-use std::backtrace::Backtrace;
 use std::fmt::{Display, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter};
@@ -185,6 +185,27 @@ impl VSurface {
 
     pub fn xy_side_length(&self) -> usize {
         self.entities.diameter()
+    }
+
+    pub fn remove_patches_within_radius(&mut self, radius: u32) {
+        let mut removed_points: Vec<usize> = Vec::new();
+        for patch in &self.patches {
+            if !patch.area.start.is_within_center_area(radius * 2) {
+                continue;
+            }
+            for index in &patch.pixel_indexes {
+                let pixel = self.pixels.get_entity_by_index(*index);
+                if pixel.get_xy()[0].is_within_center_area(radius) {
+                    removed_points.push(*index);
+                }
+            }
+        }
+        info!(
+            "removing {} patches within {} radius",
+            removed_points.len(),
+            radius
+        );
+        self.pixels.remove_positions(removed_points);
     }
 }
 

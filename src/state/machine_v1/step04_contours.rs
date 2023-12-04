@@ -1,16 +1,10 @@
-use crate::opencv::{combine_rects_into_big_rect, get_cv_bounding_rect};
-use crate::state::err::XMachineResult;
-use crate::state::machine::{Step, StepParams};
-use crate::surface::metric::Metrics;
-use crate::surface::patch::{map_patch_corners_to_kdtree, Patch};
-use crate::surface::pixel::Pixel;
-use crate::surfacev::varea::VArea;
-use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vpoint::VPoint;
-use crate::surfacev::vsurface::VSurface;
-use crate::PixelKdTree;
+use std::cmp::Ordering;
+use std::collections::HashSet;
+use std::fmt::Display;
+use std::path::Path;
+
 use itertools::Itertools;
-use kiddo::float::distance::{manhattan, squared_euclidean};
+use kiddo::float::distance::manhattan;
 use kiddo::float::neighbour::Neighbour;
 use opencv::core::{Point, Rect, Vector};
 use opencv::imgcodecs::imwrite;
@@ -18,12 +12,19 @@ use opencv::imgproc::{
     bounding_rect, find_contours, rectangle, CHAIN_APPROX_SIMPLE, LINE_8, RETR_EXTERNAL,
 };
 use opencv::prelude::*;
-use std::cmp::Ordering;
-use std::collections::HashSet;
-use std::fmt::Display;
-use std::path::Path;
 use strum::IntoEnumIterator;
 use tracing::{debug, info, trace};
+
+use crate::opencv::combine_rects_into_big_rect;
+use crate::state::err::XMachineResult;
+use crate::state::machine::{Step, StepParams};
+use crate::surface::metric::Metrics;
+use crate::surface::patch::map_patch_corners_to_kdtree;
+use crate::surface::pixel::Pixel;
+use crate::surfacev::varea::VArea;
+use crate::surfacev::vpatch::VPatch;
+use crate::surfacev::vsurface::VSurface;
+use crate::PixelKdTree;
 
 const WRITE_DEBUG_IMAGE: bool = false;
 
@@ -114,7 +115,7 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: &Pixel) -> Vec<V
     let mut patch_rects = detect_patch_rectangles(&img);
 
     let patch_corner_cloud = map_patch_corners_to_kdtree(patch_rects.iter());
-    // detect_merge_nearby_patches(&mut patch_rects, &patch_corner_cloud);
+    detect_merge_nearby_patches(&mut patch_rects, &patch_corner_cloud);
 
     draw_patch_border(&mut img, patch_rects.iter().cloned());
     let debug_image_name = format!("cv-{}.png", pixel.as_ref());
@@ -166,7 +167,7 @@ fn detect_patch_rectangles(base: &Mat) -> Vec<Rect> {
 
 /// Merge, for example Oil wells patches into a single Oil patch.   
 fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree) {
-    const SEARCH_UNIT: u32 = 100;
+    const SEARCH_UNIT: u32 = 25;
 
     // Query kdtree for all nearby points for every point
     let mut search_distance = SEARCH_UNIT;
