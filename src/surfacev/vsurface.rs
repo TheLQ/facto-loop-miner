@@ -12,6 +12,7 @@ use num_format::ToFormattedString;
 use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
+use std::cell::Cell;
 use std::fmt::{Display, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter};
@@ -152,14 +153,17 @@ impl VSurface {
         Ok(())
     }
 
-    pub fn to_entity_cv_image(&self, filter: Option<Pixel>) -> Mat {
+    pub fn to_pixel_cv_image(&self, filter: Option<Pixel>) -> Mat {
         self.pixels.pixel_map_xy_to_cv(filter)
     }
 
     //</editor-fold>
 
     pub fn set_pixel(&mut self, start: VPoint, pixel: Pixel) -> VResult<()> {
-        self.pixels.add(VPixel { start, pixel })?;
+        self.pixels.add(VPixel {
+            starts: [start].to_vec(),
+            pixel,
+        })?;
         Ok(())
     }
 
@@ -228,13 +232,13 @@ fn path_state(out_dir: &Path) -> PathBuf {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct VPixel {
-    start: VPoint,
+    starts: Vec<VPoint>,
     pixel: Pixel,
 }
 
 impl VEntityXY for VPixel {
-    fn get_xy(&self) -> Vec<VPoint> {
-        vec![self.start]
+    fn get_xy(&self) -> &[VPoint] {
+        &self.starts
     }
 }
 
@@ -251,7 +255,7 @@ pub(crate) struct VEntity {
 }
 
 impl VEntityXY for VEntity {
-    fn get_xy(&self) -> Vec<VPoint> {
-        self.points.clone()
+    fn get_xy(&self) -> &[VPoint] {
+        &self.points
     }
 }

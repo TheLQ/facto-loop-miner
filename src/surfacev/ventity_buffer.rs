@@ -16,7 +16,7 @@ use std::path::Path;
 use tracing::{debug, trace};
 
 pub trait VEntityXY {
-    fn get_xy(&self) -> Vec<VPoint>;
+    fn get_xy(&self) -> &[VPoint];
 }
 
 /// Collection of entities and xy positions they cover
@@ -61,9 +61,9 @@ where
     //<editor-fold desc="query xy">
     /// Fast Get index in xy_to_entity buffer
     pub fn xy_to_index_unchecked(&self, x: i32, y: i32) -> usize {
-        let radius = self.radius as i64;
-        let abs_x = (x as i64 + radius) as usize;
-        let abs_y = (y as i64 + radius) as usize;
+        let radius = self.radius as isize;
+        let abs_x = (x as isize + radius) as usize;
+        let abs_y = (y as isize + radius) as usize;
         self.diameter() * abs_y + abs_x
         // let mut value = self.diameter();
         // value = if let Some(v) = value.checked_mul(abs_y) {
@@ -127,23 +127,27 @@ where
         }
     }
 
-    pub fn get_points_if_in_range_vec(&self, points: Vec<VPoint>) -> VResult<Vec<VPoint>> {
-        self.check_points_if_in_range_iter(points.iter())
-            .map(|_| points)
-    }
+    // pub fn get_points_if_in_range_vec<'a, R>(&self, points: Vec<VPoint>) -> VResult<R>
+    // where
+    //     R: Iterator<Item = &'a VPoint>,
+    // {
+    //     self.check_points_if_in_range_iter(points.iter())
+    //         .map(|_| points)
+    // }
     //</editor-fold>
 
     pub fn add(&mut self, entity: E) -> VResult<()> {
-        let positions = self.get_points_if_in_range_vec(entity.get_xy())?;
+        let positions = entity.get_xy();
+        self.check_points_if_in_range_iter(positions)?;
 
-        self.entities.push(entity);
-        let entity_index = self.entities.len() - 1;
+        let entity_index = self.entities.len();
         self.add_positions(entity_index, positions);
+        self.entities.push(entity);
 
         Ok(())
     }
 
-    pub fn add_positions(&mut self, entity_index: usize, positions: Vec<VPoint>) {
+    pub fn add_positions(&mut self, entity_index: usize, positions: &[VPoint]) {
         for position in positions {
             let xy_index = self.xy_to_index_unchecked(position.x, position.y);
             self.xy_to_entity[xy_index] = entity_index;
@@ -174,7 +178,7 @@ where
         self.xy_to_entity = vec![0usize; new_xy_length];
 
         for i in 0..self.entities.len() {
-            self.add_positions(i, self.entities[i].get_xy());
+            self.add_positions(i, &self.entities[i].get_xy().to_owned());
         }
     }
 
