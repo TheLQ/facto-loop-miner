@@ -40,8 +40,8 @@ impl Step for Step04 {
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let mut surface = VSurface::load_from_last_step(&params)?;
 
-        // let disk_patches = detector(&surface, &params.step_out_dir);
-        // surface.add_patches(disk_patches);
+        let disk_patches = detector(&surface, &params.step_out_dir);
+        surface.add_patches(disk_patches);
 
         if WRITE_DEBUG_IMAGE {
             write_surface_with_all_patches_wrapped(&mut surface);
@@ -78,7 +78,7 @@ fn detector(surface_meta: &VSurface, out_dir: &Path) -> Vec<VPatch> {
 }
 
 fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: &Pixel) -> Vec<VPatch> {
-    let img = surface_meta.to_pixel_cv_image(Some(pixel.clone()));
+    let mut img = surface_meta.to_pixel_cv_image(Some(pixel.clone()));
     let size = img.size().unwrap();
     tracing::debug!(
         "Read size {}x{} type {}",
@@ -92,7 +92,7 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: &Pixel) -> Vec<V
     let patch_corner_cloud = map_patch_corners_to_kdtree(patch_rects.iter());
     detect_merge_nearby_patches(&mut patch_rects, &patch_corner_cloud, pixel);
 
-    // draw_patch_border(&mut img, patch_rects.iter().cloned());
+    draw_patch_border(&mut img, patch_rects.iter().cloned());
     let debug_image_name = format!("cv-{}.png", pixel.as_ref());
     write_png(&out_dir.join(debug_image_name), &img);
 

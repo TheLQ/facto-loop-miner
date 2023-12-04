@@ -90,6 +90,7 @@ impl VSurface {
     //<editor-fold desc="io save">
 
     pub fn save(&self, out_dir: &Path) -> VResult<()> {
+        info!("saving {}", self);
         self.save_state(out_dir)?;
         self.save_pixel_img_colorized(out_dir)?;
         self.save_entity_buffers(out_dir)?;

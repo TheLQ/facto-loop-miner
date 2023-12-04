@@ -204,22 +204,21 @@ where
         let mut file = File::open(path).map_err(VError::io_error(path))?;
 
         // Serde does not use new() so this is still uninitialized
-        self.init_xy_to_entity();
+        // self.init_xy_to_entity();
 
         let mut big_xy_bytes: Vec<u8> = Vec::new();
         file.read_to_end(&mut big_xy_bytes)
             .map_err(VError::io_error(path))?;
 
         // TODO: Slow :-(
+        assert_eq!(self.xy_to_entity.len(), 0, "not empty");
         let deserialize_watch = BasicWatch::start();
-        for (i, xy_index) in big_xy_bytes
-            .into_iter()
-            .array_chunks::<USIZE_BYTES>()
-            .map(usize::from_ne_bytes)
-            .enumerate()
-        {
-            self.xy_to_entity[i] = xy_index;
-        }
+        self.xy_to_entity.extend(
+            big_xy_bytes
+                .into_iter()
+                .array_chunks::<USIZE_BYTES>()
+                .map(usize::from_ne_bytes),
+        );
         trace!("Deserialized xy in {}", deserialize_watch);
 
         Ok(())
