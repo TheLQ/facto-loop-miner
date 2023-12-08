@@ -2,10 +2,10 @@ use crate::admiral::generators::rail90::{rail_degrees_270, rail_degrees_360};
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::fac_surface_create_entity_safe::FacSurfaceCreateEntitySafe;
 use crate::admiral::lua_command::{
-    direction_params, LuaCommand, LuaCommandBatch, DEFAULT_SURFACE_VAR,
+    DEFAULT_SURFACE_VAR, direction_params, LuaCommand, LuaCommandBatch,
 };
-use crate::admiral::{must_even_number, must_whole_number};
 use opencv::core::Point2f;
+use crate::surfacev::vpoint::{must_even_number, must_whole_number};
 
 #[derive(Debug)]
 pub struct RailStationGenerator {

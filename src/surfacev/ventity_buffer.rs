@@ -107,7 +107,7 @@ where
 
     //<editor-fold desc="query point">
     pub fn is_point_out_of_bounds(&self, point: &VPoint) -> bool {
-        self.is_xy_out_of_bounds(point.x, point.y)
+        self.is_xy_out_of_bounds(point.x(), point.y())
     }
 
     pub fn check_points_if_in_range_iter<'a>(
@@ -152,7 +152,7 @@ where
 
     pub fn add_positions(&mut self, entity_index: usize, positions: &[VPoint]) {
         for position in positions {
-            let xy_index = self.xy_to_index_unchecked(position.x, position.y);
+            let xy_index = self.xy_to_index_unchecked(position.x(), position.y());
             self.xy_to_entity[xy_index] = entity_index;
         }
     }
@@ -172,7 +172,7 @@ where
         self.entities.retain(|e| {
             e.get_xy()
                 .iter()
-                .all(|i| i.x.unsigned_abs() < new_radius && i.y.unsigned_abs() < new_radius)
+                .all(|i| i.is_within_center_radius(new_radius))
         });
 
         let new_xy_length = self.xy_array_length_from_radius();
@@ -198,8 +198,8 @@ where
         let serialize_watch = BasicWatch::start();
         let big_xy_bytes: Vec<u8> = self
             .xy_to_entity
-            .iter()
-            .flat_map(|e| e.to_ne_bytes())
+            .into_iter()
+            .flat_map(usize::to_ne_bytes)
             .collect();
         trace!("Serialized xy in {}", serialize_watch);
         file.write_all(&big_xy_bytes)
@@ -282,7 +282,7 @@ where
         trace!("mapping {} total {}", TARGETED_MAPPED_SIZE, image.len());
         for entity in &self.entities {
             for entity_pos in entity.get_xy() {
-                let index = self.xy_to_index(entity_pos.x, entity_pos.y) * TARGETED_MAPPED_SIZE;
+                let index = self.xy_to_index(entity_pos.x(), entity_pos.y()) * TARGETED_MAPPED_SIZE;
                 let color = mapper(entity);
                 if index + TARGETED_MAPPED_SIZE > image.len() {
                     trace!("overflowing for index {}", index);

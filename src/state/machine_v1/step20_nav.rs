@@ -6,6 +6,7 @@ use crate::surface::patch::{DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
 use crate::surface::sector::SectorSide;
 use crate::surface::surface::{PointU32, Surface};
+use crate::surfacev::vsurface::VSurface;
 use crate::PixelKdTree;
 use kiddo::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
@@ -25,8 +26,7 @@ impl Step for Step20 {
     }
 
     fn transformer(&self, mut params: StepParams) -> XMachineResult<()> {
-        let mut surface = Surface::load_from_step_history(&params);
-        let patches = DiskPatch::load_from_step_history(&params);
+        let mut surface = VSurface::load_from_last_step(&params);
 
         // let mut counter: usize = 0;
         // for item in surface.buffer {
@@ -61,11 +61,8 @@ fn navigate_patches_to_base_speculation(
     surface
 }
 
-fn navigate_patches_to_base(
-    mut surface: Surface,
-    disk_patches: DiskPatch,
-    params: &mut StepParams,
-) -> Surface {
+fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> Surface {
+    // TODO: Port to VSurface
     let x_start = surface
         .area_box
         .game_centered_x_i32(-REMOVE_RESOURCE_BASE_TILES) as i32;

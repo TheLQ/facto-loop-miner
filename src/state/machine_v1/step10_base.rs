@@ -50,7 +50,7 @@ pub const REMOVE_RESOURCE_BORDER_TILES: i32 =
 pub fn draw_mega_box(surface: &mut VSurface, metrics: &mut Metrics) -> VResult<()> {
     let tiles = CENTRAL_BASE_TILES;
     for point in points_in_centered_box(tiles as u32, VPoint { x: 0, y: 0 }) {
-        if !point.is_within_center_area(tiles as u32) {
+        if !point.is_within_center_radius(tiles as u32) {
             surface.set_pixel(point, Pixel::EdgeWall)?;
             metrics.increment("base-box");
         }
@@ -164,10 +164,7 @@ fn points_in_centered_box(radius: u32, center: VPoint) -> Vec<VPoint> {
     // lazy way
     for root_x in edge_neg..edge_pos {
         for root_y in edge_neg..edge_pos {
-            res.push(VPoint {
-                x: center.x + root_x,
-                y: center.y + root_y,
-            })
+            res.push(center + VPoint::new(root_x, root_y));
         }
     }
     res

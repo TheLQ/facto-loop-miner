@@ -8,7 +8,6 @@ use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
-use itertools::Itertools;
 use num_format::ToFormattedString;
 use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
@@ -21,7 +20,7 @@ use tracing::{debug, info, trace};
 /// A map of background pixels (eg resources, water) and the large entities on top
 ///
 /// Entity Position is i32 relative to top left (3x3 entity has start=0,0) for simpler math.
-/// Converted from Factorio/Lua style of f32 relative to center (3x3 entity has start=1.5,1.5).
+/// Converted from Factorio style of f32 relative to center (3x3 entity has start=1.5,1.5).
 #[derive(Serialize, Deserialize)]
 pub struct VSurface {
     pixels: VEntityBuffer<VPixel>,
@@ -190,12 +189,12 @@ impl VSurface {
     pub fn remove_patches_within_radius(&mut self, radius: u32) {
         let mut removed_points: Vec<usize> = Vec::new();
         for patch in &self.patches {
-            if !patch.area.start.is_within_center_area(radius * 2) {
+            if !patch.area.start.is_within_center_radius(radius * 2) {
                 continue;
             }
             for index in &patch.pixel_indexes {
                 let pixel = self.pixels.get_entity_by_index(*index);
-                if pixel.get_xy()[0].is_within_center_area(radius) {
+                if pixel.get_xy()[0].is_within_center_radius(radius) {
                     removed_points.push(*index);
                 }
             }

@@ -12,7 +12,6 @@ use opencv::imgproc::{
     bounding_rect, find_contours, rectangle, CHAIN_APPROX_SIMPLE, LINE_8, RETR_EXTERNAL,
 };
 use opencv::prelude::*;
-use strum::IntoEnumIterator;
 use tracing::{debug, info, trace};
 
 use crate::opencv::combine_rects_into_big_rect;

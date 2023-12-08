@@ -26,7 +26,7 @@ where
 {
     let mut result = Vec::new();
 
-    let main_array = if let BorrowedValue::Array(raw) = to_borrowed_value(input).unwrap() {
+    let main_array = if let Ok(BorrowedValue::Array(raw)) = to_borrowed_value(input) {
         raw
     } else {
         panic!("no wrapper array?")
