@@ -21,8 +21,8 @@ impl Step20 {
 }
 
 impl Step for Step20 {
-    fn name(&self) -> String {
-        "step20-nav".to_string()
+    fn name(&self) -> &'static str {
+        "step20-nav"
     }
 
     fn transformer(&self, mut params: StepParams) -> XMachineResult<()> {

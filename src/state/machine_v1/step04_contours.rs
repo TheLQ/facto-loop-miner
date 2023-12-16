@@ -38,8 +38,8 @@ impl Step04 {
 
 // type lookup table https://stackoverflow.com/questions/10167534/how-to-find-out-what-type-of-a-mat-object-is-with-mattype-in-opencv
 impl Step for Step04 {
-    fn name(&self) -> String {
-        "step04-contours".to_string()
+    fn name(&self) -> &'static str {
+        "step04-contours"
     }
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {

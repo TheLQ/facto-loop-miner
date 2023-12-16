@@ -20,8 +20,8 @@ impl Step10 {
 }
 
 impl Step for Step10 {
-    fn name(&self) -> String {
-        "step10-base".to_string()
+    fn name(&self) -> &'static str {
+        "step10-base"
     }
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {

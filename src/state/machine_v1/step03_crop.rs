@@ -14,8 +14,8 @@ impl Step03 {
 const CROP_RADIUS: u32 = 4000;
 
 impl Step for Step03 {
-    fn name(&self) -> String {
-        "step03-crop".to_string()
+    fn name(&self) -> &'static str {
+        "step03-crop"
     }
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {

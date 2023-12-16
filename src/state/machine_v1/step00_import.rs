@@ -18,8 +18,8 @@ impl Step00 {
 }
 
 impl Step for Step00 {
-    fn name(&self) -> String {
-        "step00-import".to_string()
+    fn name(&self) -> &'static str {
+        "step00-import"
     }
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {

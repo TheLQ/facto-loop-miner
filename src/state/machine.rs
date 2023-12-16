@@ -29,7 +29,7 @@ impl StepParams {
 }
 
 pub trait Step {
-    fn name(&self) -> String;
+    fn name(&self) -> &'static str;
     fn transformer(&self, params: StepParams) -> XMachineResult<()>;
 }
 
