@@ -2,7 +2,6 @@ use crate::navigator::mori_cost::{calculate_cost_for_point, RailAction};
 use crate::navigator::resource_cloud::ResourceCloud;
 use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::StepParams;
-use crate::surface::patch::DiskPatch;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::err::VResult;

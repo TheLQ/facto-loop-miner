@@ -9,9 +9,9 @@ pub struct Metrics {
 }
 
 impl Metrics {
-    pub fn new(new_item_log_prefix: String) -> Self {
+    pub fn new(new_item_log_prefix: &str) -> Self {
         Metrics {
-            new_item_log_prefix,
+            new_item_log_prefix: new_item_log_prefix.to_string(),
             entity_metrics: HashMap::new(),
         }
     }
@@ -23,14 +23,19 @@ impl Metrics {
             .or_insert(1);
     }
 
-    pub fn log_final(self) {
+    pub fn log_final(&self) {
+        let max_key_length = self
+            .entity_metrics
+            .iter()
+            .fold(0, |total, (key, _)| total.max(key.len()));
+
         for (name, count) in self
             .entity_metrics
             .iter()
             .sorted_by_key(|(name, _count)| (**name).clone())
         {
             tracing::debug!(
-                "-- {} {}\t\t{} ",
+                "-- {} {:max_key_length$} {:>10} --",
                 self.new_item_log_prefix,
                 name,
                 count.to_formatted_string(&LOCALE),
@@ -42,7 +47,7 @@ impl Metrics {
     where
         I: Iterator<Item = String>,
     {
-        let mut metric = Metrics::new(new_item_prefix.to_string());
+        let mut metric = Metrics::new(new_item_prefix);
         for metric_name in iter {
             metric.increment(&metric_name);
         }

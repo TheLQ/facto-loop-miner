@@ -10,7 +10,6 @@ use crate::surfacev::err::VResult;
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
-use itertools::Itertools;
 use kiddo::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
 use opencv::core::Point;

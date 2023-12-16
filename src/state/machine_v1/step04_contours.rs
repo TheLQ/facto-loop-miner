@@ -102,7 +102,7 @@ fn detector(surface_meta: &VSurface, out_dir: &Path) -> Vec<VPatch> {
 }
 
 fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: &Pixel) -> Vec<VPatch> {
-    let mut img = surface_meta.to_pixel_cv_image(Some(pixel.clone()));
+    let mut img = surface_meta.to_pixel_cv_image(Some(*pixel));
     let size = img.size().unwrap();
     debug!(
         "Read size {}x{} type {}",
@@ -122,7 +122,7 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: &Pixel) -> Vec<V
 
     patch_rects
         .into_iter()
-        .map(|e| VPatch::new_from_rect(e, pixel.clone()))
+        .map(|e| VPatch::new_from_rect(e, *pixel))
         .collect()
 }
 

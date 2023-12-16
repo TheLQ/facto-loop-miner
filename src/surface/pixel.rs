@@ -12,8 +12,8 @@ use strum::{AsRefStr, EnumIter};
 
 #[derive(Serialize, Deserialize, AsRefStr, EnumIter, Debug, PartialEq, Clone, Eq, Hash, Copy)]
 #[repr(u8)]
-#[serde(rename_all = "kebab-case")]
 pub enum Pixel {
+    Empty = 0,
     IronOre = 25,
     CopperOre = 50,
     Stone = 75,
@@ -22,13 +22,20 @@ pub enum Pixel {
     Water = 150,
     CrudeOil = 175,
     //
-    Empty = 0,
     EdgeWall = 200,
     Rail = 225,
     Highlighter = 250,
 }
 
 impl Pixel {
+    pub fn into_id(self) -> u8 {
+        self as u8
+    }
+
+    pub fn id(&self) -> u8 {
+        *self as u8
+    }
+
     pub fn color(&self) -> [u8; 3] {
         match self {
             Pixel::IronOre => [0x68, 0x82, 0x90],
@@ -71,7 +78,7 @@ impl Pixel {
     }
 
     pub fn scalar_cv(self) -> Scalar {
-        let id = self as u8;
+        let id = self.into_id();
         Scalar::from(id as i32)
     }
 
@@ -120,7 +127,7 @@ pub fn generate_lookup_image() {
     let file = File::create(path).unwrap();
     let writer = BufWriter::new(&file);
 
-    let buf = LOOKUP_IMAGE_ORDER.map(|e| e as u8);
+    let buf = LOOKUP_IMAGE_ORDER.map(|e| e.id());
     // let buf: Vec<u8> = LOOKUP_IMAGE_ORDER.iter().flat_map(|e| e.color()).collect();
 
     let encoder = PngEncoder::new(writer);

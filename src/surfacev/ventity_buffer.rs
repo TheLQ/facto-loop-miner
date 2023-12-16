@@ -1,3 +1,4 @@
+use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::vpoint::VPoint;
@@ -10,11 +11,11 @@ use num_format::ToFormattedString;
 use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
+use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
-use std::fs::File;
 use std::hash::Hash;
-use std::io::{Read, Write};
 use std::path::Path;
+use std::rc::Rc;
 use tracing::{debug, trace};
 
 const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
@@ -51,7 +52,7 @@ where
     }
 
     fn init_xy_to_entity(&mut self) {
-        self.xy_to_entity = vec![0; Self::_xy_array_length_from_radius(self.radius)]
+        self.xy_to_entity = vec![usize::MAX; Self::_xy_array_length_from_radius(self.radius)]
     }
 
     pub fn radius(&self) -> u32 {
@@ -255,12 +256,12 @@ where
         (radius as usize * 2).pow(2)
     }
 
-    pub fn map_xy_to_bigger_vec<const MAPPED_SIZE: usize>(
+    pub fn map_xy_entities_to_bigger_u8_vec<const MAPPED_SIZE: usize>(
         &self,
         mapper: impl Fn(&E) -> [u8; MAPPED_SIZE],
     ) -> Vec<u8> {
         match 1 {
-            0 => self._map_xy_to_vec_targeted(mapper),
+            // 0 => self._map_xy_to_vec_targeted(mapper),
             1 => self._map_xy_to_vec_inlined(mapper),
             _ => panic!("unknown"),
         }
@@ -344,30 +345,31 @@ impl<E> Display for VEntityBuffer<E> {
 }
 
 impl VEntityBuffer<VPixel> {
-    pub fn pixel_map_xy_to_cv(&self, filter: Option<Pixel>) -> Mat {
-        // let mapper = if let Some(filter) = filter {
-        //     move |e: &VPixel| {
-        //         if e.pixel() == &filter {
-        //             [e.pixel().to_owned() as u8]
-        //         } else {
-        //             [0]
-        //         }
-        //     }
-        // } else {
-        //     move |e: &VPixel| [e.pixel().to_owned() as u8]
-        // };
-        let output = self.map_xy_to_bigger_vec(|e| {
-            if let Some(filter) = &filter {
-                if e.pixel() == filter {
-                    [Pixel::Highlighter as u8]
+    pub fn map_pixel_xy_to_cv(&self, filter: Option<Pixel>) -> Mat {
+        let metrics = Rc::new(RefCell::new(Metrics::new("entity-cv-mapper")));
+
+        let output = self.map_xy_entities_to_bigger_u8_vec(|e| {
+            if let Some(filter) = filter {
+                if e.pixel() == &filter {
+                    metrics
+                        .borrow_mut()
+                        .increment(&format!("f-{:?}", e.pixel()));
+                    [Pixel::Highlighter.into_id()]
                 } else {
+                    metrics.borrow_mut().increment("f-empty");
                     [0]
                 }
+            } else if e.pixel() != &Pixel::Empty {
+                metrics.borrow_mut().increment("not-empty");
+                [Pixel::Highlighter.into_id()]
             } else {
-                [e.pixel().to_owned() as u8]
+                metrics.borrow_mut().increment("empty");
+                [0]
             }
         });
+        metrics.borrow().log_final();
         let side_length = self.diameter();
         Mat::from_slice_rows_cols(&output, side_length, side_length).unwrap()
+        // Mat::new_rows_cols_with_data(side_length, side_length, )
     }
 }

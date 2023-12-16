@@ -355,7 +355,7 @@ mod test {
         ];
         let mut needles_applied_to_array = vec![0u8; SSE_UNIT_COUNT * SSE_BITS];
         for needle in needles {
-            needles_applied_to_array[needle] = Pixel::IronOre as u8;
+            needles_applied_to_array[needle] = Pixel::IronOre.into_id();
         }
         apply_any_u8_iter_to_m256_buffer(needles_applied_to_array.iter(), &mut buffer);
 

@@ -1,4 +1,4 @@
-use crate::gamedata::lua::{LuaData, LuaPoint, LuaThing};
+use crate::gamedata::lua::{read_lua_tiles, LuaData, LuaEntity, LuaPoint, LuaThing, LuaTile};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::err::VResult;
@@ -24,13 +24,12 @@ impl Step for Step00 {
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let lua_dir = Path::new("work/chunk1000");
-        let data = LuaData::open(lua_dir);
+        let lua_tiles = read_lua_tiles(lua_dir);
 
         let convert_watch = BasicWatch::start();
-        let radius = find_radius(&data) as u32;
+        let radius = find_radius(&lua_tiles) as u32;
         let mut surface = VSurface::new(radius);
-        translate_entities_to_image(&data.entities, &mut surface, &params)?;
-        translate_entities_to_image(&data.tiles, &mut surface, &params)?;
+        translate_entities_to_image(&lua_tiles, &mut surface, &params)?;
         info!("Converted in {}", convert_watch);
 
         surface.save(&params.step_out_dir)?;
@@ -39,11 +38,10 @@ impl Step for Step00 {
     }
 }
 
-fn find_radius(data: &LuaData) -> f32 {
+fn find_radius(data: &[LuaEntity]) -> f32 {
     let mut bottom_left = LuaPoint { x: 0.0, y: 0.0 };
     let mut top_right = LuaPoint { x: 0.0, y: 0.0 };
-    find_radius_max(&data.entities, &mut bottom_left, &mut top_right);
-    find_radius_max(&data.tiles, &mut bottom_left, &mut top_right);
+    find_radius_max(data, &mut bottom_left, &mut top_right);
 
     let mut max_radius = 0.0f32;
     max_radius = max_radius.max(bottom_left.x.abs());
@@ -61,8 +59,8 @@ fn find_radius(data: &LuaData) -> f32 {
 
     max_radius
 }
-fn find_radius_max(
-    things: &Vec<impl LuaThing>,
+fn find_radius_max<T: LuaThing>(
+    things: &[T],
     bottom_left: &mut LuaPoint,
     top_right: &mut LuaPoint,
 ) {
@@ -90,7 +88,7 @@ where
     for entity in entities {
         surface.set_pixel(
             VPoint::from_f32_with_offset(entity.position().to_point2f(), 0.5)?,
-            entity.name().clone(),
+            *entity.name(),
         )?;
         params
             .metrics

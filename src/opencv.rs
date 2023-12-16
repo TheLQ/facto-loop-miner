@@ -38,7 +38,7 @@ fn load_cv_from_buffer_filtered(
 ) -> Mat {
     debug!("buffer {}", buffer.len());
     if let Some(pixel) = filter {
-        let pixel_id = pixel.clone() as u8;
+        let pixel_id = pixel.id();
         // let mut found_ids: Vec<u8> = Vec::new();
         for pixel_raw in buffer.iter_mut() {
             // if !found_ids.contains(pixel_raw) {

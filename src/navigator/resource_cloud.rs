@@ -1,6 +1,6 @@
 use crate::surface::patch::DiskPatch;
 use crate::surface::pixel::Pixel;
-use crate::surface::surface::{PointU32, Surface};
+use crate::surface::surface::PointU32;
 use crate::surfacev::vsurface::VSurface;
 use crate::PixelKdTree;
 

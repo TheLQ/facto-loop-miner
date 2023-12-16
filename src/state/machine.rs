@@ -65,7 +65,7 @@ impl Machine {
                     remove_dir_all(&step_out_dir).unwrap()
                 }
                 create_dir(&step_out_dir).unwrap();
-                let metrics = Rc::new(RefCell::new(Metrics::new(step.name().to_string())));
+                let metrics = Rc::new(RefCell::new(Metrics::new(step.name())));
                 info!("{} - Transforming", header_prefix);
 
                 let mut step_watch = BasicWatch::start();

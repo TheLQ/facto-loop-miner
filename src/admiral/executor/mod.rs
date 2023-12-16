@@ -70,7 +70,7 @@ pub trait LuaCompiler {
                         backtrace: Backtrace::capture(),
                     });
                 }
-                let mut metric = Metrics::new("ExecuteResult".to_string());
+                let mut metric = Metrics::new("ExecuteResult");
                 for part in v.split('\n') {
                     if part.contains(' ') {
                         warn!("[lua_log] {}", part);

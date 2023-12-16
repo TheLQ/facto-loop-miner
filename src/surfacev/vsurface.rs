@@ -1,5 +1,6 @@
 use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::StepParams;
+use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::ventity_buffer::{VEntityBuffer, VEntityXY};
@@ -15,8 +16,8 @@ use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-use std::fs::{File, OpenOptions};
-use std::io::{BufReader, BufWriter};
+use std::fs::File;
+use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, trace};
 
@@ -93,6 +94,7 @@ impl VSurface {
 
     pub fn save(&self, out_dir: &Path) -> VResult<()> {
         info!("+++ Saving to {} {}", out_dir.display(), self);
+        self.log_pixel_stats();
         let total_save_watch = BasicWatch::start();
         self.save_state(out_dir)?;
         self.save_pixel_img_colorized(out_dir)?;
@@ -158,7 +160,7 @@ impl VSurface {
     }
 
     pub fn to_pixel_cv_image(&self, filter: Option<Pixel>) -> Mat {
-        self.pixels.pixel_map_xy_to_cv(filter)
+        self.pixels.map_pixel_xy_to_cv(filter)
     }
 
     //</editor-fold>
@@ -228,6 +230,14 @@ impl VSurface {
 
     pub fn to_surface_diff(&self) -> SurfaceDiff {
         SurfaceDiff::from_surface(self)
+    }
+
+    pub fn log_pixel_stats(&self) {
+        let mut metrics = Metrics::new("vsurface-pixel");
+        for pixel in self.pixels.iter_xy_entities() {
+            metrics.increment(pixel.pixel.as_ref());
+        }
+        metrics.log_final();
     }
 }
 
