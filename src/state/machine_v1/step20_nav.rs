@@ -10,6 +10,7 @@ use crate::surfacev::err::VResult;
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
+use itertools::Itertools;
 use kiddo::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
 use opencv::core::Point;
@@ -38,11 +39,11 @@ impl Step for Step20 {
         // }
         // panic!("found {} iron", counter.to_formatted_string(&LOCALE));
 
-        surface = navigate_patches_to_base(surface, &mut params);
+        navigate_patches_to_base(&mut surface, &mut params)?;
 
-        for dest in main_base_destinations() {
-            surface.draw_square(&Pixel::Stone, 20, &dest);
-        }
+        // for dest in main_base_destinations() {
+        //     surface.draw_square(&Pixel::Stone, 20, &dest);
+        // }
 
         surface.save(&params.step_out_dir)?;
 
@@ -92,10 +93,11 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     let base_corner = base_bottom_right_corner();
     let mut made_paths: u8 = 0;
 
-    for (nearest_count, patch_start) in ordered_patches_by_radial_base_corner(surface)
+    let ordered_patches: Vec<VPatch> = ordered_patches_by_radial_base_corner(surface)
         .into_iter()
-        .enumerate()
-    {
+        .cloned()
+        .collect();
+    for (nearest_count, patch_start) in ordered_patches.into_iter().enumerate() {
         tracing::debug!(
             "path {} of {} - actually made {} max {:?}",
             nearest_count,
@@ -103,10 +105,10 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             made_paths,
             PATH_LIMIT,
         );
-        if x_start < patch_start.x
-            && x_end > patch_start.x
-            && y_start < patch_start.y
-            && y_end > patch_start.y
+        if x_start < patch_start.area.start.x()
+            && x_end > patch_start.area.start.x()
+            && y_start < patch_start.area.start.y()
+            && y_end > patch_start.area.start.y()
         {
             tracing::debug!("[Warn] broken patch in the remove area {:?}", patch_start);
             continue;
@@ -123,7 +125,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             break;
         };
 
-        let patch_corner = patch_start.corner_point_u32();
+        let patch_corner = patch_start.area.start;
         // surface.draw_text(
         //     "start",
         //     Point {
@@ -139,23 +141,21 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     }
         // }
 
-        let start = Rail::new_straight(patch_corner, RailDirection::Left)
-            .move_forward()
-            .unwrap();
-        let end = Rail::new_straight(patch_start.corner_point_u32(), RailDirection::Left);
+        let start = Rail::new_straight(patch_corner, RailDirection::Left).move_forward();
+        let end = Rail::new_straight(patch_start.area.start, RailDirection::Left);
 
-        if 1 + 1 == 23 {
-            write_rail(&mut surface, &Vec::from([start.clone(), end.clone()]));
+        if 1 + 1 == 2 {
+            write_rail(surface, &Vec::from([start.clone(), end.clone()]))?;
             // surface.draw_square(
             //     &Pixel::IronOre,
             //     100,
             //     &start.endpoint.to_point_u32().unwrap(),
             // );
-            return surface;
+            return Ok(());
         }
 
         if let Some(path) = mori_start(&surface, start, end, params) {
-            write_rail(&mut surface, &path);
+            write_rail(surface, &path)?;
             params.metrics.borrow_mut().increment("path-success")
         } else {
             params.metrics.borrow_mut().increment("path-failure")
@@ -163,18 +163,15 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         made_paths += 1;
     }
 
-    surface
+    Ok(())
 }
 
-fn main_base_destinations() -> Vec<PointU32> {
+fn main_base_destinations() -> Vec<VPoint> {
     let mut res = Vec::new();
 
     let base_corner = base_bottom_right_corner();
-    for nearest_count in 0..PATH_LIMIT.unwrap() * 2 {
-        let end = PointU32 {
-            x: base_corner.x as u32,
-            y: base_corner.y as u32 - (nearest_count as u32 * 20),
-        };
+    for nearest_count in 0..PATH_LIMIT.unwrap() as i32 * 2 {
+        let end = base_corner.move_y(nearest_count * 20);
         res.push(end);
     }
 
@@ -190,7 +187,7 @@ fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
         .into_iter()
         .filter(|v| v.resource == pixel)
         .collect();
-    let cloud = map_vpatch_to_kdtree(patches);
+    let cloud = map_vpatch_to_kdtree(patches.clone().into_iter());
 
     let base_corner = base_bottom_right_corner();
     let nearest: Vec<Neighbour<f32, usize>> = cloud.nearest_n(
@@ -199,9 +196,16 @@ fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
         &squared_euclidean,
     );
 
-    nearest
-        .into_iter()
-        .map(|neighbor| patches.get(neighbor.item).unwrap())
+    patches
+        .iter()
+        .enumerate()
+        .filter_map(|(i, value)| {
+            if nearest.iter().any(|neighbor| neighbor.item == i) {
+                Some(*value)
+            } else {
+                None
+            }
+        })
         .collect()
 }
 

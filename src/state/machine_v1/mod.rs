@@ -20,8 +20,8 @@ pub fn new_v1_machine() -> Machine {
             Step03::new_boxed(),
             Step04::new_boxed(),
             Step10::new_boxed(),
-            Step99Death::new_boxed(),
             Step20::new_boxed(),
+            Step99Death::new_boxed(),
         ]),
     }
 }

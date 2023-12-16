@@ -4,7 +4,7 @@ use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VPatch {
     pub resource: Pixel,
     pub area: VArea,

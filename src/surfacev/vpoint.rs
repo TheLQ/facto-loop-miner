@@ -25,6 +25,10 @@ impl VPoint {
     pub fn new(x: i32, y: i32) -> Self {
         VPoint { x, y }
     }
+
+    pub fn zero() -> Self {
+        VPoint { x: 0, y: 0 }
+    }
     pub fn from_value(value: i32) -> Self {
         VPoint { x: value, y: value }
     }

@@ -198,8 +198,8 @@ where
         let serialize_watch = BasicWatch::start();
         let big_xy_bytes: Vec<u8> = self
             .xy_to_entity
-            .into_iter()
-            .flat_map(usize::to_ne_bytes)
+            .iter()
+            .flat_map(|v| usize::to_ne_bytes(*v))
             .collect();
         trace!("Serialized xy in {}", serialize_watch);
         file.write_all(&big_xy_bytes)

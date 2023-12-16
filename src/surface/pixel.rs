@@ -10,7 +10,7 @@ use std::path::Path;
 use strum::IntoEnumIterator;
 use strum::{AsRefStr, EnumIter};
 
-#[derive(Serialize, Deserialize, AsRefStr, EnumIter, Debug, PartialEq, Clone, Eq, Hash)]
+#[derive(Serialize, Deserialize, AsRefStr, EnumIter, Debug, PartialEq, Clone, Eq, Hash, Copy)]
 #[repr(u8)]
 #[serde(rename_all = "kebab-case")]
 pub enum Pixel {
