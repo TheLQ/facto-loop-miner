@@ -6,6 +6,7 @@ use crate::surfacev::ventity_buffer::{VEntityBuffer, VEntityXY};
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::VPoint;
 use crate::util::duration::BasicWatch;
+use crate::util::io::{read_entire_file, write_entire_file};
 use crate::LOCALE;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, ImageEncoder};
@@ -41,38 +42,37 @@ impl VSurface {
     }
 
     pub fn load(out_dir: &Path) -> VResult<Self> {
+        info!("+++ Loading VSurface from {}", out_dir.display());
         let load_time = BasicWatch::start();
         let mut surface = Self::load_state(out_dir)?;
         surface.load_entity_buffers(out_dir)?;
-        info!(
-            "Loaded VSurface from {} in {}",
-            out_dir.display(),
-            load_time
-        );
+        info!("Loaded {}", surface);
+        info!("+++ Loaded in {} from {}", load_time, out_dir.display());
         Ok(surface)
     }
 
     fn load_state(out_dir: &Path) -> VResult<Self> {
+        let mut read_watch = BasicWatch::start();
         let path = path_state(out_dir);
-        let file = File::open(&path).map_err(VError::io_error(&path))?;
+        let mut data = read_entire_file(&path)?;
+        read_watch.stop();
+
         let load_watch = BasicWatch::start();
-        let surface = simd_json::serde::from_reader(BufReader::new(file))
-            .map_err(VError::simd_json(&path))?;
+        let surface = simd_json::serde::from_slice(&mut data).map_err(VError::simd_json(&path))?;
         info!(
-            "Read and loaded surface state from {} in {}",
+            "Loading state JSON read {} serialize {} from {}",
+            read_watch,
+            load_watch,
             path.display(),
-            load_watch
         );
         Ok(surface)
     }
 
     fn load_entity_buffers(&mut self, out_dir: &Path) -> VResult<()> {
         let pixel_path = &path_pixel_xy_indexes(out_dir);
-        debug!("loading pixel buffer from {}", pixel_path.display());
         self.pixels.load_xy_file(pixel_path)?;
 
         let entity_path = &path_entity_xy_indexes(out_dir);
-        debug!("loading entity buffer from {}", entity_path.display());
         self.entities.load_xy_file(entity_path)?;
 
         Ok(())
@@ -91,27 +91,30 @@ impl VSurface {
     //<editor-fold desc="io save">
 
     pub fn save(&self, out_dir: &Path) -> VResult<()> {
-        info!("saving {}", self);
+        info!("+++ Saving to {} {}", out_dir.display(), self);
+        let total_save_watch = BasicWatch::start();
         self.save_state(out_dir)?;
         self.save_pixel_img_colorized(out_dir)?;
         self.save_entity_buffers(out_dir)?;
+        info!("+++ Saved in {} to {}", total_save_watch, out_dir.display());
         Ok(())
     }
 
     fn save_state(&self, out_dir: &Path) -> VResult<()> {
         let state_path = out_dir.join("vsurface-state.json");
-        let json_watch = BasicWatch::start();
-        let file = OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .open(state_path.clone())
-            .map_err(VError::io_error(&state_path))?;
-        let writer = BufWriter::new(file);
-        simd_json::to_writer(writer, self).map_err(VError::simd_json(&state_path))?;
+
+        let mut serialize_watch = BasicWatch::start();
+        let data = simd_json::to_vec(self).map_err(VError::simd_json(&state_path))?;
+        serialize_watch.stop();
+
+        let save_watch = BasicWatch::start();
+        write_entire_file(&state_path, &data)?;
+
         debug!(
-            "Saving state JSON to {} in {}",
+            "Saving state JSON serialize {} save {} to {}",
+            serialize_watch,
+            save_watch,
             state_path.display(),
-            json_watch
         );
 
         Ok(())
@@ -145,11 +148,9 @@ impl VSurface {
 
     fn save_entity_buffers(&self, out_dir: &Path) -> VResult<()> {
         let pixel_path = path_pixel_xy_indexes(out_dir);
-        debug!("writing pixel buffer to {}", pixel_path.display());
         self.pixels.save_xy_file(&pixel_path)?;
 
         let entity_path = path_entity_xy_indexes(out_dir);
-        debug!("writing entity buffer to {}", entity_path.display());
         self.entities.save_xy_file(&entity_path)?;
 
         Ok(())

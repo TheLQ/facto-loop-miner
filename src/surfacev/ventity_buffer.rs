@@ -3,6 +3,7 @@ use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VPixel;
 use crate::util::duration::BasicWatch;
+use crate::util::io::{read_entire_file, write_entire_file};
 use crate::LOCALE;
 use itertools::*;
 use num_format::ToFormattedString;
@@ -194,28 +195,34 @@ where
 
     //<editor-fold desc="io">
     pub fn save_xy_file(&self, path: &Path) -> VResult<()> {
-        let mut file = File::create(path).map_err(VError::io_error(path))?;
-        let serialize_watch = BasicWatch::start();
+        let mut serialize_watch = BasicWatch::start();
         let big_xy_bytes: Vec<u8> = self
             .xy_to_entity
             .iter()
             .flat_map(|v| usize::to_ne_bytes(*v))
             .collect();
-        trace!("Serialized xy in {}", serialize_watch);
-        file.write_all(&big_xy_bytes)
-            .map_err(VError::io_error(path))?;
+        serialize_watch.stop();
+
+        let write_watch = BasicWatch::start();
+        write_entire_file(path, &big_xy_bytes)?;
+
+        debug!(
+            "Saving Entity XY serialize {} write {} path {}",
+            serialize_watch,
+            write_watch,
+            path.display()
+        );
+
         Ok(())
     }
 
     pub fn load_xy_file(&mut self, path: &Path) -> VResult<()> {
-        let mut file = File::open(path).map_err(VError::io_error(path))?;
+        let mut read_watch = BasicWatch::start();
+        let big_xy_bytes = read_entire_file(path)?;
+        read_watch.stop();
 
         // Serde does not use new() so this is still uninitialized
         // self.init_xy_to_entity();
-
-        let mut big_xy_bytes: Vec<u8> = Vec::new();
-        file.read_to_end(&mut big_xy_bytes)
-            .map_err(VError::io_error(path))?;
 
         // TODO: Slow :-(
         assert_eq!(self.xy_to_entity.len(), 0, "not empty");
@@ -226,7 +233,12 @@ where
                 .array_chunks::<USIZE_BYTES>()
                 .map(usize::from_ne_bytes),
         );
-        trace!("Deserialized xy in {}", deserialize_watch);
+        debug!(
+            "Loading Entity XY read {} deserialize {} path {}",
+            read_watch,
+            deserialize_watch,
+            path.display()
+        );
 
         Ok(())
     }

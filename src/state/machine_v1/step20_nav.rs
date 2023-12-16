@@ -77,7 +77,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     let y_start = -REMOVE_RESOURCE_BASE_TILES;
     let y_end = REMOVE_RESOURCE_BASE_TILES;
 
-    if 1 + 2 == 3 {
+    if 1 + 2 == 34 {
         for set_x in x_start..x_end {
             for set_y in x_start..x_end {
                 surface.set_pixel(VPoint::new(set_x, set_y), Pixel::Highlighter)?;
