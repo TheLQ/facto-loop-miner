@@ -231,7 +231,7 @@ where
         Ok(())
     }
 
-    pub fn new_xy_entity_array(&self) -> impl Iterator<Item = &E> {
+    pub fn iter_xy_entities(&self) -> impl Iterator<Item = &E> {
         self.xy_to_entity.iter().map(|index| &self.entities[*index])
     }
 
@@ -243,7 +243,7 @@ where
         (radius as usize * 2).pow(2)
     }
 
-    pub fn map_xy_to_vec<const MAPPED_SIZE: usize>(
+    pub fn map_xy_to_bigger_vec<const MAPPED_SIZE: usize>(
         &self,
         mapper: impl Fn(&E) -> [u8; MAPPED_SIZE],
     ) -> Vec<u8> {
@@ -307,6 +307,15 @@ where
         &self.entities[index]
     }
 
+    pub fn get_entity_by_point(&self, point: &VPoint) -> Option<&E> {
+        if self.is_point_out_of_bounds(point) {
+            None
+        } else {
+            let index = self.xy_to_index_unchecked(point.x(), point.y());
+            Some(self.get_entity_by_index(index))
+        }
+    }
+
     //</editor-fold>
 }
 
@@ -335,7 +344,7 @@ impl VEntityBuffer<VPixel> {
         // } else {
         //     move |e: &VPixel| [e.pixel().to_owned() as u8]
         // };
-        let output = self.map_xy_to_vec(|e| {
+        let output = self.map_xy_to_bigger_vec(|e| {
             if let Some(filter) = &filter {
                 if e.pixel() == filter {
                     [Pixel::Highlighter as u8]

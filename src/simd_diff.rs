@@ -3,6 +3,7 @@ use crate::simd::{
     m256_zero, m256_zero_vec, SseUnit, SSE_BITS,
 };
 use crate::surface::surface::Surface;
+use crate::surfacev::vsurface::VSurface;
 use std::mem::transmute;
 
 pub struct SurfaceDiff {
@@ -12,7 +13,18 @@ pub struct SurfaceDiff {
 }
 
 impl SurfaceDiff {
-    pub fn from_surface(surface: &Surface) -> Self {
+    pub fn TODO_new() -> Self {
+        SurfaceDiff {
+            working: Vec::new(),
+            source: Vec::new(),
+            surface_copy: Vec::new(),
+        }
+    }
+
+    pub fn from_surface(surface: &VSurface) -> Self {
+        if 1 + 1 == 2 {
+            return Self::TODO_new();
+        }
         let len = surface.buffer.len();
         let mut source = m256_zero_vec((len - (len % SSE_BITS)) / SSE_BITS);
         let surface_buffer = surface.buffer.clone();

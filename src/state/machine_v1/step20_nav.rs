@@ -26,7 +26,7 @@ impl Step for Step20 {
     }
 
     fn transformer(&self, mut params: StepParams) -> XMachineResult<()> {
-        let mut surface = VSurface::load_from_last_step(&params);
+        let mut surface = VSurface::load_from_last_step(&params)?;
 
         // let mut counter: usize = 0;
         // for item in surface.buffer {
@@ -36,13 +36,13 @@ impl Step for Step20 {
         // }
         // panic!("found {} iron", counter.to_formatted_string(&LOCALE));
 
-        surface = navigate_patches_to_base(surface, patches, &mut params);
+        surface = navigate_patches_to_base(surface, &mut params);
 
         for dest in main_base_destinations() {
             surface.draw_square(&Pixel::Stone, 20, &dest);
         }
 
-        surface.save(&params.step_out_dir);
+        surface.save(&params.step_out_dir)?;
 
         Ok(())
     }
@@ -61,7 +61,7 @@ fn navigate_patches_to_base_speculation(
     surface
 }
 
-fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> Surface {
+fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> VSurface {
     // TODO: Port to VSurface
     let x_start = surface
         .area_box

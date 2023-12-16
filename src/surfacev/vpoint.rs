@@ -5,7 +5,9 @@ use std::backtrace::Backtrace;
 use std::ops::{Add, Sub};
 
 /// Core XY Point. i32 for simpler math
-#[derive(Debug, Serialize, Deserialize, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Hash)]
+#[derive(
+    Debug, Serialize, Deserialize, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Hash, Ord,
+)]
 pub struct VPoint {
     x: i32,
     y: i32,
@@ -71,6 +73,60 @@ impl VPoint {
             && self.x < center_radius
             && self.y > -center_radius
             && self.y < center_radius
+    }
+
+    pub fn assert_even_position(&self) {
+        assert_eq!(self.x % 2, 0, "x={} is not even", self.x);
+        assert_eq!(self.y % 2, 0, "y={} is not even", self.y);
+    }
+
+    pub fn move_x(&self, steps: i32) -> Self {
+        VPoint {
+            x: self.x + steps,
+            y: self.y,
+        }
+    }
+
+    pub fn move_y(&self, steps: i32) -> Self {
+        VPoint {
+            x: self.x,
+            y: self.y + steps,
+        }
+    }
+
+    pub fn move_xy(&self, x_steps: i32, y_steps: i32) -> Self {
+        VPoint {
+            x: self.x + x_steps,
+            y: self.y + y_steps,
+        }
+    }
+
+    pub fn get_entity_area_2x2(&self) -> [Self; 4] {
+        [
+            *self,
+            self.move_x(1),
+            self.move_y(1),
+            self.move_x(1).move_y(1),
+        ]
+    }
+    pub fn get_entity_area_3x3(&self) -> [Self; 9] {
+        [
+            *self,
+            self.move_x(1),
+            self.move_y(1),
+            self.move_x(1).move_y(1),
+            //
+            self.move_x(2),
+            self.move_x(2).move_y(1),
+            self.move_y(2),
+            self.move_y(2).move_x(1),
+            //
+            self.move_y(2).move_x(2),
+        ]
+    }
+
+    pub fn distance_to(&self, other: &Self) -> u32 {
+        self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
     }
 }
 

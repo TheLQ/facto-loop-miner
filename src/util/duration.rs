@@ -3,19 +3,20 @@ use num_format::ToFormattedString;
 use std::fmt::{Display, Formatter};
 use std::time::{Duration, Instant};
 
+/// Usage: format!("Task completed in {}")`
 pub struct BasicWatch {
     start_time: Instant,
-    end_time: Option<Instant>
+    end_time: Option<Instant>,
 }
 
 impl BasicWatch {
     pub fn start() -> Self {
         BasicWatch {
             start_time: Instant::now(),
-            end_time: None
+            end_time: None,
         }
     }
-    
+
     pub fn stop(&mut self) {
         self.end_time = Some(Instant::now())
     }

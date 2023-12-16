@@ -1,3 +1,4 @@
+use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
@@ -120,7 +121,7 @@ impl VSurface {
         let build_watch = BasicWatch::start();
         let pixel_map_path = out_dir.join("pixel-map.png");
         debug!("Saving RGB dump image to {}", pixel_map_path.display());
-        let entities = self.pixels.new_xy_entity_array();
+        let entities = self.pixels.iter_xy_entities();
         // trace!("built entity array of {}", entities.len());
         let mut output: Vec<u8> = vec![0; self.pixels.xy_array_length_from_radius() * 3];
         for (i, pixel) in entities.enumerate() {
@@ -159,6 +160,14 @@ impl VSurface {
     }
 
     //</editor-fold>
+
+    pub fn get_radius(&self) -> u32 {
+        self.pixels.radius()
+    }
+
+    pub fn get_pixel(&self, point: &VPoint) -> Option<Pixel> {
+        self.pixels.get_entity_by_point(point).map(|e| e.pixel)
+    }
 
     pub fn set_pixel(&mut self, start: VPoint, pixel: Pixel) -> VResult<()> {
         self.pixels.add(VPixel {
@@ -205,6 +214,10 @@ impl VSurface {
             radius
         );
         self.pixels.remove_positions(removed_points);
+    }
+
+    pub fn to_surface_diff(&self) -> SurfaceDiff {
+        SurfaceDiff::from_surface(self)
     }
 }
 

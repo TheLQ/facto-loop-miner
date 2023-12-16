@@ -240,7 +240,8 @@ impl Surface {
     }
 
     pub fn surface_diff(&self) -> SurfaceDiff {
-        SurfaceDiff::from_surface(self)
+        // SurfaceDiff::from_surface(self)
+        todo!()
     }
 
     pub fn crop(&self, crop_radius_from_center: i32) -> Self {
