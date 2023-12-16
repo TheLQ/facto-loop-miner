@@ -21,7 +21,7 @@ pub fn calculate_cost_for_point(
     end: &Rail,
     resource_cloud: &ResourceCloud,
 ) -> u32 {
-    let distance = next.distance(end) as f32;
+    let distance = next.distance_to(&end) as f32;
     let cost_unit = 1f32;
     // let cost_unit = 100f32;
 
@@ -46,14 +46,14 @@ pub fn calculate_cost_for_point(
 
     // Avoid resource patches
     let closest_resources: Vec<Neighbour<f32, usize>> = resource_cloud.kdtree.within_unsorted(
-        &[start.endpoint.x as f32, start.endpoint.y as f32],
+        &start.endpoint.to_slice_f32(),
         1000f32,
         &squared_euclidean,
     );
     let mut resource_distance_bias =
         cost_unit * closest_resources.len() as f32 * RESOURCE_BIAS_EFFECT;
     // except too strong when at start
-    if next.distance(start) < 500 {
+    if next.distance_to(start) < 500 {
         resource_distance_bias = 0f32;
     }
 

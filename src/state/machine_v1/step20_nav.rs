@@ -2,12 +2,14 @@ use crate::navigator::mori::{mori_start, write_rail, Rail, RailDirection};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::state::machine_v1::step10_base::REMOVE_RESOURCE_BASE_TILES;
-use crate::surface::patch::{DiskPatch, Patch};
+use crate::surface::patch::{map_vpatch_to_kdtree, DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
 use crate::surface::sector::SectorSide;
 use crate::surface::surface::{PointU32, Surface};
+use crate::surfacev::err::VResult;
+use crate::surfacev::vpatch::VPatch;
+use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
-use crate::PixelKdTree;
 use kiddo::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
 use opencv::core::Point;
@@ -52,6 +54,12 @@ const NEAREST_COUNT: usize = 100;
 const PATH_LIMIT: Option<u8> = Some(10);
 // const PATH_LIMIT: Option<u8> = None;
 
+enum SpeculationTypes {
+    CurrentEnd,
+    CurrentEndAdd(u8),     // 1 and 2 after
+    NearestPatchToEnd(u8), // "somehow", keep the last
+}
+
 /// Vastly improve performance utilizing free CPU cores to try other paths.
 fn navigate_patches_to_base_speculation(
     surface: Surface,
@@ -61,46 +69,30 @@ fn navigate_patches_to_base_speculation(
     surface
 }
 
-fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> VSurface {
+fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> VResult<()> {
     // TODO: Port to VSurface
-    let x_start = surface
-        .area_box
-        .game_centered_x_i32(-REMOVE_RESOURCE_BASE_TILES) as i32;
-    let x_end = surface
-        .area_box
-        .game_centered_x_i32(REMOVE_RESOURCE_BASE_TILES) as i32;
-    let y_start = surface
-        .area_box
-        .game_centered_y_i32(-REMOVE_RESOURCE_BASE_TILES) as i32;
-    let y_end = surface
-        .area_box
-        .game_centered_y_i32(REMOVE_RESOURCE_BASE_TILES) as i32;
+    let x_start = -REMOVE_RESOURCE_BASE_TILES;
+    let x_end = REMOVE_RESOURCE_BASE_TILES;
+    let y_start = -REMOVE_RESOURCE_BASE_TILES;
+    let y_end = REMOVE_RESOURCE_BASE_TILES;
 
-    if 1 + 2 == 99 {
+    if 1 + 2 == 3 {
         for set_x in x_start..x_end {
             for set_y in x_start..x_end {
-                let pos = surface.xy_to_index(set_x as u32, set_y as u32);
-                surface.buffer[pos] = Pixel::Highlighter;
+                surface.set_pixel(VPoint::new(set_x, set_y), Pixel::Highlighter)?;
             }
         }
-        return surface;
+        return Ok(());
     }
 
     // tracing::debug!("found {} patch {} away", pixel.as_ref(), patch_distance);
-
-    // TODO: Speculation
-    enum SpeculationTypes {
-        CurrentEnd,
-        CurrentEndAdd(u8),     // 1 and 2 after
-        NearestPatchToEnd(u8), // "somehow", keep the last
-    }
 
     let mut destinations = main_base_destinations().into_iter();
 
     let base_corner = base_bottom_right_corner();
     let mut made_paths: u8 = 0;
 
-    for (nearest_count, patch_start) in ordered_patches_by_radial_base_corner(&disk_patches)
+    for (nearest_count, patch_start) in ordered_patches_by_radial_base_corner(surface)
         .into_iter()
         .enumerate()
     {
@@ -191,17 +183,21 @@ fn main_base_destinations() -> Vec<PointU32> {
 
 fn ordered_patches_by_base_side(surface: &Surface, side: SectorSide) {}
 
-fn ordered_patches_by_radial_base_corner(disk_patches: &DiskPatch) -> Vec<&Patch> {
+fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
     let pixel = Pixel::IronOre;
-    let patches = disk_patches.patches.get(&pixel).unwrap();
-
-    // let cloud = map_patch_corners_to_kdtree(patches.iter().map(|e| e.patch_to_rect()));
-    let cloud: PixelKdTree = todo!();
+    let patches: Vec<&VPatch> = surface
+        .get_patches_iter()
+        .into_iter()
+        .filter(|v| v.resource == pixel)
+        .collect();
+    let cloud = map_vpatch_to_kdtree(patches);
 
     let base_corner = base_bottom_right_corner();
-    let needle = point_to_slice_f32(&base_corner);
-    let nearest: Vec<Neighbour<f32, usize>> =
-        cloud.nearest_n(&needle, NEAREST_COUNT, &squared_euclidean);
+    let nearest: Vec<Neighbour<f32, usize>> = cloud.nearest_n(
+        &base_corner.to_slice_f32(),
+        NEAREST_COUNT,
+        &squared_euclidean,
+    );
 
     nearest
         .into_iter()
@@ -228,9 +224,8 @@ fn right_mid_edge_point(surface: &Surface) -> Point {
     }
 }
 
-#[allow(unused)]
-fn base_bottom_right_corner() -> Point {
-    Point { x: 4700, y: 4700 }
+fn base_bottom_right_corner() -> VPoint {
+    VPoint::new(4700, 4700)
 }
 
 #[allow(unused)]

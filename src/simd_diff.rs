@@ -1,10 +1,7 @@
 use crate::simd::{
-    any_bit_equal_m256_bool, apply_any_u8_iter_to_m256_buffer, apply_positions_iter_to_m256_buffer,
-    m256_zero, m256_zero_vec, SseUnit, SSE_BITS,
+    any_bit_equal_m256_bool, apply_positions_iter_to_m256_buffer, m256_zero, SseUnit,
 };
-use crate::surface::surface::Surface;
 use crate::surfacev::vsurface::VSurface;
-use std::mem::transmute;
 
 pub struct SurfaceDiff {
     surface_copy: Vec<u8>,
@@ -22,26 +19,27 @@ impl SurfaceDiff {
     }
 
     pub fn from_surface(surface: &VSurface) -> Self {
-        if 1 + 1 == 2 {
-            return Self::TODO_new();
-        }
-        let len = surface.buffer.len();
-        let mut source = m256_zero_vec((len - (len % SSE_BITS)) / SSE_BITS);
-        let surface_buffer = surface.buffer.clone();
-        let raw_buffer: &[u8] = unsafe { transmute(surface_buffer.as_slice()) };
-        // TODO: was raw_buffer.clone()
-        let raw_buffer2 = raw_buffer;
-        apply_any_u8_iter_to_m256_buffer((*raw_buffer).iter(), &mut source);
-
-        let working = m256_zero_vec(source.len());
-
-        let res = SurfaceDiff {
-            source,
-            working,
-            surface_copy: Vec::from(raw_buffer2),
-        };
-
-        res
+        todo!()
+        // if 1 + 1 == 2 {
+        //     return Self::TODO_new();
+        // }
+        // let len = todo!(); // surface.buffer.len();
+        // let mut source = m256_zero_vec((len - (len % SSE_BITS)) / SSE_BITS);
+        // let surface_buffer: VSurface = todo!(); // surface.buffer.clone();
+        // let raw_buffer: &[u8] = unsafe { transmute(surface_buffer.as_slice()) };
+        // // TODO: was raw_buffer.clone()
+        // let raw_buffer2 = raw_buffer;
+        // apply_any_u8_iter_to_m256_buffer((*raw_buffer).iter(), &mut source);
+        //
+        // let working = m256_zero_vec(source.len());
+        //
+        // let res = SurfaceDiff {
+        //     source,
+        //     working,
+        //     surface_copy: Vec::from(raw_buffer2),
+        // };
+        //
+        // res
     }
 
     pub fn is_positions_free(&mut self, positions: Vec<usize>) -> bool {

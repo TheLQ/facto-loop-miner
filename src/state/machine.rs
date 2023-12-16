@@ -42,7 +42,7 @@ impl Machine {
 
         let state = Rc::new(RefCell::new(State::new(&work_dir.join("state.json"))));
 
-        let step_names: Vec<String> = self.steps.iter().map(|v| v.name()).collect();
+        let step_names: Vec<String> = self.steps.iter().map(|v| v.name().to_string()).collect();
         tracing::debug!("[Machine] Steps {}", step_names.join(","));
 
         let mut step_history_out_dirs = Vec::new();
@@ -65,7 +65,7 @@ impl Machine {
                     remove_dir_all(&step_out_dir).unwrap()
                 }
                 create_dir(&step_out_dir).unwrap();
-                let metrics = Rc::new(RefCell::new(Metrics::new(step.name())));
+                let metrics = Rc::new(RefCell::new(Metrics::new(step.name().to_string())));
                 info!("{} - Transforming", header_prefix);
 
                 let mut step_watch = BasicWatch::start();

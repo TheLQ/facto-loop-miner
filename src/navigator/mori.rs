@@ -215,7 +215,7 @@ impl Rail {
         res
     }
 
-    fn distance(&self, other: &Rail) -> u32 {
+    pub fn distance_to(&self, other: &Rail) -> u32 {
         let a = &self.endpoint;
         let b = &other.endpoint;
         a.distance_to(b)
@@ -349,7 +349,7 @@ impl Rail {
         if let Some(rail) = self.move_forward().into_buildable(surface, working_buffer) {
             let cost =
                 calculate_cost_for_point(RailAction::Straight, self, &rail, end, resource_cloud);
-            if !(rail.distance(end) < 400 && rail.direction != end.direction) {
+            if !(rail.distance_to(end) < 400 && rail.direction != end.direction) {
                 res.push((rail, cost))
             }
         }
@@ -357,14 +357,14 @@ impl Rail {
         if let Some(rail) = self.move_left().into_buildable(surface, working_buffer) {
             let cost =
                 calculate_cost_for_point(RailAction::TurnLeft, self, &rail, end, resource_cloud);
-            if !(rail.distance(end) < 400 && rail.direction != end.direction) {
+            if !(rail.distance_to(end) < 400 && rail.direction != end.direction) {
                 res.push((rail, cost))
             }
         }
         if let Some(rail) = self.move_right().into_buildable(surface, working_buffer) {
             let cost =
                 calculate_cost_for_point(RailAction::TurnRight, self, &rail, end, resource_cloud);
-            if !(rail.distance(end) < 400 && rail.direction != end.direction) {
+            if !(rail.distance_to(end) < 400 && rail.direction != end.direction) {
                 res.push((rail, cost))
             }
         }
