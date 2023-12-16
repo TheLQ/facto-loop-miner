@@ -14,6 +14,7 @@ use itertools::Itertools;
 use kiddo::distance::squared_euclidean;
 use kiddo::float::neighbour::Neighbour;
 use opencv::core::Point;
+use tracing::{debug, info};
 
 pub struct Step20 {}
 
@@ -97,6 +98,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         .into_iter()
         .cloned()
         .collect();
+    let ordered_size = ordered_patches.len();
     for (nearest_count, patch_start) in ordered_patches.into_iter().enumerate() {
         tracing::debug!(
             "path {} of {} - actually made {} max {:?}",
@@ -125,7 +127,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             break;
         };
 
-        let patch_corner = patch_start.area.start;
+        let patch_corner = patch_start.area.start.move_round2_down();
         // surface.draw_text(
         //     "start",
         //     Point {
@@ -142,9 +144,9 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         // }
 
         let start = Rail::new_straight(patch_corner, RailDirection::Left).move_forward();
-        let end = Rail::new_straight(patch_start.area.start, RailDirection::Left);
+        let end = Rail::new_straight(destination, RailDirection::Left);
 
-        if 1 + 1 == 2 {
+        if 1 + 1 == 24 {
             write_rail(surface, &Vec::from([start.clone(), end.clone()]))?;
             // surface.draw_square(
             //     &Pixel::IronOre,
@@ -154,7 +156,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             return Ok(());
         }
 
-        if let Some(path) = mori_start(&surface, start, end, params) {
+        if let Some(path) = mori_start(surface, start, end, params) {
             write_rail(surface, &path)?;
             params.metrics.borrow_mut().increment("path-success")
         } else {
@@ -162,6 +164,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         }
         made_paths += 1;
     }
+    info!("out of patches in {}", ordered_size);
 
     Ok(())
 }
@@ -181,7 +184,7 @@ fn main_base_destinations() -> Vec<VPoint> {
 fn ordered_patches_by_base_side(surface: &Surface, side: SectorSide) {}
 
 fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
-    let pixel = Pixel::IronOre;
+    let pixel = Pixel::CopperOre;
     let patches: Vec<&VPatch> = surface
         .get_patches_iter()
         .into_iter()
@@ -195,6 +198,7 @@ fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
         NEAREST_COUNT,
         &squared_euclidean,
     );
+    debug!("found {} from {}", nearest.len(), patches.len());
 
     patches
         .iter()

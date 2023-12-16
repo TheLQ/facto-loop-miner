@@ -1,6 +1,7 @@
 use crate::surface::patch::DiskPatch;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
+use crate::surfacev::vsurface::VSurface;
 use crate::PixelKdTree;
 
 #[derive(Default)]
@@ -26,23 +27,14 @@ impl ResourceCloud {
         }
     }
 
-    pub fn from_surface(surface: &Surface) -> Self {
+    pub fn from_surface(surface: &VSurface) -> Self {
         let mut positions: Vec<[f32; 2]> = Vec::new();
         let mut pixels = Vec::new();
 
-        for (i, pixel) in surface.buffer.iter().enumerate() {
-            match pixel {
-                Pixel::IronOre
-                | Pixel::CopperOre
-                | Pixel::Stone
-                | Pixel::CrudeOil
-                | Pixel::Coal
-                | Pixel::UraniumOre => {
-                    let point = surface.index_to_xy(i);
-                    positions.push(point_to_slice_f32(point));
-                    pixels.push(pixel.clone());
-                }
-                _ => {}
+        for patch in surface.get_patches_iter() {
+            for patch_pixel in surface.get_xy_in_patch(patch) {
+                positions.push(patch_pixel.to_slice_f32());
+                pixels.push(patch.resource);
             }
         }
         tracing::debug!("built total {}", positions.len());

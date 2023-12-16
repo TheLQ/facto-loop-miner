@@ -13,6 +13,7 @@ use image::{ColorType, ImageEncoder};
 use num_format::ToFormattedString;
 use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter};
@@ -186,6 +187,14 @@ impl VSurface {
         self.patches.iter()
     }
 
+    pub fn get_xy_in_patch(&self, patch: &VPatch) -> Vec<VPoint> {
+        patch
+            .pixel_indexes
+            .iter()
+            .map(|v| self.pixels.get_entity_by_index(*v).starts[0])
+            .collect()
+    }
+
     pub fn crop(&mut self, new_radius: u32) {
         info!("Crop from {} to {}", self.entities.radius(), new_radius);
         self.entities.crop(new_radius);
@@ -229,9 +238,23 @@ impl Display for VSurface {
             "VSurface pixels {{ {} }} entities {{ {} }} patches {{ {} }}",
             self.pixels,
             self.entities,
-            self.patches.len()
+            display_patches(&self.patches)
         )
     }
+}
+
+fn display_patches(patches: &Vec<VPatch>) -> String {
+    let mut map: HashMap<Pixel, usize> = HashMap::new();
+    for patch in patches {
+        let current_count = map.get(&patch.resource).unwrap_or(&0);
+        map.insert(patch.resource, current_count + 1);
+    }
+
+    let mut result = format!("total {}", patches.len());
+    for (resource, count) in map {
+        result = format!("{} {:?} {}", result, resource, count);
+    }
+    result
 }
 
 //<editor-fold desc="io common">

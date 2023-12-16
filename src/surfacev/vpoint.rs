@@ -105,6 +105,21 @@ impl VPoint {
         }
     }
 
+    pub fn move_round2_down(&self) -> Self {
+        self.move_round_down(2)
+    }
+
+    fn move_round3_down(&self) -> Self {
+        self.move_round_down(3)
+    }
+
+    fn move_round_down(&self, size: i32) -> Self {
+        VPoint {
+            x: self.x - (self.x % size),
+            y: self.y - (self.y % size),
+        }
+    }
+
     pub fn get_entity_area_2x2(&self) -> [Self; 4] {
         [
             *self,

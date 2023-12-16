@@ -42,8 +42,7 @@ pub fn mori_start(
         }
     }
 
-    let patches = DiskPatch::load_from_step_history(step_params);
-    let resource_cloud = ResourceCloud::from_patches(&patches);
+    let resource_cloud = ResourceCloud::from_surface(&surface);
 
     // TODO let mut working_buffer = surface.surface_diff();
     let mut working_buffer = SurfaceDiff::TODO_new();
