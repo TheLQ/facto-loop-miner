@@ -1,6 +1,6 @@
 use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::StepParams;
-use crate::surface::metric::Metrics;
+use crate::surface::fast_metrics::{FastMetric, FastMetrics};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::ventity_buffer::{VEntityBuffer, VEntityXY};
@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
-use std::io::BufWriter;
+use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::thread::JoinHandle;
@@ -68,6 +68,14 @@ impl VSurface {
     }
 
     fn load_state(out_dir: &Path) -> VResult<Self> {
+        match 1 {
+            0 => Self::_load_state_sequential(out_dir),
+            1 => Self::_load_state_reader(out_dir),
+            _ => panic!(),
+        }
+    }
+
+    fn _load_state_sequential(out_dir: &Path) -> VResult<Self> {
         let mut read_watch = BasicWatch::start();
         let path = path_state(out_dir);
         let mut data = read_entire_file(&path)?;
@@ -79,6 +87,20 @@ impl VSurface {
             "Loading state JSON read {} deserialize {} from {}",
             read_watch,
             load_watch,
+            path.display(),
+        );
+        Ok(surface)
+    }
+
+    fn _load_state_reader(out_dir: &Path) -> VResult<Self> {
+        let total_watch = BasicWatch::start();
+        let path = path_state(out_dir);
+        let reader = BufReader::new(File::open(&path).map_err(VError::io_error(&path))?);
+
+        let surface = simd_json::serde::from_reader(reader).map_err(VError::simd_json(&path))?;
+        info!(
+            "Loading state JSON in {} from {}",
+            total_watch,
             path.display(),
         );
         Ok(surface)
@@ -262,9 +284,9 @@ impl VSurface {
     }
 
     pub fn log_pixel_stats(&self) {
-        let mut metrics = Metrics::new("vsurface-pixel");
+        let mut metrics = FastMetrics::new();
         for pixel in self.pixels.iter_xy_pixels() {
-            metrics.increment_slow(pixel.as_ref());
+            metrics.increment(FastMetric::VSurface_Pixel(*pixel));
         }
         metrics.log_final();
     }

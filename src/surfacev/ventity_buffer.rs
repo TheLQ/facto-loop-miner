@@ -1,4 +1,4 @@
-use crate::surface::metric::Metrics;
+use crate::surface::fast_metrics::{FastMetric, FastMetrics};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::vpoint::VPoint;
@@ -385,24 +385,32 @@ impl VEntityBuffer<VPixel> {
     }
 
     pub fn map_pixel_xy_to_cv(&self, filter: Option<Pixel>) -> Mat {
-        let metrics = Rc::new(RefCell::new(Metrics::new("entity-cv-mapper")));
+        let metrics = Rc::new(RefCell::new(FastMetrics::new()));
 
         let output = self.map_xy_entities_to_bigger_u8_vec(|e| {
             if let Some(e) = e {
                 if let Some(filter) = filter {
                     if e.pixel() == &filter {
-                        metrics.borrow_mut().increment(format!("f-{:?}", e.pixel()));
+                        metrics
+                            .borrow_mut()
+                            .increment(FastMetric::PixelCvMapper_Filter(*e.pixel()));
                         [Pixel::Highlighter.into_id()]
                     } else {
-                        metrics.borrow_mut().increment("f-empty".to_string());
+                        metrics
+                            .borrow_mut()
+                            .increment(FastMetric::PixelCvMapper_FilterEmpty);
                         [0]
                     }
                 } else {
-                    metrics.borrow_mut().increment("not-empty".to_string());
+                    metrics
+                        .borrow_mut()
+                        .increment(FastMetric::PixelCvMapper_NotEmpty);
                     [Pixel::Highlighter.into_id()]
                 }
             } else {
-                metrics.borrow_mut().increment("empty".to_string());
+                metrics
+                    .borrow_mut()
+                    .increment(FastMetric::PixelCvMapper_Empty);
                 [0]
             }
         });

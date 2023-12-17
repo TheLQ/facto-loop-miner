@@ -10,7 +10,20 @@ use std::path::Path;
 use strum::IntoEnumIterator;
 use strum::{AsRefStr, EnumIter};
 
-#[derive(Serialize, Deserialize, AsRefStr, EnumIter, Debug, PartialEq, Clone, Eq, Hash, Copy)]
+#[derive(
+    Serialize,
+    Deserialize,
+    AsRefStr,
+    EnumIter,
+    Debug,
+    PartialEq,
+    Clone,
+    Eq,
+    Hash,
+    Copy,
+    PartialOrd,
+    Ord,
+)]
 #[repr(u8)]
 pub enum Pixel {
     Empty = 0,

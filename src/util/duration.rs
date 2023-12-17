@@ -40,3 +40,9 @@ impl Display for BasicWatch {
         )
     }
 }
+
+impl Default for BasicWatch {
+    fn default() -> Self {
+        Self::start()
+    }
+}
