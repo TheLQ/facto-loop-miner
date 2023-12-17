@@ -89,7 +89,14 @@ where
 
     pub fn index_to_xy(&self, index: usize) -> VPoint {
         if index > self.xy_to_entity.len() {
-            panic!("too big {}", index);
+            panic!(
+                "too big {} {}",
+                index,
+                VError::XYOutOfBounds {
+                    positions: vec![],
+                    backtrace: Backtrace::capture()
+                }
+            );
         }
         let radius = self.radius as i32;
         let diameter = self.diameter();
@@ -246,6 +253,10 @@ where
         Ok(())
     }
 
+    pub fn load_xy_from_other(&mut self, other: Self) {
+        self.xy_to_entity = other.xy_to_entity;
+    }
+
     // pub fn iter_xy_entities_or_default<'a>(&'a self, default: &'a E) -> impl Iterator<Item = &E> {
     //     self.xy_to_entity.iter().map(move |index| {
     //         if *index == EMPTY_XY_INDEX {
@@ -380,20 +391,18 @@ impl VEntityBuffer<VPixel> {
             if let Some(e) = e {
                 if let Some(filter) = filter {
                     if e.pixel() == &filter {
-                        metrics
-                            .borrow_mut()
-                            .increment(&format!("f-{:?}", e.pixel()));
+                        metrics.borrow_mut().increment(format!("f-{:?}", e.pixel()));
                         [Pixel::Highlighter.into_id()]
                     } else {
-                        metrics.borrow_mut().increment("f-empty");
+                        metrics.borrow_mut().increment("f-empty".to_string());
                         [0]
                     }
                 } else {
-                    metrics.borrow_mut().increment("not-empty");
+                    metrics.borrow_mut().increment("not-empty".to_string());
                     [Pixel::Highlighter.into_id()]
                 }
             } else {
-                metrics.borrow_mut().increment("empty");
+                metrics.borrow_mut().increment("empty".to_string());
                 [0]
             }
         });

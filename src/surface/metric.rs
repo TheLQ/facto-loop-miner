@@ -16,7 +16,14 @@ impl Metrics {
         }
     }
 
-    pub fn increment(&mut self, metric_name: &str) {
+    pub fn increment(&mut self, metric_name: String) {
+        self.entity_metrics
+            .entry(metric_name)
+            .and_modify(|v| *v += 1)
+            .or_insert(1);
+    }
+
+    pub fn increment_slow(&mut self, metric_name: &str) {
         self.entity_metrics
             .entry(metric_name.to_string())
             .and_modify(|v| *v += 1)
@@ -49,7 +56,7 @@ impl Metrics {
     {
         let mut metric = Metrics::new(new_item_prefix);
         for metric_name in iter {
-            metric.increment(&metric_name);
+            metric.increment_slow(&metric_name);
         }
         metric.log_final();
     }

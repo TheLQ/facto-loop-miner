@@ -157,9 +157,9 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
 
         if let Some(path) = mori_start(surface, start, end, params) {
             write_rail(surface, &path)?;
-            params.metrics.borrow_mut().increment("path-success")
+            params.metrics.borrow_mut().increment_slow("path-success")
         } else {
-            params.metrics.borrow_mut().increment("path-failure")
+            params.metrics.borrow_mut().increment_slow("path-failure")
         }
         made_paths += 1;
     }

@@ -93,7 +93,7 @@ where
         params
             .metrics
             .borrow_mut()
-            .increment(entity.name().as_ref());
+            .increment_slow(entity.name().as_ref());
     }
     Ok(())
 }

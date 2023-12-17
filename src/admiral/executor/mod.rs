@@ -75,7 +75,7 @@ pub trait LuaCompiler {
                     if part.contains(' ') {
                         warn!("[lua_log] {}", part);
                     } else {
-                        metric.increment(part);
+                        metric.increment_slow(part);
                     }
                     // if !v.ends_with("_success") {
                     //     return Err(RCONError::TypeError(format!(

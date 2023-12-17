@@ -16,7 +16,7 @@
 // #![feature()]
 // #![feature()]
 // #![feature()]
-
+#![feature(const_trait_impl)]
 // lints
 #![allow(unused_variables)]
 #![allow(dead_code)]

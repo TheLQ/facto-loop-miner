@@ -52,7 +52,7 @@ pub fn draw_mega_box(surface: &mut VSurface, metrics: &mut Metrics) -> VResult<(
     for point in points_in_centered_box(tiles as u32, VPoint::zero()) {
         if !point.is_within_center_radius(tiles as u32) {
             surface.set_pixel(point, Pixel::EdgeWall)?;
-            metrics.increment("base-box");
+            metrics.increment_slow("base-box");
         }
     }
     debug!("megabox?");

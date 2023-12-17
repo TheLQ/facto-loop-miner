@@ -19,6 +19,8 @@ use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
+use std::thread;
+use std::thread::JoinHandle;
 use tracing::{debug, info, trace};
 
 /// A map of background pixels (eg resources, water) and the large entities on top
@@ -46,11 +48,23 @@ impl VSurface {
     pub fn load(out_dir: &Path) -> VResult<Self> {
         info!("+++ Loading VSurface from {}", out_dir.display());
         let load_time = BasicWatch::start();
-        let mut surface = Self::load_state(out_dir)?;
-        surface.load_entity_buffers(out_dir)?;
-        info!("Loaded {}", surface);
+
+        let surface_out_dir = out_dir.to_path_buf();
+        let surface_thread = thread::spawn(move || Self::load_state(&surface_out_dir));
+        let (pixel_thread, entity_thread) = Self::new(1).load_entity_buffers(out_dir);
+
+        let mut new_surface = surface_thread.join().expect("surface join failed")?;
+
+        new_surface
+            .entities
+            .load_xy_from_other(entity_thread.join().expect("entity thread failed")?);
+        new_surface
+            .pixels
+            .load_xy_from_other(pixel_thread.join().expect("pixel thread failed")?);
+
+        info!("Loaded {}", new_surface);
         info!("+++ Loaded in {} from {}", load_time, out_dir.display());
-        Ok(surface)
+        Ok(new_surface)
     }
 
     fn load_state(out_dir: &Path) -> VResult<Self> {
@@ -70,14 +84,28 @@ impl VSurface {
         Ok(surface)
     }
 
-    fn load_entity_buffers(&mut self, out_dir: &Path) -> VResult<()> {
-        let pixel_path = &path_pixel_xy_indexes(out_dir);
-        self.pixels.load_xy_file(pixel_path)?;
+    fn load_entity_buffers(
+        &mut self,
+        out_dir: &Path,
+    ) -> (
+        JoinHandle<VResult<VEntityBuffer<VPixel>>>,
+        JoinHandle<VResult<VEntityBuffer<VEntity>>>,
+    ) {
+        let out_dir_buf = out_dir.to_path_buf();
+        let pixel_thread = thread::spawn(move || {
+            let pixel_path = &path_pixel_xy_indexes(&out_dir_buf);
+            let mut buffer = VEntityBuffer::<VPixel>::new(0);
+            buffer.load_xy_file(pixel_path).map(|_| buffer)
+        });
 
-        let entity_path = &path_entity_xy_indexes(out_dir);
-        self.entities.load_xy_file(entity_path)?;
+        let out_dir_buf = out_dir.to_path_buf();
+        let entity_thread = thread::spawn(move || {
+            let entity_path = &path_entity_xy_indexes(&out_dir_buf);
+            let mut buffer = VEntityBuffer::<VEntity>::new(0);
+            buffer.load_xy_file(entity_path).map(|_| buffer)
+        });
 
-        Ok(())
+        (pixel_thread, entity_thread)
     }
 
     pub fn load_from_last_step(params: &StepParams) -> VResult<Self> {
@@ -182,12 +210,12 @@ impl VSurface {
         Ok(())
     }
 
-    pub fn add_patches(&mut self, patches: Vec<VPatch>) {
-        self.patches.extend(patches)
+    pub fn add_patches(&mut self, patches: &[VPatch]) {
+        self.patches.extend_from_slice(patches)
     }
 
-    pub fn get_patches_iter(&self) -> impl IntoIterator<Item = &VPatch> {
-        self.patches.iter()
+    pub fn get_patches_iter(&self) -> &[VPatch] {
+        &self.patches
     }
 
     pub fn get_xy_in_patch(&self, patch: &VPatch) -> Vec<VPoint> {
@@ -236,7 +264,7 @@ impl VSurface {
     pub fn log_pixel_stats(&self) {
         let mut metrics = Metrics::new("vsurface-pixel");
         for pixel in self.pixels.iter_xy_pixels() {
-            metrics.increment(pixel.as_ref());
+            metrics.increment_slow(pixel.as_ref());
         }
         metrics.log_final();
     }
