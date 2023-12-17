@@ -108,21 +108,22 @@ mod test {
         let mut surface = Surface::new(WIDTH as u32, HEIGHT as u32 - 1);
         surface.buffer = input_raw;
 
-        assert_eq!(
-            SurfaceDiff::from_surface(&surface).is_positions_free(pixel_positions_test.clone()),
-            false
-        );
-
-        tracing::debug!("-----");
-
-        for pos in &pixel_positions_test {
-            let slice = surface.buffer.as_mut_slice();
-            slice[*pos] = Pixel::Empty;
-        }
-
-        assert_eq!(
-            SurfaceDiff::from_surface(&surface).is_positions_free(pixel_positions_test),
-            true
-        );
+        todo!()
+        // assert_eq!(
+        //     SurfaceDiff::from_surface(&surface).is_positions_free(pixel_positions_test.clone()),
+        //     false
+        // );
+        //
+        // tracing::debug!("-----");
+        //
+        // for pos in &pixel_positions_test {
+        //     let slice = surface.buffer.as_mut_slice();
+        //     slice[*pos] = Pixel::Empty;
+        // }
+        //
+        // assert_eq!(
+        //     SurfaceDiff::from_surface(&surface).is_positions_free(pixel_positions_test),
+        //     true
+        // );
     }
 }

@@ -16,9 +16,10 @@ use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 use std::path::Path;
 use std::rc::Rc;
-use tracing::{debug, trace};
+use tracing::debug;
 
 const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
+const EMPTY_XY_INDEX: usize = usize::MAX;
 
 pub trait VEntityXY {
     fn get_xy(&self) -> &[VPoint];
@@ -52,7 +53,7 @@ where
     }
 
     fn init_xy_to_entity(&mut self) {
-        self.xy_to_entity = vec![usize::MAX; Self::_xy_array_length_from_radius(self.radius)]
+        self.xy_to_entity = vec![EMPTY_XY_INDEX; Self::_xy_array_length_from_radius(self.radius)]
     }
 
     pub fn radius(&self) -> u32 {
@@ -70,19 +71,6 @@ where
         let abs_x = (x as isize + radius) as usize;
         let abs_y = (y as isize + radius) as usize;
         self.diameter() * abs_y + abs_x
-        // let mut value = self.diameter();
-        // value = if let Some(v) = value.checked_mul(abs_y) {
-        //     v
-        // } else {
-        //     panic!(
-        //         "can't multiply diameter {} and {} (orig {} radius {})",
-        //         self.diameter(),
-        //         abs_y,
-        //         y,
-        //         radius
-        //     );
-        // };
-        // value + abs_x
     }
 
     /// Get index in xy_to_entity buffer
@@ -97,6 +85,19 @@ where
             )
         }
         self.xy_to_index_unchecked(x, y)
+    }
+
+    pub fn index_to_xy(&self, index: usize) -> VPoint {
+        if index > self.xy_to_entity.len() {
+            panic!("too big {}", index);
+        }
+        let radius = self.radius as i32;
+        let diameter = self.diameter();
+
+        let diameter_component = index - (index % diameter);
+        let y = diameter_component / diameter;
+        let x = index - diameter_component;
+        VPoint::new(x as i32 - radius, y as i32 - radius)
     }
 
     pub fn is_xy_out_of_bounds(&self, x: i32, y: i32) -> bool {
@@ -186,7 +187,7 @@ where
             new_xy_length
         );
 
-        self.xy_to_entity = vec![0usize; new_xy_length];
+        self.init_xy_to_entity();
 
         for i in 0..self.entities.len() {
             let xy_insertable = self.entities[i].get_xy().to_owned();
@@ -208,9 +209,10 @@ where
         write_entire_file(path, &big_xy_bytes)?;
 
         debug!(
-            "Saving Entity XY serialize {} write {} path {}",
+            "Saving Entity XY serialize {} write {} bytes {} path {}",
             serialize_watch,
             write_watch,
+            big_xy_bytes.len(),
             path.display()
         );
 
@@ -244,8 +246,21 @@ where
         Ok(())
     }
 
-    pub fn iter_xy_entities(&self) -> impl Iterator<Item = &E> {
-        self.xy_to_entity.iter().map(|index| &self.entities[*index])
+    // pub fn iter_xy_entities_or_default<'a>(&'a self, default: &'a E) -> impl Iterator<Item = &E> {
+    //     self.xy_to_entity.iter().map(move |index| {
+    //         if *index == EMPTY_XY_INDEX {
+    //             default
+    //         } else {
+    //             &self.entities[*index]
+    //         }
+    //     })
+    // }
+
+    pub fn iter_entities(&self) -> impl Iterator<Item = &E> {
+        self.xy_to_entity
+            .iter()
+            .filter(|index| **index != EMPTY_XY_INDEX)
+            .map(|index| &self.entities[*index])
     }
 
     pub fn xy_array_length_from_radius(&self) -> usize {
@@ -258,7 +273,7 @@ where
 
     pub fn map_xy_entities_to_bigger_u8_vec<const MAPPED_SIZE: usize>(
         &self,
-        mapper: impl Fn(&E) -> [u8; MAPPED_SIZE],
+        mapper: impl Fn(Option<&E>) -> [u8; MAPPED_SIZE],
     ) -> Vec<u8> {
         match 1 {
             // 0 => self._map_xy_to_vec_targeted(mapper),
@@ -269,12 +284,12 @@ where
 
     fn _map_xy_to_vec_inlined<const INLINED_MAPPED_SIZE: usize>(
         &self,
-        mapper: impl Fn(&E) -> [u8; INLINED_MAPPED_SIZE],
+        mapper: impl Fn(Option<&E>) -> [u8; INLINED_MAPPED_SIZE],
     ) -> Vec<u8> {
         let result: Vec<u8> = self
             .xy_to_entity
             .iter()
-            .map(|index| &self.entities[*index])
+            .map(|index| self.entities.get(*index))
             .flat_map(mapper)
             .collect();
         assert_eq!(
@@ -287,34 +302,37 @@ where
         result
     }
 
-    fn _map_xy_to_vec_targeted<const TARGETED_MAPPED_SIZE: usize>(
-        &self,
-        mapper: impl Fn(&E) -> [u8; TARGETED_MAPPED_SIZE],
-    ) -> Vec<u8> {
-        let mut image = vec![0u8; self.xy_to_entity.len() * TARGETED_MAPPED_SIZE];
-        trace!("mapping {} total {}", TARGETED_MAPPED_SIZE, image.len());
-        for entity in &self.entities {
-            for entity_pos in entity.get_xy() {
-                let index = self.xy_to_index(entity_pos.x(), entity_pos.y()) * TARGETED_MAPPED_SIZE;
-                let color = mapper(entity);
-                if index + TARGETED_MAPPED_SIZE > image.len() {
-                    trace!("overflowing for index {}", index);
-                }
-                // todo recheck this for >1
-                if TARGETED_MAPPED_SIZE == 1 {
-                    image[index] = color[0];
-                } else {
-                    image[index..(index + TARGETED_MAPPED_SIZE)].copy_from_slice(&color);
-                }
-            }
-        }
-        trace!(
-            "mapped xy from {} to {}",
-            self.xy_to_entity.len(),
-            image.len()
-        );
-        image
-    }
+    // fn _map_xy_to_vec_targeted<const TARGETED_MAPPED_SIZE: usize>(
+    //     &self,
+    //     mapper: impl Fn(Option<&E>) -> [u8; TARGETED_MAPPED_SIZE],
+    // ) -> Vec<u8> {
+    //     let mut image = vec![0u8; self.xy_to_entity.len() * TARGETED_MAPPED_SIZE];
+    //     trace!("mapping {} total {}", TARGETED_MAPPED_SIZE, image.len());
+    //     for entity_index in &self.xy_to_entity {
+    //         let mapped_value = mapper(self.entities.get(*entity_index));
+    //         let index = self.xy_to_index(entity_pos.x(), entity_pos.y()) * TARGETED_MAPPED_SIZE;
+    //         image[index..(index + TARGETED_MAPPED_SIZE)].copy_from_slice(&color);
+    //
+    //         for entity_pos in entity.get_xy() {
+    //             let color = mapper(entity);
+    //             if index + TARGETED_MAPPED_SIZE > image.len() {
+    //                 trace!("overflowing for index {}", index);
+    //             }
+    //             // todo recheck this for >1
+    //             if TARGETED_MAPPED_SIZE == 1 {
+    //                 image[index] = color[0];
+    //             } else {
+    //                 image[index..(index + TARGETED_MAPPED_SIZE)].copy_from_slice(&color);
+    //             }
+    //         }
+    //     }
+    //     trace!(
+    //         "mapped xy from {} to {}",
+    //         self.xy_to_entity.len(),
+    //         image.len()
+    //     );
+    //     image
+    // }
 
     pub fn get_entity_by_index(&self, index: usize) -> &E {
         &self.entities[index]
@@ -345,23 +363,35 @@ impl<E> Display for VEntityBuffer<E> {
 }
 
 impl VEntityBuffer<VPixel> {
+    pub fn iter_xy_pixels(&self) -> impl Iterator<Item = &Pixel> {
+        self.xy_to_entity.iter().map(|index| {
+            if *index == EMPTY_XY_INDEX {
+                &Pixel::Empty
+            } else {
+                self.entities[*index].pixel()
+            }
+        })
+    }
+
     pub fn map_pixel_xy_to_cv(&self, filter: Option<Pixel>) -> Mat {
         let metrics = Rc::new(RefCell::new(Metrics::new("entity-cv-mapper")));
 
         let output = self.map_xy_entities_to_bigger_u8_vec(|e| {
-            if let Some(filter) = filter {
-                if e.pixel() == &filter {
-                    metrics
-                        .borrow_mut()
-                        .increment(&format!("f-{:?}", e.pixel()));
-                    [Pixel::Highlighter.into_id()]
+            if let Some(e) = e {
+                if let Some(filter) = filter {
+                    if e.pixel() == &filter {
+                        metrics
+                            .borrow_mut()
+                            .increment(&format!("f-{:?}", e.pixel()));
+                        [Pixel::Highlighter.into_id()]
+                    } else {
+                        metrics.borrow_mut().increment("f-empty");
+                        [0]
+                    }
                 } else {
-                    metrics.borrow_mut().increment("f-empty");
-                    [0]
+                    metrics.borrow_mut().increment("not-empty");
+                    [Pixel::Highlighter.into_id()]
                 }
-            } else if e.pixel() != &Pixel::Empty {
-                metrics.borrow_mut().increment("not-empty");
-                [Pixel::Highlighter.into_id()]
             } else {
                 metrics.borrow_mut().increment("empty");
                 [0]
@@ -371,5 +401,35 @@ impl VEntityBuffer<VPixel> {
         let side_length = self.diameter();
         Mat::from_slice_rows_cols(&output, side_length, side_length).unwrap()
         // Mat::new_rows_cols_with_data(side_length, side_length, )
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::surfacev::ventity_buffer::VEntityBuffer;
+    use crate::surfacev::vpoint::VPoint;
+    use crate::surfacev::vsurface::VPixel;
+
+    #[test]
+    pub fn to_xy_index_and_back() {
+        let buffer: VEntityBuffer<VPixel> = VEntityBuffer::new(50);
+
+        let test = VPoint::new(25, 20);
+        assert_eq!(
+            test,
+            buffer.index_to_xy(buffer.xy_to_index(test.x(), test.y())),
+        );
+
+        let test = VPoint::new(-25, -20);
+        assert_eq!(
+            test,
+            buffer.index_to_xy(buffer.xy_to_index(test.x(), test.y())),
+        );
+
+        let test = VPoint::new(-49, -49);
+        assert_eq!(
+            test,
+            buffer.index_to_xy(buffer.xy_to_index(test.x(), test.y())),
+        );
     }
 }

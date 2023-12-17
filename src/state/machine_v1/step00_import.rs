@@ -1,4 +1,4 @@
-use crate::gamedata::lua::{read_lua_tiles, LuaData, LuaEntity, LuaPoint, LuaThing, LuaTile};
+use crate::gamedata::lua::{read_lua_tiles, LuaEntity, LuaPoint, LuaThing};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::err::VResult;

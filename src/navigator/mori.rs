@@ -22,8 +22,8 @@ use tracing::warn;
 /// Without collisions into any point on the Surface.
 pub fn mori_start(
     surface: &VSurface,
-    mut start: Rail,
-    mut end: Rail,
+    start: Rail,
+    end: Rail,
     step_params: &StepParams,
 ) -> Option<Vec<Rail>> {
     let pathfind_watch = BasicWatch::start();
@@ -41,7 +41,7 @@ pub fn mori_start(
         }
     }
 
-    let resource_cloud = ResourceCloud::from_surface(&surface);
+    let resource_cloud = ResourceCloud::from_surface(surface);
 
     // TODO let mut working_buffer = surface.surface_diff();
     let mut working_buffer = SurfaceDiff::TODO_new();

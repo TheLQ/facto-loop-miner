@@ -62,7 +62,7 @@ impl VSurface {
         let load_watch = BasicWatch::start();
         let surface = simd_json::serde::from_slice(&mut data).map_err(VError::simd_json(&path))?;
         info!(
-            "Loading state JSON read {} serialize {} from {}",
+            "Loading state JSON read {} deserialize {} from {}",
             read_watch,
             load_watch,
             path.display(),
@@ -127,11 +127,12 @@ impl VSurface {
         let build_watch = BasicWatch::start();
         let pixel_map_path = out_dir.join("pixel-map.png");
         debug!("Saving RGB dump image to {}", pixel_map_path.display());
-        let entities = self.pixels.iter_xy_entities();
+
+        let entities = self.pixels.iter_xy_pixels();
         // trace!("built entity array of {}", entities.len());
         let mut output: Vec<u8> = vec![0; self.pixels.xy_array_length_from_radius() * 3];
         for (i, pixel) in entities.enumerate() {
-            let color = &pixel.pixel.color();
+            let color = &pixel.color();
             let start = i * color.len();
             output[start] = color[2];
             output[start + 1] = color[1];
@@ -234,8 +235,8 @@ impl VSurface {
 
     pub fn log_pixel_stats(&self) {
         let mut metrics = Metrics::new("vsurface-pixel");
-        for pixel in self.pixels.iter_xy_entities() {
-            metrics.increment(pixel.pixel.as_ref());
+        for pixel in self.pixels.iter_xy_pixels() {
+            metrics.increment(pixel.as_ref());
         }
         metrics.log_final();
     }
