@@ -4,8 +4,12 @@ use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VPixel;
 use crate::util::duration::BasicWatch;
-use crate::util::io::{read_entire_file, write_entire_file};
+use crate::util::io::{
+    get_mebibytes_of_slice_usize, map_u8_to_usize_slice, read_entire_file, read_entire_file_mmap,
+    read_entire_file_transmute_u64, write_entire_file,
+};
 use crate::LOCALE;
+use bytemuck::cast_vec;
 use itertools::*;
 use num_format::ToFormattedString;
 use opencv::core::Mat;
@@ -15,10 +19,8 @@ use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 use std::path::Path;
-use std::rc::Rc;
 use tracing::debug;
 
-const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
 const EMPTY_XY_INDEX: usize = usize::MAX;
 
 pub trait VEntityXY {
@@ -227,8 +229,18 @@ where
     }
 
     pub fn load_xy_file(&mut self, path: &Path) -> VResult<()> {
+        match 0 {
+            0 => self._load_xy_file_slow(path),
+            1 => self._load_xy_file_bytemuck(path),
+            2 => self._load_xy_file_transmute(path),
+            3 => self._load_xy_file_mmap(path),
+            _ => panic!(),
+        }
+    }
+
+    fn _load_xy_file_slow(&mut self, path: &Path) -> VResult<()> {
         let mut read_watch = BasicWatch::start();
-        let big_xy_bytes = read_entire_file(path)?;
+        let xy_bytes_u8 = read_entire_file(path)?;
         read_watch.stop();
 
         // Serde does not use new() so this is still uninitialized
@@ -237,16 +249,54 @@ where
         // TODO: Slow :-(
         assert_eq!(self.xy_to_entity.len(), 0, "not empty");
         let deserialize_watch = BasicWatch::start();
-        self.xy_to_entity.extend(
-            big_xy_bytes
-                .into_iter()
-                .array_chunks::<USIZE_BYTES>()
-                .map(usize::from_ne_bytes),
-        );
+        self.xy_to_entity = vec![0; xy_bytes_u8.len() * 8];
+        map_u8_to_usize_slice(&xy_bytes_u8, self.xy_to_entity.as_mut_slice());
         debug!(
-            "Loading Entity XY read {} deserialize {} path {}",
+            "Loading Entity XY (slow) read {} deserialize {} bytes {} path {}",
             read_watch,
             deserialize_watch,
+            get_mebibytes_of_slice_usize(&self.xy_to_entity),
+            path.display()
+        );
+
+        Ok(())
+    }
+
+    fn _load_xy_file_bytemuck(&mut self, path: &Path) -> VResult<()> {
+        let total_watch = BasicWatch::start();
+        let raw_bytes = read_entire_file(path)?;
+
+        let converted_bytes: Vec<usize> = cast_vec(raw_bytes);
+        self.xy_to_entity = converted_bytes;
+        debug!(
+            "Loading Entity XY total {} path {}",
+            total_watch,
+            path.display()
+        );
+
+        Ok(())
+    }
+
+    fn _load_xy_file_transmute(&mut self, path: &Path) -> VResult<()> {
+        let total_watch = BasicWatch::start();
+        self.xy_to_entity = read_entire_file_transmute_u64(path)?;
+        debug!(
+            "Loading Entity XY (transmute) total {} path {}",
+            total_watch,
+            path.display()
+        );
+
+        Ok(())
+    }
+
+    fn _load_xy_file_mmap(&mut self, path: &Path) -> VResult<()> {
+        let total_watch = BasicWatch::start();
+        self.xy_to_entity = read_entire_file_mmap(path)?;
+        debug!(
+            "Loading Entity XY (mmap) total {} / {} in {} path {}",
+            self.xy_to_entity.len().to_formatted_string(&LOCALE),
+            get_mebibytes_of_slice_usize(&self.xy_to_entity),
+            total_watch,
             path.display()
         );
 
@@ -385,7 +435,7 @@ impl VEntityBuffer<VPixel> {
     }
 
     pub fn map_pixel_xy_to_cv(&self, filter: Option<Pixel>) -> Mat {
-        let metrics = Rc::new(RefCell::new(FastMetrics::new()));
+        let metrics = RefCell::new(FastMetrics::new());
 
         let output = self.map_xy_entities_to_bigger_u8_vec(|e| {
             if let Some(e) = e {
@@ -414,7 +464,7 @@ impl VEntityBuffer<VPixel> {
                 [0]
             }
         });
-        metrics.borrow().log_final();
+        metrics.into_inner().log_final();
         let side_length = self.diameter();
         Mat::from_slice_rows_cols(&output, side_length, side_length).unwrap()
         // Mat::new_rows_cols_with_data(side_length, side_length, )

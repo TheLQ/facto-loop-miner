@@ -1,15 +1,14 @@
 use crate::surface::pixel::Pixel;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
-use itertools::Itertools;
+use enum_map::EnumMap;
 use num_format::ToFormattedString;
-use std::collections::HashMap;
-use strum::AsRefStr;
+use std::fmt::Display;
 
 /// Strings are slow apparently at billions of entries. Solution: Enums!
 #[derive(Default)]
 pub struct FastMetrics {
-    entity_metrics: HashMap<FastMetric, u32>,
+    entity_metrics: EnumMap<FastMetric, u32>,
     start: BasicWatch,
 }
 
@@ -19,22 +18,25 @@ impl FastMetrics {
     }
 
     pub fn increment(&mut self, metric_name: FastMetric) {
-        self.entity_metrics
-            .entry(metric_name)
-            .and_modify(|v| *v += 1)
-            .or_insert(1);
+        self.entity_metrics[metric_name] += 1
     }
 
-    pub fn log_final(&self) {
-        let max_key_length = self
+    pub fn log_final(self) {
+        let mut used_entries: Vec<(FastMetric, u32)> = self
             .entity_metrics
-            .keys()
-            .fold(0, |total, key| total.max(key.to_str().len()));
+            .into_iter()
+            .filter(|(_, size)| *size != 0)
+            .collect();
+        used_entries.sort_by_key(|(key, _)| key.clone());
 
-        for (name, count) in self.entity_metrics.iter().sorted_by_key(|(name, _)| *name) {
+        let max_key_length = used_entries
+            .iter()
+            .fold(0, |total, (metric, _)| total.max(metric.to_string().len()));
+
+        for (metric, count) in used_entries {
             tracing::debug!(
                 "-- {:max_key_length$} {:>10} --",
-                name.to_str(),
+                metric.to_string(),
                 count.to_formatted_string(&LOCALE),
             );
         }
@@ -54,7 +56,7 @@ impl FastMetrics {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Ord, AsRefStr)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, enum_map::Enum)]
 pub enum FastMetric {
     PixelCvMapper_Empty,
     PixelCvMapper_NotEmpty,
@@ -63,8 +65,8 @@ pub enum FastMetric {
     VSurface_Pixel(Pixel),
 }
 
-impl FastMetric {
-    pub fn to_str(&self) -> &str {
-        self.as_ref()
+impl Display for FastMetric {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }

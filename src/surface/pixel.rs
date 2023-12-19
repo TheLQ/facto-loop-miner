@@ -23,6 +23,7 @@ use strum::{AsRefStr, EnumIter};
     Copy,
     PartialOrd,
     Ord,
+    enum_map::Enum,
 )]
 #[repr(u8)]
 pub enum Pixel {

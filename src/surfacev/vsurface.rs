@@ -93,6 +93,7 @@ impl VSurface {
     }
 
     fn _load_state_reader(out_dir: &Path) -> VResult<Self> {
+        trace!("start state thread");
         let total_watch = BasicWatch::start();
         let path = path_state(out_dir);
         let reader = BufReader::new(File::open(&path).map_err(VError::io_error(&path))?);
@@ -115,6 +116,7 @@ impl VSurface {
     ) {
         let out_dir_buf = out_dir.to_path_buf();
         let pixel_thread = thread::spawn(move || {
+            trace!("start pixel thread");
             let pixel_path = &path_pixel_xy_indexes(&out_dir_buf);
             let mut buffer = VEntityBuffer::<VPixel>::new(0);
             buffer.load_xy_file(pixel_path).map(|_| buffer)
@@ -122,6 +124,7 @@ impl VSurface {
 
         let out_dir_buf = out_dir.to_path_buf();
         let entity_thread = thread::spawn(move || {
+            trace!("start entity thread");
             let entity_path = &path_entity_xy_indexes(&out_dir_buf);
             let mut buffer = VEntityBuffer::<VEntity>::new(0);
             buffer.load_xy_file(entity_path).map(|_| buffer)
