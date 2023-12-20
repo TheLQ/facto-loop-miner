@@ -4,11 +4,13 @@ use bytemuck::cast_vec;
 use itertools::Itertools;
 use memmap2::Mmap;
 use num_format::ToFormattedString;
+use std::cell::Ref;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::mem;
 use std::mem::transmute;
+use std::os::fd::{AsRawFd, IntoRawFd};
 use std::path::Path;
+use std::{io, mem, ptr};
 
 pub const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
 
@@ -104,6 +106,53 @@ pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VResult<Vec<usize>> {
     println!("array sum {}", xy_vec_u64.iter().sum::<usize>());
 
     Ok(xy_vec_u64)
+}
+
+pub fn read_entire_file_usize_memmap(path: &Path) -> VResult<Vec<usize>> {
+    // let file = File::open(path).map_err(VError::io_error(path))?;
+    // SAFETY: We do not open that many files. The file reference must outlive
+    // let file: &mut File = Box::leak(Box::new(file));
+
+    // PROD_READ = Required to do anything
+    // MAP_PRIVATE = Required mode
+    // MAP_POPULATE = seems good
+    let vec = unsafe {
+        let file = File::open(path).map_err(VError::io_error(path))?;
+        let xy_array_len_u8 = get_file_size(&file, path)? as usize;
+        let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
+        println!("mmap");
+        let ptr = libc::mmap64(
+            ptr::null_mut(),
+            xy_array_len_u8 * mem::size_of::<u8>(),
+            libc::PROT_READ,
+            // libc::MAP_HUGETLB | libc::MAP_HUGE_2MB
+            libc::MAP_PRIVATE | libc::MAP_POPULATE,
+            file.as_raw_fd(),
+            0,
+        );
+        libc::madvise(
+            ptr,
+            xy_array_len_u8,
+            libc::MADV_SEQUENTIAL | libc::MADV_WILLNEED,
+        );
+        // mem::drop(file);
+        if ptr == libc::MAP_FAILED {
+            panic!("failed to mmap {}", xy_array_len_u8);
+        }
+        let raw = Vec::from_raw_parts(ptr as *mut usize, xy_array_len_u64, xy_array_len_u64);
+        //copy
+        let mut copied = vec![0; raw.len()];
+        copied.clone_from_slice(&raw);
+
+        // For some reason Vec cannot free this. Even though mmap64 just returns a raw pointer
+        mem::forget(raw);
+        copied
+    };
+
+    // let vec
+    println!("wrote array of {}", vec.len());
+    println!("array sum {}", vec.iter().sum::<usize>());
+    Ok(vec)
 }
 
 #[cfg(lol)]

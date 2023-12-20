@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use crate::util::io::{
     map_u8_to_usize_iter_ref, map_u8_to_usize_slice, read_entire_file_usize_aligned_vec,
-    read_entire_file_usize_transmute_broken, USIZE_BYTES,
+    read_entire_file_usize_memmap, read_entire_file_usize_transmute_broken, USIZE_BYTES,
 };
 
 fn input_path() -> PathBuf {
@@ -70,9 +70,27 @@ fn bench_read_transmute_broken(bencher: &mut test::Bencher) {
     });
 }
 
+#[bench]
+fn bench_read_mmap(bencher: &mut test::Bencher) {
+    bencher.iter(|| {
+        println!("interation");
+        let output = read_entire_file_usize_memmap(&input_path()).unwrap();
+        injest_value(output)
+    });
+}
+
+#[bench]
+fn bench_read_mmap(bencher: &mut test::Bencher) {
+    bencher.iter(|| {
+        println!("interation");
+        let output = read_entire_file_usize_iter(&input_path()).unwrap();
+        injest_value(output)
+    });
+}
+
 fn injest_value(output: Vec<usize>) -> usize {
     let total: usize = output.iter().sum();
     println!("total {}", total);
-    assert_ne!(total, 0);
+    assert_eq!(total, 224321692961);
     total
 }

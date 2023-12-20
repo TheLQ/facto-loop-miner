@@ -34,3 +34,4 @@ clap = { version = "4.4.11", features = ["derive"] }
 bytemuck = { version = "1.14.0", features = ["extern_crate_alloc"] }
 memmap2 = "0.9.2"
 enum-map = "2.7.3"
+libc = "0.2.151"
