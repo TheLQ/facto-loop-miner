@@ -6,7 +6,7 @@ use crate::surfacev::vsurface::VPixel;
 use crate::util::duration::BasicWatch;
 use crate::util::io::{
     get_mebibytes_of_slice_usize, map_u8_to_usize_slice, read_entire_file, read_entire_file_mmap,
-    read_entire_file_transmute_u64, write_entire_file,
+    read_entire_file_usize_transmute_broken, write_entire_file,
 };
 use crate::LOCALE;
 use bytemuck::cast_vec;
@@ -279,7 +279,7 @@ where
 
     fn _load_xy_file_transmute(&mut self, path: &Path) -> VResult<()> {
         let total_watch = BasicWatch::start();
-        self.xy_to_entity = read_entire_file_transmute_u64(path)?;
+        self.xy_to_entity = read_entire_file_usize_transmute_broken(path)?;
         debug!(
             "Loading Entity XY (transmute) total {} path {}",
             total_watch,

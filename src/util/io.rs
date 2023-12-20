@@ -29,11 +29,11 @@ pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VResult<Vec<usi
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
     let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
 
-    // Allocate a Vec. Grab an aligned piece of it
-    // Docs state asserted behavior is expected usually
+    // Create a large Vec, grab an aligned piece of it
+    // Docs claim the asserted behavior is expected
     let mut xy_array_u64_raw: Vec<usize> = vec![0usize; xy_array_len_u64];
     let (xy_array_prefix, xy_array_aligned, xy_array_suffix) =
-        unsafe { xy_array_u64_raw.align_to_mut::<u8>() };
+        unsafe { xy_array_u64_raw.align_to_mut::<usize>() };
     assert_eq!(xy_array_prefix.len(), 0, "prefix big");
     assert_eq!(xy_array_suffix.len(), 0, "suffix big");
     assert_eq!(
@@ -45,7 +45,7 @@ pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VResult<Vec<usi
     // Build Vec for read_to_end using aligned slice
     let mut xy_vec_aligned_u8 = unsafe {
         Vec::from_raw_parts(
-            xy_array_aligned.as_mut_ptr(),
+            xy_array_aligned.as_mut_ptr() as *mut u8,
             0,
             xy_array_len_u8 * mem::size_of::<u8>(),
         )
@@ -75,32 +75,53 @@ pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VResult<Vec<usize>> {
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
     let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
 
-    // Create a large Vec, grab an aligned piece of it
-    let mut xy_vec_u64: Vec<usize> = vec![0usize; xy_array_len_u64];
-    let (xy_vec_prefix, xy_vec_aligned, xy_vec_suffix) =
-        unsafe { xy_vec_u64.align_to_mut::<usize>() };
+    // Allocate result buffer. We will fill the internal capacity
+    let mut xy_vec_u64: Vec<usize> = vec![0; xy_array_len_u64];
+
+    // Build u8 Vec viewing the same memory with proper aligned access
+    // Docs claim the asserted behavior is expected usually
+    let (xy_vec_prefix, xy_vec_aligned, xy_vec_suffix) = unsafe { xy_vec_u64.align_to_mut::<u8>() };
     assert_eq!(xy_vec_prefix.len(), 0, "prefix big");
     assert_eq!(xy_vec_suffix.len(), 0, "suffix big");
-    assert_eq!(xy_vec_aligned.len(), xy_array_len_u64, "aligned size");
-
-    // Build Vec for read_to_end using aligned slice
-    let mut xy_vec_aligned_u8 = unsafe {
+    assert_eq!(xy_vec_aligned.len(), xy_array_len_u8, "aligned size");
+    let mut xy_vec_aligned_u8: Vec<u8> = unsafe {
         Vec::from_raw_parts(
-            xy_vec_aligned.as_mut_ptr() as *mut u8,
+            xy_vec_aligned.as_mut_ptr(),
             0,
             xy_array_len_u8 * mem::size_of::<u8>(),
         )
     };
     assert_eq!(xy_vec_aligned_u8.capacity(), xy_array_len_u8, "veccapacity");
+
     file.read_to_end(&mut xy_vec_aligned_u8)
         .map_err(VError::io_error(path))?;
     assert_eq!(xy_vec_aligned_u8.len(), xy_array_len_u8, "vec length");
 
-    // Do not double free. It's data is owned by xy_vec_u64
+    // Do not double free. Data is owned by xy_vec_u64
     mem::forget(xy_vec_aligned_u8);
 
     println!("wrote array of {}", xy_vec_u64.len());
     println!("array sum {}", xy_vec_u64.iter().sum::<usize>());
+
+    Ok(xy_vec_u64)
+}
+
+#[cfg(lol)]
+pub unsafe fn read_entire_file_usize_aligned_vec_golfed(path: &Path) -> VResult<Vec<usize>> {
+    let mut file = File::open(path).map_err(VError::io_error(path))?;
+    let xy_array_len_u8 = get_file_size(&file, path)? as usize;
+
+    let mut xy_vec_u64: Vec<usize> = vec![0; xy_array_len_u8 / USIZE_BYTES];
+    let (_, xy_vec_aligned, _) = xy_vec_u64.align_to_mut::<u8>();
+    assert_eq!(xy_vec_aligned.len(), xy_array_len_u8, "aligned size");
+    let mut xy_vec_aligned_u8 = Vec::from_raw_parts(
+        xy_vec_aligned.as_mut_ptr(),
+        0,
+        xy_array_len_u8 * mem::size_of::<u8>(),
+    );
+    file.read_to_end(&mut xy_vec_aligned_u8)
+        .map_err(VError::io_error(path))?;
+    mem::forget(xy_vec_aligned_u8);
 
     Ok(xy_vec_u64)
 }
