@@ -31,6 +31,7 @@
 // #![deny(clippy::all)]
 #![allow(clippy::let_and_return)]
 #![allow(clippy::result_large_err)]
+#![feature(test)]
 
 // TODO #![deny(future-incompatible)]
 // TODO #![deny(let-underscore)]
@@ -39,6 +40,7 @@ extern crate core;
 
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
+use crate::util::io::read_entire_file_usize_aligned_vec;
 use kiddo::KdTree;
 use num_format::Locale;
 use num_traits::PrimInt;
@@ -72,13 +74,22 @@ pub fn inner_main() {
     tracing::debug!("hello");
     let root_dir = Path::new("work");
 
-    match 1 {
+    match 6 {
         1 => new_v1_machine().start(root_dir),
         3 => generate_lookup_image(),
         4 => self_bin::get_patch::get_patch_main(),
         5 => admiral::client::admiral(),
+        6 => asdf(),
         _ => panic!("wtf"),
     }
+}
+const BENCH_XY_PATH: &str = "work/out0/step10-base/pixel-xy-indexes.dat";
+pub fn asdf() {
+    let sum: usize = read_entire_file_usize_aligned_vec(Path::new(BENCH_XY_PATH))
+        .unwrap()
+        .iter()
+        .sum();
+    println!("total sum {}", sum);
 }
 
 /// what is this called?
