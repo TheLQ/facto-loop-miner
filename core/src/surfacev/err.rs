@@ -1,4 +1,5 @@
 use crate::surfacev::vpoint::VPoint;
+use facto_loop_miner_io::err::VIoError;
 use itertools::Itertools;
 use opencv::core::Point2f;
 use std::backtrace::Backtrace;
@@ -37,6 +38,8 @@ pub enum VError {
     },
     #[error("NotADirectory {path}")]
     NotADirectory { path: String, backtrace: Backtrace },
+    #[error("VIoError {0}")]
+    VIoError(#[from] VIoError),
 }
 
 impl VError {
@@ -47,7 +50,8 @@ impl VError {
             | VError::IoError { backtrace, .. }
             | VError::UnknownName { backtrace, .. }
             | VError::SimdJsonFail { backtrace, .. }
-            | VError::NotADirectory { backtrace, .. } => backtrace,
+            | VError::NotADirectory { backtrace, .. }
+            | VError::VIoError(VIoError::IoError { backtrace, .. }) => backtrace,
         }
     }
 

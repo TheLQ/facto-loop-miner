@@ -1,11 +1,9 @@
 extern crate test;
 
-use itertools::Itertools;
-use std::env;
 use std::path::PathBuf;
 
-use crate::util::io::{
-    drop_mmap_vec, map_u8_to_usize_iter_ref, map_u8_to_usize_slice, read_entire_file,
+use crate::io::{
+    map_u8_to_usize_iter_ref, map_u8_to_usize_slice, read_entire_file,
     read_entire_file_usize_aligned_vec, read_entire_file_usize_mmap_custom,
     read_entire_file_usize_read_then_iter, read_entire_file_usize_transmute_broken,
     read_entire_file_varray_mmap_lib, USIZE_BYTES,
@@ -122,7 +120,7 @@ fn injest_value(output: Vec<usize>) -> usize {
     total
 }
 
-fn injest_value_TESTING_u8(output: Vec<u8>) -> u8 {
+fn injest_value_testing_u8(output: Vec<u8>) -> u8 {
     let total: u8 = output.iter().sum();
     println!("total {}", total);
     // assert_eq!(total, 224321692961);

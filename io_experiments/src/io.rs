@@ -5,25 +5,24 @@ use std::os::fd::AsRawFd;
 use std::path::Path;
 use std::{io, mem, ptr, slice};
 
+use crate::err::{VIoError, VIoResult};
+use crate::varray::VArray;
 use libc::munmap;
 use memmap2::{Mmap, MmapOptions};
 
-use crate::surfacev::err::{VError, VResult};
-use crate::surfacev::varray::VArray;
-
 pub const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
 
-pub fn read_entire_file(path: &Path) -> VResult<Vec<u8>> {
-    let mut file = File::open(path).map_err(VError::io_error(path))?;
+pub fn read_entire_file(path: &Path) -> VIoResult<Vec<u8>> {
+    let mut file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
     let mut xy_array_u8_raw: Vec<u8> = vec![0; xy_array_len_u8];
     file.read_to_end(&mut xy_array_u8_raw)
-        .map_err(VError::io_error(path))?;
+        .map_err(VIoError::io_error(path))?;
     Ok(xy_array_u8_raw)
 }
 
-pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VResult<Vec<usize>> {
-    let mut file = File::open(path).map_err(VError::io_error(path))?;
+pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VIoResult<Vec<usize>> {
+    let mut file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
     let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
 
@@ -54,7 +53,7 @@ pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VResult<Vec<usi
         "unexpected original written array length"
     );
     file.read_to_end(&mut xy_vec_aligned_u8)
-        .map_err(VError::io_error(path))?;
+        .map_err(VIoError::io_error(path))?;
     assert_eq!(
         xy_vec_aligned_u8.len(),
         xy_array_len_u8,
@@ -68,8 +67,8 @@ pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VResult<Vec<usi
     println!("array sum {}", output.iter().sum::<usize>());
     Ok(output)
 }
-pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VResult<Vec<usize>> {
-    let mut file = File::open(path).map_err(VError::io_error(path))?;
+pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VIoResult<Vec<usize>> {
+    let mut file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
     let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
 
@@ -92,7 +91,7 @@ pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VResult<Vec<usize>> {
     assert_eq!(xy_vec_aligned_u8.capacity(), xy_array_len_u8, "veccapacity");
 
     file.read_to_end(&mut xy_vec_aligned_u8)
-        .map_err(VError::io_error(path))?;
+        .map_err(VIoError::io_error(path))?;
     assert_eq!(xy_vec_aligned_u8.len(), xy_array_len_u8, "vec length");
 
     // Do not double free. Data is owned by xy_vec_u64
@@ -104,11 +103,11 @@ pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VResult<Vec<usize>> {
     Ok(xy_vec_u64)
 }
 
-pub fn read_entire_file_usize_mmap_custom(path: &Path) -> VResult<Vec<usize>> {
+pub fn read_entire_file_usize_mmap_custom(path: &Path) -> VIoResult<Vec<usize>> {
     let vec: Vec<usize> = unsafe {
         let page_size = libc::sysconf(libc::_SC_PAGE_SIZE) as usize;
 
-        let file = File::open(path).map_err(VError::io_error(path))?;
+        let file = File::open(path).map_err(VIoError::io_error(path))?;
         let file_size = get_file_size(&file, path)? as usize;
         let alignment_padding = file_size % page_size;
         let xy_array_len_u8 = file_size;
@@ -176,8 +175,8 @@ pub fn drop_mmap_vec(mut mmap_vec: Vec<usize>) {
     }
 }
 
-pub fn read_entire_file_usize_memmap_u8(path: &Path) -> VResult<Vec<usize>> {
-    let file = File::open(path).map_err(VError::io_error(path))?;
+pub fn read_entire_file_usize_memmap_u8(path: &Path) -> VIoResult<Vec<usize>> {
+    let file = File::open(path).map_err(VIoError::io_error(path))?;
 
     let vec = unsafe {
         let xy_array_len_u8 = get_file_size(&file, path)? as usize;
@@ -218,14 +217,14 @@ pub fn read_entire_file_usize_memmap_u8(path: &Path) -> VResult<Vec<usize>> {
     Ok(vec)
 }
 
-pub fn read_entire_file_usize_read_then_iter(path: &Path) -> VResult<Vec<usize>> {
+pub fn read_entire_file_usize_read_then_iter(path: &Path) -> VIoResult<Vec<usize>> {
     let data = read_entire_file(path)?;
     Ok(map_u8_to_usize_iter(data).into_iter().collect())
 }
 
 #[cfg(lol)]
-pub unsafe fn read_entire_file_usize_aligned_vec_golfed(path: &Path) -> VResult<Vec<usize>> {
-    let mut file = File::open(path).map_err(VError::io_error(path))?;
+pub unsafe fn read_entire_file_usize_aligned_vec_golfed(path: &Path) -> VIoResult<Vec<usize>> {
+    let mut file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
 
     let mut xy_vec_u64: Vec<usize> = vec![0; xy_array_len_u8 / USIZE_BYTES];
@@ -237,15 +236,15 @@ pub unsafe fn read_entire_file_usize_aligned_vec_golfed(path: &Path) -> VResult<
         xy_array_len_u8 * mem::size_of::<u8>(),
     );
     file.read_to_end(&mut xy_vec_aligned_u8)
-        .map_err(VError::io_error(path))?;
+        .map_err(VIoError::io_error(path))?;
     mem::forget(xy_vec_aligned_u8);
 
     Ok(xy_vec_u64)
 }
 
 #[allow(clippy::unsound_collection_transmute)]
-pub fn read_entire_file_usize_transmute_broken(path: &Path) -> VResult<Vec<usize>> {
-    let mut file = File::open(path).map_err(VError::io_error(path))?;
+pub fn read_entire_file_usize_transmute_broken(path: &Path) -> VIoResult<Vec<usize>> {
+    let mut file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
     let xy_array_len_u64 = xy_array_len_u8 / 8;
 
@@ -257,15 +256,15 @@ pub fn read_entire_file_usize_transmute_broken(path: &Path) -> VResult<Vec<usize
     // let mut small_xy_bytes: Vec<u8> = vec![0; xy_array_len_u8];
 
     file.read_to_end(&mut small_xy_bytes)
-        .map_err(VError::io_error(path))?;
+        .map_err(VIoError::io_error(path))?;
 
     let mut big_xy_bytes: Vec<usize> = unsafe { transmute(small_xy_bytes) };
     unsafe { big_xy_bytes.set_len(xy_array_len_u64) };
     Ok(big_xy_bytes)
 }
 
-pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VResult<VArray> {
-    let file = File::open(path).map_err(VError::io_error(path))?;
+pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
+    let file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
     let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
 
@@ -273,7 +272,7 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VResult<VArray> {
         MmapOptions::new()
             .populate()
             .map_copy(&file)
-            .map_err(VError::io_error(path))?
+            .map_err(VIoError::io_error(path))?
     };
 
     // View mmap as a Vec
@@ -298,13 +297,13 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VResult<VArray> {
     Ok(VArray::from_mmap(mmap, ManuallyDrop::new(xy_array_u64)))
 }
 
-pub fn read_entire_file_mmap_copy(path: &Path) -> VResult<Vec<usize>> {
-    let file = File::open(path).map_err(VError::io_error(path))?;
+pub fn read_entire_file_mmap_copy(path: &Path) -> VIoResult<Vec<usize>> {
+    let file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
     let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
 
     let result = unsafe {
-        let mmap = Mmap::map(&file).map_err(VError::io_error(path))?;
+        let mmap = Mmap::map(&file).map_err(VIoError::io_error(path))?;
 
         // Build usize Vec viewing the same memory with proper aligned access
         // Docs state the outer slices should be empty in real world environments
@@ -321,12 +320,12 @@ pub fn read_entire_file_mmap_copy(path: &Path) -> VResult<Vec<usize>> {
     Ok(result)
 }
 
-pub fn get_file_size(file: &File, path: &Path) -> VResult<u64> {
-    Ok(file.metadata().map_err(VError::io_error(path))?.len())
+pub fn get_file_size(file: &File, path: &Path) -> VIoResult<u64> {
+    Ok(file.metadata().map_err(VIoError::io_error(path))?.len())
 }
 
-pub fn get_file_size_u8_and_u64(file: &File, path: &Path) -> VResult<(usize, usize)> {
-    let size = file.metadata().map_err(VError::io_error(path))?.len();
+pub fn get_file_size_u8_and_u64(file: &File, path: &Path) -> VIoResult<(usize, usize)> {
+    let size = file.metadata().map_err(VIoError::io_error(path))?.len();
     Ok((size as usize, size as usize / USIZE_BYTES))
 }
 
@@ -399,15 +398,15 @@ pub fn map_u8_to_usize_slice(input: &[u8], output: &mut [usize]) {
 //     output
 // }
 
-pub fn get_usize_vec_length_from_file_size(path: &Path, file: &File) -> VResult<usize> {
-    let file_size = file.metadata().map_err(VError::io_error(path))?.len();
+pub fn get_usize_vec_length_from_file_size(path: &Path, file: &File) -> VIoResult<usize> {
+    let file_size = file.metadata().map_err(VIoError::io_error(path))?.len();
     let array_size = file_size / 8;
     Ok(array_size as usize)
 }
 
-pub fn write_entire_file(path: &Path, data: &[u8]) -> VResult<()> {
-    let mut file = File::create(path).map_err(VError::io_error(path))?;
-    file.write_all(data).map_err(VError::io_error(path))?;
+pub fn write_entire_file(path: &Path, data: &[u8]) -> VIoResult<()> {
+    let mut file = File::create(path).map_err(VIoError::io_error(path))?;
+    file.write_all(data).map_err(VIoError::io_error(path))?;
     Ok(())
 }
 

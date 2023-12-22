@@ -13,13 +13,13 @@ use tracing::debug;
 use crate::surface::fast_metrics::{FastMetric, FastMetrics};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
-use crate::surfacev::varray::VArray;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VPixel;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
+use facto_loop_miner_io::varray::VArray;
 
-use crate::util::io::{
+use facto_loop_miner_io::{
     get_mebibytes_of_slice_usize, read_entire_file_varray_mmap_lib, write_entire_file,
 };
 
