@@ -1,2 +1,3 @@
 [workspace]
-members = ["src/core", "src/io_experiments"]
+members = ["core", "io_experiments"]
+resolver = "2"
