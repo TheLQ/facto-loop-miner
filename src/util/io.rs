@@ -1,29 +1,25 @@
-use crate::surfacev::err::{VError, VResult};
-use crate::LOCALE;
-use bytemuck::cast_vec;
-use itertools::Itertools;
-use memmap2::Mmap;
-use num_format::ToFormattedString;
-use std::cell::Ref;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::mem::transmute;
-use std::os::fd::{AsRawFd, IntoRawFd};
+use std::mem::{transmute, ManuallyDrop};
+use std::os::fd::AsRawFd;
 use std::path::Path;
-use std::{io, mem, ptr};
+use std::{io, mem, ptr, slice};
+
+use libc::munmap;
+use memmap2::{Mmap, MmapOptions};
+
+use crate::surfacev::err::{VError, VResult};
+use crate::surfacev::varray::VArray;
 
 pub const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
 
 pub fn read_entire_file(path: &Path) -> VResult<Vec<u8>> {
     let mut file = File::open(path).map_err(VError::io_error(path))?;
-
-    // let xy_size = get_usize_vec_length_from_file_size(path, &file)?;
-    let xy_size = file.metadata().map_err(VError::io_error(path))?.len();
-    let mut big_xy_bytes: Vec<u8> = vec![0; xy_size as usize];
-
-    file.read_to_end(&mut big_xy_bytes)
+    let xy_array_len_u8 = get_file_size(&file, path)? as usize;
+    let mut xy_array_u8_raw: Vec<u8> = vec![0; xy_array_len_u8];
+    file.read_to_end(&mut xy_array_u8_raw)
         .map_err(VError::io_error(path))?;
-    Ok(big_xy_bytes)
+    Ok(xy_array_u8_raw)
 }
 
 pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VResult<Vec<usize>> {
@@ -81,7 +77,7 @@ pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VResult<Vec<usize>> {
     let mut xy_vec_u64: Vec<usize> = vec![0; xy_array_len_u64];
 
     // Build u8 Vec viewing the same memory with proper aligned access
-    // Docs claim the asserted behavior is expected usually
+    // Docs state the outer slices should be empty in real world environments
     let (xy_vec_prefix, xy_vec_aligned, xy_vec_suffix) = unsafe { xy_vec_u64.align_to_mut::<u8>() };
     assert_eq!(xy_vec_prefix.len(), 0, "prefix big");
     assert_eq!(xy_vec_suffix.len(), 0, "suffix big");
@@ -108,51 +104,123 @@ pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VResult<Vec<usize>> {
     Ok(xy_vec_u64)
 }
 
-pub fn read_entire_file_usize_memmap(path: &Path) -> VResult<Vec<usize>> {
-    // let file = File::open(path).map_err(VError::io_error(path))?;
-    // SAFETY: We do not open that many files. The file reference must outlive
-    // let file: &mut File = Box::leak(Box::new(file));
+pub fn read_entire_file_usize_mmap_custom(path: &Path) -> VResult<Vec<usize>> {
+    let vec: Vec<usize> = unsafe {
+        let page_size = libc::sysconf(libc::_SC_PAGE_SIZE) as usize;
 
-    // PROD_READ = Required to do anything
-    // MAP_PRIVATE = Required mode
-    // MAP_POPULATE = seems good
-    let vec = unsafe {
         let file = File::open(path).map_err(VError::io_error(path))?;
-        let xy_array_len_u8 = get_file_size(&file, path)? as usize;
+        let file_size = get_file_size(&file, path)? as usize;
+        let alignment_padding = file_size % page_size;
+        let xy_array_len_u8 = file_size;
         let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
-        println!("mmap");
-        let ptr = libc::mmap64(
+        let xy_array_len_aligned_u8 = file_size + alignment_padding;
+        let xy_array_len_aligned_u64 = xy_array_len_u8 / USIZE_BYTES;
+
+        // PROT_READ | PROT_WRITE = Basic rw memory usage
+        // MAP_PRIVATE = Required mode
+        // MAP_POPULATE = Prepoplate file
+        let mmap_ptr = libc::mmap64(
             ptr::null_mut(),
-            xy_array_len_u8 * mem::size_of::<u8>(),
+            xy_array_len_aligned_u8,
             libc::PROT_READ,
             // libc::MAP_HUGETLB | libc::MAP_HUGE_2MB
             libc::MAP_PRIVATE | libc::MAP_POPULATE,
+            // SAFETY file can be closed immediately
             file.as_raw_fd(),
             0,
         );
-        libc::madvise(
-            ptr,
-            xy_array_len_u8,
-            libc::MADV_SEQUENTIAL | libc::MADV_WILLNEED,
-        );
-        // mem::drop(file);
-        if ptr == libc::MAP_FAILED {
+        if mmap_ptr == libc::MAP_FAILED {
             panic!("failed to mmap {}", xy_array_len_u8);
         }
-        let raw = Vec::from_raw_parts(ptr as *mut usize, xy_array_len_u64, xy_array_len_u64);
-        //copy
-        let mut copied = vec![0; raw.len()];
-        copied.clone_from_slice(&raw);
 
-        // For some reason Vec cannot free this. Even though mmap64 just returns a raw pointer
-        mem::forget(raw);
-        copied
+        if libc::madvise(
+            mmap_ptr,
+            xy_array_len_aligned_u8,
+            libc::MADV_SEQUENTIAL | libc::MADV_WILLNEED,
+        ) != libc::EXIT_SUCCESS
+        {
+            panic!("madvise failed {}", io::Error::last_os_error());
+        }
+
+        let xy_array_u8 = slice::from_raw_parts_mut(mmap_ptr, xy_array_len_u8);
+
+        // Build usize Vec viewing the same memory with proper aligned access
+        // Docs state the outer slices should be empty in real world environments
+        let (xy_vec_prefix, xy_vec_aligned, xy_vec_suffix) = xy_array_u8.align_to_mut::<usize>();
+        assert_eq!(xy_vec_prefix.len(), 0, "prefix big");
+        assert_eq!(xy_vec_suffix.len(), 0, "suffix big");
+        assert_eq!(xy_vec_aligned.len(), xy_array_len_u64, "aligned size");
+        let xy_vec_aligned_usize: Vec<usize> = Vec::from_raw_parts(
+            xy_vec_aligned.as_mut_ptr(),
+            xy_array_len_u64,
+            xy_array_len_aligned_u64,
+        );
+
+        xy_vec_aligned_usize
     };
 
     // let vec
     println!("wrote array of {}", vec.len());
     println!("array sum {}", vec.iter().sum::<usize>());
     Ok(vec)
+}
+
+// Must Drop with munmap(), not the normal free()
+pub fn drop_mmap_vec(mut mmap_vec: Vec<usize>) {
+    unsafe {
+        let page_size = libc::sysconf(libc::_SC_PAGE_SIZE) as usize;
+        let ptr = mmap_vec.as_mut_ptr();
+        let cap = mmap_vec.capacity();
+        munmap(ptr as *mut libc::c_void, cap * page_size);
+        mem::forget(mmap_vec)
+    }
+}
+
+pub fn read_entire_file_usize_memmap_u8(path: &Path) -> VResult<Vec<usize>> {
+    let file = File::open(path).map_err(VError::io_error(path))?;
+
+    let vec = unsafe {
+        let xy_array_len_u8 = get_file_size(&file, path)? as usize;
+        let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
+        println!("mmap");
+        // PROT_READ | PROT_WRITE = Basic rw memory usage
+        // MAP_PRIVATE = Required mode
+        // MAP_POPULATE = Prepoplate file
+        let ptr = libc::mmap64(
+            ptr::null_mut(),
+            xy_array_len_u8 * mem::size_of::<u8>(),
+            libc::PROT_READ | libc::PROT_WRITE,
+            // libc::MAP_HUGETLB | libc::MAP_HUGE_2MB
+            libc::MAP_PRIVATE | libc::MAP_POPULATE,
+            // SAFETY this can be closed immediately
+            file.as_raw_fd(),
+            0,
+        );
+        if ptr == libc::MAP_FAILED {
+            panic!("failed to mmap {}", xy_array_len_u8);
+        }
+
+        if libc::madvise(
+            ptr,
+            xy_array_len_u8,
+            libc::MADV_SEQUENTIAL | libc::MADV_WILLNEED,
+        ) != libc::EXIT_SUCCESS
+        {
+            panic!("failed to madvise");
+        }
+
+        Vec::from_raw_parts(ptr as *mut usize, xy_array_len_u64, xy_array_len_u64)
+    };
+
+    // let vec
+    println!("wrote array of {}", vec.len());
+    println!("array sum {}", vec.iter().sum::<usize>());
+    Ok(vec)
+}
+
+pub fn read_entire_file_usize_read_then_iter(path: &Path) -> VResult<Vec<usize>> {
+    let data = read_entire_file(path)?;
+    Ok(map_u8_to_usize_iter(data).into_iter().collect())
 }
 
 #[cfg(lol)]
@@ -196,14 +264,60 @@ pub fn read_entire_file_usize_transmute_broken(path: &Path) -> VResult<Vec<usize
     Ok(big_xy_bytes)
 }
 
-pub fn read_entire_file_mmap(path: &Path) -> VResult<Vec<usize>> {
+pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VResult<VArray> {
     let file = File::open(path).map_err(VError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
-    let xy_array_len_u64 = xy_array_len_u8 / 8;
+    let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
 
-    let mmap = unsafe { Mmap::map(&file).map_err(VError::io_error(path))? };
-    let mut result = vec![0usize; xy_array_len_u64];
-    map_u8_to_usize_slice(&mmap, result.as_mut_slice());
+    let mut mmap = unsafe {
+        MmapOptions::new()
+            .populate()
+            .map_copy(&file)
+            .map_err(VError::io_error(path))?
+    };
+
+    // View mmap as a Vec
+    let xy_array_u8 = unsafe { slice::from_raw_parts_mut(mmap.as_mut_ptr(), xy_array_len_u8) };
+
+    // Build usize Vec viewing the same memory with proper aligned access
+    // Docs state the outer slices should be empty in real world environments
+    let (xy_array_prefix, xy_array_aligned, xy_array_suffix) =
+        unsafe { xy_array_u8.align_to_mut::<usize>() };
+    assert_eq!(xy_array_prefix.len(), 0, "prefix big");
+    assert_eq!(xy_array_suffix.len(), 0, "suffix big");
+    assert_eq!(xy_array_aligned.len(), xy_array_len_u64, "aligned size");
+
+    let xy_array_u64 = unsafe {
+        Vec::from_raw_parts(
+            xy_array_aligned.as_mut_ptr(),
+            xy_array_len_u64,
+            xy_array_len_u64,
+        )
+    };
+
+    Ok(VArray::from_mmap(mmap, ManuallyDrop::new(xy_array_u64)))
+}
+
+pub fn read_entire_file_mmap_copy(path: &Path) -> VResult<Vec<usize>> {
+    let file = File::open(path).map_err(VError::io_error(path))?;
+    let xy_array_len_u8 = get_file_size(&file, path)? as usize;
+    let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
+
+    let result = unsafe {
+        let mmap = Mmap::map(&file).map_err(VError::io_error(path))?;
+
+        // Build usize Vec viewing the same memory with proper aligned access
+        // Docs state the outer slices should be empty in real world environments
+        let (xy_vec_prefix, xy_vec_aligned, xy_vec_suffix) = mmap.align_to::<usize>();
+        assert_eq!(xy_vec_prefix.len(), 0, "prefix big");
+        assert_eq!(xy_vec_suffix.len(), 0, "suffix big");
+        assert_eq!(xy_vec_aligned.len(), xy_array_len_u64, "aligned size");
+
+        let mut result = vec![0usize; xy_array_len_u64];
+        result.copy_from_slice(xy_vec_aligned);
+        result
+    };
+
     Ok(result)
 }
 
@@ -262,7 +376,7 @@ pub fn map_u8_to_usize_slice(input: &[u8], output: &mut [usize]) {
     let expected_output_size = input.len() / USIZE_BYTES;
     if output.len() != expected_output_size {
         panic!(
-            "outsize {} too small expected {} * {} = {}",
+            "outsize {} too small expected {} / {} = {}",
             output.len(),
             input.len(),
             USIZE_BYTES,

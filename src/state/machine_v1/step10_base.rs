@@ -28,7 +28,9 @@ impl Step for Step10 {
         let mut surface = VSurface::load_from_last_step(&params)?;
         surface.remove_patches_within_radius(CENTRAL_BASE_TILES as u32);
 
+        println!("drawing");
         draw_mega_box(&mut surface, &mut params.metrics.borrow_mut())?;
+        println!("done drawing");
 
         // draw_resource_exclude(&mut surface, &mut params.metrics.borrow_mut(), &mut patches);
         // exclude_patches(&mut surface, &mut params.metrics.borrow_mut(), &mut patches);

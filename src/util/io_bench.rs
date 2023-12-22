@@ -1,11 +1,14 @@
 extern crate test;
 
+use itertools::Itertools;
 use std::env;
 use std::path::PathBuf;
 
 use crate::util::io::{
-    map_u8_to_usize_iter_ref, map_u8_to_usize_slice, read_entire_file_usize_aligned_vec,
-    read_entire_file_usize_memmap, read_entire_file_usize_transmute_broken, USIZE_BYTES,
+    drop_mmap_vec, map_u8_to_usize_iter_ref, map_u8_to_usize_slice, read_entire_file,
+    read_entire_file_usize_aligned_vec, read_entire_file_usize_mmap_custom,
+    read_entire_file_usize_read_then_iter, read_entire_file_usize_transmute_broken,
+    read_entire_file_varray_mmap_lib, USIZE_BYTES,
 };
 
 fn input_path() -> PathBuf {
@@ -41,12 +44,24 @@ fn bench_included_map_slice(bencher: &mut test::Bencher) {
 fn bench_included_map_iter(bencher: &mut test::Bencher) {
     bencher.iter(|| {
         println!("start");
-        let mut output: Vec<usize> = map_u8_to_usize_iter_ref(BENCH_RAW_XY_BUFFER.iter())
+        let output: Vec<usize> = map_u8_to_usize_iter_ref(BENCH_RAW_XY_BUFFER.iter())
             .into_iter()
             .collect();
         injest_value(output)
     })
 }
+
+#[bench]
+fn bench_read_minimum_unconverted(bencher: &mut test::Bencher) {
+    println!("init");
+    bencher.iter(|| {
+        println!("interation");
+        let output = read_entire_file(&input_path()).unwrap();
+        println!("output");
+        injest_value_TESTING_u8(output)
+    })
+}
+
 #[bench]
 fn bench_read_aligned_vec(bencher: &mut test::Bencher) {
     println!("init");
@@ -71,19 +86,31 @@ fn bench_read_transmute_broken(bencher: &mut test::Bencher) {
 }
 
 #[bench]
-fn bench_read_mmap(bencher: &mut test::Bencher) {
+fn bench_read_mmap_lib(bencher: &mut test::Bencher) {
     bencher.iter(|| {
         println!("interation");
-        let output = read_entire_file_usize_memmap(&input_path()).unwrap();
-        injest_value(output)
+        let output = read_entire_file_varray_mmap_lib(&input_path()).unwrap();
+        let bench_result: usize = output.as_slice().iter().sum1().unwrap();
+        bench_result
     });
 }
 
 #[bench]
-fn bench_read_mmap(bencher: &mut test::Bencher) {
+fn bench_read_mmap_custom(bencher: &mut test::Bencher) {
     bencher.iter(|| {
         println!("interation");
-        let output = read_entire_file_usize_iter(&input_path()).unwrap();
+        let output = read_entire_file_usize_mmap_custom(&input_path()).unwrap();
+        let bench_result: usize = output.iter().sum1().unwrap();
+        drop_mmap_vec(output);
+        bench_result
+    });
+}
+
+#[bench]
+fn bench_read_iter(bencher: &mut test::Bencher) {
+    bencher.iter(|| {
+        println!("interation");
+        let output = read_entire_file_usize_read_then_iter(&input_path()).unwrap();
         injest_value(output)
     });
 }
@@ -92,5 +119,12 @@ fn injest_value(output: Vec<usize>) -> usize {
     let total: usize = output.iter().sum();
     println!("total {}", total);
     assert_eq!(total, 224321692961);
+    total
+}
+
+fn injest_value_TESTING_u8(output: Vec<u8>) -> u8 {
+    let total: u8 = output.iter().sum();
+    println!("total {}", total);
+    // assert_eq!(total, 224321692961);
     total
 }

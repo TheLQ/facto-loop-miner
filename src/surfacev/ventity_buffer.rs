@@ -1,25 +1,27 @@
-use crate::surface::fast_metrics::{FastMetric, FastMetrics};
-use crate::surface::pixel::Pixel;
-use crate::surfacev::err::{VError, VResult};
-use crate::surfacev::vpoint::VPoint;
-use crate::surfacev::vsurface::VPixel;
-use crate::util::duration::BasicWatch;
-use crate::util::io::{
-    get_mebibytes_of_slice_usize, map_u8_to_usize_slice, read_entire_file, read_entire_file_mmap,
-    read_entire_file_usize_transmute_broken, write_entire_file,
-};
-use crate::LOCALE;
-use bytemuck::cast_vec;
-use itertools::*;
-use num_format::ToFormattedString;
-use opencv::core::Mat;
-use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 use std::path::Path;
+
+use itertools::*;
+use num_format::ToFormattedString;
+use opencv::core::Mat;
+use serde::{Deserialize, Serialize};
 use tracing::debug;
+
+use crate::surface::fast_metrics::{FastMetric, FastMetrics};
+use crate::surface::pixel::Pixel;
+use crate::surfacev::err::{VError, VResult};
+use crate::surfacev::varray::VArray;
+use crate::surfacev::vpoint::VPoint;
+use crate::surfacev::vsurface::VPixel;
+use crate::util::duration::BasicWatch;
+use crate::LOCALE;
+
+use crate::util::io::{
+    get_mebibytes_of_slice_usize, read_entire_file_varray_mmap_lib, write_entire_file,
+};
 
 const EMPTY_XY_INDEX: usize = usize::MAX;
 
@@ -35,7 +37,7 @@ pub struct VEntityBuffer<E> {
     entities: Vec<E>,
     /// More efficient to store a (radius * 2)^2 length Array as a raw file instead of JSON  
     #[serde(skip)]
-    xy_to_entity: Vec<usize>,
+    xy_to_entity: VArray,
     /// A *square* centered on 0,0
     radius: u32,
 }
@@ -45,17 +47,12 @@ where
     E: VEntityXY + Clone + Eq + Hash,
 {
     pub fn new(radius: u32) -> Self {
-        let mut res = VEntityBuffer {
+        let res = VEntityBuffer {
             entities: Vec::new(),
-            xy_to_entity: Vec::new(),
+            xy_to_entity: VArray::new_length(Self::_xy_array_length_from_radius(radius)),
             radius,
         };
-        res.init_xy_to_entity();
         res
-    }
-
-    fn init_xy_to_entity(&mut self) {
-        self.xy_to_entity = vec![EMPTY_XY_INDEX; Self::_xy_array_length_from_radius(self.radius)]
     }
 
     pub fn radius(&self) -> u32 {
@@ -165,13 +162,13 @@ where
     pub fn add_positions(&mut self, entity_index: usize, positions: &[VPoint]) {
         for position in positions {
             let xy_index = self.xy_to_index_unchecked(position.x(), position.y());
-            self.xy_to_entity[xy_index] = entity_index;
+            self.xy_to_entity.as_mut_slice()[xy_index] = entity_index;
         }
     }
 
     pub fn remove_positions(&mut self, indexes: impl IntoIterator<Item = usize>) {
         for index in indexes.into_iter().sorted().unique().rev() {
-            self.xy_to_entity.remove(index);
+            self.xy_to_entity.as_mut_slice()[index] = EMPTY_XY_INDEX;
         }
     }
 
@@ -196,7 +193,7 @@ where
             new_xy_length
         );
 
-        self.init_xy_to_entity();
+        self.xy_to_entity = VArray::new_length(self.xy_array_length_from_radius());
 
         for i in 0..self.entities.len() {
             let xy_insertable = self.entities[i].get_xy().to_owned();
@@ -209,6 +206,7 @@ where
         let mut serialize_watch = BasicWatch::start();
         let big_xy_bytes: Vec<u8> = self
             .xy_to_entity
+            .as_slice()
             .iter()
             .flat_map(|v| usize::to_ne_bytes(*v))
             .collect();
@@ -229,73 +227,73 @@ where
     }
 
     pub fn load_xy_file(&mut self, path: &Path) -> VResult<()> {
-        match 0 {
-            0 => self._load_xy_file_slow(path),
-            1 => self._load_xy_file_bytemuck(path),
-            2 => self._load_xy_file_transmute(path),
+        match 3 {
+            // 0 => self._load_xy_file_slow(path),
+            // 1 => self._load_xy_file_bytemuck(path),
+            // 2 => self._load_xy_file_transmute(path),
             3 => self._load_xy_file_mmap(path),
             _ => panic!(),
         }
     }
 
-    fn _load_xy_file_slow(&mut self, path: &Path) -> VResult<()> {
-        let mut read_watch = BasicWatch::start();
-        let xy_bytes_u8 = read_entire_file(path)?;
-        read_watch.stop();
-
-        // Serde does not use new() so this is still uninitialized
-        // self.init_xy_to_entity();
-
-        // TODO: Slow :-(
-        assert_eq!(self.xy_to_entity.len(), 0, "not empty");
-        let deserialize_watch = BasicWatch::start();
-        self.xy_to_entity = vec![0; xy_bytes_u8.len() * 8];
-        map_u8_to_usize_slice(&xy_bytes_u8, self.xy_to_entity.as_mut_slice());
-        debug!(
-            "Loading Entity XY (slow) read {} deserialize {} bytes {} path {}",
-            read_watch,
-            deserialize_watch,
-            get_mebibytes_of_slice_usize(&self.xy_to_entity),
-            path.display()
-        );
-
-        Ok(())
-    }
-
-    fn _load_xy_file_bytemuck(&mut self, path: &Path) -> VResult<()> {
-        let total_watch = BasicWatch::start();
-        let raw_bytes = read_entire_file(path)?;
-
-        let converted_bytes: Vec<usize> = cast_vec(raw_bytes);
-        self.xy_to_entity = converted_bytes;
-        debug!(
-            "Loading Entity XY total {} path {}",
-            total_watch,
-            path.display()
-        );
-
-        Ok(())
-    }
-
-    fn _load_xy_file_transmute(&mut self, path: &Path) -> VResult<()> {
-        let total_watch = BasicWatch::start();
-        self.xy_to_entity = read_entire_file_usize_transmute_broken(path)?;
-        debug!(
-            "Loading Entity XY (transmute) total {} path {}",
-            total_watch,
-            path.display()
-        );
-
-        Ok(())
-    }
+    // fn _load_xy_file_slow(&mut self, path: &Path) -> VResult<()> {
+    //     let mut read_watch = BasicWatch::start();
+    //     let xy_bytes_u8 = read_entire_file(path)?;
+    //     read_watch.stop();
+    //
+    //     // Serde does not use new() so this is still uninitialized
+    //     // self.init_xy_to_entity();
+    //
+    //     // TODO: Slow :-(
+    //     assert_eq!(self.xy_to_entity.len(), 0, "not empty");
+    //     let deserialize_watch = BasicWatch::start();
+    //     self.xy_to_entity = vec![0; xy_bytes_u8.len() * 8];
+    //     map_u8_to_usize_slice(&xy_bytes_u8, self.xy_to_entity.as_mut_slice());
+    //     debug!(
+    //         "Loading Entity XY (slow) read {} deserialize {} bytes {} path {}",
+    //         read_watch,
+    //         deserialize_watch,
+    //         get_mebibytes_of_slice_usize(&self.xy_to_entity),
+    //         path.display()
+    //     );
+    //
+    //     Ok(())
+    // }
+    //
+    // fn _load_xy_file_bytemuck(&mut self, path: &Path) -> VResult<()> {
+    //     let total_watch = BasicWatch::start();
+    //     let raw_bytes = read_entire_file(path)?;
+    //
+    //     let converted_bytes: Vec<usize> = cast_vec(raw_bytes);
+    //     self.xy_to_entity = converted_bytes;
+    //     debug!(
+    //         "Loading Entity XY total {} path {}",
+    //         total_watch,
+    //         path.display()
+    //     );
+    //
+    //     Ok(())
+    // }
+    //
+    // fn _load_xy_file_transmute(&mut self, path: &Path) -> VResult<()> {
+    //     let total_watch = BasicWatch::start();
+    //     self.xy_to_entity = read_entire_file_usize_transmute_broken(path)?;
+    //     debug!(
+    //         "Loading Entity XY (transmute) total {} path {}",
+    //         total_watch,
+    //         path.display()
+    //     );
+    //
+    //     Ok(())
+    // }
 
     fn _load_xy_file_mmap(&mut self, path: &Path) -> VResult<()> {
         let total_watch = BasicWatch::start();
-        self.xy_to_entity = read_entire_file_mmap(path)?;
+        self.xy_to_entity = read_entire_file_varray_mmap_lib(path)?;
         debug!(
             "Loading Entity XY (mmap) total {} / {} in {} path {}",
             self.xy_to_entity.len().to_formatted_string(&LOCALE),
-            get_mebibytes_of_slice_usize(&self.xy_to_entity),
+            get_mebibytes_of_slice_usize(&self.xy_to_entity.as_slice()),
             total_watch,
             path.display()
         );
@@ -319,6 +317,7 @@ where
 
     pub fn iter_entities(&self) -> impl Iterator<Item = &E> {
         self.xy_to_entity
+            .as_slice()
             .iter()
             .filter(|index| **index != EMPTY_XY_INDEX)
             .map(|index| &self.entities[*index])
@@ -349,6 +348,7 @@ where
     ) -> Vec<u8> {
         let result: Vec<u8> = self
             .xy_to_entity
+            .as_slice()
             .iter()
             .map(|index| self.entities.get(*index))
             .flat_map(mapper)
@@ -425,7 +425,7 @@ impl<E> Display for VEntityBuffer<E> {
 
 impl VEntityBuffer<VPixel> {
     pub fn iter_xy_pixels(&self) -> impl Iterator<Item = &Pixel> {
-        self.xy_to_entity.iter().map(|index| {
+        self.xy_to_entity.as_slice().iter().map(|index| {
             if *index == EMPTY_XY_INDEX {
                 &Pixel::Empty
             } else {
