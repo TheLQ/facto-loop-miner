@@ -1,7 +1,7 @@
 pub mod err;
 pub mod varea;
-mod ventity_buffer;
+pub mod varray;
+mod ventity_map;
 pub mod vpatch;
 pub mod vpoint;
 pub mod vsurface;
-pub mod varray;

@@ -33,7 +33,7 @@ pub trait VEntityXY {
 ///
 /// For example, ore tiles cover 1 positions. Assembly machines cover 9 positions
 #[derive(Serialize, Deserialize)]
-pub struct VEntityBuffer<E> {
+pub struct VEntityMap<E> {
     entities: Vec<E>,
     /// More efficient to store a (radius * 2)^2 length Array as a raw file instead of JSON  
     #[serde(skip)]
@@ -42,12 +42,12 @@ pub struct VEntityBuffer<E> {
     radius: u32,
 }
 
-impl<E> VEntityBuffer<E>
+impl<E> VEntityMap<E>
 where
     E: VEntityXY + Clone + Eq + Hash,
 {
     pub fn new(radius: u32) -> Self {
-        let res = VEntityBuffer {
+        let res = VEntityMap {
             entities: Vec::new(),
             xy_to_entity: VArray::new_length(Self::_xy_array_length_from_radius(radius)),
             radius,
@@ -411,7 +411,7 @@ where
     //</editor-fold>
 }
 
-impl<E> Display for VEntityBuffer<E> {
+impl<E> Display for VEntityMap<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -423,7 +423,7 @@ impl<E> Display for VEntityBuffer<E> {
     }
 }
 
-impl VEntityBuffer<VPixel> {
+impl VEntityMap<VPixel> {
     pub fn iter_xy_pixels(&self) -> impl Iterator<Item = &Pixel> {
         self.xy_to_entity.as_slice().iter().map(|index| {
             if *index == EMPTY_XY_INDEX {
@@ -473,13 +473,13 @@ impl VEntityBuffer<VPixel> {
 
 #[cfg(test)]
 mod test {
-    use crate::surfacev::ventity_buffer::VEntityBuffer;
+    use crate::surfacev::ventity_map::VEntityMap;
     use crate::surfacev::vpoint::VPoint;
     use crate::surfacev::vsurface::VPixel;
 
     #[test]
     pub fn to_xy_index_and_back() {
-        let buffer: VEntityBuffer<VPixel> = VEntityBuffer::new(50);
+        let buffer: VEntityMap<VPixel> = VEntityMap::new(50);
 
         let test = VPoint::new(25, 20);
         assert_eq!(

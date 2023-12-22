@@ -3,7 +3,7 @@ use crate::state::machine::StepParams;
 use crate::surface::fast_metrics::{FastMetric, FastMetrics};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
-use crate::surfacev::ventity_buffer::{VEntityBuffer, VEntityXY};
+use crate::surfacev::ventity_map::{VEntityMap, VEntityXY};
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::VPoint;
 use crate::util::duration::BasicWatch;
@@ -29,8 +29,8 @@ use tracing::{debug, info, trace};
 /// Converted from Factorio style of f32 relative to center (3x3 entity has start=1.5,1.5).
 #[derive(Serialize, Deserialize)]
 pub struct VSurface {
-    pixels: VEntityBuffer<VPixel>,
-    entities: VEntityBuffer<VEntity>,
+    pixels: VEntityMap<VPixel>,
+    entities: VEntityMap<VEntity>,
     patches: Vec<VPatch>,
 }
 
@@ -39,8 +39,8 @@ impl VSurface {
 
     pub fn new(radius: u32) -> Self {
         VSurface {
-            pixels: VEntityBuffer::new(radius),
-            entities: VEntityBuffer::new(radius),
+            pixels: VEntityMap::new(radius),
+            entities: VEntityMap::new(radius),
             patches: Vec::new(),
         }
     }
@@ -111,14 +111,14 @@ impl VSurface {
         &mut self,
         out_dir: &Path,
     ) -> (
-        JoinHandle<VResult<VEntityBuffer<VPixel>>>,
-        JoinHandle<VResult<VEntityBuffer<VEntity>>>,
+        JoinHandle<VResult<VEntityMap<VPixel>>>,
+        JoinHandle<VResult<VEntityMap<VEntity>>>,
     ) {
         let out_dir_buf = out_dir.to_path_buf();
         let pixel_thread = thread::spawn(move || {
             trace!("start pixel thread");
             let pixel_path = &path_pixel_xy_indexes(&out_dir_buf);
-            let mut buffer = VEntityBuffer::<VPixel>::new(0);
+            let mut buffer = VEntityMap::<VPixel>::new(0);
             buffer.load_xy_file(pixel_path).map(|_| buffer)
         });
 
@@ -126,7 +126,7 @@ impl VSurface {
         let entity_thread = thread::spawn(move || {
             trace!("start entity thread");
             let entity_path = &path_entity_xy_indexes(&out_dir_buf);
-            let mut buffer = VEntityBuffer::<VEntity>::new(0);
+            let mut buffer = VEntityMap::<VEntity>::new(0);
             buffer.load_xy_file(entity_path).map(|_| buffer)
         });
 
