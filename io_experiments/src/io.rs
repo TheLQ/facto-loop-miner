@@ -67,6 +67,8 @@ pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VIoResult<Vec<u
     println!("array sum {}", output.iter().sum::<usize>());
     Ok(output)
 }
+
+/// DOC
 pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VIoResult<Vec<usize>> {
     let mut file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
@@ -103,27 +105,32 @@ pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VIoResult<Vec<usize>> 
     Ok(xy_vec_u64)
 }
 
-pub fn read_entire_file_usize_mmap_custom(path: &Path) -> VIoResult<ManuallyDrop<Vec<usize>>> {
+/// DOC
+pub fn read_entire_file_usize_mmap_custom(
+    path: &Path,
+    populate: bool,
+    sequential: bool,
+    willneed: bool,
+) -> VIoResult<ManuallyDrop<Vec<usize>>> {
+    let file = File::open(path).map_err(VIoError::io_error(path))?;
+    let file_size = get_file_size(&file, path)? as usize;
+    let page_size = unsafe { libc::sysconf(libc::_SC_PAGE_SIZE) as usize };
+    let alignment_padding = page_size - (file_size % page_size);
+
+    let xy_array_len_u8 = file_size;
+    let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
+    let xy_array_len_aligned_u8 = file_size + alignment_padding;
+    let xy_array_len_aligned_u64 = xy_array_len_u8 / USIZE_BYTES;
+
     let vec: Vec<usize> = unsafe {
-        let file = File::open(path).map_err(VIoError::io_error(path))?;
-        let file_size = get_file_size(&file, path)? as usize;
-        let page_size = libc::sysconf(libc::_SC_PAGE_SIZE) as usize;
-        let alignment_padding = page_size - (file_size % page_size);
-
-        let xy_array_len_u8 = file_size;
-        let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
-        let xy_array_len_aligned_u8 = file_size + alignment_padding;
-        let xy_array_len_aligned_u64 = xy_array_len_u8 / USIZE_BYTES;
-
-        // PROT_READ | PROT_WRITE = Basic rw memory usage
-        // MAP_PRIVATE = Required mode
-        // MAP_POPULATE = Prepoplate file
         let mmap_ptr = libc::mmap64(
             ptr::null_mut(),
             xy_array_len_aligned_u8,
+            // ACL required to use it
             libc::PROT_READ | libc::PROT_WRITE,
-            // libc::MAP_HUGETLB | libc::MAP_HUGE_2MB
-            libc::MAP_PRIVATE | libc::MAP_POPULATE,
+            // TODO: libc::MAP_HUGETLB | libc::MAP_HUGE_2MB
+            // Required mode, Prepopulate with file content
+            libc::MAP_PRIVATE | enable_if(libc::MAP_POPULATE, populate),
             // SAFETY file can be closed immediately
             file.as_raw_fd(),
             0,
@@ -135,7 +142,7 @@ pub fn read_entire_file_usize_mmap_custom(path: &Path) -> VIoResult<ManuallyDrop
         if libc::madvise(
             mmap_ptr,
             xy_array_len_aligned_u8,
-            libc::MADV_SEQUENTIAL | libc::MADV_WILLNEED,
+            enable_if(libc::MADV_SEQUENTIAL, sequential) | enable_if(libc::MADV_WILLNEED, willneed),
         ) != libc::EXIT_SUCCESS
         {
             panic!("madvise failed {}", io::Error::last_os_error());
@@ -162,6 +169,14 @@ pub fn read_entire_file_usize_mmap_custom(path: &Path) -> VIoResult<ManuallyDrop
     println!("wrote array of {}", vec.len());
     println!("array sum {}", vec.iter().sum::<usize>());
     Ok(ManuallyDrop::new(vec))
+}
+
+fn enable_if(value: libc::c_int, enable: bool) -> libc::c_int {
+    if enable {
+        value
+    } else {
+        0
+    }
 }
 
 /// Must Drop with munmap() not the normal free()
