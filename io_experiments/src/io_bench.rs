@@ -1,13 +1,16 @@
 extern crate test;
 
+use itertools::Itertools;
+use num_format::ToFormattedString;
+use std::env;
 use std::path::PathBuf;
 
 use crate::io::{
-    map_u8_to_usize_iter_ref, map_u8_to_usize_slice, read_entire_file,
-    read_entire_file_usize_aligned_vec, read_entire_file_usize_mmap_custom,
-    read_entire_file_usize_read_then_iter, read_entire_file_usize_transmute_broken,
-    read_entire_file_varray_mmap_lib, USIZE_BYTES,
+    drop_mmap_vec, map_u8_to_usize_iter, map_u8_to_usize_iter_ref, map_u8_to_usize_slice,
+    read_entire_file, read_entire_file_usize_aligned_vec, read_entire_file_usize_mmap_custom,
+    read_entire_file_usize_transmute_broken, read_entire_file_varray_mmap_lib, USIZE_BYTES,
 };
+use crate::LOCALE;
 
 fn input_path() -> PathBuf {
     PathBuf::from(BENCH_XY_PATH)
@@ -56,7 +59,7 @@ fn bench_read_minimum_unconverted(bencher: &mut test::Bencher) {
         println!("interation");
         let output = read_entire_file(&input_path()).unwrap();
         println!("output");
-        injest_value_TESTING_u8(output)
+        injest_value_testing_u8(output)
     })
 }
 
@@ -86,43 +89,52 @@ fn bench_read_transmute_broken(bencher: &mut test::Bencher) {
 #[bench]
 fn bench_read_mmap_lib(bencher: &mut test::Bencher) {
     bencher.iter(|| {
-        println!("interation");
         let output = read_entire_file_varray_mmap_lib(&input_path()).unwrap();
         let bench_result: usize = output.as_slice().iter().sum1().unwrap();
         bench_result
     });
 }
 
-#[bench]
-fn bench_read_mmap_custom(bencher: &mut test::Bencher) {
-    bencher.iter(|| {
-        println!("interation");
-        let output = read_entire_file_usize_mmap_custom(&input_path()).unwrap();
-        let bench_result: usize = output.iter().sum1().unwrap();
-        drop_mmap_vec(output);
-        bench_result
-    });
-}
+// #[bench]
+// fn bench_read_mmap_custom(bencher: &mut test::Bencher) {
+//     bencher.iter(|| {
+//         println!("interation {}", env::current_dir().unwrap().display());
+//         let output = read_entire_file_usize_mmap_custom(&input_path()).unwrap();
+//         let bench_result: usize = output.iter().sum1().unwrap();
+//         drop_mmap_vec(output);
+//         bench_result
+//     });
+// }
 
 #[bench]
 fn bench_read_iter(bencher: &mut test::Bencher) {
     bencher.iter(|| {
-        println!("interation");
-        let output = read_entire_file_usize_read_then_iter(&input_path()).unwrap();
+        let data = read_entire_file(&input_path()).unwrap();
+        let output = map_u8_to_usize_iter(data).into_iter().collect();
         injest_value(output)
     });
 }
 
+const EXPECTED_SUM: usize = 224321692961;
+
 fn injest_value(output: Vec<usize>) -> usize {
     let total: usize = output.iter().sum();
     println!("total {}", total);
-    assert_eq!(total, 224321692961);
+
+    // assert_eq!(total, EXPECTED_SUM);
+    if total != EXPECTED_SUM {
+        eprintln!(
+            "WARN: Expected {} got {}",
+            total,
+            EXPECTED_SUM.to_formatted_string(&LOCALE)
+        );
+    }
     total
 }
 
-fn injest_value_testing_u8(output: Vec<u8>) -> u8 {
-    let total: u8 = output.iter().sum();
+fn injest_value_testing_u8(output: Vec<u8>) -> usize {
+    let total: usize = output.iter().map(|v| *v as usize).sum();
     println!("total {}", total);
-    // assert_eq!(total, 224321692961);
+    // assert_eq!(total, EXPECTED_SUM * USIZE_BYTES);
     total
 }

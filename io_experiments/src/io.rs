@@ -103,13 +103,13 @@ pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VIoResult<Vec<usize>> 
     Ok(xy_vec_u64)
 }
 
-pub fn read_entire_file_usize_mmap_custom(path: &Path) -> VIoResult<Vec<usize>> {
+pub fn read_entire_file_usize_mmap_custom(path: &Path) -> VIoResult<ManuallyDrop<Vec<usize>>> {
     let vec: Vec<usize> = unsafe {
-        let page_size = libc::sysconf(libc::_SC_PAGE_SIZE) as usize;
-
         let file = File::open(path).map_err(VIoError::io_error(path))?;
         let file_size = get_file_size(&file, path)? as usize;
-        let alignment_padding = file_size % page_size;
+        let page_size = libc::sysconf(libc::_SC_PAGE_SIZE) as usize;
+        let alignment_padding = page_size - (file_size % page_size);
+
         let xy_array_len_u8 = file_size;
         let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
         let xy_array_len_aligned_u8 = file_size + alignment_padding;
@@ -121,7 +121,7 @@ pub fn read_entire_file_usize_mmap_custom(path: &Path) -> VIoResult<Vec<usize>> 
         let mmap_ptr = libc::mmap64(
             ptr::null_mut(),
             xy_array_len_aligned_u8,
-            libc::PROT_READ,
+            libc::PROT_READ | libc::PROT_WRITE,
             // libc::MAP_HUGETLB | libc::MAP_HUGE_2MB
             libc::MAP_PRIVATE | libc::MAP_POPULATE,
             // SAFETY file can be closed immediately
@@ -145,12 +145,13 @@ pub fn read_entire_file_usize_mmap_custom(path: &Path) -> VIoResult<Vec<usize>> 
 
         // Build usize Vec viewing the same memory with proper aligned access
         // Docs state the outer slices should be empty in real world environments
-        let (xy_vec_prefix, xy_vec_aligned, xy_vec_suffix) = xy_array_u8.align_to_mut::<usize>();
-        assert_eq!(xy_vec_prefix.len(), 0, "prefix big");
-        assert_eq!(xy_vec_suffix.len(), 0, "suffix big");
-        assert_eq!(xy_vec_aligned.len(), xy_array_len_u64, "aligned size");
+        let (xy_array_prefix, xy_array_aligned, xy_array_suffix) =
+            xy_array_u8.align_to_mut::<usize>();
+        assert_eq!(xy_array_prefix.len(), 0, "prefix big");
+        assert_eq!(xy_array_suffix.len(), 0, "suffix big");
+        assert_eq!(xy_array_aligned.len(), xy_array_len_u64, "aligned size");
         let xy_vec_aligned_usize: Vec<usize> = Vec::from_raw_parts(
-            xy_vec_aligned.as_mut_ptr(),
+            xy_array_aligned.as_mut_ptr(),
             xy_array_len_u64,
             xy_array_len_aligned_u64,
         );
@@ -158,20 +159,18 @@ pub fn read_entire_file_usize_mmap_custom(path: &Path) -> VIoResult<Vec<usize>> 
         xy_vec_aligned_usize
     };
 
-    // let vec
     println!("wrote array of {}", vec.len());
     println!("array sum {}", vec.iter().sum::<usize>());
-    Ok(vec)
+    Ok(ManuallyDrop::new(vec))
 }
 
-// Must Drop with munmap(), not the normal free()
-pub fn drop_mmap_vec(mut mmap_vec: Vec<usize>) {
+/// Must Drop with munmap() not the normal free()
+pub fn drop_mmap_vec(mut mmap_vec: ManuallyDrop<Vec<usize>>) {
     unsafe {
         let page_size = libc::sysconf(libc::_SC_PAGE_SIZE) as usize;
-        let ptr = mmap_vec.as_mut_ptr();
-        let cap = mmap_vec.capacity();
-        munmap(ptr as *mut libc::c_void, cap * page_size);
-        mem::forget(mmap_vec)
+        let ptr = mmap_vec.as_mut_ptr() as *mut libc::c_void;
+        let capacity = mmap_vec.capacity();
+        munmap(ptr, capacity * page_size);
     }
 }
 
@@ -215,11 +214,6 @@ pub fn read_entire_file_usize_memmap_u8(path: &Path) -> VIoResult<Vec<usize>> {
     println!("wrote array of {}", vec.len());
     println!("array sum {}", vec.iter().sum::<usize>());
     Ok(vec)
-}
-
-pub fn read_entire_file_usize_read_then_iter(path: &Path) -> VIoResult<Vec<usize>> {
-    let data = read_entire_file(path)?;
-    Ok(map_u8_to_usize_iter(data).into_iter().collect())
 }
 
 #[cfg(lol)]
