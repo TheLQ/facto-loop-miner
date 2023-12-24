@@ -17,7 +17,7 @@ impl ResourceCloud {
         for (pixel, resource_patches) in &patches.patches {
             for resource_patch in resource_patches {
                 positions.push(resource_patch.corner_point_slice_f32());
-                pixels.push(pixel.clone());
+                pixels.push(*pixel);
             }
         }
 

@@ -21,7 +21,7 @@ pub fn calculate_cost_for_point(
     end: &Rail,
     resource_cloud: &ResourceCloud,
 ) -> u32 {
-    let distance = next.distance_to(&end) as f32;
+    let distance = next.distance_to(end) as f32;
     let cost_unit = 1f32;
     // let cost_unit = 100f32;
 

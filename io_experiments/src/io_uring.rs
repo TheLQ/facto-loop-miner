@@ -1,19 +1,15 @@
-use std::alloc::{alloc, Layout};
-use std::fs::File;
-use std::io::Result as IoResult;
-use std::io::{Error as IoError, ErrorKind};
+use std::io::Error as IoError;
 use std::mem::transmute;
-use std::os::fd::AsRawFd;
 use std::{io, mem};
+
+use libc::iovec;
+use uring_sys2::{
+    io_uring, io_uring_cqe, io_uring_cqe_seen, io_uring_peek_cqe, io_uring_queue_exit,
+    io_uring_queue_init, io_uring_submit, io_uring_wait_cqe,
+};
 
 use crate::io_uring_common::{log_debug, IoUringEventData};
 use crate::io_uring_file::IoUringFile;
-use libc::iovec;
-use uring_sys2::{
-    io_uring, io_uring_cqe, io_uring_cqe_get_data, io_uring_cqe_seen, io_uring_get_sqe,
-    io_uring_peek_cqe, io_uring_prep_read, io_uring_queue_exit, io_uring_queue_init, io_uring_sqe,
-    io_uring_sqe_set_data, io_uring_submit, io_uring_wait_cqe,
-};
 
 /*
 c file copy example: https://github.com/axboe/liburing/blob/master/examples/io_uring-cp.c
@@ -34,7 +30,7 @@ pub fn io_uring_main() -> io::Result<()> {
 
     // fill queue
     let mut io_file = IoUringFile::open(file_path)?;
-    let read = io_file
+    io_file
         .read_entire_file(&mut ring)
         .expect("Failed to create read");
 
@@ -183,7 +179,7 @@ impl<const QUEUE_DEPTH: u32> IoUring<QUEUE_DEPTH> {
                 IoError::from_raw_os_error(submitted_entries)
             );
         }
-        log_debug(&format!("submit"));
+        log_debug("submit");
         submitted_entries != 0
     }
 
