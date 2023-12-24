@@ -12,7 +12,7 @@ pub mod varray;
 mod io_bench;
 
 mod io;
-mod io_uring;
+pub mod io_uring;
 
 pub use io::{
     get_mebibytes_of_slice_usize, read_entire_file, read_entire_file_varray_mmap_lib,

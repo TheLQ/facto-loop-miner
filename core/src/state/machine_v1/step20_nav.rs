@@ -186,7 +186,7 @@ fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
     let pixel = Pixel::CopperOre;
     let patches: Vec<&VPatch> = surface
         .get_patches_iter()
-        .into_iter()
+        .iter()
         .filter(|v| v.resource == pixel)
         .collect();
     let cloud = map_vpatch_to_kdtree(patches.clone().into_iter());

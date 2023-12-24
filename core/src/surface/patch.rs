@@ -152,7 +152,7 @@ pub fn map_patch_map_to_kdtree(
         .iter()
         .map(|(key_pixel, patches_for_key)| {
             (
-                key_pixel.clone(),
+                *key_pixel,
                 map_patch_corners_to_kdtree_ref(patches_for_key.iter()),
             )
         })
@@ -172,7 +172,7 @@ pub fn map_patch_corners_to_kdtree_ref<'a>(
 pub fn map_patch_corners_to_kdtree<'a>(patch_rects: impl Iterator<Item = &'a Rect>) -> PixelKdTree {
     let mut tree: PixelKdTree = KdTree::new();
     for (patch_counter, patch_rect) in patch_rects.enumerate() {
-        tree.add(&map_rect_corner_to_slice(&patch_rect), patch_counter);
+        tree.add(&map_rect_corner_to_slice(patch_rect), patch_counter);
     }
     tree
 }

@@ -293,7 +293,7 @@ where
         debug!(
             "Loading Entity XY (mmap) total {} / {} in {} path {}",
             self.xy_to_entity.len().to_formatted_string(&LOCALE),
-            get_mebibytes_of_slice_usize(&self.xy_to_entity.as_slice()),
+            get_mebibytes_of_slice_usize(self.xy_to_entity.as_slice()),
             total_watch,
             path.display()
         );

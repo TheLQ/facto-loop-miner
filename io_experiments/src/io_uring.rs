@@ -1,23 +1,16 @@
-use libc::{iovec, size_t};
 use std::alloc::{alloc, Layout};
-use std::ffi::c_void;
 use std::fs::File;
 use std::io::Result as IoResult;
 use std::io::{Error as IoError, ErrorKind};
-use std::mem::{transmute, MaybeUninit};
+use std::mem::transmute;
 use std::os::fd::AsRawFd;
-use std::ptr::addr_of;
-use std::{io, mem, slice};
+use std::{io, mem};
 
+use libc::iovec;
 use uring_sys2::{
-    __kernel_timespec, io_uring, io_uring_buf, io_uring_buf_reg, io_uring_buf_ring,
-    io_uring_buf_ring_add, io_uring_buf_ring_advance, io_uring_buf_ring_init,
-    io_uring_buf_ring_mask, io_uring_cqe, io_uring_cqe_get_data, io_uring_cqe_seen,
-    io_uring_get_sqe, io_uring_prep_nop, io_uring_prep_read, io_uring_prep_read_fixed,
-    io_uring_prep_readv, io_uring_queue_exit, io_uring_queue_init, io_uring_register_buf_ring,
-    io_uring_register_buffers, io_uring_sqe, io_uring_sqe_set_data, io_uring_submit,
-    io_uring_submit_and_wait, io_uring_wait_cqe, io_uring_wait_cqes, IORING_CQE_BUFFER_SHIFT,
-    IORING_FEAT_EXT_ARG,
+    io_uring, io_uring_cqe, io_uring_cqe_get_data, io_uring_cqe_seen, io_uring_get_sqe,
+    io_uring_peek_cqe, io_uring_prep_read, io_uring_queue_exit, io_uring_queue_init, io_uring_sqe,
+    io_uring_sqe_set_data, io_uring_submit, io_uring_wait_cqe,
 };
 
 /*
@@ -25,7 +18,7 @@ c file copy example: https://github.com/axboe/liburing/blob/master/examples/io_u
 rust basic read example: https://github.com/Noah-Kennedy/liburing/blob/master/tests/test_read_file.rs
  */
 
-pub fn c_mode_main() -> io::Result<()> {
+pub fn io_uring_main() -> io::Result<()> {
     // init
     let mut ring = IoUring::new();
 
@@ -40,31 +33,8 @@ pub fn c_mode_main() -> io::Result<()> {
     // fill queue
     let mut io_file = IoUringFile::open(file_path)?;
     let read = io_file
-        .create_submission_queue_read_all(&mut ring)
+        .read_entire_file(&mut ring)
         .expect("Failed to create read");
-
-    // loop {
-    //     let sqe = unsafe { io_uring_get_sqe(&mut ring) };
-    //     if sqe == std::ptr::null_mut() {
-    //         // TODO: throw something
-    //         break;
-    //     }
-    //     unsafe { io_uring_prep_read_fixed(sqe) };
-    // }
-
-    io_file.drain_completion_queue(&mut ring);
-
-    // submit requests
-    ring.submit();
-
-    // fetch completions
-    // let mut my_cqes = ring.wait_cqes();
-    // ring.seen_cqe(&mut my_cqes[4]);
-    // for cqe in my_cqes {
-    //
-    // }
-
-    ring.wait_cqe();
 
     ring.exit();
 
@@ -80,10 +50,10 @@ const BUF_RING_ID: u16 = 42;
 const BUF_RING_COUNT: usize = 50;
 const BUF_RING_ENTRY_SIZE: usize = PAGE_SIZE * 256; // 1 MibiByte
 type BufRing = [io_uring; BUF_RING_COUNT];
-type BackingBufEntry = [u8; BUF_RING_ENTRY_SIZE as usize];
-type BackingBufRing = [BackingBufEntry; BUF_RING_COUNT as usize];
+type BackingBufEntry = [u8; BUF_RING_ENTRY_SIZE];
+type BackingBufRing = [BackingBufEntry; BUF_RING_COUNT];
 
-struct IoUring<const QUEUE_DEPTH: u32 = 25> {
+pub struct IoUring<const QUEUE_DEPTH: u32 = 75> {
     ring: io_uring,
     // buf_ring: Box<io_uring_buf_ring>,
     // backing_buf_ring: Box<BackingBufRing>,
@@ -111,7 +81,7 @@ fn allocate_array_page_size_aligned<Container, Entry>(count: usize) -> (*mut Con
 
 impl<const QUEUE_DEPTH: u32> IoUring<QUEUE_DEPTH> {
     pub fn new() -> Self {
-        let mut ring = unsafe {
+        let ring = unsafe {
             let mut s = mem::MaybeUninit::<io_uring>::uninit();
             // IORING_FEAT_ENTER_EXT_ARG so wait_cqes does not do submit() for us
             // IORING_FEAT_EXT_ARG
@@ -202,7 +172,7 @@ impl<const QUEUE_DEPTH: u32> IoUring<QUEUE_DEPTH> {
         // }
         // println!("yay?");
 
-        let mut result = IoUring {
+        let result = IoUring {
             ring,
             // buf_ring,
             // backing_buf_ring,
@@ -235,12 +205,26 @@ impl<const QUEUE_DEPTH: u32> IoUring<QUEUE_DEPTH> {
     //     }
     // }
 
-    pub fn submit(&mut self) {
-        let ret = unsafe { io_uring_submit(&mut self.ring) };
-        if ret < 0 {
-            panic!("io_uring_submit: {:?}", IoError::from_raw_os_error(ret));
+    pub fn submit(&mut self) -> bool {
+        let submitted_entries = unsafe { io_uring_submit(&mut self.ring) };
+        if submitted_entries < 0 {
+            panic!(
+                "io_uring_submit: {:?}",
+                IoError::from_raw_os_error(submitted_entries)
+            );
         }
-        println!("submit {}", ret);
+        log_debug(&format!("submit"));
+        submitted_entries != 0
+    }
+
+    pub fn peek_cqe(&mut self) -> Option<*mut io_uring_cqe> {
+        let mut cqe_ptr: *mut io_uring_cqe = unsafe { mem::zeroed() };
+        let ret = unsafe { io_uring_peek_cqe(&mut self.ring, &mut cqe_ptr) };
+        if ret == -libc::EAGAIN {
+            None
+        } else {
+            Some(cqe_ptr)
+        }
     }
 
     pub fn wait_cqe(&mut self) {
@@ -263,6 +247,7 @@ impl<const QUEUE_DEPTH: u32> IoUring<QUEUE_DEPTH> {
         unsafe { io_uring_cqe_seen(&mut self.ring, cqe_ptr) };
     }
 
+    #[cfg(nope)]
     pub fn wait_cqes_broken(&mut self) -> Vec<io_uring_cqe> {
         let mut cqes: Vec<io_uring_cqe> = Vec::with_capacity(QUEUE_DEPTH as usize);
         unsafe {
@@ -298,9 +283,9 @@ impl<const QUEUE_DEPTH: u32> IoUring<QUEUE_DEPTH> {
         cqes
     }
 
-    pub fn seen_cqe(&mut self, cqe: *mut io_uring_cqe) {
-        unsafe { io_uring_cqe_seen(&mut self.ring, cqe) };
-    }
+    // pub fn seen_cqe(&mut self, cqe: *mut io_uring_cqe) {
+    //     unsafe { io_uring_cqe_seen(&mut self.ring, cqe) };
+    // }
 
     pub fn exit(&mut self) {
         unsafe { io_uring_queue_exit(&mut self.ring) };
@@ -335,17 +320,19 @@ struct IoUringCompletion {
 #[derive(Default)]
 #[repr(C)]
 struct IoUringEventData {
-    buffer_index: u8,
     b: u16,
     c: u16,
     d: u16,
+    // TODO: Only works here, we are overwriting something...
+    buffer_index: u8,
 }
 
 impl IoUringEventData {
     pub fn from_buf_index(buffer_index: u8) -> Self {
-        let mut new = Self::default();
-        new.buffer_index = buffer_index;
-        new
+        Self {
+            buffer_index,
+            ..Self::default()
+        }
     }
 }
 
@@ -353,7 +340,8 @@ impl IoUringEventData {
 struct IoUringFile {
     handle: File,
     backing_buf_ring: Box<BackingBufRing>,
-    backing_buf_ring_available: [bool; BUF_RING_COUNT],
+    backing_buf_ring_free: [bool; BUF_RING_COUNT],
+    backing_buf_ring_offset: [usize; BUF_RING_COUNT],
     next_index: usize,
     output_buffer: Vec<u8>,
 }
@@ -366,7 +354,8 @@ impl IoUringFile {
         Ok(IoUringFile {
             handle,
             backing_buf_ring: unsafe { Box::from_raw(ptr) },
-            backing_buf_ring_available: [true; BUF_RING_COUNT],
+            backing_buf_ring_free: [true; BUF_RING_COUNT],
+            backing_buf_ring_offset: [usize::MAX; BUF_RING_COUNT],
             output_buffer: vec![0u8; file_size as usize],
             next_index: 0,
         })
@@ -386,19 +375,50 @@ impl IoUringFile {
     //     Ok((sqe, iovecs))
     // }
 
-    pub fn create_submission_queue_read_all(
-        &mut self,
-        ring: &mut IoUring,
-    ) -> IoResult<Vec<*mut io_uring_sqe>> {
-        let mut results = Vec::with_capacity(self.backing_buf_ring.len());
-        for buf_index in 0..self.backing_buf_ring.len() {
-            if self.backing_buf_ring_available[buf_index] {
-                let sqe =
-                    self.create_submission_queue_read_for_buffer_index(ring, buf_index as u8)?;
-                results.push(sqe);
+    pub fn read_entire_file(&mut self, ring: &mut IoUring) -> IoResult<()> {
+        let file_size = self.output_buffer.len();
+        let last_index = (file_size - (file_size % BUF_RING_ENTRY_SIZE)) / BUF_RING_ENTRY_SIZE;
+        let mut force_next = false;
+        while self.next_index < last_index {
+            let changed = self.create_submission_queue_read_all(ring)?;
+            let is_changed = changed != 0;
+            if is_changed {
+                ring.submit();
+            }
+
+            let mut drained = 0;
+            loop {
+                let is_drained = self.drain_completion_queue(ring, force_next);
+                force_next = false;
+                if !is_drained {
+                    drained += 1;
+                    break;
+                }
+                // println!("loop");
+            }
+            let is_drained = drained != 0;
+            if !is_drained && !is_changed {
+                log_debug("force next");
+                force_next = true;
             }
         }
-        Ok(results)
+
+        Ok(())
+    }
+
+    pub fn create_submission_queue_read_all(&mut self, ring: &mut IoUring) -> IoResult<u8> {
+        // let mut results = Vec::with_capacity(self.backing_buf_ring.len());
+        let mut changed = 0;
+        for buf_index in 0..self.backing_buf_ring.len() {
+            if self.backing_buf_ring_free[buf_index] {
+                let sqe =
+                    self.create_submission_queue_read_for_buffer_index(ring, buf_index as u8)?;
+                // results.push(sqe);
+                changed += 1;
+            }
+        }
+        // Ok(results)
+        Ok(changed)
     }
 
     pub fn create_submission_queue_read_for_buffer_index(
@@ -407,51 +427,88 @@ impl IoUringFile {
         buf_index: u8,
     ) -> IoResult<*mut io_uring_sqe> {
         let sqe = unsafe { io_uring_get_sqe(&mut ring.ring) };
-        if sqe == std::ptr::null_mut() {
-            return Err(IoError::new(ErrorKind::Other, "get_sqe"));
+        if sqe.is_null() {
+            return Err(IoError::new(ErrorKind::Other, "get_sqe, queue if full?"));
         }
 
-        let mut event = IoUringEventData::from_buf_index(buf_index);
-        let event_ptr: *mut IoUringEventData = &mut event;
+        let event = Box::new(IoUringEventData::from_buf_index(buf_index));
         unsafe {
-            io_uring_sqe_set_data(sqe, event_ptr as *mut libc::c_void);
+            io_uring_sqe_set_data(sqe, Box::into_raw(event) as *mut libc::c_void);
         }
         // TODO SAFETY Pretty sure we can't free this? Needs testing
-        mem::forget(event);
+        // mem::forget(event);
 
+        let offset = (BUF_RING_ENTRY_SIZE * self.next_index) as u64;
         unsafe {
             io_uring_prep_read(
                 sqe,
                 self.handle.as_raw_fd(),
                 self.backing_buf_ring[buf_index as usize].as_mut_ptr() as *mut libc::c_void,
                 BUF_RING_ENTRY_SIZE as libc::c_uint,
-                (BUF_RING_ENTRY_SIZE * buf_index as usize) as u64,
+                offset,
             )
         };
+        self.backing_buf_ring_free[buf_index as usize] = false;
+        self.backing_buf_ring_offset[buf_index as usize] = offset as usize;
+        log_debug(&format!("sqe create {}", buf_index));
         Ok(sqe)
     }
 
-    pub fn drain_completion_queue(&mut self, ring: &mut IoUring) {
+    pub fn drain_completion_queue(&mut self, ring: &mut IoUring, wait: bool) -> bool {
         let mut cqe_ptr: *mut io_uring_cqe = unsafe { mem::zeroed() };
-        let ret = unsafe { io_uring_wait_cqe(&mut ring.ring, &mut cqe_ptr) };
-        assert_eq!(
-            ret,
-            0,
-            "io_uring_wait_cqe: {:?}",
-            IoError::from_raw_os_error(ret)
-        );
+        if !wait {
+            let ret = unsafe { io_uring_peek_cqe(&mut ring.ring, &mut cqe_ptr) };
+            if ret == -libc::EAGAIN {
+                return false;
+            }
+            assert_eq!(
+                ret,
+                0,
+                "io_uring_peek_cqe: {:?}",
+                IoError::from_raw_os_error(ret)
+            );
+        } else {
+            log_debug("wait");
+            let ret = unsafe { io_uring_wait_cqe(&mut ring.ring, &mut cqe_ptr) };
+            assert_eq!(
+                ret,
+                0,
+                "io_uring_wait_cqe: {:?}",
+                IoError::from_raw_os_error(ret)
+            );
+        };
+        if cqe_ptr.is_null() {
+            panic!("asd")
+        }
+
         let cqe_result = unsafe { (*cqe_ptr).res };
         assert!(cqe_result > 0, "(*cqe).res = {}", cqe_result);
 
         // let buffer_id = unsafe {
         //     (*cqe_ptr).flags >> IORING_CQE_BUFFER_SHIFT;
         // };
-        let cqe_data: IoUringEventData = unsafe { transmute((*cqe_ptr).user_data) };
-        cqe_data.buffer_index;
+        let cqe_data: *mut IoUringEventData =
+            unsafe { io_uring_cqe_get_data(cqe_ptr) as *mut IoUringEventData };
+        let cqe_data = unsafe { &*cqe_data };
+        log_debug(&format!("read {}", cqe_data.buffer_index));
+        let source = self.backing_buf_ring[cqe_data.buffer_index as usize];
+        let target_offset = self.backing_buf_ring_offset[cqe_data.buffer_index as usize];
+        let target = &mut self.output_buffer[target_offset..(target_offset + BUF_RING_ENTRY_SIZE)];
+        target.copy_from_slice(&source);
+        self.backing_buf_ring_free[cqe_data.buffer_index as usize] = true;
 
         unsafe { io_uring_cqe_seen(&mut ring.ring, cqe_ptr) };
+        mem::forget(cqe_data);
+
+        true
     }
 }
+
+fn log_debug(value: &str) {
+    // println!("{}", value);
+}
+
+enum CqeFetchMode {}
 
 // #[repr(C, align(4096))]
 // struct PageAlignedMemory<const ENTRY_SIZE: usize, const ENTRY_COUNT: usize> {

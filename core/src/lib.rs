@@ -41,6 +41,7 @@ extern crate core;
 
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
+use facto_loop_miner_io::io_uring::io_uring_main;
 use kiddo::KdTree;
 use num_format::Locale;
 use num_traits::PrimInt;
@@ -74,11 +75,12 @@ pub fn inner_main() {
     tracing::debug!("hello");
     let root_dir = Path::new("work");
 
-    match 1 {
+    match 6 {
         1 => new_v1_machine().start(root_dir),
         3 => generate_lookup_image(),
         4 => self_bin::get_patch::get_patch_main(),
         5 => admiral::client::admiral(),
+        6 => io_uring_main().expect("iouring"),
         _ => panic!("wtf"),
     }
 }
