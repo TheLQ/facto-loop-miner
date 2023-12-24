@@ -1,8 +1,12 @@
+use itertools::Itertools;
 use std::io::Error as IoError;
 use std::mem::transmute;
+use std::time::Instant;
 use std::{io, mem};
 
+use crate::io::USIZE_BYTES;
 use libc::iovec;
+use num_format::ToFormattedString;
 use uring_sys2::{
     io_uring, io_uring_cqe, io_uring_cqe_seen, io_uring_peek_cqe, io_uring_queue_exit,
     io_uring_queue_init, io_uring_submit, io_uring_wait_cqe,
@@ -10,6 +14,7 @@ use uring_sys2::{
 
 use crate::io_uring_common::{log_debug, IoUringEventData};
 use crate::io_uring_file::IoUringFile;
+use crate::LOCALE;
 
 /*
 c file copy example: https://github.com/axboe/liburing/blob/master/examples/io_uring-cp.c
@@ -28,11 +33,28 @@ pub fn io_uring_main() -> io::Result<()> {
     }
     .to_string();
 
+    let start = Instant::now();
+
     // fill queue
     let mut io_file = IoUringFile::open(file_path)?;
     io_file
         .read_entire_file(&mut ring)
         .expect("Failed to create read");
+    let xy_array_u8 = io_file.into_result();
+    let (_, xy_array_usize, _) = unsafe { xy_array_u8.align_to::<usize>() };
+    assert_eq!(
+        xy_array_usize.len(),
+        xy_array_u8.len() / USIZE_BYTES,
+        "size"
+    );
+    let sum: usize = xy_array_usize.iter().sum1().unwrap();
+
+    let read_watch = Instant::now() - start;
+    println!(
+        "processed in {} ms total {}",
+        read_watch.as_millis().to_formatted_string(&LOCALE),
+        sum.to_formatted_string(&LOCALE),
+    );
 
     ring.exit();
 

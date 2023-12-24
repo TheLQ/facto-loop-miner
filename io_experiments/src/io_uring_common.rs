@@ -28,7 +28,7 @@ pub fn allocate_array_page_size_aligned<Container, Entry>(count: usize) -> (*mut
 }
 
 pub fn log_debug(value: &str) {
-    // println!("{}", value);
+    println!("{}", value);
 }
 
 /// Struct Kernel passes from submission queue to completion queue
@@ -40,13 +40,13 @@ pub struct IoUringEventData {
     c: u16,
     d: u16,
     // TODO: Only works here, we are overwriting something...
-    pub buffer_index: u8,
+    pub buf_index: u8,
 }
 
 impl IoUringEventData {
     pub fn from_buf_index(buffer_index: u8) -> Self {
         Self {
-            buffer_index,
+            buf_index: buffer_index,
             ..Self::default()
         }
     }
