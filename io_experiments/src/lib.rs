@@ -13,6 +13,8 @@ mod io_bench;
 
 mod io;
 pub mod io_uring;
+mod io_uring_common;
+mod io_uring_file;
 
 pub use io::{
     get_mebibytes_of_slice_usize, read_entire_file, read_entire_file_varray_mmap_lib,
