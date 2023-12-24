@@ -138,13 +138,11 @@ impl<const QUEUE_DEPTH: u32> IoUring<QUEUE_DEPTH> {
         // }
         // println!("yay?");
 
-        let result = IoUring {
+        IoUring {
             ring,
             // buf_ring,
             // backing_buf_ring,
-        };
-        // result.fill_buffer_ring();
-        result
+        }
     }
 
     // fn get_buf_ring(&mut self) -> *mut io_uring_buf_ring {

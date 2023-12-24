@@ -185,7 +185,7 @@ fn ordered_patches_by_base_side(surface: &Surface, side: SectorSide) {}
 fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
     let pixel = Pixel::CopperOre;
     let patches: Vec<&VPatch> = surface
-        .get_patches_iter()
+        .get_patches_slice()
         .iter()
         .filter(|v| v.resource == pixel)
         .collect();

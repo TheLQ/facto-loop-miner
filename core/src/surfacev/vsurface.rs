@@ -239,7 +239,7 @@ impl VSurface {
         self.patches.extend_from_slice(patches)
     }
 
-    pub fn get_patches_iter(&self) -> &[VPatch] {
+    pub fn get_patches_slice(&self) -> &[VPatch] {
         &self.patches
     }
 

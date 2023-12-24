@@ -120,7 +120,7 @@ impl ExportCompressedItem {
 
     fn as_string(&self) -> &str {
         match self {
-            ExportCompressedItem::Name(v) => &v,
+            ExportCompressedItem::Name(v) => v,
             _ => {
                 panic!("unexpected value")
             }

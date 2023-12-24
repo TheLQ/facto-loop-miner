@@ -313,7 +313,7 @@ impl Rail {
         next = next.move_force_rotate_clockwise(rotation_steps);
         next.move_force_forward_mut(RAIL_STEP_SIZE);
 
-        next.mode = RailMode::Turn90(self.endpoint.clone(), self.direction.clone());
+        next.mode = RailMode::Turn90(self.endpoint, self.direction.clone());
         next
     }
 
@@ -408,9 +408,9 @@ impl Rail {
     }
 
     fn is_area_buildable(&self, surface: &VSurface) -> bool {
-        self.area().into_iter().fold(true, |total, area_point| {
-            total && is_buildable_point_ref(surface, area_point)
-        })
+        self.area()
+            .into_iter()
+            .all(|area_point| is_buildable_point_ref(surface, area_point))
     }
 
     // fn into_buildable_sequential(self, surface: &VSurface) -> Option<Self> {

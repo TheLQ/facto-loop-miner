@@ -56,7 +56,7 @@ impl Step for Step04 {
             let mut max_width = 0u32;
             let mut max_height = 0u32;
             let mut total = 0;
-            for patch in surface.get_patches_iter() {
+            for patch in surface.get_patches_slice() {
                 if patch.resource != pixel {
                     continue;
                 }
@@ -80,10 +80,7 @@ fn write_surface_with_all_patches_wrapped(surface: &mut VSurface) {
     let mut img = surface.to_pixel_cv_image(None);
     draw_patch_border(
         &mut img,
-        surface
-            .get_patches_iter()
-            .into_iter()
-            .map(|e| e.area.to_rect()),
+        surface.get_patches_slice().iter().map(|e| e.area.to_rect()),
     );
 }
 
