@@ -96,7 +96,7 @@ pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VIoResult<Vec<usize>> 
         .map_err(VIoError::io_error(path))?;
     assert_eq!(xy_vec_aligned_u8.len(), xy_array_len_u8, "vec length");
 
-    // Do not double free. Data is owned by xy_vec_u64
+    // Do not double free memory owned by xy_vec_u64
     mem::forget(xy_vec_aligned_u8);
 
     println!("wrote array of {}", xy_vec_u64.len());

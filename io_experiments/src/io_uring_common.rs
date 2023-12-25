@@ -33,7 +33,7 @@ pub fn log_debug(value: &str) {
 
 /// Struct Kernel passes from submission queue to completion queue
 /// We have u64 *total* to work with
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 #[repr(C)]
 pub struct IoUringEventData {
     b: u16,

@@ -13,7 +13,7 @@ use uring_sys2::{
 };
 
 use crate::io_uring_common::{log_debug, IoUringEventData};
-use crate::io_uring_file::IoUringFile;
+use crate::io_uring_file::{IoUringFile, BUF_RING_COUNT};
 use crate::LOCALE;
 
 /*
@@ -61,19 +61,19 @@ pub fn io_uring_main() -> io::Result<()> {
     Ok(())
 }
 
-pub struct IoUring<const QUEUE_DEPTH: u32 = 75> {
+pub struct IoUring {
     pub ring: io_uring,
     // buf_ring: Box<io_uring_buf_ring>,
     // backing_buf_ring: Box<BackingBufRing>,
 }
 
-impl<const QUEUE_DEPTH: u32> IoUring<QUEUE_DEPTH> {
+impl IoUring {
     pub fn new() -> Self {
         let ring = unsafe {
             let mut s = mem::MaybeUninit::<io_uring>::uninit();
             // IORING_FEAT_ENTER_EXT_ARG so wait_cqes does not do submit() for us
             // IORING_FEAT_EXT_ARG
-            let ret = io_uring_queue_init(QUEUE_DEPTH, s.as_mut_ptr(), 0);
+            let ret = io_uring_queue_init(BUF_RING_COUNT as u32, s.as_mut_ptr(), 0);
             assert_eq!(
                 ret,
                 libc::EXIT_SUCCESS,
@@ -201,6 +201,11 @@ impl<const QUEUE_DEPTH: u32> IoUring<QUEUE_DEPTH> {
         }
         log_debug("submit");
         submitted_entries != 0
+    }
+    
+    pub fn assert_cq_has_no_overflow(&self) {
+        let overflow = unsafe { *self.ring.cq.koverflow };
+        assert_eq!(overflow, 0, "detected overflow of completion queue, too many submissions in flight");
     }
 
     pub fn peek_cqe(&mut self) -> Option<*mut io_uring_cqe> {
