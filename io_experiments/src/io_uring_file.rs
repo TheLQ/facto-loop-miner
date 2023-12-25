@@ -4,6 +4,7 @@ use std::io::Result as IoResult;
 use std::io::{Error as IoError, ErrorKind};
 use std::os::fd::AsRawFd;
 use std::{mem, ptr};
+use tracing::{debug, trace};
 
 use uring_sys2::{
     io_uring, io_uring_cqe, io_uring_cqe_get_data, io_uring_cqe_seen, io_uring_get_sqe,
@@ -11,7 +12,7 @@ use uring_sys2::{
 };
 
 use crate::io_uring::IoUring;
-use crate::io_uring_common::{allocate_page_size_aligned, log_debug, IoUringEventData, PAGE_SIZE};
+use crate::io_uring_common::{allocate_page_size_aligned, IoUringEventData, PAGE_SIZE};
 use crate::LOCALE;
 
 pub const BUF_RING_COUNT: usize = 32 * 4;
@@ -21,28 +22,30 @@ type BackingBufRing = [BackingBufEntry; BUF_RING_COUNT];
 
 /// Handles read/write to a larger vec
 pub struct IoUringFile {
-    handle: File,
+    file_handle: File,
+    file_size: usize,
     backing_buf_ring: Box<BackingBufRing>,
     backing_buf_ring_data: [BackingBufData; BUF_RING_COUNT],
-    offset_max_read: usize,
-    next_result_index: usize,
     result_buffer: Vec<u8>,
-    file_size: usize,
+    result_buffer_done: Vec<bool>,
+    result_buffer_done_fast_check_from: usize,
+    result_cursor: usize,
 }
 
 impl IoUringFile {
     pub fn open(path: String) -> IoResult<Self> {
-        let handle = File::open(path)?;
-        let file_size = handle.metadata()?.len() as usize;
+        let file_handle = File::open(path)?;
+        let file_size = file_handle.metadata()?.len() as usize;
         let (ptr, _) = allocate_page_size_aligned::<BackingBufRing>();
         Ok(IoUringFile {
-            handle,
+            file_handle,
+            file_size,
             backing_buf_ring: unsafe { Box::from_raw(ptr) },
             backing_buf_ring_data: [BackingBufData::default(); BUF_RING_COUNT],
             result_buffer: vec![0u8; file_size],
-            offset_max_read: 0,
-            next_result_index: 0,
-            file_size,
+            result_buffer_done: vec![false; file_size],
+            result_buffer_done_fast_check_from: 0,
+            result_cursor: 0,
         })
     }
 
@@ -66,12 +69,11 @@ impl IoUringFile {
 
     /// Superfast io_uring
     pub fn read_entire_file(&mut self, ring: &mut IoUring) -> IoResult<()> {
-        let file_size = self.result_buffer.len();
         let mut blocked = false;
         let mut sqe_enabled = true;
         let mut total_cqe: usize = 0;
         let mut total_sqe: usize = 0;
-        while self.offset_max_read < file_size {
+        while self.result_buffer_done_fast_check_from < self.result_buffer_done.len() {
             let submit;
             let mut wait_for_cqe: bool;
             let processed_submission: u8;
@@ -116,20 +118,21 @@ impl IoUringFile {
                 }
             }
             total_sqe += processed_completed;
-            log_debug(&format!(
-                "processed_submission {} processed_completed {} result_index {}",
-                processed_submission, processed_completed, self.next_result_index
-            ));
+            debug!(
+                "processed_submission {} processed_completed {} minimum_done {}",
+                processed_submission, processed_completed, self.result_buffer_done_fast_check_from
+            );
             ring.assert_cq_has_no_overflow();
 
             if sqe_enabled && processed_completed == 0 && processed_submission == 0 {
-                // log_debug("blocked!");
+                trace!("blocked!");
                 blocked = true;
             }
             if !sqe_enabled && total_cqe == total_sqe {
-                log_debug("entire EOF");
+                debug!("entire EOF");
                 break;
             }
+            self.check_and_advance();
         }
 
         Ok(())
@@ -147,7 +150,7 @@ impl IoUringFile {
                 };
                 match sqe {
                     CreateSqeResult::Eof => {
-                        log_debug("SQ EOF");
+                        debug!("SQ EOF");
                         return Ok(CreateAllSqeResult::EofWithTotal(changed));
                     }
                     CreateSqeResult::CreatedAt(_) => changed += 1,
@@ -169,7 +172,7 @@ impl IoUringFile {
         // SAFETY Box::new.into_raw() effectively leaks this?
         io_uring_sqe_set_data(sqe, Box::into_raw(event) as *mut libc::c_void);
 
-        let offset = self.next_result_index * BUF_RING_ENTRY_SIZE;
+        let offset = self.result_cursor * BUF_RING_ENTRY_SIZE;
 
         if offset > self.file_size {
             return Ok(CreateSqeResult::Eof);
@@ -177,7 +180,7 @@ impl IoUringFile {
         let buf_index_usize = buf_index as usize;
         io_uring_prep_read(
             sqe,
-            self.handle.as_raw_fd(),
+            self.file_handle.as_raw_fd(),
             ptr::addr_of_mut!(self.backing_buf_ring_data[buf_index_usize].io_event_data)
                 as *mut libc::c_void,
             BUF_RING_ENTRY_SIZE as libc::c_uint,
@@ -185,13 +188,14 @@ impl IoUringFile {
         );
         self.backing_buf_ring_data[buf_index_usize].is_free = false;
         self.backing_buf_ring_data[buf_index_usize].result_offset = offset;
-        self.backing_buf_ring_data[buf_index_usize].result_abs_buf_index = self.next_result_index;
-        // log_debug(&format!(
-        //     "sqe create {}\tnext_result_index {}",
-        //     buf_index, self.result_index
-        // ));
+        self.backing_buf_ring_data[buf_index_usize].result_abs_buf_index = self.result_cursor;
+        trace!(
+            "sqe create {}\tminimum_done {}",
+            buf_index,
+            self.result_cursor
+        );
 
-        self.next_result_index += 1;
+        self.result_cursor += 1;
         Ok(CreateSqeResult::CreatedAt(sqe))
     }
 
@@ -208,7 +212,7 @@ impl IoUringFile {
                 ret
             }
         } else {
-            log_debug("wait_cqe");
+            debug!("wait_cqe");
             io_uring_wait_cqe(&mut ring.ring, &mut cqe_ptr)
         };
         assert_eq!(
@@ -254,10 +258,22 @@ impl IoUringFile {
         let target = &mut self.result_buffer[target_offset..target_offset_end];
         target.copy_from_slice(source_ref);
         self.backing_buf_ring_data[cqe_buf_index_usize].is_free = true;
-        self.offset_max_read = self.offset_max_read.max(target_offset_end);
+        // self.offset_max_read = self.offset_max_read.max(target_offset_end);
 
         io_uring_cqe_seen(&mut ring.ring, cqe_ptr);
         PopCqeResult::PopOneEvent
+    }
+
+    fn check_and_advance(&mut self) {
+        let start = self.result_buffer_done_fast_check_from;
+        let mut cursor = start;
+        for i in start..(self.result_buffer_done.len()) {
+            if !self.result_buffer_done[i] {
+                break;
+            }
+            cursor += 1;
+        }
+        self.result_buffer_done_fast_check_from = cursor;
     }
 }
 

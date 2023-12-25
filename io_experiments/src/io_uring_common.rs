@@ -27,10 +27,6 @@ pub fn allocate_array_page_size_aligned<Container, Entry>(count: usize) -> (*mut
     (ptr, ptr as usize)
 }
 
-pub fn log_debug(value: &str) {
-    println!("{}", value);
-}
-
 /// Struct Kernel passes from submission queue to completion queue
 /// We have u64 *total* to work with
 #[derive(Default, Clone, Copy)]

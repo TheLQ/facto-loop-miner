@@ -7,12 +7,13 @@ use std::{io, mem};
 use crate::io::USIZE_BYTES;
 use libc::iovec;
 use num_format::ToFormattedString;
+use tracing::debug;
 use uring_sys2::{
     io_uring, io_uring_cqe, io_uring_cqe_seen, io_uring_peek_cqe, io_uring_queue_exit,
     io_uring_queue_init, io_uring_submit, io_uring_wait_cqe,
 };
 
-use crate::io_uring_common::{log_debug, IoUringEventData};
+use crate::io_uring_common::IoUringEventData;
 use crate::io_uring_file::{IoUringFile, BUF_RING_COUNT};
 use crate::LOCALE;
 
@@ -199,13 +200,16 @@ impl IoUring {
                 IoError::from_raw_os_error(submitted_entries)
             );
         }
-        log_debug("submit");
+        debug!("submit");
         submitted_entries != 0
     }
-    
+
     pub fn assert_cq_has_no_overflow(&self) {
         let overflow = unsafe { *self.ring.cq.koverflow };
-        assert_eq!(overflow, 0, "detected overflow of completion queue, too many submissions in flight");
+        assert_eq!(
+            overflow, 0,
+            "detected overflow of completion queue, too many submissions in flight"
+        );
     }
 
     pub fn peek_cqe(&mut self) -> Option<*mut io_uring_cqe> {
