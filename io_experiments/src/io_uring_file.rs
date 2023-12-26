@@ -7,8 +7,9 @@ use std::{mem, ptr};
 use tracing::{debug, trace};
 
 use uring_sys2::{
-    io_uring, io_uring_cqe, io_uring_cqe_get_data, io_uring_cqe_seen, io_uring_get_sqe,
-    io_uring_peek_cqe, io_uring_prep_read, io_uring_sqe, io_uring_sqe_set_data, io_uring_wait_cqe,
+    io_uring, io_uring_cqe, io_uring_cqe_get_data, io_uring_cqe_get_data64, io_uring_cqe_seen,
+    io_uring_get_sqe, io_uring_peek_cqe, io_uring_prep_read, io_uring_sqe, io_uring_sqe_set_data,
+    io_uring_sqe_set_data64, io_uring_wait_cqe,
 };
 
 use crate::io_uring::IoUring;
@@ -21,6 +22,7 @@ type BackingBufEntry = [u8; BUF_RING_ENTRY_SIZE];
 type BackingBufRing = [BackingBufEntry; BUF_RING_COUNT];
 
 /// Handles read/write to a larger vec
+#[repr(C, align(4096))]
 pub struct IoUringFile {
     file_handle: File,
     file_size: usize,
@@ -36,6 +38,7 @@ impl IoUringFile {
     pub fn open(path: String) -> IoResult<Self> {
         let file_handle = File::open(path)?;
         let file_size = file_handle.metadata()?.len() as usize;
+        println!("file size {}", file_size);
         let (ptr, _) = allocate_page_size_aligned::<BackingBufRing>();
         Ok(IoUringFile {
             file_handle,
@@ -110,7 +113,7 @@ impl IoUringFile {
             let mut processed_completed = 0;
             unsafe {
                 while let PopCqeResult::PopOneEvent =
-                    self.pop_completion_queue(ring, wait_for_cqe || blocked)
+                    self.pop_completion_queue(ring, PopCqeType::Wait)
                 {
                     processed_completed += 1;
                     wait_for_cqe = false;
@@ -168,15 +171,13 @@ impl IoUringFile {
         let sqe = io_uring_get_sqe(&mut ring.ring);
         assert!(!sqe.is_null(), "get_sqe, queue is full?");
 
-        let event = Box::new(IoUringEventData::from_buf_index(buf_index));
-        // SAFETY Box::new.into_raw() effectively leaks this?
-        io_uring_sqe_set_data(sqe, Box::into_raw(event) as *mut libc::c_void);
+        io_uring_sqe_set_data64(sqe, buf_index as u64);
 
         let offset = self.result_cursor * BUF_RING_ENTRY_SIZE;
-
         if offset > self.file_size {
             return Ok(CreateSqeResult::Eof);
         }
+
         let buf_index_usize = buf_index as usize;
         io_uring_prep_read(
             sqe,
@@ -199,44 +200,38 @@ impl IoUringFile {
         Ok(CreateSqeResult::CreatedAt(sqe))
     }
 
-    pub unsafe fn pop_completion_queue(&mut self, ring: &mut IoUring, wait: bool) -> PopCqeResult {
+    pub unsafe fn pop_completion_queue(
+        &mut self,
+        ring: &mut IoUring,
+        pop_type: PopCqeType,
+    ) -> PopCqeResult {
         let mut cqe_ptr: *mut io_uring_cqe = mem::zeroed();
-        let ret = if !wait {
-            let ret = io_uring_peek_cqe(&mut ring.ring, &mut cqe_ptr);
-            if ret == -libc::EAGAIN {
-                return PopCqeResult::EmptyQueue;
-            } else if cqe_ptr.is_null() {
-                panic!("!!! cqe nullptr")
-                // return PopCqeResult::EmptyQueue;
-            } else {
-                ret
-            }
-        } else {
-            debug!("wait_cqe");
-            io_uring_wait_cqe(&mut ring.ring, &mut cqe_ptr)
-        };
+        debug!("wait_cqe");
+        let ret = io_uring_wait_cqe(&mut ring.ring, &mut cqe_ptr);
         assert_eq!(
             ret,
             0,
-            "io_uring_{}_cqe: {:?}",
-            if wait { "wait" } else { "peek" },
+            "io_uring_wait_cqe: {:?}",
             IoError::from_raw_os_error(ret)
         );
-        // assert!(cqe_ptr.is_null(), "cqe nullptr");
+        assert!(!cqe_ptr.is_null(), "cqe nullptr");
+        println!("fetched");
 
         let cqe_result = (*cqe_ptr).res;
         assert!(cqe_result >= 0, "(*cqe).res = {}", cqe_result);
+        println!("res");
 
         // let buffer_id = unsafe {
         //     (*cqe_ptr).flags >> IORING_CQE_BUFFER_SHIFT;
         // };
-        let cqe_data = io_uring_cqe_get_data(cqe_ptr) as *mut IoUringEventData;
-        let cqe_data = &*cqe_data;
-        let cqe_buf_index_usize = cqe_data.buf_index as usize;
-        let source: BackingBufEntry = self.backing_buf_ring[cqe_buf_index_usize];
+        let cqe_buf_index = io_uring_cqe_get_data64(cqe_ptr) as usize;
+        println!("source");
+        let source: BackingBufEntry = self.backing_buf_ring[cqe_buf_index];
+        println!("source");
         let mut source_ref: &[u8] = &source;
+        println!("source");
 
-        let target_offset = self.backing_buf_ring_data[cqe_buf_index_usize].result_offset;
+        let target_offset = self.backing_buf_ring_data[cqe_buf_index].result_offset;
         assert!(
             target_offset < self.file_size,
             "target offset too big {}",
@@ -248,16 +243,16 @@ impl IoUringFile {
             source_ref = &source[0..(target_offset_end - target_offset)];
         }
 
-        // log_debug(&format!(
-        //     "cqe buf {} range {} to {}",
-        //     cqe_data.buf_index,
-        //     target_offset.to_formatted_string(&LOCALE),
-        //     target_offset_end.to_formatted_string(&LOCALE)
-        // ));
+        trace!(
+            "cqe buf {} range {} to {}",
+            cqe_buf_index,
+            target_offset.to_formatted_string(&LOCALE),
+            target_offset_end.to_formatted_string(&LOCALE)
+        );
 
         let target = &mut self.result_buffer[target_offset..target_offset_end];
         target.copy_from_slice(source_ref);
-        self.backing_buf_ring_data[cqe_buf_index_usize].is_free = true;
+        self.backing_buf_ring_data[cqe_buf_index].is_free = true;
         // self.offset_max_read = self.offset_max_read.max(target_offset_end);
 
         io_uring_cqe_seen(&mut ring.ring, cqe_ptr);
@@ -286,6 +281,11 @@ pub enum CreateAllSqeResult {
     RefreshZero,
     RefreshTotal(u8),
     EofWithTotal(u8),
+}
+
+pub enum PopCqeType {
+    Wait,
+    SubmitAndWait,
 }
 
 pub enum PopCqeResult {
