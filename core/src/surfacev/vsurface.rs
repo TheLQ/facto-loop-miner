@@ -78,7 +78,7 @@ impl VSurface {
     fn _load_state_sequential(out_dir: &Path) -> VResult<Self> {
         let mut read_watch = BasicWatch::start();
         let path = path_state(out_dir);
-        let mut data = read_entire_file(&path)?;
+        let mut data = read_entire_file(&path, true)?;
         read_watch.stop();
 
         let load_watch = BasicWatch::start();

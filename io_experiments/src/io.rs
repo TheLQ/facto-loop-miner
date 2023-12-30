@@ -13,10 +13,14 @@ use memmap2::{Mmap, MmapOptions};
 
 pub const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
 
-pub fn read_entire_file(path: &Path) -> VIoResult<Vec<u8>> {
+pub fn read_entire_file(path: &Path, preallocate_vec: bool) -> VIoResult<Vec<u8>> {
     let mut file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
-    let mut xy_array_u8_raw: Vec<u8> = Vec::new();
+    let mut xy_array_u8_raw: Vec<u8> = if preallocate_vec {
+        vec![0; xy_array_len_u8]
+    } else {
+        Vec::new()
+    };
     file.read_to_end(&mut xy_array_u8_raw)
         .map_err(VIoError::io_error(path))?;
     assert_eq!(xy_array_u8_raw.len(), xy_array_len_u8);
@@ -148,11 +152,13 @@ pub fn read_entire_file_usize_mmap_custom(
             panic!("failed to mmap {}", xy_array_len_u8);
         }
 
-        if libc::madvise(
-            mmap_ptr,
-            xy_array_len_aligned_u8,
-            enable_if(libc::MADV_SEQUENTIAL, sequential) | enable_if(libc::MADV_WILLNEED, willneed),
-        ) != libc::EXIT_SUCCESS
+        if (sequential || willneed)
+            && libc::madvise(
+                mmap_ptr,
+                xy_array_len_aligned_u8,
+                enable_if(libc::MADV_SEQUENTIAL, sequential)
+                    | enable_if(libc::MADV_WILLNEED, willneed),
+            ) != libc::EXIT_SUCCESS
         {
             panic!("madvise failed {}", io::Error::last_os_error());
         }
@@ -175,8 +181,8 @@ pub fn read_entire_file_usize_mmap_custom(
         xy_vec_aligned_usize
     };
 
-    println!("wrote array of {}", vec.len());
-    println!("array sum {}", vec.iter().sum::<usize>());
+    // println!("wrote array of {}", vec.len());
+    // println!("array sum {}", vec.iter().sum::<usize>());
     Ok(ManuallyDrop::new(vec))
 }
 

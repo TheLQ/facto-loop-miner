@@ -40,7 +40,7 @@ fn bench_included_map_slice(bencher: &mut test::Bencher) {
         println!("start");
         let mut output: Vec<usize> = vec![0; BENCH_RAW_XY_BUFFER.len() / USIZE_BYTES];
         map_u8_to_usize_slice(BENCH_RAW_XY_BUFFER, &mut output);
-        injest_value(output)
+        checksum_vec_usize(output)
     })
 }
 
@@ -52,7 +52,7 @@ fn bench_included_map_iter(bencher: &mut test::Bencher) {
         let output: Vec<usize> = map_u8_to_usize_iter_ref(BENCH_RAW_XY_BUFFER.iter())
             .into_iter()
             .collect();
-        injest_value(output)
+        checksum_vec_usize(output)
     })
 }
 
@@ -61,9 +61,20 @@ fn bench_read_minimum_unconverted(bencher: &mut test::Bencher) {
     println!("init");
     bencher.iter(|| {
         println!("interation");
-        let output = read_entire_file(&input_path()).unwrap();
+        let output = read_entire_file(&input_path(), false).unwrap();
         println!("output");
-        injest_value_testing_u8(output)
+        checksum_vec_u8(output)
+    })
+}
+
+#[bench]
+fn bench_read_minimum_unconverted_preallocate(bencher: &mut test::Bencher) {
+    println!("init");
+    bencher.iter(|| {
+        println!("interation");
+        let output = read_entire_file(&input_path(), true).unwrap();
+        println!("output");
+        checksum_vec_u8(output)
     })
 }
 
@@ -74,7 +85,7 @@ fn bench_read_aligned_vec(bencher: &mut test::Bencher) {
         println!("interation");
         let output = read_entire_file_usize_aligned_vec(&input_path()).unwrap();
         println!("output");
-        injest_value(output)
+        checksum_vec_usize(output);
     })
 }
 
@@ -86,7 +97,7 @@ fn bench_read_transmute_broken(bencher: &mut test::Bencher) {
     }
     bencher.iter(|| {
         let output = read_entire_file_usize_transmute_broken(&input_path()).unwrap();
-        injest_value(output)
+        checksum_vec_usize(output)
     });
 }
 
@@ -113,19 +124,38 @@ fn bench_read_mmap_custom(bencher: &mut test::Bencher) {
 #[bench]
 fn bench_read_iter(bencher: &mut test::Bencher) {
     bencher.iter(|| {
-        let data = read_entire_file(&input_path()).unwrap();
+        let data = read_entire_file(&input_path(), false).unwrap();
         let output = map_u8_to_usize_iter(data).into_iter().collect();
-        injest_value(output)
+        checksum_vec_usize(output)
+    });
+}
+
+#[bench]
+fn bench_read_iter_preallocate(bencher: &mut test::Bencher) {
+    bencher.iter(|| {
+        let data = read_entire_file(&input_path(), true).unwrap();
+        let output = map_u8_to_usize_iter(data).into_iter().collect();
+        checksum_vec_usize(output)
     });
 }
 
 #[bench]
 fn bench_read_slice(bencher: &mut test::Bencher) {
     bencher.iter(|| {
-        let data = read_entire_file(&input_path()).unwrap();
+        let data = read_entire_file(&input_path(), false).unwrap();
         let mut usize_data = vec![0; data.len() / USIZE_BYTES];
         map_u8_to_usize_slice(&data, &mut usize_data);
-        injest_value(usize_data)
+        checksum_vec_usize(usize_data)
+    });
+}
+
+#[bench]
+fn bench_read_slice_preallocate(bencher: &mut test::Bencher) {
+    bencher.iter(|| {
+        let data = read_entire_file(&input_path(), true).unwrap();
+        let mut usize_data = vec![0; data.len() / USIZE_BYTES];
+        map_u8_to_usize_slice(&data, &mut usize_data);
+        checksum_vec_usize(usize_data)
     });
 }
 
@@ -136,13 +166,13 @@ fn bench_read_io_uring(bencher: &mut test::Bencher) {
         let mut io_uring_file = IoUringFile::open(&input_path()).unwrap();
         io_uring_file.read_entire_file(&mut io_uring).unwrap();
         let usize_data = io_uring_file.into_result_as_usize();
-        injest_value(usize_data)
+        checksum_vec_usize(usize_data)
     });
 }
 
 const EXPECTED_SUM: usize = 224321692961;
 
-fn injest_value(output: Vec<usize>) -> usize {
+fn checksum_vec_usize(output: Vec<usize>) -> usize {
     let total: usize = output.iter().sum();
     println!("total {}", total);
 
@@ -157,7 +187,7 @@ fn injest_value(output: Vec<usize>) -> usize {
     total
 }
 
-fn injest_value_testing_u8(output: Vec<u8>) -> usize {
+fn checksum_vec_u8(output: Vec<u8>) -> usize {
     let total: usize = output.iter().map(|v| *v as usize).sum();
     println!("total {}", total);
     // assert_eq!(total, EXPECTED_SUM * USIZE_BYTES);
