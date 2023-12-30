@@ -1,12 +1,11 @@
 use itertools::Itertools;
-use std::io::Error as IoError;
-use std::mem::transmute;
-use std::time::Instant;
-use std::{io, mem};
-
-use crate::io::USIZE_BYTES;
 use libc::iovec;
 use num_format::ToFormattedString;
+use std::io::Error as IoError;
+use std::mem::transmute;
+use std::path::Path;
+use std::time::Instant;
+use std::{io, mem};
 use tracing::{debug, error};
 use uring_sys2::{
     io_uring, io_uring_cqe, io_uring_cqe_seen, io_uring_peek_cqe, io_uring_queue_exit,
@@ -37,19 +36,13 @@ pub fn io_uring_main() -> io::Result<()> {
     let start = Instant::now();
 
     // fill queue
-    let mut io_file = IoUringFile::open(file_path)?;
+    let mut io_file = IoUringFile::open(Path::new(file_path.as_str()))?;
     if let Err(e) = io_file.read_entire_file(&mut ring) {
         println!("err");
         error!("IOU failed! {}\n{}", e, e.my_backtrace());
         return Ok(());
     }
-    let xy_array_u8 = io_file.into_result();
-    let (_, xy_array_usize, _) = unsafe { xy_array_u8.align_to::<usize>() };
-    assert_eq!(
-        xy_array_usize.len(),
-        xy_array_u8.len() / USIZE_BYTES,
-        "size"
-    );
+    let xy_array_usize = io_file.into_result_as_usize();
     let sum: usize = xy_array_usize.iter().sum1().unwrap();
 
     let read_watch = Instant::now() - start;

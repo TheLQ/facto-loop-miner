@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::Result as IoResult;
 use std::mem::ManuallyDrop;
 use std::os::fd::AsRawFd;
+use std::path::Path;
 use std::{io, mem, ptr};
 
 use num_format::ToFormattedString;
@@ -17,7 +18,7 @@ use crate::io_uring::IoUring;
 use crate::io_uring_common::{allocate_page_size_aligned, PAGE_SIZE};
 use crate::LOCALE;
 
-pub const BUF_RING_COUNT: usize = 32 * 4;
+pub const BUF_RING_COUNT: usize = 32 * 8;
 const BUF_RING_ENTRY_SIZE: usize = PAGE_SIZE * 256; // 1 MibiByte
 type BackingBufEntry = [u8; BUF_RING_ENTRY_SIZE];
 type BackingBufRing = [BackingBufEntry; BUF_RING_COUNT];
@@ -37,14 +38,14 @@ pub struct IoUringFile {
     file_size: usize,
     backing_buf_ring: ManuallyDrop<Box<BackingBufRing>>,
     backing_buf_ring_data: [BackingBufData; BUF_RING_COUNT],
-    result_buffer: Vec<u8>,
+    result_buffer: ManuallyDrop<Vec<u8>>,
     result_buffer_done: Vec<bool>,
     result_buffer_done_fast_check_from: usize,
     result_cursor: usize,
 }
 
 impl IoUringFile {
-    pub fn open(path: String) -> IoResult<Self> {
+    pub fn open(path: &Path) -> IoResult<Self> {
         let file_handle = File::open(path)?;
         let file_size = file_handle.metadata()?.len() as usize;
         println!("file size {}", file_size);
@@ -54,15 +55,11 @@ impl IoUringFile {
             file_size,
             backing_buf_ring: unsafe { ManuallyDrop::new(Box::from_raw(backing_buf_ptr)) },
             backing_buf_ring_data: [BackingBufData::default(); BUF_RING_COUNT],
-            result_buffer: vec![0u8; file_size],
+            result_buffer: ManuallyDrop::new(vec![0u8; file_size]),
             result_buffer_done: vec![false; file_size],
             result_buffer_done_fast_check_from: 0,
             result_cursor: 0,
         })
-    }
-
-    pub fn into_result(self) -> Vec<u8> {
-        self.result_buffer
     }
 
     // pub fn create_read_iovec(
@@ -87,8 +84,9 @@ impl IoUringFile {
             let processed_submission: usize;
             let eof_reached: bool;
             let submit;
-            let mut wait_for_cqe: usize =
-                (self.backing_buf_ring_data.len() as f32 * 0.75).round() as usize;
+            // let mut wait_for_cqe: usize =
+            //     (self.backing_buf_ring_data.len() as f32 * 0.75).round() as usize;
+            let mut wait_for_cqe = self.backing_buf_ring_data.len();
             let val = self.refresh_submission_queue_read_all(ring)?;
             debug!("Cqe {:?}", val);
             match val {
@@ -143,6 +141,25 @@ impl IoUringFile {
         }
 
         Ok(())
+    }
+
+    pub fn into_result_as_usize(mut self) -> Vec<usize> {
+        let result_u8_len = self.result_buffer.len();
+
+        // Build u8 Vec viewing the same memory with proper aligned access
+        // Docs state the outer slices should be empty in real world environments
+        let (xy_vec_prefix, xy_vec_aligned, xy_vec_suffix) =
+            unsafe { self.result_buffer.align_to_mut::<usize>() };
+        assert_eq!(xy_vec_prefix.len(), 0, "prefix big");
+        assert_eq!(xy_vec_suffix.len(), 0, "suffix big");
+        unsafe {
+            // SAFETY result_buffer is ManuallyDrop so we can own it's data now
+            Vec::from_raw_parts(
+                xy_vec_aligned.as_mut_ptr(),
+                0,
+                result_u8_len * mem::size_of::<usize>(),
+            )
+        }
     }
 
     pub fn refresh_submission_queue_read_all(

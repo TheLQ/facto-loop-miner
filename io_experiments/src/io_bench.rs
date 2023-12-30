@@ -10,15 +10,19 @@ use crate::io::{
     read_entire_file, read_entire_file_usize_aligned_vec, read_entire_file_usize_mmap_custom,
     read_entire_file_usize_transmute_broken, read_entire_file_varray_mmap_lib, USIZE_BYTES,
 };
+use crate::io_uring::IoUring;
+use crate::io_uring_file::IoUringFile;
 use crate::LOCALE;
 
 fn input_path() -> PathBuf {
     PathBuf::from(BENCH_XY_PATH)
 }
 
+// step00-import
+// step10-base
 const BENCH_RAW_XY_BUFFER: &[u8] =
     include_bytes!("../../work/out0/step10-base/pixel-xy-indexes.dat");
-const BENCH_XY_PATH: &str = "work/out0/step10-base/pixel-xy-indexes.dat";
+const BENCH_XY_PATH: &str = "work/out0/step00-import/pixel-xy-indexes.dat";
 
 #[bench]
 fn bench_included_minimum_test(bencher: &mut test::Bencher) {
@@ -121,6 +125,17 @@ fn bench_read_slice(bencher: &mut test::Bencher) {
         let data = read_entire_file(&input_path()).unwrap();
         let mut usize_data = vec![0; data.len() / USIZE_BYTES];
         map_u8_to_usize_slice(&data, &mut usize_data);
+        injest_value(usize_data)
+    });
+}
+
+#[bench]
+fn bench_read_io_uring(bencher: &mut test::Bencher) {
+    bencher.iter(|| {
+        let mut io_uring = IoUring::new();
+        let mut io_uring_file = IoUringFile::open(&input_path()).unwrap();
+        io_uring_file.read_entire_file(&mut io_uring).unwrap();
+        let usize_data = io_uring_file.into_result_as_usize();
         injest_value(usize_data)
     });
 }
