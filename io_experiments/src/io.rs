@@ -1,3 +1,4 @@
+use std::backtrace::Backtrace;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::mem::{transmute, ManuallyDrop};
@@ -15,9 +16,10 @@ pub const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
 pub fn read_entire_file(path: &Path) -> VIoResult<Vec<u8>> {
     let mut file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
-    let mut xy_array_u8_raw: Vec<u8> = vec![0; xy_array_len_u8];
+    let mut xy_array_u8_raw: Vec<u8> = Vec::new();
     file.read_to_end(&mut xy_array_u8_raw)
         .map_err(VIoError::io_error(path))?;
+    assert_eq!(xy_array_u8_raw.len(), xy_array_len_u8);
     Ok(xy_array_u8_raw)
 }
 
@@ -62,6 +64,13 @@ pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VIoResult<Vec<u
 
     // We should return a normally allocated vec clone
     let mut output: Vec<usize> = vec![0; xy_array_aligned.len()];
+    if output.len() != xy_array_aligned.len() {
+        return Err(VIoError::IoUring_CqeCopyFailed {
+            source_size: xy_array_aligned.len(),
+            target_size: output.len(),
+            backtrace: Backtrace::capture(),
+        });
+    }
     output.copy_from_slice(xy_array_aligned);
     println!("wrote array of {}", output.len());
     println!("array sum {}", output.iter().sum::<usize>());
@@ -123,7 +132,7 @@ pub fn read_entire_file_usize_mmap_custom(
     let xy_array_len_aligned_u64 = xy_array_len_u8 / USIZE_BYTES;
 
     let vec: Vec<usize> = unsafe {
-        let mmap_ptr = libc::mmap64(
+        let mmap_ptr = libc::mmap(
             ptr::null_mut(),
             xy_array_len_aligned_u8,
             // ACL required to use it
@@ -199,7 +208,7 @@ pub fn read_entire_file_usize_memmap_u8(path: &Path) -> VIoResult<Vec<usize>> {
         // PROT_READ | PROT_WRITE = Basic rw memory usage
         // MAP_PRIVATE = Required mode
         // MAP_POPULATE = Prepoplate file
-        let ptr = libc::mmap64(
+        let ptr = libc::mmap(
             ptr::null_mut(),
             xy_array_len_u8 * mem::size_of::<u8>(),
             libc::PROT_READ | libc::PROT_WRITE,
@@ -296,14 +305,14 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
     assert_eq!(xy_array_aligned.len(), xy_array_len_u64, "aligned size");
 
     let xy_array_u64 = unsafe {
-        Vec::from_raw_parts(
+        ManuallyDrop::new(Vec::from_raw_parts(
             xy_array_aligned.as_mut_ptr(),
             xy_array_len_u64,
             xy_array_len_u64,
-        )
+        ))
     };
 
-    Ok(VArray::from_mmap(mmap, ManuallyDrop::new(xy_array_u64)))
+    Ok(VArray::from_mmap(mmap, xy_array_u64))
 }
 
 pub fn read_entire_file_mmap_copy(path: &Path) -> VIoResult<Vec<usize>> {
@@ -364,34 +373,14 @@ pub fn map_usize_to_u8_iter(
 }
 
 pub fn map_usize_to_u8_slice(input: &[usize], output: &mut [u8]) {
-    let expected_output_size = input.len() / USIZE_BYTES;
-    if output.len() != expected_output_size {
-        panic!(
-            "outsize {} too small expected {} * {} = {}",
-            output.len(),
-            input.len(),
-            USIZE_BYTES,
-            expected_output_size
-        );
-    }
-
+    assert_eq!(input.len() * USIZE_BYTES, output.len(), "outsize too small",);
     for (i, output_chunk) in output.array_chunks_mut::<USIZE_BYTES>().enumerate() {
         output_chunk.clone_from_slice(&input[i].to_ne_bytes());
     }
 }
 
 pub fn map_u8_to_usize_slice(input: &[u8], output: &mut [usize]) {
-    let expected_output_size = input.len() / USIZE_BYTES;
-    if output.len() != expected_output_size {
-        panic!(
-            "outsize {} too small expected {} / {} = {}",
-            output.len(),
-            input.len(),
-            USIZE_BYTES,
-            expected_output_size
-        );
-    }
-
+    assert_eq!(input.len() / USIZE_BYTES, output.len(), "outsize too small");
     for (i, input_chunk) in input.array_chunks().enumerate() {
         output[i] = usize::from_ne_bytes(*input_chunk);
     }

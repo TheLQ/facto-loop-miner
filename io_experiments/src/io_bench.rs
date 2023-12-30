@@ -95,16 +95,16 @@ fn bench_read_mmap_lib(bencher: &mut test::Bencher) {
     });
 }
 
-// #[bench]
-// fn bench_read_mmap_custom(bencher: &mut test::Bencher) {
-//     bencher.iter(|| {
-//         println!("interation {}", env::current_dir().unwrap().display());
-//         let output = read_entire_file_usize_mmap_custom(&input_path()).unwrap();
-//         let bench_result: usize = output.iter().sum1().unwrap();
-//         drop_mmap_vec(output);
-//         bench_result
-//     });
-// }
+#[bench]
+fn bench_read_mmap_custom(bencher: &mut test::Bencher) {
+    bencher.iter(|| {
+        println!("interation {}", env::current_dir().unwrap().display());
+        let output = read_entire_file_usize_mmap_custom(&input_path(), true, true, true).unwrap();
+        let bench_result: usize = output.iter().sum1().unwrap();
+        drop_mmap_vec(output);
+        bench_result
+    });
+}
 
 #[bench]
 fn bench_read_iter(bencher: &mut test::Bencher) {
@@ -112,6 +112,16 @@ fn bench_read_iter(bencher: &mut test::Bencher) {
         let data = read_entire_file(&input_path()).unwrap();
         let output = map_u8_to_usize_iter(data).into_iter().collect();
         injest_value(output)
+    });
+}
+
+#[bench]
+fn bench_read_slice(bencher: &mut test::Bencher) {
+    bencher.iter(|| {
+        let data = read_entire_file(&input_path()).unwrap();
+        let mut usize_data = vec![0; data.len() / USIZE_BYTES];
+        map_u8_to_usize_slice(&data, &mut usize_data);
+        injest_value(usize_data)
     });
 }
 

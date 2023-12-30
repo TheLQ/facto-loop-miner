@@ -7,7 +7,7 @@ use std::{io, mem};
 use crate::io::USIZE_BYTES;
 use libc::iovec;
 use num_format::ToFormattedString;
-use tracing::debug;
+use tracing::{debug, error};
 use uring_sys2::{
     io_uring, io_uring_cqe, io_uring_cqe_seen, io_uring_peek_cqe, io_uring_queue_exit,
     io_uring_queue_init, io_uring_submit, io_uring_wait_cqe,
@@ -38,9 +38,11 @@ pub fn io_uring_main() -> io::Result<()> {
 
     // fill queue
     let mut io_file = IoUringFile::open(file_path)?;
-    io_file
-        .read_entire_file(&mut ring)
-        .expect("Failed to create read");
+    if let Err(e) = io_file.read_entire_file(&mut ring) {
+        println!("err");
+        error!("IOU failed! {}\n{}", e, e.my_backtrace());
+        return Ok(());
+    }
     let xy_array_u8 = io_file.into_result();
     let (_, xy_array_usize, _) = unsafe { xy_array_u8.align_to::<usize>() };
     assert_eq!(
@@ -71,7 +73,7 @@ pub struct IoUring {
 impl IoUring {
     pub fn new() -> Self {
         let ring = unsafe {
-            let mut s = mem::MaybeUninit::<io_uring>::uninit();
+            let mut s = mem::MaybeUninit::<io_uring>::zeroed();
             // IORING_FEAT_ENTER_EXT_ARG so wait_cqes does not do submit() for us
             // IORING_FEAT_EXT_ARG
             let ret = io_uring_queue_init(BUF_RING_COUNT as u32, s.as_mut_ptr(), 0);

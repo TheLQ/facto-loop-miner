@@ -50,8 +50,8 @@ impl VError {
             | VError::IoError { backtrace, .. }
             | VError::UnknownName { backtrace, .. }
             | VError::SimdJsonFail { backtrace, .. }
-            | VError::NotADirectory { backtrace, .. }
-            | VError::VIoError(VIoError::IoError { backtrace, .. }) => backtrace,
+            | VError::NotADirectory { backtrace, .. } => backtrace,
+            VError::VIoError(e) => e.my_backtrace(),
         }
     }
 
