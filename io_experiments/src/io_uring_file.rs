@@ -1,6 +1,6 @@
 use std::backtrace::Backtrace;
 use std::fs::File;
-use std::io::Result as IoResult;
+use std::io::{ErrorKind, Result as IoResult};
 use std::mem::ManuallyDrop;
 use std::os::fd::AsRawFd;
 use std::path::Path;
@@ -10,7 +10,8 @@ use num_format::ToFormattedString;
 use tracing::{debug, info, trace};
 use uring_sys2::{
     io_uring_cqe, io_uring_cqe_get_data64, io_uring_cqe_seen, io_uring_get_sqe, io_uring_prep_read,
-    io_uring_sqe, io_uring_sqe_set_data64, io_uring_wait_cqe,
+    io_uring_register_files, io_uring_sqe, io_uring_sqe_set_data64, io_uring_sqe_set_flags,
+    io_uring_unregister_files, io_uring_wait_cqe, IOSQE_FIXED_FILE,
 };
 
 use crate::err::{VIoError, VIoResult};
@@ -45,10 +46,16 @@ pub struct IoUringFile {
 }
 
 impl IoUringFile {
-    pub fn open(path: &Path) -> IoResult<Self> {
+    pub fn open(path: &Path, ring: &mut IoUring) -> IoResult<Self> {
         let file_handle = File::open(path)?;
         let file_size = file_handle.metadata()?.len() as usize;
         println!("file size {}", file_size);
+
+        // let register_result = unsafe {
+        //     io_uring_register_files(&mut ring.ring, [file_handle.as_raw_fd()].as_ptr(), 1)
+        // };
+        // assert_eq!(register_result, 0, "register failed");
+
         let (backing_buf_ptr, _) = allocate_page_size_aligned::<BackingBufRing>();
         Ok(IoUringFile {
             file_handle,
@@ -115,6 +122,7 @@ impl IoUringFile {
 
             let prev_total_completions = total_completions;
             for i in 0..wait_for_cqe {
+                info!("i {}", i);
                 unsafe {
                     self.pop_completion_queue(ring)?;
                 }
@@ -143,8 +151,12 @@ impl IoUringFile {
         Ok(())
     }
 
-    pub fn into_result_as_usize(mut self) -> Vec<usize> {
+    pub fn into_result_as_usize(mut self, ring: &mut IoUring) -> Vec<usize> {
         let result_u8_len = self.result_buffer.len();
+
+        // unsafe {
+        //     io_uring_unregister_files(&mut ring.ring);
+        // }
 
         // Build u8 Vec viewing the same memory with proper aligned access
         // Docs state the outer slices should be empty in real world environments
@@ -154,11 +166,7 @@ impl IoUringFile {
         assert_eq!(xy_vec_suffix.len(), 0, "suffix big");
         unsafe {
             // SAFETY result_buffer is ManuallyDrop so we can own it's data now
-            Vec::from_raw_parts(
-                xy_vec_aligned.as_mut_ptr(),
-                0,
-                result_u8_len * mem::size_of::<usize>(),
-            )
+            Vec::from_raw_parts(xy_vec_aligned.as_mut_ptr(), 0, result_u8_len)
         }
     }
 
@@ -202,9 +210,11 @@ impl IoUringFile {
         }
 
         io_uring_sqe_set_data64(sqe_ptr, buf_index as u64);
-
+        // io_uring_sqe_set_flags(sqe_ptr, IOSQE_FIXED_FILE);
         io_uring_prep_read(
             sqe_ptr,
+            // should only register this file
+            // 0,
             self.file_handle.as_raw_fd(),
             ptr::addr_of_mut!(self.backing_buf_ring[buf_index]) as *mut libc::c_void,
             BUF_RING_ENTRY_SIZE as libc::c_uint,
@@ -224,7 +234,7 @@ impl IoUringFile {
     }
 
     pub unsafe fn pop_completion_queue(&mut self, ring: &mut IoUring) -> VIoResult<()> {
-        let mut cqe_ptr: *mut io_uring_cqe = mem::zeroed();
+        let mut cqe_ptr: *mut io_uring_cqe = ptr::null_mut();
         let ret = io_uring_wait_cqe(&mut ring.ring, &mut cqe_ptr);
         if ret != 0 {
             return Err(VIoError::IoUring_CqeWaitReturn {

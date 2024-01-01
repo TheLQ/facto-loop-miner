@@ -23,6 +23,7 @@ fn input_path() -> PathBuf {
 const BENCH_RAW_XY_BUFFER: &[u8] =
     include_bytes!("../../work/out0/step10-base/pixel-xy-indexes.dat");
 const BENCH_XY_PATH: &str = "work/out0/step00-import/pixel-xy-indexes.dat";
+// const BENCH_XY_PATH: &str = "work/out0/step10-base/pixel-xy-indexes.dat";
 
 #[bench]
 fn bench_included_minimum_test(bencher: &mut test::Bencher) {
@@ -58,22 +59,8 @@ fn bench_included_map_iter(bencher: &mut test::Bencher) {
 
 #[bench]
 fn bench_read_minimum_unconverted(bencher: &mut test::Bencher) {
-    println!("init");
     bencher.iter(|| {
-        println!("interation");
-        let output = read_entire_file(&input_path(), false).unwrap();
-        println!("output");
-        checksum_vec_u8(output)
-    })
-}
-
-#[bench]
-fn bench_read_minimum_unconverted_preallocate(bencher: &mut test::Bencher) {
-    println!("init");
-    bencher.iter(|| {
-        println!("interation");
         let output = read_entire_file(&input_path(), true).unwrap();
-        println!("output");
         checksum_vec_u8(output)
     })
 }
@@ -124,15 +111,6 @@ fn bench_read_mmap_custom(bencher: &mut test::Bencher) {
 #[bench]
 fn bench_read_iter(bencher: &mut test::Bencher) {
     bencher.iter(|| {
-        let data = read_entire_file(&input_path(), false).unwrap();
-        let output = map_u8_to_usize_iter(data).into_iter().collect();
-        checksum_vec_usize(output)
-    });
-}
-
-#[bench]
-fn bench_read_iter_preallocate(bencher: &mut test::Bencher) {
-    bencher.iter(|| {
         let data = read_entire_file(&input_path(), true).unwrap();
         let output = map_u8_to_usize_iter(data).into_iter().collect();
         checksum_vec_usize(output)
@@ -141,16 +119,6 @@ fn bench_read_iter_preallocate(bencher: &mut test::Bencher) {
 
 #[bench]
 fn bench_read_slice(bencher: &mut test::Bencher) {
-    bencher.iter(|| {
-        let data = read_entire_file(&input_path(), false).unwrap();
-        let mut usize_data = vec![0; data.len() / USIZE_BYTES];
-        map_u8_to_usize_slice(&data, &mut usize_data);
-        checksum_vec_usize(usize_data)
-    });
-}
-
-#[bench]
-fn bench_read_slice_preallocate(bencher: &mut test::Bencher) {
     bencher.iter(|| {
         let data = read_entire_file(&input_path(), true).unwrap();
         let mut usize_data = vec![0; data.len() / USIZE_BYTES];
@@ -163,9 +131,9 @@ fn bench_read_slice_preallocate(bencher: &mut test::Bencher) {
 fn bench_read_io_uring(bencher: &mut test::Bencher) {
     bencher.iter(|| {
         let mut io_uring = IoUring::new();
-        let mut io_uring_file = IoUringFile::open(&input_path()).unwrap();
+        let mut io_uring_file = IoUringFile::open(&input_path(), &mut io_uring).unwrap();
         io_uring_file.read_entire_file(&mut io_uring).unwrap();
-        let usize_data = io_uring_file.into_result_as_usize();
+        let usize_data = io_uring_file.into_result_as_usize(&mut io_uring);
         checksum_vec_usize(usize_data)
     });
 }

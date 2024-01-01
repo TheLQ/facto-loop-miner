@@ -36,13 +36,13 @@ pub fn io_uring_main() -> io::Result<()> {
     let start = Instant::now();
 
     // fill queue
-    let mut io_file = IoUringFile::open(Path::new(file_path.as_str()))?;
+    let mut io_file = IoUringFile::open(Path::new(file_path.as_str()), &mut ring)?;
     if let Err(e) = io_file.read_entire_file(&mut ring) {
         println!("err");
         error!("IOU failed! {}\n{}", e, e.my_backtrace());
         return Ok(());
     }
-    let xy_array_usize = io_file.into_result_as_usize();
+    let xy_array_usize = io_file.into_result_as_usize(&mut ring);
     let sum: usize = xy_array_usize.iter().sum1().unwrap();
 
     let read_watch = Instant::now() - start;

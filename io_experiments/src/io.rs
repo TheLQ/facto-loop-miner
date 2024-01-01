@@ -17,7 +17,7 @@ pub fn read_entire_file(path: &Path, preallocate_vec: bool) -> VIoResult<Vec<u8>
     let mut file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
     let mut xy_array_u8_raw: Vec<u8> = if preallocate_vec {
-        vec![0; xy_array_len_u8]
+        Vec::with_capacity(xy_array_len_u8)
     } else {
         Vec::new()
     };
@@ -27,6 +27,7 @@ pub fn read_entire_file(path: &Path, preallocate_vec: bool) -> VIoResult<Vec<u8>
     Ok(xy_array_u8_raw)
 }
 
+#[cfg(lol)]
 pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VIoResult<Vec<usize>> {
     let mut file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
@@ -47,11 +48,7 @@ pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VIoResult<Vec<u
 
     // Build Vec for read_to_end using aligned slice
     let mut xy_vec_aligned_u8 = unsafe {
-        Vec::from_raw_parts(
-            xy_array_aligned.as_mut_ptr() as *mut u8,
-            0,
-            xy_array_len_u8 * mem::size_of::<u8>(),
-        )
+        Vec::from_raw_parts(xy_array_aligned.as_mut_ptr() as *mut u8, 0, xy_array_len_u8)
     };
     assert_eq!(
         xy_vec_aligned_u8.capacity(),
@@ -96,13 +93,8 @@ pub fn read_entire_file_usize_aligned_vec(path: &Path) -> VIoResult<Vec<usize>> 
     assert_eq!(xy_vec_prefix.len(), 0, "prefix big");
     assert_eq!(xy_vec_suffix.len(), 0, "suffix big");
     assert_eq!(xy_vec_aligned.len(), xy_array_len_u8, "aligned size");
-    let mut xy_vec_aligned_u8: Vec<u8> = unsafe {
-        Vec::from_raw_parts(
-            xy_vec_aligned.as_mut_ptr(),
-            0,
-            xy_array_len_u8 * mem::size_of::<u8>(),
-        )
-    };
+    let mut xy_vec_aligned_u8: Vec<u8> =
+        unsafe { Vec::from_raw_parts(xy_vec_aligned.as_mut_ptr(), 0, xy_array_len_u8) };
     assert_eq!(xy_vec_aligned_u8.capacity(), xy_array_len_u8, "veccapacity");
 
     file.read_to_end(&mut xy_vec_aligned_u8)
@@ -133,7 +125,7 @@ pub fn read_entire_file_usize_mmap_custom(
     let xy_array_len_u8 = file_size;
     let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
     let xy_array_len_aligned_u8 = file_size + alignment_padding;
-    let xy_array_len_aligned_u64 = xy_array_len_u8 / USIZE_BYTES;
+    let xy_array_len_aligned_u64 = xy_array_len_aligned_u8 / USIZE_BYTES;
 
     let vec: Vec<usize> = unsafe {
         let mmap_ptr = libc::mmap(
@@ -197,13 +189,17 @@ fn enable_if(value: libc::c_int, enable: bool) -> libc::c_int {
 /// Must Drop with munmap() not the normal free()
 pub fn drop_mmap_vec(mut mmap_vec: ManuallyDrop<Vec<usize>>) {
     unsafe {
-        let page_size = libc::sysconf(libc::_SC_PAGE_SIZE) as usize;
-        let ptr = mmap_vec.as_mut_ptr() as *mut libc::c_void;
-        let capacity = mmap_vec.capacity();
-        munmap(ptr, capacity * page_size);
+        let res = munmap(
+            mmap_vec.as_mut_slice().as_mut_ptr() as *mut libc::c_void,
+            mmap_vec.capacity() * USIZE_BYTES,
+        );
+        if res != 0 {
+            panic!("munmap failed {}", io::Error::from_raw_os_error(-res));
+        }
     }
 }
 
+#[cfg(lol)]
 pub fn read_entire_file_usize_memmap_u8(path: &Path) -> VIoResult<Vec<usize>> {
     let file = File::open(path).map_err(VIoError::io_error(path))?;
 
