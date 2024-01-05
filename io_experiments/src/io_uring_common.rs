@@ -19,7 +19,7 @@ pub fn allocate_page_size_aligned<Container>() -> (*mut Container, usize) {
     // allocate_array_page_size_aligned::<Container, Container>(1)
 
     let mmap_ptr = unsafe {
-        libc::mmap64(
+        libc::mmap(
             ptr::null_mut(),
             layout.size(),
             // ACL required to use it

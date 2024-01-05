@@ -41,7 +41,9 @@ extern crate core;
 
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
+use crate::util::duration::BasicWatch;
 use facto_loop_miner_io::io_uring::io_uring_main;
+use facto_loop_miner_io::read_entire_file;
 use kiddo::KdTree;
 use num_format::Locale;
 use num_traits::PrimInt;
@@ -68,7 +70,7 @@ pub fn inner_main() {
     let tracing_format = tracing_subscriber::fmt::format().compact();
 
     tracing_subscriber::fmt()
-        .with_max_level(Level::TRACE)
+        .with_max_level(Level::INFO)
         .compact()
         .init();
 
@@ -81,8 +83,31 @@ pub fn inner_main() {
         4 => self_bin::get_patch::get_patch_main(),
         5 => admiral::client::admiral(),
         6 => io_uring_main().expect("iouring"),
+        7 => test_u8(),
         _ => panic!("wtf"),
     }
+}
+
+fn test_io_uring() {}
+
+fn test_u8() {
+    let path = Path::new("work/out0/step00-import/pixel-xy-indexes.dat");
+    let watch = BasicWatch::start();
+    let output = read_entire_file(path, true).unwrap();
+    let checksum = checksum_vec_u8(output);
+    println!(
+        "InnerMain loaded {} checksum {} in {}",
+        path.display(),
+        checksum,
+        watch
+    );
+}
+
+fn checksum_vec_u8(output: Vec<u8>) -> usize {
+    let total: usize = output.iter().map(|v| *v as usize).sum();
+    println!("total {}", total);
+    // assert_eq!(total, EXPECTED_SUM * USIZE_BYTES);
+    total
 }
 
 /// what is this called?

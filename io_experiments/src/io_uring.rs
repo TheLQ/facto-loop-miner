@@ -6,7 +6,7 @@ use std::mem::transmute;
 use std::path::Path;
 use std::time::Instant;
 use std::{io, mem};
-use tracing::{debug, error};
+use tracing::{debug, error, trace};
 use uring_sys2::{
     io_uring, io_uring_cqe, io_uring_cqe_seen, io_uring_peek_cqe, io_uring_queue_exit,
     io_uring_queue_init, io_uring_submit, io_uring_wait_cqe,
@@ -28,7 +28,9 @@ pub fn io_uring_main() -> io::Result<()> {
     let file_path = match 3 {
         1 => "/xf-megafile/data/pages.db.index",
         2 => "/boot/initrd.img-6.1.0-9-amd64",
-        3 => "/home/desk/IdeaProjects/facto-loop-miner/work/out0/step10-base/pixel-xy-indexes.dat",
+        3 => {
+            "/home/desk/IdeaProjects/facto-loop-miner/work/out0/step00-import/pixel-xy-indexes.dat"
+        }
         _ => unimplemented!("fuck"),
     }
     .to_string();
@@ -47,7 +49,7 @@ pub fn io_uring_main() -> io::Result<()> {
 
     let read_watch = Instant::now() - start;
     println!(
-        "processed in {} ms total {}",
+        "processed in {} ms checksum {}",
         read_watch.as_millis().to_formatted_string(&LOCALE),
         sum.to_formatted_string(&LOCALE),
     );
@@ -195,7 +197,7 @@ impl IoUring {
                 IoError::from_raw_os_error(submitted_entries)
             );
         }
-        debug!("submit");
+        trace!("submit");
         submitted_entries != 0
     }
 

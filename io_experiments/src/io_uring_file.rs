@@ -1,20 +1,20 @@
 use std::backtrace::Backtrace;
 use std::fs::File;
-use std::io::{ErrorKind, Result as IoResult};
+use std::io::Result as IoResult;
 use std::mem::ManuallyDrop;
 use std::os::fd::AsRawFd;
 use std::path::Path;
-use std::{io, mem, ptr};
+use std::{io, ptr};
 
 use num_format::ToFormattedString;
 use tracing::{debug, info, trace};
 use uring_sys2::{
     io_uring_cqe, io_uring_cqe_get_data64, io_uring_cqe_seen, io_uring_get_sqe, io_uring_prep_read,
-    io_uring_register_files, io_uring_sqe, io_uring_sqe_set_data64, io_uring_sqe_set_flags,
-    io_uring_unregister_files, io_uring_wait_cqe, IOSQE_FIXED_FILE,
+    io_uring_sqe, io_uring_sqe_set_data64, io_uring_wait_cqe,
 };
 
 use crate::err::{VIoError, VIoResult};
+use crate::io::USIZE_BYTES;
 use crate::io_uring::IoUring;
 use crate::io_uring_common::{allocate_page_size_aligned, PAGE_SIZE};
 use crate::LOCALE;
@@ -33,7 +33,7 @@ type BackingBufRing = [BackingBufEntry; BUF_RING_COUNT];
 // }
 
 /// Handles read/write to a larger vec
-#[repr(C, align(4096))]
+// #[repr(C, align(4096))]
 pub struct IoUringFile {
     file_handle: File,
     file_size: usize,
@@ -87,62 +87,49 @@ impl IoUringFile {
     pub fn read_entire_file(&mut self, ring: &mut IoUring) -> VIoResult<()> {
         let mut total_submissions: usize = 0;
         let mut total_completions: usize = 0;
-        loop {
-            let processed_submission: usize;
-            let eof_reached: bool;
-            let submit;
-            // let mut wait_for_cqe: usize =
-            //     (self.backing_buf_ring_data.len() as f32 * 0.75).round() as usize;
-            let mut wait_for_cqe = self.backing_buf_ring_data.len();
-            let val = self.refresh_submission_queue_read_all(ring)?;
-            debug!("Cqe {:?}", val);
-            match val {
-                CreateAllSqeResult::RefreshZero => {
-                    processed_submission = 0;
-                    submit = false;
-                    eof_reached = false;
-                }
-                CreateAllSqeResult::RefreshTotal(total) => {
-                    processed_submission = total;
-                    submit = true;
-                    eof_reached = false;
-                }
-                CreateAllSqeResult::EofWithTotal(total) => {
-                    processed_submission = total;
-                    submit = true;
-                    eof_reached = true;
-                    wait_for_cqe = total + total_submissions - total_completions;
+
+        // pre-fill Completion Queue
+        for buf_index in 0..self.backing_buf_ring_data.len() {
+            if self.backing_buf_ring_data[buf_index].is_free {
+                let sqe = unsafe {
+                    self.refresh_submission_queue_read_for_buffer_index(ring, buf_index)?
+                };
+                if let CreateSqeResult::CreatedAt(_) = sqe {
+                    total_submissions += 1;
+                } else {
+                    panic!("file too small");
                 }
             }
-            total_submissions += processed_submission;
+        }
+        ring.submit();
 
-            if submit {
+        let mut end_of_file = false;
+        loop {
+            let free_buffer_index = unsafe { self.pop_completion_queue(ring)? };
+            total_completions += 1;
+
+            if !end_of_file {
+                let create_cqe = unsafe {
+                    self.refresh_submission_queue_read_for_buffer_index(ring, free_buffer_index)?
+                };
+                match create_cqe {
+                    CreateSqeResult::CreatedAt(_) => {
+                        total_submissions += 1;
+                    }
+                    CreateSqeResult::Eof => {
+                        end_of_file = true;
+                    }
+                }
                 ring.submit();
             }
 
-            let prev_total_completions = total_completions;
-            for i in 0..wait_for_cqe {
-                info!("i {}", i);
-                unsafe {
-                    self.pop_completion_queue(ring)?;
-                }
-                total_completions += 1;
-                if eof_reached {
-                    debug!(
-                        "EPF in {} {} total {} {}",
-                        i, wait_for_cqe, processed_submission, total_completions
-                    )
-                }
-            }
             debug!(
-                "processed_submission {} processed_completed {} minimum_done {}",
-                processed_submission,
-                total_completions - prev_total_completions,
-                self.result_buffer_done_fast_check_from
+                "total_submissions {} total_completions {} minimum_done {}",
+                total_submissions, total_completions, self.result_buffer_done_fast_check_from
             );
             ring.assert_cq_has_no_overflow();
 
-            if eof_reached && total_submissions == total_completions {
+            if end_of_file && total_submissions == total_completions {
                 debug!("entire EOF");
                 break;
             }
@@ -152,7 +139,8 @@ impl IoUringFile {
     }
 
     pub fn into_result_as_usize(mut self, ring: &mut IoUring) -> Vec<usize> {
-        let result_u8_len = self.result_buffer.len();
+        let result_len_u8 = self.result_buffer.len();
+        let result_len_usize = result_len_u8 / USIZE_BYTES;
 
         // unsafe {
         //     io_uring_unregister_files(&mut ring.ring);
@@ -166,30 +154,12 @@ impl IoUringFile {
         assert_eq!(xy_vec_suffix.len(), 0, "suffix big");
         unsafe {
             // SAFETY result_buffer is ManuallyDrop so we can own it's data now
-            Vec::from_raw_parts(xy_vec_aligned.as_mut_ptr(), 0, result_u8_len)
+            Vec::from_raw_parts(
+                xy_vec_aligned.as_mut_ptr(),
+                result_len_usize,
+                result_len_usize,
+            )
         }
-    }
-
-    pub fn refresh_submission_queue_read_all(
-        &mut self,
-        ring: &mut IoUring,
-    ) -> VIoResult<CreateAllSqeResult> {
-        let mut changed = 0;
-        for buf_index in 0..self.backing_buf_ring_data.len() {
-            if self.backing_buf_ring_data[buf_index].is_free {
-                let sqe = unsafe {
-                    self.refresh_submission_queue_read_for_buffer_index(ring, buf_index)?
-                };
-                match sqe {
-                    CreateSqeResult::Eof => {
-                        debug!("SQ EOF");
-                        return Ok(CreateAllSqeResult::EofWithTotal(changed));
-                    }
-                    CreateSqeResult::CreatedAt(_) => changed += 1,
-                }
-            }
-        }
-        Ok(CreateAllSqeResult::RefreshTotal(changed))
     }
 
     pub unsafe fn refresh_submission_queue_read_for_buffer_index(
@@ -224,7 +194,7 @@ impl IoUringFile {
         self.backing_buf_ring_data[buf_index].result_offset = offset;
         self.backing_buf_ring_data[buf_index].backing_result_cursor = self.result_cursor;
         trace!(
-            "sqe create {}\tminimum_done {}",
+            "sqe create {}\tcursor_status {}",
             buf_index,
             self.result_cursor
         );
@@ -233,7 +203,7 @@ impl IoUringFile {
         Ok(CreateSqeResult::CreatedAt(sqe_ptr))
     }
 
-    pub unsafe fn pop_completion_queue(&mut self, ring: &mut IoUring) -> VIoResult<()> {
+    pub unsafe fn pop_completion_queue(&mut self, ring: &mut IoUring) -> VIoResult<usize> {
         let mut cqe_ptr: *mut io_uring_cqe = ptr::null_mut();
         let ret = io_uring_wait_cqe(&mut ring.ring, &mut cqe_ptr);
         if ret != 0 {
@@ -291,7 +261,7 @@ impl IoUringFile {
         self.result_buffer_done[cqe_buf_data.backing_result_cursor] = true;
 
         io_uring_cqe_seen(&mut ring.ring, cqe_ptr);
-        Ok(())
+        Ok(cqe_buf_index)
     }
 
     // fn check_is_remaining_result_buffer(&mut self) -> bool {
@@ -310,6 +280,7 @@ impl IoUringFile {
     // }
 }
 
+#[derive(PartialEq)]
 pub enum CreateSqeResult {
     CreatedAt(*mut io_uring_sqe),
     Eof,
