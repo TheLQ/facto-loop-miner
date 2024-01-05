@@ -26,8 +26,7 @@ pub fn allocate_page_size_aligned<Container>() -> (*mut Container, usize) {
             libc::PROT_READ | libc::PROT_WRITE,
             // TODO: libc::MAP_HUGETLB | libc::MAP_HUGE_2MB
             // Required mode, Prepopulate with file content
-            libc::MAP_PRIVATE | libc::MAP_ANONYMOUS,
-            // SAFETY file can be closed immediately
+            libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_HUGETLB | libc::MAP_HUGE_2MB,
             0,
             0,
         )

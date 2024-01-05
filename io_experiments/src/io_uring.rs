@@ -31,6 +31,7 @@ pub fn io_uring_main() -> io::Result<()> {
         3 => {
             "/home/desk/IdeaProjects/facto-loop-miner/work/out0/step00-import/pixel-xy-indexes.dat"
         }
+        4 => "/hugetemp/pixel-xy-indexes.dat",
         _ => unimplemented!("fuck"),
     }
     .to_string();

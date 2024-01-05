@@ -70,6 +70,7 @@ pub fn inner_main() {
     let tracing_format = tracing_subscriber::fmt::format().compact();
 
     tracing_subscriber::fmt()
+        // .with_max_level(Level::TRACE)
         .with_max_level(Level::INFO)
         .compact()
         .init();
@@ -91,7 +92,8 @@ pub fn inner_main() {
 fn test_io_uring() {}
 
 fn test_u8() {
-    let path = Path::new("work/out0/step00-import/pixel-xy-indexes.dat");
+    // let path = Path::new("work/out0/step00-import/pixel-xy-indexes.dat");
+    let path = Path::new("/hugetemp/pixel-xy-indexes.dat");
     let watch = BasicWatch::start();
     let output = read_entire_file(path, true).unwrap();
     let checksum = checksum_vec_u8(output);
