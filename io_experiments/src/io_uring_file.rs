@@ -5,13 +5,14 @@ use std::mem::ManuallyDrop;
 use std::os::fd::AsRawFd;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
-use std::{io, ptr};
+use std::{io, mem, ptr};
 
 use num_format::ToFormattedString;
-use tracing::{debug, info, trace};
+use tracing::{debug, info, trace, warn};
 use uring_sys2::{
     io_uring_cqe, io_uring_cqe_get_data64, io_uring_cqe_seen, io_uring_get_sqe, io_uring_prep_read,
-    io_uring_register_files, io_uring_sqe, io_uring_sqe_set_data64, io_uring_sqe_set_flags,
+    io_uring_prep_read_fixed, io_uring_register_buffers, io_uring_register_files, io_uring_sqe,
+    io_uring_sqe_set_data64, io_uring_sqe_set_flags, io_uring_unregister_buffers,
     io_uring_unregister_files, io_uring_wait_cqe, IOSQE_FIXED_FILE,
 };
 
@@ -39,8 +40,8 @@ type BackingBufRing = [BackingBufEntry; BUF_RING_COUNT];
 // #[repr(C, align(4096))]
 pub struct IoUringFile {
     file_handle: File,
-    file_size: usize,
     file_registered_index: i32,
+    backing_iovecs: Vec<libc::iovec>,
     backing_buf_ring: ManuallyDrop<Box<BackingBufRing>>,
     backing_buf_ring_data: [BackingBufData; BUF_RING_COUNT],
     result_buffer: ManuallyDrop<Vec<u8>>,
@@ -55,18 +56,36 @@ impl IoUringFile {
             // .custom_flags(libc::O_DIRECT)
             .open(path)?;
         let file_size = file_handle.metadata()?.len() as usize;
-        println!("file size {}", file_size);
 
+        // Internal Fixed Files have less per-operation overhead than File Descriptors
         let fds = [file_handle.as_raw_fd()];
         let register_result = unsafe { io_uring_register_files(&mut ring.ring, fds.as_ptr(), 1) };
-        assert_eq!(register_result, 0, "register failed");
+        assert_eq!(register_result, 0, "register files failed");
 
         let (backing_buf_ptr, _) = allocate_page_size_aligned::<BackingBufRing>();
+        let mut backing_buf_ring = unsafe { ManuallyDrop::new(Box::from_raw(backing_buf_ptr)) };
+
+        // Register
+        let backing_iovecs: Vec<libc::iovec> = backing_buf_ring
+            .iter_mut()
+            .map(|backing_buf| libc::iovec {
+                iov_len: backing_buf.len(),
+                iov_base: backing_buf.as_mut_ptr() as *mut libc::c_void,
+            })
+            .collect();
+        unsafe {
+            io_uring_register_buffers(
+                &mut ring.ring,
+                backing_iovecs.as_ptr(),
+                backing_iovecs.len() as libc::c_uint,
+            )
+        };
+
         Ok(IoUringFile {
             file_handle,
-            file_size,
             file_registered_index: 0,
-            backing_buf_ring: unsafe { ManuallyDrop::new(Box::from_raw(backing_buf_ptr)) },
+            backing_iovecs,
+            backing_buf_ring,
             backing_buf_ring_data: [BackingBufData::default(); BUF_RING_COUNT],
             result_buffer: ManuallyDrop::new(vec![0u8; file_size]),
             result_cursor: 0,
@@ -128,17 +147,19 @@ impl IoUringFile {
     pub fn into_result_as_usize(mut self, ring: &mut IoUring) -> Vec<usize> {
         let result_len_u8 = self.result_buffer.len();
         let result_len_usize = result_len_u8 / USIZE_BYTES;
+        eprintln!("INTO RESULT");
 
         unsafe {
             io_uring_unregister_files(&mut ring.ring);
+            io_uring_unregister_buffers(&mut ring.ring);
+            libc::munmap(
+                self.backing_buf_ring.as_mut_ptr() as *mut libc::c_void,
+                mem::size_of::<BackingBufRing>(),
+            );
         }
 
-        // Build u8 Vec viewing the same memory with proper aligned access
-        // Docs state the outer slices should be empty in real world environments
-        let (xy_vec_prefix, xy_vec_aligned, xy_vec_suffix) =
-            unsafe { self.result_buffer.align_to_mut::<usize>() };
-        assert_eq!(xy_vec_prefix.len(), 0, "prefix big");
-        assert_eq!(xy_vec_suffix.len(), 0, "suffix big");
+        let (_, xy_vec_aligned, _) = unsafe { self.result_buffer.align_to_mut::<usize>() };
+        assert_eq!(xy_vec_aligned.len(), result_len_usize, "invalid size");
         unsafe {
             // SAFETY result_buffer is ManuallyDrop so we can own it's data now
             Vec::from_raw_parts(
@@ -155,7 +176,7 @@ impl IoUringFile {
         buf_index: usize,
     ) -> VIoResult<CreateSqeResult> {
         let offset = self.result_cursor * BUF_RING_ENTRY_SIZE;
-        if offset > self.file_size {
+        if offset > self.file_size() {
             info!("EOF at result_cursor {}", self.result_cursor);
             return Ok(CreateSqeResult::Eof);
         }
@@ -166,12 +187,13 @@ impl IoUringFile {
             });
         }
 
-        io_uring_prep_read(
+        io_uring_prep_read_fixed(
             sqe_ptr,
             self.file_registered_index,
             self.backing_buf_ring[buf_index].as_mut_ptr() as *mut libc::c_void,
             BUF_RING_ENTRY_SIZE as libc::c_uint,
             offset as u64,
+            buf_index as libc::c_int,
         );
         io_uring_sqe_set_flags(sqe_ptr, IOSQE_FIXED_FILE);
         io_uring_sqe_set_data64(sqe_ptr, buf_index as u64);
@@ -208,6 +230,17 @@ impl IoUringFile {
                 e: io::Error::from_raw_os_error(-cqe_result),
                 backtrace: Backtrace::capture(),
             });
+        } else if cqe_result != BUF_RING_ENTRY_SIZE as i32 {
+            // return Err(VIoError::IoUring_CqeReadIncomplete {
+            //     expected_size: BUF_RING_ENTRY_SIZE,
+            //     actual_size: cqe_result as usize,
+            //     backtrace: Backtrace::capture(),
+            // });
+            warn!(
+                "expected {} got {}",
+                BUF_RING_ENTRY_SIZE.to_formatted_string(&LOCALE),
+                cqe_result.to_formatted_string(&LOCALE)
+            );
         }
 
         // let buffer_id = unsafe {
@@ -215,9 +248,9 @@ impl IoUringFile {
         // };
         let cqe_buf_index = io_uring_cqe_get_data64(cqe_ptr) as usize;
         let target_offset_start = self.backing_buf_ring_data[cqe_buf_index].result_offset;
-        if target_offset_start > self.file_size {
+        if target_offset_start > self.file_size() {
             return Err(VIoError::IoUring_CqeOffsetTooBig {
-                file_size: self.file_size,
+                file_size: self.file_size(),
                 target_offset: target_offset_start,
                 backtrace: Backtrace::capture(),
             });
@@ -226,10 +259,10 @@ impl IoUringFile {
         let source: BackingBufEntry = self.backing_buf_ring[cqe_buf_index];
         let source_ref: &[u8];
         let mut target_offset_end = target_offset_start + source.len();
-        if target_offset_end < self.file_size {
+        if target_offset_end < self.file_size() {
             source_ref = &source;
         } else {
-            target_offset_end = self.file_size;
+            target_offset_end = self.file_size();
             source_ref = &source[0..(target_offset_end - target_offset_start)];
         }
 
@@ -245,6 +278,10 @@ impl IoUringFile {
 
         io_uring_cqe_seen(&mut ring.ring, cqe_ptr);
         Ok(cqe_buf_index)
+    }
+
+    fn file_size(&self) -> usize {
+        self.result_buffer.len()
     }
 
     // fn check_is_remaining_result_buffer(&mut self) -> bool {

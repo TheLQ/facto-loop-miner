@@ -16,25 +16,25 @@ pub fn allocate_page_size_aligned<Container>() -> (*mut Container, usize) {
     //     panic!("allocate");
     // }
     // (ptr, ptr as usize)
-    // allocate_array_page_size_aligned::<Container, Container>(1)
+    allocate_array_page_size_aligned::<Container, Container>(1)
 
-    let mmap_ptr = unsafe {
-        libc::mmap(
-            ptr::null_mut(),
-            layout.size(),
-            // ACL required to use it
-            libc::PROT_READ | libc::PROT_WRITE,
-            // TODO: libc::MAP_HUGETLB | libc::MAP_HUGE_2MB
-            // Required mode, Prepopulate with file content
-            libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_HUGETLB | libc::MAP_HUGE_2MB,
-            0,
-            0,
-        )
-    };
-    if mmap_ptr == libc::MAP_FAILED {
-        panic!("mmap failed");
-    }
-    (mmap_ptr as *mut Container, mmap_ptr as usize)
+    // let mmap_ptr = unsafe {
+    //     libc::mmap(
+    //         ptr::null_mut(),
+    //         layout.size(),
+    //         // ACL required to use it
+    //         libc::PROT_READ | libc::PROT_WRITE,
+    //         // TODO: libc::MAP_HUGETLB | libc::MAP_HUGE_2MB
+    //         // Required mode, Prepopulate with file content
+    //         libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_HUGETLB | libc::MAP_HUGE_2MB,
+    //         0,
+    //         0,
+    //     )
+    // };
+    // if mmap_ptr == libc::MAP_FAILED {
+    //     panic!("mmap failed");
+    // }
+    // (mmap_ptr as *mut Container, mmap_ptr as usize)
 }
 
 fn allocate_array_page_size_aligned<Container, Entry>(count: usize) -> (*mut Container, usize) {

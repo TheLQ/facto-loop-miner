@@ -22,6 +22,12 @@ pub enum VIoError {
     IoUring_CqeNullPointer { backtrace: Backtrace },
     #[error("IoUring_CqeResultReturn {e}")]
     IoUring_CqeResultReturn { e: io::Error, backtrace: Backtrace },
+    #[error("IoUring_CqeReadIncomplete expected {expected_size} got {actual_size}")]
+    IoUring_CqeReadIncomplete {
+        expected_size: usize,
+        actual_size: usize,
+        backtrace: Backtrace,
+    },
     #[error("IoUring_CqeOffsetTooBig {file_size} {target_offset}")]
     IoUring_CqeOffsetTooBig {
         file_size: usize,
@@ -52,6 +58,7 @@ impl VIoError {
             | VIoError::IoUring_CqeWaitReturn { backtrace, .. }
             | VIoError::IoUring_CqeNullPointer { backtrace, .. }
             | VIoError::IoUring_CqeResultReturn { backtrace, .. }
+            | VIoError::IoUring_CqeReadIncomplete { backtrace, .. }
             | VIoError::IoUring_CqeOffsetTooBig { backtrace, .. }
             | VIoError::IoUring_CqeCopyFailed { backtrace, .. } => backtrace,
         }
