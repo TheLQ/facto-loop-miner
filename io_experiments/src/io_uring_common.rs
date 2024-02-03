@@ -1,5 +1,5 @@
 use std::alloc::{alloc, Layout};
-use std::{mem, ptr};
+use std::mem;
 
 /// TODO: New Macbook's are 16k?
 /// But this is a runtime environment option. Usually.
@@ -16,7 +16,8 @@ pub fn allocate_page_size_aligned<Container>() -> (*mut Container, usize) {
     //     panic!("allocate");
     // }
     // (ptr, ptr as usize)
-    allocate_array_page_size_aligned::<Container, Container>(1)
+    let res = allocate_array_page_size_aligned::<Container>(1);
+    (res.0 as *mut Container, res.1)
 
     // let mmap_ptr = unsafe {
     //     libc::mmap(
@@ -37,10 +38,10 @@ pub fn allocate_page_size_aligned<Container>() -> (*mut Container, usize) {
     // (mmap_ptr as *mut Container, mmap_ptr as usize)
 }
 
-fn allocate_array_page_size_aligned<Container, Entry>(count: usize) -> (*mut Container, usize) {
+pub fn allocate_array_page_size_aligned<Entry>(count: usize) -> (*mut Entry, usize) {
     let layout = Layout::from_size_align(count * mem::size_of::<Entry>(), PAGE_SIZE)
         .expect("allocate_layout");
-    let ptr = unsafe { alloc(layout) as *mut Container };
+    let ptr = unsafe { alloc(layout) as *mut Entry };
     if ptr.is_null() {
         panic!("allocate");
     }

@@ -1,6 +1,7 @@
+#![allow(unused_imports)]
+
 extern crate test;
 
-use itertools::Itertools;
 use num_format::ToFormattedString;
 use std::env;
 use std::path::PathBuf;
@@ -11,7 +12,7 @@ use crate::io::{
     read_entire_file_usize_transmute_broken, read_entire_file_varray_mmap_lib, USIZE_BYTES,
 };
 use crate::io_uring::IoUring;
-use crate::io_uring_file::IoUringFile;
+use crate::io_uring_file_copying::IoUringFileCopying;
 use crate::LOCALE;
 
 fn input_path() -> PathBuf {
@@ -20,8 +21,7 @@ fn input_path() -> PathBuf {
 
 // step00-import
 // step10-base
-const BENCH_RAW_XY_BUFFER: &[u8] =
-    include_bytes!("../../work/out0/step10-base/pixel-xy-indexes.dat");
+const BENCH_RAW_XY_BUFFER: &[u8] = &[0u8; 1]; //include_bytes!("../../work/out0/step10-base/pixel-xy-indexes.dat");
 const BENCH_XY_PATH: &str = "work/out0/step00-import/pixel-xy-indexes.dat";
 // const BENCH_XY_PATH: &str = "work/out0/step10-base/pixel-xy-indexes.dat";
 
@@ -155,7 +155,7 @@ fn checksum_vec_usize(output: Vec<usize>) -> usize {
     total
 }
 
-fn checksum_vec_u8(output: Vec<u8>) -> usize {
+pub fn checksum_vec_u8(output: Vec<u8>) -> usize {
     let total: usize = output.iter().map(|v| *v as usize).sum();
     println!("total {}", total);
     // assert_eq!(total, EXPECTED_SUM * USIZE_BYTES);

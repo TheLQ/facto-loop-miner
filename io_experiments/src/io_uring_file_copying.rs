@@ -3,13 +3,14 @@ use std::fs::{File, OpenOptions};
 use std::io::Result as IoResult;
 use std::mem::ManuallyDrop;
 use std::os::fd::AsRawFd;
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 use std::{io, mem, ptr};
 
 use num_format::ToFormattedString;
 use tracing::{debug, info, trace, warn};
 use uring_sys2::{
-    io_uring_cqe, io_uring_cqe_get_data64, io_uring_cqe_seen, io_uring_get_sqe,
+    io_uring_cqe, io_uring_cqe_get_data64, io_uring_cqe_seen, io_uring_get_sqe, io_uring_prep_read,
     io_uring_prep_read_fixed, io_uring_register_buffers, io_uring_register_files, io_uring_sqe,
     io_uring_sqe_set_data64, io_uring_sqe_set_flags, io_uring_unregister_buffers,
     io_uring_unregister_files, io_uring_wait_cqe, IOSQE_FIXED_FILE,
@@ -18,9 +19,7 @@ use uring_sys2::{
 use crate::err::{VIoError, VIoResult};
 use crate::io::USIZE_BYTES;
 use crate::io_uring::IoUring;
-use crate::io_uring_common::{
-    allocate_array_page_size_aligned, allocate_page_size_aligned, PAGE_SIZE,
-};
+use crate::io_uring_common::{allocate_page_size_aligned, PAGE_SIZE};
 use crate::LOCALE;
 
 pub const BUF_RING_COUNT: usize = 32;
@@ -39,15 +38,17 @@ type BackingBufRing = [BackingBufEntry; BUF_RING_COUNT];
 
 /// Handles read/write to a larger vec
 // #[repr(C, align(4096))]
-pub struct IoUringFile {
+pub struct IoUringFileCopying {
     file_handle: File,
     file_registered_index: i32,
     backing_iovecs: Vec<libc::iovec>,
-    backing_buf_ring: ManuallyDrop<Vec<BackingBufEntry>>,
+    backing_buf_ring: ManuallyDrop<Box<BackingBufRing>>,
+    backing_buf_ring_data: [BackingBufData; BUF_RING_COUNT],
+    result_buffer: ManuallyDrop<Vec<u8>>,
     result_cursor: usize,
 }
 
-impl IoUringFile {
+impl IoUringFileCopying {
     pub fn open(path: &Path, ring: &mut IoUring) -> IoResult<Self> {
         // let file_handle = File::open(path)?;
         let file_handle = OpenOptions::new()
@@ -58,22 +59,13 @@ impl IoUringFile {
 
         // Internal Fixed Files have less per-operation overhead than File Descriptors
         let fds = [file_handle.as_raw_fd()];
-        let register_result = unsafe {
-            io_uring_register_files(&mut ring.ring, fds.as_ptr(), fds.len() as libc::c_uint)
-        };
+        let register_result = unsafe { io_uring_register_files(&mut ring.ring, fds.as_ptr(), 1) };
         assert_eq!(register_result, 0, "register files failed");
 
-        let iovec_count = (file_size / BUF_RING_ENTRY_SIZE) + 1;
-        let (backing_buf_ptr, _) = allocate_array_page_size_aligned::<BackingBufEntry>(iovec_count);
-        let mut backing_buf_ring = unsafe {
-            ManuallyDrop::new(Vec::from_raw_parts(
-                backing_buf_ptr,
-                iovec_count,
-                iovec_count,
-            ))
-        };
+        let (backing_buf_ptr, _) = allocate_page_size_aligned::<BackingBufRing>();
+        let mut backing_buf_ring = unsafe { ManuallyDrop::new(Box::from_raw(backing_buf_ptr)) };
 
-        // Register buffers as iovecs, to the kernel it's just a pointer and size
+        // Register
         let backing_iovecs: Vec<libc::iovec> = backing_buf_ring
             .iter_mut()
             .map(|backing_buf| libc::iovec {
@@ -89,11 +81,13 @@ impl IoUringFile {
             )
         };
 
-        Ok(IoUringFile {
+        Ok(IoUringFileCopying {
             file_handle,
             file_registered_index: 0,
             backing_iovecs,
             backing_buf_ring,
+            backing_buf_ring_data: [BackingBufData::default(); BUF_RING_COUNT],
+            result_buffer: ManuallyDrop::new(vec![0u8; file_size]),
             result_cursor: 0,
         })
     }
@@ -249,6 +243,9 @@ impl IoUringFile {
             );
         }
 
+        // let buffer_id = unsafe {
+        //     (*cqe_ptr).flags >> IORING_CQE_BUFFER_SHIFT;
+        // };
         let cqe_buf_index = io_uring_cqe_get_data64(cqe_ptr) as usize;
         let target_offset_start = self.backing_buf_ring_data[cqe_buf_index].result_offset;
         if target_offset_start > self.file_size() {

@@ -6,14 +6,14 @@ use std::mem::transmute;
 use std::path::Path;
 use std::time::Instant;
 use std::{io, mem};
-use tracing::{debug, error, trace};
+use tracing::{error, trace};
 use uring_sys2::{
     io_uring, io_uring_cqe, io_uring_cqe_seen, io_uring_peek_cqe, io_uring_queue_exit,
     io_uring_queue_init, io_uring_submit, io_uring_wait_cqe,
 };
 
 use crate::io_uring_common::IoUringEventData;
-use crate::io_uring_file::{IoUringFile, BUF_RING_COUNT};
+use crate::io_uring_file_copying::{IoUringFileCopying, BUF_RING_COUNT};
 use crate::LOCALE;
 
 /*
@@ -21,25 +21,14 @@ c file copy example: https://github.com/axboe/liburing/blob/master/examples/io_u
 rust basic read example: https://github.com/Noah-Kennedy/liburing/blob/master/tests/test_read_file.rs
  */
 
-pub fn io_uring_main() -> io::Result<()> {
+pub(crate) fn io_uring_main(input_path: &Path) -> io::Result<()> {
     // init
     let mut ring = IoUring::new();
-
-    let file_path = match 3 {
-        1 => "/xf-megafile/data/pages.db.index",
-        2 => "/boot/initrd.img-6.1.0-9-amd64",
-        3 => {
-            "/home/desk/IdeaProjects/facto-loop-miner/work/out0/step00-import/pixel-xy-indexes.dat"
-        }
-        4 => "/hugetemp/pixel-xy-indexes.dat",
-        _ => unimplemented!("fuck"),
-    }
-    .to_string();
 
     let start = Instant::now();
 
     // fill queue
-    let mut io_file = IoUringFile::open(Path::new(file_path.as_str()), &mut ring)?;
+    let mut io_file = IoUringFileCopying::open(input_path, &mut ring)?;
     if let Err(e) = io_file.read_entire_file(&mut ring) {
         println!("err");
         error!("IOU failed! {}\n{}", e, e.my_backtrace());

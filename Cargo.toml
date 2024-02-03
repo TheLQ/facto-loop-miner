@@ -1,3 +1,5 @@
 [workspace]
 members = ["core", "io_experiments"]
 resolver = "2"
+
+default-members = ["core"]
