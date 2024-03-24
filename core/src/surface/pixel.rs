@@ -103,7 +103,7 @@ impl Pixel {
         }
     }
 
-    pub fn is_resource(&self) -> bool {
+    pub const fn is_resource(&self) -> bool {
         matches!(
             self,
             Pixel::IronOre

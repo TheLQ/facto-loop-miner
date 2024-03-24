@@ -251,6 +251,10 @@ impl VSurface {
             .collect()
     }
 
+    pub fn is_xy_out_of_bounds(&self, x: i32, y: i32) -> bool {
+        self.pixels.is_xy_out_of_bounds(x, y)
+    }
+
     pub fn crop(&mut self, new_radius: u32) {
         info!("Crop from {} to {}", self.entities.radius(), new_radius);
         self.entities.crop(new_radius);
@@ -293,6 +297,42 @@ impl VSurface {
         }
         metrics.log_final();
     }
+
+    pub fn draw_debug_square(&mut self, point: &VPoint) {
+        let size = 10;
+
+        for x in (point.x() - 10)..(point.x() + 10) {
+            for y in (point.y() - 10)..(point.y() + 10) {
+                if self.pixels.is_xy_out_of_bounds(x, y) {
+                    continue;
+                }
+                let cur_point = VPoint::new(x, y);
+                if point == &cur_point {
+                    self.set_pixel(cur_point, Pixel::Highlighter).unwrap();
+                } else {
+                    self.set_pixel(cur_point, Pixel::EdgeWall).unwrap();
+                }
+            }
+        }
+    }
+
+    // pub fn draw_debug_square(&mut self, point: &VPoint) {
+    //     let center_entity = VPixel {
+    //         pixel: Pixel::EdgeWall,
+    //         starts: vec![*point],
+    //     };
+    //     let mut background_entitiy = VPixel {
+    //         pixel: Pixel::EdgeWall,
+    //         starts: Vec::new(),
+    //     };
+    //     let (background_index, background_points) =
+    //         self.pixels
+    //             .draw_debug_square(point, center_entity, background_entitiy);
+    //     self.pixels
+    //         .get_entity_by_index_mut(background_index)
+    //         .starts
+    //         .extend(background_points.into_iter())
+    // }
 }
 
 impl Display for VSurface {

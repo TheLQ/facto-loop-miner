@@ -396,7 +396,11 @@ where
     // }
 
     pub fn get_entity_by_index(&self, index: usize) -> &E {
-        &self.entities[index]
+        self.entities.get(index).unwrap()
+    }
+
+    pub fn get_entity_by_index_mut(&mut self, index: usize) -> &mut E {
+        self.entities.get_mut(index).unwrap()
     }
 
     pub fn get_entity_by_point(&self, point: &VPoint) -> Option<&E> {
@@ -409,6 +413,42 @@ where
     }
 
     //</editor-fold>
+
+    // pub fn draw_debug_square(
+    //     &mut self,
+    //     point: &VPoint,
+    //     center_entity: E,
+    //     background_entity: E,
+    // ) -> (usize, Vec<VPoint>) {
+    //     assert!(self.is_point_out_of_bounds(point), "out of bounds");
+    //
+    //     let size = 10;
+    //
+    //     let background_entity_index = self.entities.len();
+    //     self.entities.push(background_entity);
+    //     let center_entity_index = self.entities.len();
+    //     self.entities.push(center_entity);
+    //
+    //     let mut background_entity_positions = Vec::new();
+    //
+    //     for x in (point.x() - 10)..(point.x() + 10) {
+    //         for y in (point.y() - 10)..(point.y() + 10) {
+    //             if self.is_xy_out_of_bounds(x, y) {
+    //                 continue;
+    //             }
+    //             let index = self.xy_to_index_unchecked(x, y);
+    //             let cur_point = VPoint::new(x, y);
+    //             if point == &cur_point {
+    //                 self.xy_to_entity.as_mut_slice()[index] = background_entity_index;
+    //                 background_entity_positions.push(cur_point)
+    //             } else {
+    //                 self.xy_to_entity.as_mut_slice()[index] = center_entity_index;
+    //             }
+    //         }
+    //     }
+    //
+    //     (background_entity_index, background_entity_positions)
+    // }
 }
 
 impl<E> Display for VEntityMap<E> {
@@ -440,7 +480,7 @@ impl VEntityMap<VPixel> {
         let output = self.map_xy_entities_to_bigger_u8_vec(|e| {
             if let Some(e) = e {
                 if let Some(filter) = filter {
-                    if e.pixel() == &filter {
+                    if *e.pixel() == filter {
                         metrics
                             .borrow_mut()
                             .increment(FastMetric::PixelCvMapper_Filter(*e.pixel()));

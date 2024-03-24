@@ -145,13 +145,9 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         let start = Rail::new_straight(patch_corner, RailDirection::Left).move_forward();
         let end = Rail::new_straight(destination, RailDirection::Left);
 
-        if 1 + 1 == 24 {
+        if 1 + 1 == 2 {
             write_rail(surface, &Vec::from([start.clone(), end.clone()]))?;
-            // surface.draw_square(
-            //     &Pixel::IronOre,
-            //     100,
-            //     &start.endpoint.to_point_u32().unwrap(),
-            // );
+            surface.draw_debug_square(&start.endpoint);
             return Ok(());
         }
 

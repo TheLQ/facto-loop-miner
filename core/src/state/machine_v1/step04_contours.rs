@@ -92,14 +92,14 @@ fn write_png(path: &Path, img: &Mat) {
 fn detector(surface_meta: &VSurface, out_dir: &Path) -> Vec<VPatch> {
     let mut patches: Vec<VPatch> = Vec::new();
     for pixel in Pixel::iter_resource() {
-        let detected_patches = detect_pixel(surface_meta, out_dir, &pixel);
+        let detected_patches = detect_pixel(surface_meta, out_dir, pixel);
         patches.extend(detected_patches.into_iter());
     }
     patches
 }
 
-fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: &Pixel) -> Vec<VPatch> {
-    let mut img = surface_meta.to_pixel_cv_image(Some(*pixel));
+fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: Pixel) -> Vec<VPatch> {
+    let mut img = surface_meta.to_pixel_cv_image(Some(pixel));
     let size = img.size().unwrap();
     debug!(
         "Read size {}x{} type {}",
@@ -109,6 +109,7 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: &Pixel) -> Vec<V
     );
 
     let mut patch_rects = detect_patch_rectangles(&img);
+    debug!("Found {} patch rects", patch_rects.len());
 
     let patch_corner_cloud = map_patch_corners_to_kdtree(patch_rects.iter());
     detect_merge_nearby_patches(&mut patch_rects, &patch_corner_cloud);
@@ -119,7 +120,22 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: &Pixel) -> Vec<V
 
     patch_rects
         .into_iter()
-        .map(|e| VPatch::new_from_rect(e, *pixel))
+        .map(|patch_rect| {
+            let centered_patch_rect = Rect {
+                x: patch_rect.x - surface_meta.get_radius() as i32,
+                y: patch_rect.y - surface_meta.get_radius() as i32,
+                width: patch_rect.width,
+                height: patch_rect.height,
+            };
+            assert!(
+                !surface_meta.is_xy_out_of_bounds(centered_patch_rect.x, centered_patch_rect.y),
+                "too big {:?} from {:?} is {}",
+                centered_patch_rect,
+                patch_rect,
+                surface_meta.is_xy_out_of_bounds(centered_patch_rect.x, centered_patch_rect.y)
+            );
+            VPatch::new_from_rect(centered_patch_rect, pixel)
+        })
         .collect()
 }
 
