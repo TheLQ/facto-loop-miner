@@ -98,6 +98,7 @@ fn detector(surface_meta: &VSurface, out_dir: &Path) -> Vec<VPatch> {
 }
 
 fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: Pixel) -> Vec<VPatch> {
+    surface_meta.log_pixel_stats("detect_pixel");
     let mut img = surface_meta.to_pixel_cv_image(Some(pixel));
     let size = img.size().unwrap();
     debug!(

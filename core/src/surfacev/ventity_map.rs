@@ -10,20 +10,18 @@ use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
-use crate::surface::fast_metrics::{FastMetric, FastMetrics};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VPixel;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
-use facto_loop_miner_io::varray::VArray;
+use facto_loop_miner_io::varray::{VArray, EMPTY_XY_INDEX};
 
+use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use facto_loop_miner_io::{
     get_mebibytes_of_slice_usize, read_entire_file_varray_mmap_lib, write_entire_file,
 };
-
-const EMPTY_XY_INDEX: usize = usize::MAX;
 
 pub trait VEntityXY {
     fn get_xy(&self) -> &[VPoint];
@@ -475,7 +473,7 @@ impl VEntityMap<VPixel> {
     }
 
     pub fn map_pixel_xy_to_cv(&self, filter: Option<Pixel>) -> Mat {
-        let metrics = RefCell::new(FastMetrics::new());
+        let metrics = RefCell::new(FastMetrics::new("map_pixel_xy_to_cv".to_string()));
 
         let output = self.map_xy_entities_to_bigger_u8_vec(|e| {
             if let Some(e) = e {

@@ -1,8 +1,8 @@
 use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::StepParams;
-use crate::surface::fast_metrics::{FastMetric, FastMetrics};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
+use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::ventity_map::{VEntityMap, VEntityXY};
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::VPoint;
@@ -147,7 +147,7 @@ impl VSurface {
 
     pub fn save(&self, out_dir: &Path) -> VResult<()> {
         info!("+++ Saving to {} {}", out_dir.display(), self);
-        self.log_pixel_stats();
+        self.log_pixel_stats("vsurface save");
         let total_save_watch = BasicWatch::start();
         self.save_state(out_dir)?;
         self.save_pixel_img_colorized(out_dir)?;
@@ -292,6 +292,8 @@ impl VSurface {
 
     pub fn log_pixel_stats(&self) {
         let mut metrics = FastMetrics::new();
+    pub fn log_pixel_stats(&self, debug_message: &str) {
+        let mut metrics = FastMetrics::new(format!("log_pixel_stats XY {}", debug_message));
         for pixel in self.pixels.iter_xy_pixels() {
             metrics.increment(FastMetric::VSurface_Pixel(*pixel));
         }

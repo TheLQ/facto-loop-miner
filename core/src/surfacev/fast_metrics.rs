@@ -8,13 +8,16 @@ use std::fmt::Display;
 /// Strings are slow apparently at billions of entries. Solution: Enums!
 #[derive(Default)]
 pub struct FastMetrics {
+    log_prefix: String,
     entity_metrics: EnumMap<FastMetric, u32>,
     start: BasicWatch,
 }
 
 impl FastMetrics {
-    pub fn new() -> Self {
-        FastMetrics::default()
+    pub fn new(log_prefix: String) -> Self {
+        let mut res = FastMetrics::default();
+        res.log_prefix = log_prefix;
+        res
     }
 
     pub fn increment(&mut self, metric_name: FastMetric) {
@@ -40,7 +43,12 @@ impl FastMetrics {
                 count.to_formatted_string(&LOCALE),
             );
         }
-        tracing::debug!("-- Metrics in {} since creation --", self.start);
+
+        tracing::debug!(
+            "-- Metrics {} in {} since creation --",
+            self.log_prefix,
+            self.start
+        );
     }
 
     // pub fn process<I>(new_item_prefix: &str, iter: I)
