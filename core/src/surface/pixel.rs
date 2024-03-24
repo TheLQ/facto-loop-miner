@@ -1,6 +1,6 @@
 use crate::surfacev::err::{VError, VResult};
 use image::codecs::png::PngEncoder;
-use image::{ColorType, ImageEncoder};
+use image::{ExtendedColorType, ImageEncoder};
 use opencv::core::{Scalar, Vec3b};
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
@@ -146,6 +146,11 @@ pub fn generate_lookup_image() {
 
     let encoder = PngEncoder::new(writer);
     encoder
-        .write_image(&buf, LOOKUP_IMAGE_ORDER.len() as u32, 1, ColorType::Rgb8)
+        .write_image(
+            &buf,
+            LOOKUP_IMAGE_ORDER.len() as u32,
+            1,
+            ExtendedColorType::Rgb8,
+        )
         .unwrap();
 }

@@ -6,17 +6,22 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-image = "0.24.7"
+image = "0.25.0"
 jemallocator = "0.5.4"
 num-format = "0.4.4"
 num-traits = "0.2.16"
 serde = { version = "1.0.183", features = ["derive"]  }
 serde_json = { version = "1.0.104" }
-simd-json = { version = "0.10.5", features = ["serde"] }
-opencv = { version = "0.84.5", features = ["imgcodecs"] }
-strum = { version = "0.25.0", features = ["derive"]}
-itertools = "0.11.0"
-kiddo = "2.1.1"
+simd-json = { version = "0.13.9", features = ["serde"] }
+opencv = { version = "0.89.0", default-features = false, features = [
+    "clang-runtime",
+    "imgcodecs",
+    "imgproc"
+] }
+
+strum = { version = "0.26.2", features = ["derive"]}
+itertools = "0.12.1"
+kiddo = "4.2.0"
 fixed = "1.23.1"
 pathfinding = { version = "4.3.1", path = "../../pathfinding" }
 rayon = "1.7.0"

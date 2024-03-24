@@ -4,8 +4,7 @@ use std::fmt::Display;
 use std::path::Path;
 
 use itertools::Itertools;
-use kiddo::float::distance::manhattan;
-use kiddo::float::neighbour::Neighbour;
+use kiddo::{Manhattan, NearestNeighbour};
 use opencv::core::{Point, Rect, Vector};
 use opencv::imgcodecs::imwrite;
 use opencv::imgproc::{
@@ -185,15 +184,14 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree)
     let mut search_distance = SEARCH_UNIT;
     let mut last_nearby_points_count = 0;
     let mut empty_count = 0;
-    let mut within_search: Vec<Vec<Neighbour<_, _>>>;
+    let mut within_search: Vec<Vec<NearestNeighbour<_, _>>>;
     loop {
         within_search = patch_rects
             .iter()
             .map(|patch_rect| {
-                cloud.within(
+                cloud.within::<Manhattan>(
                     &VArea::new_from_rect(patch_rect).start.to_slice_f32(),
                     search_distance as f32,
-                    &manhattan,
                 )
             })
             .collect();
@@ -275,13 +273,12 @@ fn detect_merge_nearby_patches_slow(
     // arbitrary size, for some reason within 1 diameter for IronOre still finds max 5...
     search_square_size += pixel.nearby_patch_search_distance(search_square_size);
 
-    let within_search: Vec<Vec<Neighbour<_, _>>> = patch_rects
+    let within_search: Vec<Vec<NearestNeighbour<_, _>>> = patch_rects
         .iter()
         .map(|patch_rect| {
-            cloud.within(
+            cloud.within::<Manhattan>(
                 &VArea::new_from_rect(patch_rect).start.to_slice_f32(),
                 search_square_size as f32,
-                &manhattan,
             )
         })
         .collect();

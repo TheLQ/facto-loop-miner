@@ -10,7 +10,7 @@ use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::PngEncoder;
-use image::{ColorType, ImageEncoder};
+use image::{ExtendedColorType, ImageEncoder};
 use num_format::ToFormattedString;
 use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
@@ -369,7 +369,7 @@ fn save_png(path: &Path, rgb: &[u8], width: u32, height: u32) {
 
     let encoder = PngEncoder::new(writer);
     encoder
-        .write_image(rgb, width, height, ColorType::Rgb8)
+        .write_image(rgb, width, height, ExtendedColorType::Rgb8)
         .unwrap();
     let size = file.metadata().unwrap().len();
     debug!(

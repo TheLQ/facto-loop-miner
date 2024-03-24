@@ -3,17 +3,16 @@ use std::fs::{File, OpenOptions};
 use std::io::Result as IoResult;
 use std::mem::ManuallyDrop;
 use std::os::fd::AsRawFd;
-use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 use std::{io, mem, ptr};
 
 use num_format::ToFormattedString;
 use tracing::{debug, info, trace, warn};
 use uring_sys2::{
-    io_uring_cqe, io_uring_cqe_get_data64, io_uring_cqe_seen, io_uring_get_sqe, io_uring_prep_read,
+    io_uring_cqe, io_uring_cqe_get_data64, io_uring_cqe_seen, io_uring_get_sqe,
     io_uring_prep_read_fixed, io_uring_register_buffers, io_uring_register_files, io_uring_sqe,
     io_uring_sqe_set_data64, io_uring_sqe_set_flags, io_uring_unregister_buffers,
-    io_uring_unregister_files, io_uring_wait_cqe, IOSQE_FIXED_FILE,
+    io_uring_unregister_files, io_uring_wait_cqe, IOSQE_FIXED_FILE_BIT,
 };
 
 use crate::err::{VIoError, VIoResult};
@@ -41,7 +40,7 @@ type BackingBufRing = [BackingBufEntry; BUF_RING_COUNT];
 pub struct IoUringFileCopying {
     file_handle: File,
     file_registered_index: i32,
-    backing_iovecs: Vec<libc::iovec>,
+    backing_iovecs: Vec<uring_sys2::iovec>,
     backing_buf_ring: ManuallyDrop<Box<BackingBufRing>>,
     backing_buf_ring_data: [BackingBufData; BUF_RING_COUNT],
     result_buffer: ManuallyDrop<Vec<u8>>,
@@ -66,9 +65,9 @@ impl IoUringFileCopying {
         let mut backing_buf_ring = unsafe { ManuallyDrop::new(Box::from_raw(backing_buf_ptr)) };
 
         // Register
-        let backing_iovecs: Vec<libc::iovec> = backing_buf_ring
+        let backing_iovecs: Vec<uring_sys2::iovec> = backing_buf_ring
             .iter_mut()
-            .map(|backing_buf| libc::iovec {
+            .map(|backing_buf| uring_sys2::iovec {
                 iov_len: backing_buf.len(),
                 iov_base: backing_buf.as_mut_ptr() as *mut libc::c_void,
             })
@@ -195,7 +194,7 @@ impl IoUringFileCopying {
             offset as u64,
             buf_index as libc::c_int,
         );
-        io_uring_sqe_set_flags(sqe_ptr, IOSQE_FIXED_FILE);
+        io_uring_sqe_set_flags(sqe_ptr, IOSQE_FIXED_FILE_BIT);
         io_uring_sqe_set_data64(sqe_ptr, buf_index as u64);
         self.backing_buf_ring_data[buf_index].result_offset = offset;
         self.backing_buf_ring_data[buf_index].backing_result_cursor = self.result_cursor;

@@ -17,15 +17,16 @@ pub fn get_patch_main() {
     tracing::debug!("dumping {:?}", first_patch);
 
     let mut img = surface.get_buffer_to_cv();
-    img = img
-        .apply(
-            Range::new(first_patch.y, first_patch.y + first_patch.height).unwrap(),
-            Range::new(first_patch.x, first_patch.x + first_patch.width).unwrap(),
-        )
-        .unwrap()
-        // clone to new contiguous memory location
-        .clone();
-    imwrite("work/test3/inner.png", &img, &Vector::new()).unwrap();
+    // TODO: doesn't compile anymore???
+    // img = img
+    //     .apply(
+    //         Range::new(first_patch.y, first_patch.y + first_patch.height).unwrap(),
+    //         Range::new(first_patch.x, first_patch.x + first_patch.width).unwrap(),
+    //     )
+    //     .unwrap()
+    //     // clone to new contiguous memory location
+    //     .clone();
+    // imwrite("work/test3/inner.png", &img, &Vector::new()).unwrap();
 
     surface.set_buffer_from_cv(img);
 

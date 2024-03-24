@@ -41,9 +41,7 @@ extern crate core;
 
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
-use crate::util::duration::BasicWatch;
-use facto_loop_miner_io::read_entire_file;
-use kiddo::KdTree;
+use kiddo::float;
 use num_format::Locale;
 use num_traits::PrimInt;
 use std::path::Path;
@@ -61,7 +59,8 @@ pub mod surface;
 pub mod surfacev;
 pub mod util;
 
-pub type PixelKdTree = KdTree<f32, 2>;
+// pub type PixelKdTree = KdTree<f32, 2usize>;
+pub type PixelKdTree = float::kdtree::KdTree<f32, usize, 2usize, 32, u32>;
 
 pub const LOCALE: Locale = Locale::en;
 pub const TILES_PER_CHUNK: usize = 32;

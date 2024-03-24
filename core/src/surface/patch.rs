@@ -4,7 +4,6 @@ use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::vpatch::VPatch;
 use crate::PixelKdTree;
-use kiddo::KdTree;
 use opencv::core::{Point, Rect, Rect_};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -162,7 +161,7 @@ pub fn map_patch_map_to_kdtree(
 pub fn map_patch_corners_to_kdtree_ref<'a>(
     patch_rects: impl Iterator<Item = &'a Patch>,
 ) -> PixelKdTree {
-    let mut tree: PixelKdTree = KdTree::new();
+    let mut tree: PixelKdTree = PixelKdTree::new();
     for (patch_counter, patch_rect) in patch_rects.enumerate() {
         tree.add(&patch_rect.corner_slice(), patch_counter);
     }
@@ -170,7 +169,7 @@ pub fn map_patch_corners_to_kdtree_ref<'a>(
 }
 
 pub fn map_patch_corners_to_kdtree<'a>(patch_rects: impl Iterator<Item = &'a Rect>) -> PixelKdTree {
-    let mut tree: PixelKdTree = KdTree::new();
+    let mut tree: PixelKdTree = PixelKdTree::new();
     for (patch_counter, patch_rect) in patch_rects.enumerate() {
         tree.add(&map_rect_corner_to_slice(patch_rect), patch_counter);
     }
@@ -178,7 +177,7 @@ pub fn map_patch_corners_to_kdtree<'a>(patch_rects: impl Iterator<Item = &'a Rec
 }
 
 pub fn map_vpatch_to_kdtree<'a>(patch_rects: impl Iterator<Item = &'a VPatch>) -> PixelKdTree {
-    let mut tree: PixelKdTree = KdTree::new();
+    let mut tree: PixelKdTree = PixelKdTree::new();
     for (patch_counter, patch_rect) in patch_rects.enumerate() {
         tree.add(&patch_rect.area.start.to_slice_f32(), patch_counter);
     }

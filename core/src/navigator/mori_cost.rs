@@ -1,7 +1,6 @@
 use crate::navigator::mori::Rail;
 use crate::navigator::resource_cloud::ResourceCloud;
-use kiddo::distance::squared_euclidean;
-use kiddo::float::neighbour::Neighbour;
+use kiddo::SquaredEuclidean;
 
 const DIRECTION_BIAS_EFFECT: f32 = 2f32;
 const TURN_BIAS_EFFECT: f32 = 5f32;
@@ -45,11 +44,10 @@ pub fn calculate_cost_for_point(
     // };
 
     // Avoid resource patches
-    let closest_resources: Vec<Neighbour<f32, usize>> = resource_cloud.kdtree.within_unsorted(
-        &start.endpoint.to_slice_f32(),
-        1000f32,
-        &squared_euclidean,
-    );
+    // : Vec<Neighbour<f32, usize>>
+    let closest_resources = resource_cloud
+        .kdtree
+        .within_unsorted::<SquaredEuclidean>(&start.endpoint.to_slice_f32(), 1000f32);
     let mut resource_distance_bias =
         cost_unit * closest_resources.len() as f32 * RESOURCE_BIAS_EFFECT;
     // except too strong when at start

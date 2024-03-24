@@ -10,8 +10,7 @@ use crate::surfacev::err::VResult;
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
-use kiddo::distance::squared_euclidean;
-use kiddo::float::neighbour::Neighbour;
+use kiddo::{Manhattan, NearestNeighbour};
 use opencv::core::Point;
 use tracing::{debug, info};
 
@@ -188,11 +187,8 @@ fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
     let cloud = map_vpatch_to_kdtree(patches.clone().into_iter());
 
     let base_corner = base_bottom_right_corner();
-    let nearest: Vec<Neighbour<f32, usize>> = cloud.nearest_n(
-        &base_corner.to_slice_f32(),
-        NEAREST_COUNT,
-        &squared_euclidean,
-    );
+    let nearest: Vec<NearestNeighbour<f32, usize>> =
+        cloud.nearest_n::<Manhattan>(&base_corner.to_slice_f32(), NEAREST_COUNT);
     debug!("found {} from {}", nearest.len(), patches.len());
 
     patches

@@ -4,9 +4,9 @@ use crate::surface::game_locator::GameLocator;
 use crate::surface::pixel::Pixel;
 use crate::{PixelKdTree, LOCALE};
 use image::codecs::png::PngEncoder;
-use image::{ColorType, ImageEncoder};
+use image::{ExtendedColorType, ImageEncoder};
 use num_format::ToFormattedString;
-use opencv::core::{rotate, Mat, Point, Point_, Range, ROTATE_90_COUNTERCLOCKWISE};
+use opencv::core::{rotate, Point, Point_, Rect, ROTATE_90_COUNTERCLOCKWISE};
 use opencv::imgproc::{get_font_scale_from_height, put_text, FONT_HERSHEY_SIMPLEX, LINE_8};
 use opencv::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -215,7 +215,7 @@ impl Surface {
 
         let encoder = PngEncoder::new(writer);
         encoder
-            .write_image(rgb, self.width, self.height, ColorType::Rgb8)
+            .write_image(rgb, self.width, self.height, ExtendedColorType::Rgb8)
             .unwrap();
         let size = file.metadata().unwrap().len();
         tracing::debug!(
@@ -245,20 +245,32 @@ impl Surface {
     }
 
     pub fn crop(&self, crop_radius_from_center: i32) -> Self {
-        let x_start = self.area_box.game_centered_x_i32(-crop_radius_from_center);
-        let x_end = self.area_box.game_centered_x_i32(crop_radius_from_center);
-        let y_start = self.area_box.game_centered_y_i32(-crop_radius_from_center);
-        let y_end = self.area_box.game_centered_y_i32(crop_radius_from_center);
+        let x_start = self.area_box.game_centered_x_i32(-crop_radius_from_center) as i32;
+        let x_end = self.area_box.game_centered_x_i32(crop_radius_from_center) as i32;
+        let y_start = self.area_box.game_centered_y_i32(-crop_radius_from_center) as i32;
+        let y_end = self.area_box.game_centered_y_i32(crop_radius_from_center) as i32;
 
         let img = self.get_buffer_to_cv();
-        let cropped = img
-            .apply(
-                Range::new(y_start as i32, y_end as i32).unwrap(),
-                Range::new(x_start as i32, x_end as i32).unwrap(),
-            )
-            .unwrap()
-            // clone to new contiguous memory location
-            .clone();
+        // let cropped = img
+        //     .apply(
+        //         Range::new(y_start as i32, y_end as i32).unwrap(),
+        //         Range::new(x_start as i32, x_end as i32).unwrap(),
+        //     )
+        //     .unwrap()
+        //     // clone to new contiguous memory location
+        //     .clone();
+        let cropped = Mat::roi(
+            &img,
+            Rect {
+                x: x_start,
+                width: x_end - x_start,
+                y: y_start,
+                height: y_end - y_start,
+            },
+        )
+        .unwrap()
+        // clone to new contiguous memory location
+        .clone_pointee();
         let expected_size = crop_radius_from_center * 2;
         if cropped.rows() != expected_size {
             panic!("expected rows {} got {}", expected_size, cropped.rows());

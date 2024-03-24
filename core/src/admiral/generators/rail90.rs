@@ -3,7 +3,6 @@ use crate::admiral::lua_command::fac_surface_create_entity_safe::FacSurfaceCreat
 use crate::admiral::lua_command::{direction_params_exact, LuaCommand, DEFAULT_SURFACE_VAR};
 use opencv::core::Point2f;
 use std::collections::HashMap;
-use std::string::ToString;
 
 pub fn rail_degrees_90(start: Point2f) -> [Box<dyn LuaCommand>; 5] {
     [
