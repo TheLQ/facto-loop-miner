@@ -98,7 +98,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         .collect();
     let ordered_size = ordered_patches.len();
     for (nearest_count, patch_start) in ordered_patches.into_iter().enumerate() {
-        tracing::debug!(
+        debug!(
             "path {} of {} - actually made {} max {:?}",
             nearest_count,
             NEAREST_COUNT,
@@ -110,18 +110,18 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             && y_start < patch_start.area.start.y()
             && y_end > patch_start.area.start.y()
         {
-            tracing::debug!("[Warn] broken patch in the remove area {:?}", patch_start);
+            warn!("broken patch in the remove area {:?}", patch_start);
             continue;
         }
 
         if let Some(limit) = PATH_LIMIT {
             if limit == made_paths {
-                tracing::debug!("path limit");
+                debug!("path limit");
                 break;
             }
         }
         let Some(destination) = destinations.next() else {
-            tracing::debug!("Out of destinations, stopping");
+            debug!("Out of destinations, stopping");
             break;
         };
 
