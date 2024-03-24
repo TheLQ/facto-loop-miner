@@ -307,10 +307,10 @@ impl VSurface {
     }
 
     pub fn draw_debug_square(&mut self, point: &VPoint) {
-        let size = 10;
+        const SIZE: i32 = 100;
 
-        for x in (point.x() - 10)..(point.x() + 10) {
-            for y in (point.y() - 10)..(point.y() + 10) {
+        for x in (point.x() - SIZE)..(point.x() + SIZE) {
+            for y in (point.y() - SIZE)..(point.y() + SIZE) {
                 if self.pixels.is_xy_out_of_bounds(x, y) {
                     continue;
                 }

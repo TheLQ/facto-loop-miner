@@ -176,7 +176,7 @@ pub fn map_patch_corners_to_kdtree<'a>(patch_rects: impl Iterator<Item = &'a Rec
     tree
 }
 
-pub fn map_vpatch_to_kdtree<'a>(patch_rects: impl Iterator<Item = &'a VPatch>) -> PixelKdTree {
+pub fn map_vpatch_to_kdtree<'a>(patch_rects: impl Iterator<Item = &'a &'a VPatch>) -> PixelKdTree {
     let mut tree: PixelKdTree = PixelKdTree::new();
     for (patch_counter, patch_rect) in patch_rects.enumerate() {
         tree.add(&patch_rect.area.start.to_slice_f32(), patch_counter);

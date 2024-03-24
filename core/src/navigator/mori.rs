@@ -14,7 +14,7 @@ use pathfinding::prelude::astar_mori;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 /// Pathfinder v1, Mori Calliope
 ///
@@ -141,17 +141,13 @@ impl Rail {
         let mut res = Vec::new();
         match &self.mode {
             RailMode::Straight => {
-                for step_forward in 0..RAIL_STEP_SIZE {
-                    let mut next = self.clone();
-                    // must cover 0..1 -like area
-                    next = next.move_force_rotate_clockwise(2);
-                    next = next.move_force_forward(step_forward);
-                    for adjacent in 0..DUAL_RAIL_SIZE {
-                        let mut next = next.move_force_rotate_clockwise(1);
-                        next = next.move_force_forward(adjacent);
-                        res.extend(self.endpoint.get_entity_area_2x2());
-                    }
-                }
+                // main rail
+                res.extend_from_slice(&self.endpoint.get_entity_area_2x2());
+
+                // adjacent dual rail
+                let next = self.move_force_rotate_clockwise(1);
+                let next = next.move_force_forward_steps(1);
+                res.extend_from_slice(&next.endpoint.get_entity_area_2x2());
             }
             RailMode::Turn90(source_point, source_direction) => {
                 let source_rail = Rail {
@@ -167,7 +163,7 @@ impl Rail {
                 let is_left_turn =
                     source_rail.move_force_rotate_clockwise(1).direction == self.direction;
                 if is_left_turn {
-                    let dog_leg = first_leg.move_force_forward(DUAL_RAIL_SIZE - 1);
+                    let dog_leg = first_leg.move_force_forward_steps(1);
                     res.extend(dog_leg.area());
                     // debug!("dog_leg {:?}", dog_leg);
                 }
@@ -182,16 +178,17 @@ impl Rail {
                 res.extend(second_leg.area());
 
                 // very first row is the source's
-                for width in 1..RAIL_STEP_SIZE {
-                    for height in 0..RAIL_STEP_SIZE {
-                        let mut next = source_rail.clone();
-                        next.move_force_forward_mut(width);
-                        next.direction = self.direction.clone();
-                        next.move_force_forward_mut(height);
-
-                        res.push(next.endpoint);
-                    }
-                }
+                unimplemented!("asd");
+                // for width in 1..RAIL_STEP_SIZE {
+                //     for height in 0..RAIL_STEP_SIZE {
+                //         let mut next = source_rail.clone();
+                //         next.move_force_forward_mut(width);
+                //         next.direction = self.direction.clone();
+                //         next.move_force_forward_mut(height);
+                //
+                //         res.push(next.endpoint);
+                //     }
+                // }
 
                 res.sort();
                 let res_before = res.len();
@@ -203,12 +200,19 @@ impl Rail {
             }
         }
 
-        // let before = next.area.len();
-        // next.area.dedup();
-        // let after = next.area.len();
-        // if before != after {
-        //     panic!("broken area check {} \n\n {}", before, after);
-        // }
+        for entry in &res {
+            debug!("ENTRY {:?}", entry);
+        }
+        let before = res.len();
+        res.sort();
+        res.dedup();
+        let after = res.len();
+        if before != after {
+            panic!(
+                "reduced area duplicates from {} to {} for {:?}",
+                before, after, self
+            );
+        }
 
         res
     }
@@ -246,7 +250,7 @@ impl Rail {
         next = next.move_force_rotate_clockwise(2);
         // TODO
         loop {
-            let next_rail = next.move_force_forward(1);
+            let next_rail = next.move_forward();
             if let Some(next_rail) = next_rail.into_buildable(surface, working_buffer) {
                 next = next_rail;
             } else {
@@ -268,20 +272,20 @@ impl Rail {
     pub fn move_forward(&self) -> Self {
         let mut next = self.clone();
         next.mode = RailMode::Straight;
-        next.move_force_forward_mut(RAIL_STEP_SIZE);
+        next.move_force_forward_steps_mut(1);
         next
     }
 
-    pub fn move_force_forward(&self, steps: u32) -> Rail {
+    pub fn move_force_forward_steps(&self, steps: u32) -> Rail {
         let mut cur = self.clone();
-        cur.move_force_forward_mut(steps);
+        cur.move_force_forward_steps_mut(steps);
         cur
     }
 
-    fn move_force_forward_mut(&mut self, steps: u32) {
+    fn move_force_forward_steps_mut(&mut self, steps: u32) {
         // rail is 2x2
-        let steps = (steps * 2) as i32;
-        match self.direction {
+        let steps = (steps * RAIL_STEP_SIZE) as i32;
+        self.endpoint = match self.direction {
             RailDirection::Up => self.endpoint.move_y(steps),
             RailDirection::Down => self.endpoint.move_y(-steps),
             RailDirection::Left => self.endpoint.move_x(-steps),
@@ -308,11 +312,10 @@ impl Rail {
     }
 
     fn move_rotating(&self, rotation_steps: usize) -> Self {
-        let mut next = self.clone();
-        next.move_force_forward_mut(RAIL_STEP_SIZE);
-        next = next.move_force_rotate_clockwise(rotation_steps);
-        next.move_force_forward_mut(RAIL_STEP_SIZE);
-
+        let next = self.clone();
+        let next = next.move_forward();
+        let next = next.move_force_rotate_clockwise(rotation_steps);
+        let mut next = next.move_forward();
         next.mode = RailMode::Turn90(self.endpoint, self.direction.clone());
         next
     }
@@ -376,35 +379,35 @@ impl Rail {
 
     fn into_buildable(self, surface: &VSurface, working_buffer: &mut SurfaceDiff) -> Option<Self> {
         const SIZE: u32 = 0;
-        if self.endpoint.x() < 4000 {
-            None
-        } else {
-            match 4 {
-                // 1 => self.into_buildable_sequential(surface),
-                // 2 => self.into_buildable_parallel(surface),
-                // 3 => self.into_buildable_avx(surface, working_buffer),
-                4 => {
-                    if self.is_area_buildable(surface) {
-                        Some(self)
-                    } else {
-                        None
-                    }
+        // if self.endpoint.x() < 4000 {
+        //     None
+        // } else {
+        match 4 {
+            // 1 => self.into_buildable_sequential(surface),
+            // 2 => self.into_buildable_parallel(surface),
+            // 3 => self.into_buildable_avx(surface, working_buffer),
+            4 => {
+                if self.is_area_buildable(surface) {
+                    Some(self)
+                } else {
+                    None
                 }
-                _ => panic!("0"),
             }
-            // let seq = self.clone().into_buildable_sequential(surface);
-            // let avx = self.clone().into_buildable_avx(surface, working_buffer);
-            // match (seq, avx) {
-            //     (None, None) => None,
-            //     (Some(left), Some(right)) => {
-            //         if left != right {
-            //             panic!("UNEQUAL left {:?} right {:?}", left, right);
-            //         }
-            //         Some(left)
-            //     }
-            //     (left, right) => panic!("self {:?} left {:?} right {:?}", self, left, right),
-            // }
+            _ => panic!("0"),
         }
+        // let seq = self.clone().into_buildable_sequential(surface);
+        // let avx = self.clone().into_buildable_avx(surface, working_buffer);
+        // match (seq, avx) {
+        //     (None, None) => None,
+        //     (Some(left), Some(right)) => {
+        //         if left != right {
+        //             panic!("UNEQUAL left {:?} right {:?}", left, right);
+        //         }
+        //         Some(left)
+        //     }
+        //     (left, right) => panic!("self {:?} left {:?} right {:?}", self, left, right),
+        // }
+        // }
     }
 
     fn is_area_buildable(&self, surface: &VSurface) -> bool {
@@ -570,13 +573,15 @@ fn is_buildable_point_u32<'p>(surface: &Surface, point: &'p PointU32) -> Option<
 }
 
 pub fn write_rail(surface: &mut VSurface, path: &Vec<Rail>) -> VResult<()> {
-    let special_endpoint_pixels: Vec<VPoint> = path.iter().map(|v| v.endpoint).collect();
+    // let special_endpoint_pixels: Vec<VPoint> = path.iter().map(|v| v.endpoint).collect();
 
     let mut total_rail = 0;
     for path_rail in path {
+        debug!("writing rail start at {:?}", path_rail.endpoint);
         for path_area_point in path_rail.area() {
             total_rail += 1;
             surface.set_pixel(path_area_point, Pixel::Rail)?;
+            debug!("writing rail at {:?}", path_area_point);
 
             // TODO: wtf??
             // let mut new_pixel = match surface.get_pixel_point_u32(&path_area_point) {
@@ -597,6 +602,7 @@ pub fn write_rail(surface: &mut VSurface, path: &Vec<Rail>) -> VResult<()> {
             // surface.set_pixel_point_u32(new_pixel, path_area_point);
         }
     }
+    debug!("wrote {} rail", total_rail);
     Ok(())
 }
 
