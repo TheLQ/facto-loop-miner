@@ -1,5 +1,6 @@
 use crate::gamedata::compressed_export::parse_exported_lua_data;
 use crate::surface::pixel::Pixel;
+use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use num_format::ToFormattedString;
@@ -39,6 +40,13 @@ pub fn read_lua_tiles(input_dir: &Path) -> Vec<LuaEntity> {
         entities.len().to_formatted_string(&LOCALE),
         read_watch
     );
+
+    let mut metric = FastMetrics::new("lua load init".to_string());
+    for entity in &entities {
+        metric.increment(FastMetric::VSurface_Pixel(entity.name));
+    }
+    metric.log_final();
+
     // debug!("-- sample 0 {:?}", data.entities[0]);
     // debug!("-- sample 1 {:?}", data.entities[1]);
 

@@ -151,20 +151,20 @@ where
         self.check_points_if_in_range_iter(positions)?;
 
         let entity_index = self.entities.len();
-        self.add_positions(entity_index, positions);
         self.entities.push(entity);
+        self.add_positions_of_entity(entity_index);
 
         Ok(())
     }
 
-    pub fn add_positions(&mut self, entity_index: usize, positions: &[VPoint]) {
-        for position in positions {
+    fn add_positions_of_entity(&mut self, entity_index: usize) {
+        for position in self.entities[entity_index].get_xy() {
             let xy_index = self.xy_to_index_unchecked(position.x(), position.y());
             self.xy_to_entity.as_mut_slice()[xy_index] = entity_index;
         }
     }
 
-    pub fn remove_positions(&mut self, indexes: impl IntoIterator<Item = usize>) {
+    fn remove_positions(&mut self, indexes: impl IntoIterator<Item = usize>) {
         for index in indexes.into_iter().sorted().unique().rev() {
             self.xy_to_entity.as_mut_slice()[index] = EMPTY_XY_INDEX;
         }
@@ -182,20 +182,17 @@ where
                 .all(|i| i.is_within_center_radius(new_radius))
         });
 
-        let new_xy_length = self.xy_array_length_from_radius();
+        self.xy_to_entity = VArray::new_length(self.xy_array_length_from_radius());
         debug!(
             "Reduce entities from {} to {}, xy_map from {} to {}",
-            old_entity_length,
-            self.entities.len(),
-            old_xy_length,
-            new_xy_length
+            old_entity_length.to_formatted_string(&LOCALE),
+            self.entities.len().to_formatted_string(&LOCALE),
+            old_xy_length.to_formatted_string(&LOCALE),
+            self.xy_to_entity.len().to_formatted_string(&LOCALE)
         );
 
-        self.xy_to_entity = VArray::new_length(self.xy_array_length_from_radius());
-
         for i in 0..self.entities.len() {
-            let xy_insertable = self.entities[i].get_xy().to_owned();
-            self.add_positions(i, &xy_insertable);
+            self.add_positions_of_entity(i);
         }
     }
 
@@ -314,11 +311,12 @@ where
     // }
 
     pub fn iter_entities(&self) -> impl Iterator<Item = &E> {
-        self.xy_to_entity
-            .as_slice()
-            .iter()
-            .filter(|index| **index != EMPTY_XY_INDEX)
-            .map(|index| &self.entities[*index])
+        // self.xy_to_entity
+        //     .as_slice()
+        //     .iter()
+        //     .filter(|index| **index != EMPTY_XY_INDEX)
+        //     .map(|index| &self.entities[*index])
+        self.entities.iter()
     }
 
     pub fn xy_array_length_from_radius(&self) -> usize {

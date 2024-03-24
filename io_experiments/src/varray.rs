@@ -12,6 +12,8 @@ impl Default for BackingMemory {
     }
 }
 
+pub const EMPTY_XY_INDEX: usize = usize::MAX;
+
 // Light wrapper around Vec. Memory map backed Vec's must live as long as the Mmap
 #[derive(Default)]
 pub struct VArray {
@@ -21,7 +23,7 @@ pub struct VArray {
 impl VArray {
     pub fn new_length(size: usize) -> Self {
         VArray {
-            inner: BackingMemory::RegularOldeVec(vec![0; size]),
+            inner: BackingMemory::RegularOldeVec(vec![EMPTY_XY_INDEX; size]),
         }
     }
 

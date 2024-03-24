@@ -63,6 +63,7 @@ impl VSurface {
             .load_xy_from_other(pixel_thread.join().expect("pixel thread failed")?);
 
         info!("Loaded {}", new_surface);
+        new_surface.log_pixel_stats("vsurface load");
         info!("+++ Loaded in {} from {}", load_time, out_dir.display());
         Ok(new_surface)
     }
@@ -283,19 +284,24 @@ impl VSurface {
             removed_points.len(),
             radius
         );
-        self.pixels.remove_positions(removed_points);
+        // TODO
+        // self.pixels.remove_positions(removed_points);
     }
 
     pub fn to_surface_diff(&self) -> SurfaceDiff {
         SurfaceDiff::from_surface(self)
     }
 
-    pub fn log_pixel_stats(&self) {
-        let mut metrics = FastMetrics::new();
     pub fn log_pixel_stats(&self, debug_message: &str) {
         let mut metrics = FastMetrics::new(format!("log_pixel_stats XY {}", debug_message));
         for pixel in self.pixels.iter_xy_pixels() {
             metrics.increment(FastMetric::VSurface_Pixel(*pixel));
+        }
+        metrics.log_final();
+
+        let mut metrics = FastMetrics::new(format!("log_pixel_stats Entities {}", debug_message));
+        for entity in self.pixels.iter_entities() {
+            metrics.increment(FastMetric::VSurface_Pixel(*entity.pixel()));
         }
         metrics.log_final();
     }

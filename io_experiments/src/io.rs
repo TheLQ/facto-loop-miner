@@ -9,6 +9,7 @@ use crate::err::{VIoError, VIoResult};
 use crate::varray::VArray;
 use libc::munmap;
 use memmap2::{Mmap, MmapOptions};
+use tracing::debug;
 
 pub const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
 
@@ -293,9 +294,12 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
             .map_copy(&file)
             .map_err(VIoError::io_error(path))?
     };
+    debug!("mapped {}", path.display());
 
     // View mmap as a Vec
     let xy_array_u8 = unsafe { slice::from_raw_parts_mut(mmap.as_mut_ptr(), xy_array_len_u8) };
+
+    debug!("from raw parts {}", path.display());
 
     // Build usize Vec viewing the same memory with proper aligned access
     // Docs state the outer slices should be empty in real world environments
@@ -312,6 +316,8 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
             xy_array_len_u64,
         ))
     };
+
+    debug!("reviewed {}", path.display());
 
     Ok(VArray::from_mmap(mmap, xy_array_u64))
 }

@@ -27,7 +27,7 @@ use strum::{AsRefStr, EnumIter};
 )]
 #[repr(u8)]
 pub enum Pixel {
-    Empty = 0,
+    Empty = 10,
     IronOre = 25,
     CopperOre = 50,
     Stone = 75,
