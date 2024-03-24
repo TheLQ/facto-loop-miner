@@ -50,9 +50,9 @@ pub const REMOVE_RESOURCE_BORDER_TILES: i32 =
     REMOVE_RESOURCE_BORDER_CHUNKS * TILES_PER_CHUNK as i32;
 
 pub fn draw_mega_box(surface: &mut VSurface, metrics: &mut Metrics) -> VResult<()> {
-    let tiles = CENTRAL_BASE_TILES;
-    for point in points_in_centered_box(tiles as u32, VPoint::zero()) {
-        if !point.is_within_center_radius(tiles as u32) {
+    let tiles = CENTRAL_BASE_TILES as u32;
+    for point in points_in_centered_box(tiles, VPoint::zero()) {
+        if !point.is_within_center_radius(tiles - 50) {
             surface.set_pixel(point, Pixel::EdgeWall)?;
             metrics.increment_slow("base-box");
         }
@@ -160,9 +160,8 @@ fn points_in_centered_box(radius: u32, center: VPoint) -> Vec<VPoint> {
     let mut res = Vec::new();
 
     let radius = radius as i32;
-    let banner_width = 50i32;
-    let edge_neg: i32 = -radius - banner_width;
-    let edge_pos: i32 = radius + banner_width;
+    let edge_neg: i32 = -radius;
+    let edge_pos: i32 = radius;
     // lazy way
     for root_x in edge_neg..edge_pos {
         for root_y in edge_neg..edge_pos {
