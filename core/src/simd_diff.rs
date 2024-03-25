@@ -78,7 +78,6 @@ impl SurfaceDiff {
 #[cfg(test)]
 mod test {
     use crate::simd::SSE_BITS;
-    use crate::simd_diff::SurfaceDiff;
     use crate::surface::pixel::Pixel;
     use crate::surface::surface::Surface;
 

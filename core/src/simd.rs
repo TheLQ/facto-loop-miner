@@ -273,9 +273,7 @@ fn format_i64(i: i64) -> String {
 mod test {
     use std::arch::x86_64::_mm256_or_si256;
 
-    use bitvec::order::Lsb0;
     use bitvec::prelude::*;
-    use bitvec::vec::BitVec;
 
     use crate::simd::{
         any_bit_equal_m256_bool, apply_any_u8_iter_to_m256_buffer,
@@ -359,7 +357,7 @@ mod test {
         }
         apply_any_u8_iter_to_m256_buffer(needles_applied_to_array.iter(), &mut buffer);
 
-        let mut bit_actual: BitVec = {
+        let bit_actual: BitVec = {
             let mut res = BitVec::new();
             for inner in buffer {
                 res.extend_from_bitslice(&m256_into_bitvec(inner));

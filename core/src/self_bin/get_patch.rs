@@ -1,9 +1,9 @@
 use crate::surface::patch::{DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
-use opencv::core::{Range, Vector};
-use opencv::imgcodecs::imwrite;
-use opencv::prelude::*;
+// use opencv::core::{Range, Vector};
+// use opencv::imgcodecs::imwrite;
+// use opencv::prelude::*;
 use std::path::Path;
 
 pub fn get_patch_main() {
@@ -16,7 +16,7 @@ pub fn get_patch_main() {
         .unwrap();
     tracing::debug!("dumping {:?}", first_patch);
 
-    let mut img = surface.get_buffer_to_cv();
+    let img = surface.get_buffer_to_cv();
     // TODO: doesn't compile anymore???
     // img = img
     //     .apply(
