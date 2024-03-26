@@ -5,6 +5,10 @@ use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::err::VResult;
+use crate::surfacev::rail_turn_templates::{
+    rail_turn_template_down_left, rail_turn_template_down_right, rail_turn_template_up_left,
+    rail_turn_template_up_right,
+};
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
@@ -14,18 +18,13 @@ use pathfinding::prelude::astar_mori;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
-use tracing::{debug, info, warn};
+use tracing::debug;
 
 /// Pathfinder v1, Mori Calliope
 ///
 /// Makes a dual rail + spacing, +6 straight or 90 degree turning, path of rail from start to end.
 /// Without collisions into any point on the Surface.
-pub fn mori_start(
-    surface: &VSurface,
-    start: Rail,
-    end: Rail,
-    step_params: &StepParams,
-) -> Option<Vec<Rail>> {
+pub fn mori_start(surface: &VSurface, start: Rail, end: Rail) -> Option<Vec<Rail>> {
     let pathfind_watch = BasicWatch::start();
 
     start.endpoint.assert_even_position();
@@ -36,7 +35,10 @@ pub fn mori_start(
     for width in 0..RAIL_STEP_SIZE {
         for height in 0..RAIL_STEP_SIZE {
             let mut next = end.clone();
-            next.endpoint = next.endpoint.move_xy(width as i32 * 2, height as i32 * 2);
+            next.endpoint = next.endpoint.move_xy(width as i32, height as i32);
+            // surface
+            //     .set_pixel(next.endpoint, Pixel::Highlighter)
+            //     .unwrap();
             valid_destinations.insert(next);
         }
     }
@@ -50,8 +52,8 @@ pub fn mori_start(
     // Forked function adds parents and cost params to each successor call. Used for limits
     let pathfind = astar_mori(
         &start,
-        |(p, parents, total_cost)| {
-            p.successors(
+        |(rail, parents, total_cost)| {
+            rail.successors(
                 parents,
                 total_cost,
                 surface,
@@ -95,7 +97,22 @@ pub fn mori_start(
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum RailMode {
     Straight,
-    Turn90(VPoint, RailDirection),
+    Turn(TurnType),
+}
+
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum TurnType {
+    Turn90,
+    Turn270,
+}
+
+impl TurnType {
+    pub fn rotations(&self) -> usize {
+        match self {
+            TurnType::Turn90 => 1,
+            TurnType::Turn270 => 3,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -104,6 +121,20 @@ pub enum RailDirection {
     Down,
     Left,
     Right,
+}
+
+impl RailDirection {
+    pub fn spinner(&self, post_rotations: usize) -> RailDirection {
+        let mut directions = RAIL_DIRECTION_CLOCKWISE.iter().cycle();
+
+        while directions.next().unwrap() != self {}
+
+        let mut new_direction = directions.next().unwrap();
+        for _ in 1..post_rotations {
+            new_direction = directions.next().unwrap();
+        }
+        new_direction.clone()
+    }
 }
 
 const RAIL_DIRECTION_CLOCKWISE: [RailDirection; 4] = [
@@ -137,72 +168,132 @@ impl Rail {
         res
     }
 
+    /// XY positions underneath this section of rail
     fn area(&self) -> Vec<VPoint> {
         let mut res = Vec::new();
         match &self.mode {
             RailMode::Straight => {
-                // main rail
-                res.extend_from_slice(&self.endpoint.get_entity_area_2x2());
+                // Going BACKWARDS from endpoint
+                for inner_step in 0..RAIL_STEP_SIZE {
+                    // main rail
+                    let next = self.move_force_rotate_clockwise(2);
+                    let next = next.move_forward_single_num(inner_step);
+                    res.extend_from_slice(&next.endpoint.get_entity_area_2x2());
 
-                // adjacent dual rail
-                let next = self.move_force_rotate_clockwise(1);
-                let next = next.move_force_forward_steps(1);
-                res.extend_from_slice(&next.endpoint.get_entity_area_2x2());
+                    // adjacent dual rail
+                    let next = next.move_force_rotate_clockwise(1);
+                    let next = next.move_forward_single_num(DUAL_RAIL_SIZE - /*not self rail*/1);
+                    res.extend_from_slice(&next.endpoint.get_entity_area_2x2());
+                }
             }
-            RailMode::Turn90(source_point, source_direction) => {
-                let source_rail = Rail {
-                    endpoint: source_point.clone(),
-                    direction: source_direction.clone(),
-                    mode: RailMode::Straight,
-                };
-                // debug!("source {:?}", source_rail);
+            RailMode::Turn(turn_type) => {
+                // ↓↓↓↓↓↓↓↓↓ GHETTO FIX
+                let mut last_leg = self.clone();
+                last_leg.mode = RailMode::Straight;
+                res.extend_from_slice(&last_leg.area());
 
-                let first_leg = source_rail.move_forward();
-                // debug!("first_leg {:?}", first_leg);
+                let first_leg = self.move_force_rotate_clockwise(2).move_forward_step();
+                let first_leg = first_leg.move_force_rotate_clockwise(match &turn_type {
+                    TurnType::Turn90 => 1,
+                    TurnType::Turn270 => 3,
+                });
+                res.extend_from_slice(&first_leg.area());
 
-                let is_left_turn =
-                    source_rail.move_force_rotate_clockwise(1).direction == self.direction;
-                if is_left_turn {
-                    let dog_leg = first_leg.move_force_forward_steps(1);
-                    res.extend(dog_leg.area());
-                    // debug!("dog_leg {:?}", dog_leg);
+                let before = res.len();
+                res.sort();
+                res.dedup();
+                let after = res.len();
+                if ![8, 0].contains(&(before - after)) {
+                    panic!("Asd {} {} {}", before, after, before - after);
                 }
 
-                let mut second_leg = first_leg.clone();
-                second_leg.direction = self.direction.clone();
-                second_leg = second_leg.move_forward();
-                // debug!("second_leg {:?}", second_leg);
+                // ↑↑↑↑↑↑↑↑↑ GHETTO FIX
 
-                res.extend(first_leg.area());
-
-                res.extend(second_leg.area());
-
-                // very first row is the source's
-                unimplemented!("asd");
-                // for width in 1..RAIL_STEP_SIZE {
-                //     for height in 0..RAIL_STEP_SIZE {
-                //         let mut next = source_rail.clone();
-                //         next.move_force_forward_mut(width);
-                //         next.direction = self.direction.clone();
-                //         next.move_force_forward_mut(height);
+                // ----- PROPER FIX
+                // let endpoint = self.endpoint;
                 //
-                //         res.push(next.endpoint);
+                // let (template, x_sign, y_sign) = match (&self.direction, turn_type) {
+                //     (RailDirection::Left, TurnType::Turn90) => {
+                //         (rail_turn_template_down_right(), 1, 1)
+                //     }
+                //     (RailDirection::Right, TurnType::Turn270) => {
+                //         (rail_turn_template_up_left(), -1, 1)
+                //     }
+                //     (direction, turn) => {
+                //         unimplemented!("no template for {:?} {:?}", direction, turn)
+                //     }
+                // };
+                //
+                // for (y_pos, row) in template.iter().enumerate() {
+                //     for (x_pos, value) in row.iter().enumerate() {
+                //         if *value {
+                //             let this_point =
+                //                 endpoint.move_xy(x_pos as i32 * x_sign, y_pos as i32 * y_sign);
+                //             res.push(this_point);
+                //         }
                 //     }
                 // }
+                // ----- PROPER FIX
 
-                res.sort();
-                let res_before = res.len();
-                res.dedup();
-                let res_dedupred = res_before - res.len();
-                if res_dedupred != 0 {
-                    warn!("{}", res_dedupred);
-                }
+                // // TODO: Temporary solution
+
+                //
+
+                // let next = self.move_force_rotate_clockwise(2);
+                // let next = next.move_forward_step();
+                // let next_last_leg = next.move_force_rotate_clockwise(2);
+                // res.extend_from_slice(&next_last_leg.endpoint.get_entity_area_2x2());
+
+                // let next = self.move_force_rotate_clockwise(1);
+                // let next = next.move_forward_step();
+                // res.extend_from_slice(&next.area());
+                // res.extend_from_slice(&next.endpoint.get_entity_area_2x2());
+
+                // let source_rail = Rail {
+                //     endpoint: source_point.clone(),
+                //     direction: source_direction.clone(),
+                //     mode: RailMode::Straight,
+                // };
+                // // debug!("source {:?}", source_rail);
+                //
+                // let first_leg = source_rail.move_forward_step();
+                // // debug!("first_leg {:?}", first_leg);
+                //
+                // // let is_left_turn =
+                // //     source_rail.move_force_rotate_clockwise(1).direction == self.direction;
+                // // if is_left_turn {
+                // //     let dog_leg = first_leg.move_force_forward_steps(1);
+                // //     res.extend(dog_leg.area());
+                // //     // debug!("dog_leg {:?}", dog_leg);
+                // // }
+                //
+                // let mut second_leg = first_leg.clone();
+                // second_leg.direction = self.direction.clone();
+                // second_leg = second_leg.move_forward();
+                // // debug!("second_leg {:?}", second_leg);
+                //
+                // res.extend(first_leg.area());
+                //
+                // res.extend(second_leg.area());
+                //
+                // // very first row is the source's
+                // unimplemented!("asd");
+                // // for width in 1..RAIL_STEP_SIZE {
+                // //     for height in 0..RAIL_STEP_SIZE {
+                // //         let mut next = source_rail.clone();
+                // //         next.move_force_forward_mut(width);
+                // //         next.direction = self.direction.clone();
+                // //         next.move_force_forward_mut(height);
+                // //
+                // //         res.push(next.endpoint);
+                // //     }
+                // // }
             }
         }
 
-        for entry in &res {
-            debug!("ENTRY {:?}", entry);
-        }
+        // for entry in &res {
+        //     debug!("ENTRY {:?}", entry);
+        // }
         let before = res.len();
         res.sort();
         res.dedup();
@@ -224,67 +315,64 @@ impl Rail {
     }
 
     pub fn move_force_rotate_clockwise(&self, rotations: usize) -> Self {
-        let mut directions = RAIL_DIRECTION_CLOCKWISE.iter().cycle();
-
-        while directions.next().unwrap() != &self.direction {}
-
-        let mut new_direction = directions.next().unwrap();
-        for _ in 1..rotations {
-            new_direction = directions.next().unwrap();
-        }
-
         let mut next = self.clone();
-        next.direction = new_direction.clone();
+        next.direction = next.direction.spinner(rotations);
         next
     }
 
     ///
-    pub fn move_backwards_toward_water(
-        &self,
-        surface: &VSurface,
-        working_buffer: &mut SurfaceDiff,
-    ) -> Self {
-        // // come in as far away as possible
-        // // optimize area around base
-        let mut next = self.clone();
-        next = next.move_force_rotate_clockwise(2);
-        // TODO
-        loop {
-            let next_rail = next.move_forward();
-            if let Some(next_rail) = next_rail.into_buildable(surface, working_buffer) {
-                next = next_rail;
-            } else {
-                break;
-            }
-        }
-        // point back in original direction
-        next = next.move_force_rotate_clockwise(2);
-        // back away from water with a full step
-        next = next.move_forward();
-        // full step again for spacing (eg in a cove)
-        next = next.move_forward();
+    // pub fn move_backwards_toward_water(
+    //     &self,
+    //     surface: &VSurface,
+    //     working_buffer: &mut SurfaceDiff,
+    // ) -> Self {
+    //     // come in as far away as possible
+    //     // optimize area around base
+    //     let mut next = self.clone();
+    //     next = next.move_force_rotate_clockwise(2);
+    //     // TODO
+    //     loop {
+    //         let next_rail = next.move_forward();
+    //         if let Some(next_rail) = next_rail.into_buildable(surface, working_buffer) {
+    //             next = next_rail;
+    //         } else {
+    //             break;
+    //         }
+    //     }
+    //     // point back in original direction
+    //     next = next.move_force_rotate_clockwise(2);
+    //     // back away from water with a full step
+    //     next = next.move_forward();
+    //     // full step again for spacing (eg in a cove)
+    //     next = next.move_forward();
+    //
+    //     debug!("move backwards from {:?} to {:?}", self, next);
+    //
+    //     next
+    // }
 
-        debug!("move backwards from {:?} to {:?}", self, next);
-
-        next
-    }
-
-    pub fn move_forward(&self) -> Self {
-        let mut next = self.clone();
+    pub fn move_forward_step(&self) -> Self {
+        let mut next = self.move_forward_single_num(RAIL_STEP_SIZE);
         next.mode = RailMode::Straight;
-        next.move_force_forward_steps_mut(1);
         next
     }
 
-    pub fn move_force_forward_steps(&self, steps: u32) -> Rail {
-        let mut cur = self.clone();
-        cur.move_force_forward_steps_mut(steps);
-        cur
+    pub fn move_forward_single(&self) -> Self {
+        let mut next = self.move_forward_single_num(1);
+        next.mode = RailMode::Straight;
+        next
     }
 
-    fn move_force_forward_steps_mut(&mut self, steps: u32) {
+    pub fn move_forward_single_num(&self, steps: u32) -> Self {
+        let mut next = self.clone();
+        next.move_force_forward_single_num_mut(steps);
+        next
+    }
+
+    fn move_force_forward_single_num_mut(&mut self, steps: u32) {
         // rail is 2x2
-        let steps = (steps * RAIL_STEP_SIZE) as i32;
+        const RAIL_ENTITY_SIZE: u32 = 2;
+        let steps = (steps * RAIL_ENTITY_SIZE) as i32;
         self.endpoint = match self.direction {
             RailDirection::Up => self.endpoint.move_y(steps),
             RailDirection::Down => self.endpoint.move_y(-steps),
@@ -304,19 +392,20 @@ impl Rail {
     // }
 
     fn move_left(&self) -> Self {
-        self.move_rotating(3)
+        self.move_rotating(TurnType::Turn270)
     }
 
     fn move_right(&self) -> Self {
-        self.move_rotating(1)
+        self.move_rotating(TurnType::Turn90)
     }
 
-    fn move_rotating(&self, rotation_steps: usize) -> Self {
+    fn move_rotating(&self, turn_type: TurnType) -> Self {
         let next = self.clone();
-        let next = next.move_forward();
-        let next = next.move_force_rotate_clockwise(rotation_steps);
-        let mut next = next.move_forward();
-        next.mode = RailMode::Turn90(self.endpoint, self.direction.clone());
+        let next = next.move_forward_step();
+        let next = next.move_force_rotate_clockwise(turn_type.rotations());
+        let mut next = next.move_forward_step();
+        // next.mode = RailMode::Turn90(self.endpoint, self.direction.clone());
+        next.mode = RailMode::Turn(turn_type);
         next
     }
 
@@ -347,7 +436,10 @@ impl Rail {
         }
 
         let mut res = Vec::new();
-        if let Some(rail) = self.move_forward().into_buildable(surface, working_buffer) {
+        if let Some(rail) = self
+            .move_forward_step()
+            .into_buildable(surface, working_buffer)
+        {
             let cost =
                 calculate_cost_for_point(RailAction::Straight, self, &rail, end, resource_cloud);
             if !(rail.distance_to(end) < 400 && rail.direction != end.direction) {
@@ -550,8 +642,11 @@ impl Rail {
 // }
 
 fn is_buildable_point_ref(surface: &VSurface, point: VPoint) -> bool {
+    if surface.is_point_out_of_bounds(&point) {
+        return false;
+    }
     match surface.get_pixel(&point) {
-        Some(Pixel::Empty) => true,
+        Pixel::Empty => true,
         _existing => {
             // debug!("blocked at {:?} by {:?}", &position, existing);
             false
@@ -606,436 +701,662 @@ pub fn write_rail(surface: &mut VSurface, path: &Vec<Rail>) -> VResult<()> {
     Ok(())
 }
 
-// #[cfg(test)]
-// mod test {
-//     use crate::navigator::mori::{write_rail, Rail, RailDirection, RailPoint, RAIL_STEP_SIZE};
-//     use crate::surface::pixel::Pixel;
-//     use crate::surface::surface::{PointU32, Surface};
-//     use opencv::prelude::*;
-//     use std::path::Path;
-//
-//     // #[test]
-//     // fn use_cloud() {
-//     //     let mut surface = Surface::new(100, 100);
-//     //     // surface.set_pixel(Pixel::IronOre, 50, 5);
-//     //     devo_start(
-//     //         &mut surface,
-//     //         Rail::new_straight(PointU32 { x: 15, y: 15 }, RailDirection::Right),
-//     //         Rail::new_straight(PointU32 { x: 85, y: 15 }, RailDirection::Right),
-//     //     );
-//     //     surface.save(Path::new("work/test"))
-//     // }
-//
-//     #[test]
-//     fn operator() {
-//         let mut surface = Surface::new(200, 200);
-//         let mut path: Vec<Rail> = Vec::new();
-//
-//         let origin = PointU32 { x: 75, y: 75 };
-//         surface.set_pixel_point_u32(Pixel::Highlighter, origin);
-//
-//         path.extend(make_dash_left(origin));
-//         path.extend(make_dash_right(origin));
-//         path.extend(make_dash_up(origin));
-//         path.extend(make_dash_down(origin));
-//         //
-//         path.extend(make_left_side_left_l(origin));
-//         path.extend(make_left_side_right_l(origin));
-//         //
-//         path.extend(make_right_side_left_l(origin));
-//         path.extend(make_right_side_right_l(origin));
-//         //
-//         path.extend(make_up_side_left_l(origin));
-//         path.extend(make_up_side_right_l(origin));
-//         //
-//         path.extend(make_down_side_left_l(origin));
-//         path.extend(make_down_side_right_l(origin));
-//         //
-//         path.extend(make_l_alone(origin));
-//         path.extend(make_r_alone(origin));
-//         write_rail(&mut surface, &path);
-//
-//         surface.save(Path::new("work/test"))
-//     }
-//
-//     const DASH_STEP_SIZE: u32 = 6;
-//
-//     fn make_dash_left(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//                 y: origin.y,
-//             },
-//             RailDirection::Left,
-//         ));
-//
-//         path
-//     }
-//
-//     fn make_dash_right(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//                 y: origin.y,
-//             },
-//             RailDirection::Left,
-//         ));
-//
-//         path
-//     }
-//
-//     fn make_dash_up(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x,
-//                 y: origin.y + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//             },
-//             RailDirection::Up,
-//         ));
-//
-//         path
-//     }
-//
-//     fn make_dash_down(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x,
-//                 y: origin.y - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//             },
-//             RailDirection::Down,
-//         ));
-//
-//         path
-//     }
-//
-//     fn make_left_side_left_l(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//                 y: origin.y - (RAIL_STEP_SIZE * 2),
-//             },
-//             RailDirection::Left,
-//         ));
-//         path.push(path.last().unwrap().move_left().unwrap());
-//         path.push(path.last().unwrap().move_forward().unwrap());
-//
-//         // for i in 0..(RAIL_STEP_SIZE * 2) {
-//         //     surface.set_pixel(Pixel::Stone, 30, 35 + i);
-//         // }
-//         path
-//     }
-//
-//     fn make_left_side_right_l(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//                 y: origin.y + (RAIL_STEP_SIZE * 2),
-//             },
-//             RailDirection::Left,
-//         ));
-//         // path.push(path.last().unwrap().move_forward().unwrap());
-//         path.push(path.last().unwrap().move_right().unwrap());
-//         path.push(path.last().unwrap().move_forward().unwrap());
-//         path
-//     }
-//
-//     fn make_right_side_left_l(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//                 y: origin.y + (RAIL_STEP_SIZE * 2),
-//             },
-//             RailDirection::Right,
-//         ));
-//
-//         path.push(path.last().unwrap().move_forward().unwrap());
-//
-//         // for i in 0..(RAIL_STEP_SIZE * 2) {
-//         //     surface.set_pixel(Pixel::Stone, 30, 35 + i);
-//         // }
-//         path
-//     }
-//
-//     fn make_right_side_right_l(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//                 y: origin.y - (RAIL_STEP_SIZE * 2),
-//             },
-//             RailDirection::Right,
-//         ));
-//         // path.push(path.last().unwrap().move_forward().unwrap());
-//         path.push(path.last().unwrap().move_right().unwrap());
-//         path.push(path.last().unwrap().move_forward().unwrap());
-//         path
-//     }
-//
-//     fn make_up_side_left_l(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x - (RAIL_STEP_SIZE * 2),
-//                 y: origin.y + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//             },
-//             RailDirection::Up,
-//         ));
-//         path.push(path.last().unwrap().move_left().unwrap());
-//         path.push(path.last().unwrap().move_forward().unwrap());
-//
-//         // for i in 0..(RAIL_STEP_SIZE * 2) {
-//         //     surface.set_pixel(Pixel::Stone, 30, 35 + i);
-//         // }
-//         path
-//     }
-//
-//     fn make_up_side_right_l(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x + (RAIL_STEP_SIZE * 2),
-//                 y: origin.y + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//             },
-//             RailDirection::Up,
-//         ));
-//         // path.push(path.last().unwrap().move_forward().unwrap());
-//         path.push(path.last().unwrap().move_right().unwrap());
-//         path.push(path.last().unwrap().move_forward().unwrap());
-//         path
-//     }
-//
-//     fn make_down_side_left_l(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x + (RAIL_STEP_SIZE * 2),
-//                 y: origin.y - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//             },
-//             RailDirection::Down,
-//         ));
-//         path.push(path.last().unwrap().move_left().unwrap());
-//         path.push(path.last().unwrap().move_forward().unwrap());
-//
-//         // for i in 0..(RAIL_STEP_SIZE * 2) {
-//         //     surface.set_pixel(Pixel::Stone, 30, 35 + i);
-//         // }
-//         path
-//     }
-//
-//     fn make_down_side_right_l(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x - (RAIL_STEP_SIZE * 2),
-//                 y: origin.y - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//             },
-//             RailDirection::Down,
-//         ));
-//         // path.push(path.last().unwrap().move_forward().unwrap());
-//         path.push(path.last().unwrap().move_right().unwrap());
-//         path.push(path.last().unwrap().move_forward().unwrap());
-//         path
-//     }
-//
-//     fn make_l_alone(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x - (RAIL_STEP_SIZE * 2),
-//                 y: origin.y + 100 - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//             },
-//             RailDirection::Down,
-//         ));
-//         path.push(path.last().unwrap().move_left().unwrap());
-//
-//         // [path.last().unwrap().clone()].into()
-//         path
-//     }
-//
-//     fn make_r_alone(origin: PointU32) -> Vec<Rail> {
-//         let mut path = Vec::new();
-//         path.push(Rail::new_straight(
-//             PointU32 {
-//                 x: origin.x - (RAIL_STEP_SIZE * 2),
-//                 y: origin.y + 140 - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
-//             },
-//             RailDirection::Down,
-//         ));
-//         path.push(path.last().unwrap().move_right().unwrap());
-//
-//         // Vec::from([path.last().unwrap().clone()])
-//         path
-//     }
-//
-//     #[test]
-//     fn surface_vs_opencv() {
-//         let mut surface = Surface::new(100, 100);
-//         let center = PointU32 { x: 15, y: 15 };
-//
-//         surface.draw_square(&Pixel::Stone, 5, &center);
-//
-//         let mut img = surface.get_buffer_to_cv();
-//         match img.at_2d_mut::<u8>(center.x as i32, center.y as i32) {
-//             Ok(e) => *e = Pixel::EdgeWall as u8,
-//             Err(e) => panic!("error {}", e),
-//         }
-//         surface.set_buffer_from_cv(img);
-//
-//         surface.save(Path::new("work/test2"))
-//     }
-//
-//     #[test]
-//     fn closed_circle_left_test() {
-//         let mut surface = Surface::new(100, 100);
-//         let start = PointU32 { x: 50, y: 50 };
-//
-//         let mut rail = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
-//         rail.push(rail.last().unwrap().move_left().unwrap());
-//         rail.push(rail.last().unwrap().move_left().unwrap());
-//         rail.push(rail.last().unwrap().move_left().unwrap());
-//         rail.push(rail.last().unwrap().move_left().unwrap());
-//         assert_eq_rail(
-//             rail.first().unwrap(),
-//             rail.last().unwrap(),
-//             &mut surface,
-//             &rail,
-//             |r| r.x + r.y,
-//         );
-//     }
-//
-//     #[test]
-//     fn closed_circle_right_test() {
-//         let mut surface = Surface::new(100, 100);
-//         let start = PointU32 { x: 50, y: 50 };
-//
-//         // we are on X going up and down Y for turns
-//         let mut rail = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
-//         rail.push(rail.last().unwrap().move_right().unwrap());
-//         rail.push(rail.last().unwrap().move_right().unwrap());
-//         rail.push(rail.last().unwrap().move_right().unwrap());
-//         rail.push(rail.last().unwrap().move_right().unwrap());
-//         assert_eq_rail(
-//             rail.first().unwrap(),
-//             rail.last().unwrap(),
-//             &mut surface,
-//             &rail,
-//             |r| r.y,
-//         );
-//     }
-//
-//     #[test]
-//     fn return_to_center_line_right_test() {
-//         let mut surface = Surface::new(100, 100);
-//         let start = PointU32 { x: 30, y: 50 };
-//
-//         let mut rail = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
-//         rail.push(rail.last().unwrap().move_right().unwrap());
-//         rail.push(rail.last().unwrap().move_left().unwrap());
-//         rail.push(rail.last().unwrap().move_left().unwrap());
-//         rail.push(rail.last().unwrap().move_right().unwrap());
-//         assert_eq_rail(
-//             rail.first().unwrap(),
-//             rail.last().unwrap(),
-//             &mut surface,
-//             &rail,
-//             |r| r.y,
-//         );
-//     }
-//
-//     #[test]
-//     fn return_to_center_line_left_test() {
-//         let mut surface = Surface::new(100, 100);
-//         let start = PointU32 { x: 30, y: 50 };
-//
-//         let mut rail: Vec<Rail> = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
-//         rail.push(rail.last().unwrap().move_left().unwrap());
-//         rail.push(rail.last().unwrap().move_right().unwrap());
-//         rail.push(rail.last().unwrap().move_right().unwrap());
-//         rail.push(rail.last().unwrap().move_left().unwrap());
-//         assert_eq_rail(
-//             rail.first().unwrap(),
-//             rail.last().unwrap(),
-//             &mut surface,
-//             &rail,
-//             |r| r.y,
-//         );
-//     }
-//
-//     #[test]
-//     fn centerline_vs_left_right_distance_test() {
-//         let mut surface = Surface::new(100, 100);
-//         let start = PointU32 { x: 30, y: 50 };
-//
-//         let mut wavy_rail: Vec<Rail> = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
-//         wavy_rail.push(wavy_rail.last().unwrap().move_left().unwrap());
-//         wavy_rail.push(wavy_rail.last().unwrap().move_right().unwrap());
-//         wavy_rail.push(wavy_rail.last().unwrap().move_right().unwrap());
-//         wavy_rail.push(wavy_rail.last().unwrap().move_left().unwrap());
-//
-//         let mut straight_rail: Vec<Rail> = Vec::from([Rail::new_straight(
-//             PointU32 {
-//                 x: start.x,
-//                 y: start.y - 20,
-//             },
-//             RailDirection::Right,
-//         )]);
-//         straight_rail.push(straight_rail.last().unwrap().move_forward().unwrap());
-//         straight_rail.push(straight_rail.last().unwrap().move_forward().unwrap());
-//         straight_rail.push(straight_rail.last().unwrap().move_forward().unwrap());
-//         straight_rail.push(straight_rail.last().unwrap().move_forward().unwrap());
-//
-//         let mut all_rail = Vec::new();
-//         wavy_rail.clone().into_iter().for_each(|v| all_rail.push(v));
-//         straight_rail
-//             .clone()
-//             .into_iter()
-//             .for_each(|v| all_rail.push(v));
-//
-//         assert_eq_rail(
-//             straight_rail.last().unwrap(),
-//             wavy_rail.last().unwrap(),
-//             &mut surface,
-//             &all_rail,
-//             |r| r.x,
-//         );
-//
-//         for i in 0..wavy_rail.len() {
-//             assert_eq_rail(
-//                 &straight_rail[i],
-//                 &wavy_rail[i],
-//                 &mut surface,
-//                 &all_rail,
-//                 |r| r.x,
-//             );
-//         }
-//     }
-//
-//     fn assert_eq_rail<T>(a: &Rail, b: &Rail, surface: &mut Surface, all_rail: &Vec<Rail>, test: T)
-//     where
-//         T: Fn(&RailPoint) -> i32,
-//     {
-//         let compare_a = test(&a.endpoint);
-//         let compare_b = test(&b.endpoint);
-//         if compare_a != compare_b {
-//             write_rail(surface, all_rail);
-//             surface.save(Path::new("work/test4"));
-//
-//             assert_eq!(
-//                 compare_a, compare_b,
-//                 "point left {:?} right {:?}",
-//                 a.endpoint, b.endpoint
-//             );
-//         }
-//     }
-// }
+#[cfg(test)]
+mod test {
+    use crate::log_init;
+    use crate::navigator::mori::{mori_start, Rail, RailDirection};
+    use crate::surface::pixel::Pixel;
+    use crate::surfacev::vpoint::VPoint;
+    use crate::surfacev::vsurface::VSurface;
+    use itertools::Itertools;
+
+    #[test]
+    fn rail_area_up_down_test() {
+        const TEST_RADIUS: usize = 10;
+        let mut surface = VSurface::new(TEST_RADIUS as u32);
+
+        draw_rail(
+            &mut surface,
+            &Rail::new_straight(VPoint::new(-5, 5), RailDirection::Up),
+        );
+        draw_rail(
+            &mut surface,
+            &Rail::new_straight(VPoint::new(1, -5), RailDirection::Down),
+        );
+        // surface.set_pixel(VPoint::new(-9, -9), Pixel::Rail).unwrap();
+
+        let actual_str = format_surface_dump(&surface);
+
+        let expected = [
+            // -10,-10       9,-10
+            ".................... // 0",
+            "....................",
+            ".................... // 2",
+            "....................",
+            ".................... // 4",
+            // -5
+            ".11..11....91..11...",
+            ".11..11....11..11... // 6",
+            ".11..11....11..11...",
+            ".11..11....11..11... // 8",
+            ".11..11....11..11...",
+            // 0
+            ".11..11....11..11... // 10",
+            ".11..11....11..11...",
+            ".11..11....11..11... // 12",
+            ".11..11....11..11...",
+            ".11..11....11..11... // 14",
+            // 5
+            ".11..91....11..11...",
+            ".11..11....11..11... // 16",
+            "....................",
+            ".................... // 18",
+            "....................",
+            // -10,9          9,9
+        ]
+        .join("\n");
+
+        assert_eq!(actual_str, expected,);
+    }
+
+    #[test]
+    fn rail_area_down_right_test() {
+        const TEST_RADIUS: usize = 16;
+
+        let mut surface = VSurface::new(TEST_RADIUS as u32);
+
+        let origin_rail = Rail::new_straight(VPoint::new(0, 2), RailDirection::Down);
+        draw_rail(&mut surface, &origin_rail);
+        let turn_rail = origin_rail.move_right();
+        draw_rail(&mut surface, &turn_rail);
+        // draw_rail(&mut surface, VPoint::new(1, -5), RailDirection::Down);
+
+        let actual_str = format_surface_dump(&surface);
+
+        let expected = [
+            // -10,-10       9,-10
+            ".................... // .",
+            "....................",
+            ".................... // 2",
+            "....................",
+            ".................... // 4",
+            // -5
+            ".11..11....91..11...",
+            ".11..11....11..11... // 6",
+            ".11..11....11..11...",
+            ".11..11....11..11... // 8",
+            ".11..11....11..11...",
+            // 0
+            ".11..11....11..11... // 10",
+            ".11..11....11..11...",
+            ".11..11....11..11... // 12",
+            ".11..11....11..11...",
+            ".11..11....11..11... // 14",
+            // 5
+            ".11..91....11..11...",
+            ".11..11....11..11... // 16",
+            "....................",
+            ".................... // 18",
+            "....................",
+            // -10,9          9,9
+        ]
+        .join("\n");
+
+        assert_eq!(actual_str, expected,);
+    }
+
+    #[test]
+    fn rail_area_down_left_test() {
+        const TEST_RADIUS: usize = 30;
+        let mut surface = VSurface::new(TEST_RADIUS as u32);
+
+        let origin_rail = Rail::new_straight(VPoint::new(-5, 2), RailDirection::Down);
+        draw_rail(&mut surface, &origin_rail);
+        let turn_rail = origin_rail.move_left();
+        draw_rail(&mut surface, &turn_rail);
+        // draw_rail(&mut surface, VPoint::new(1, -5), RailDirection::Down);
+
+        let actual_str = format_surface_dump(&surface);
+
+        let expected = [
+            // -10,-10       9,-10
+            ".................... // .",
+            "....................",
+            ".................... // 2",
+            "....................",
+            ".................... // 4",
+            // -5
+            ".11..11....91..11...",
+            ".11..11....11..11... // 6",
+            ".11..11....11..11...",
+            ".11..11....11..11... // 8",
+            ".11..11....11..11...",
+            // 0
+            ".11..11....11..11... // 10",
+            ".11..11....11..11...",
+            ".11..11....11..11... // 12",
+            ".11..11....11..11...",
+            ".11..11....11..11... // 14",
+            // 5
+            ".11..91....11..11...",
+            ".11..11....11..11... // 16",
+            "....................",
+            ".................... // 18",
+            "....................",
+            // -10,9          9,9
+        ]
+        .join("\n");
+
+        assert_eq!(actual_str, expected,);
+    }
+
+    #[test]
+    fn mori_basic_test() {
+        log_init();
+
+        const TEST_RADIUS: usize = 30;
+        let mut surface = VSurface::new(TEST_RADIUS as u32);
+
+        let start_rail = Rail::new_straight(VPoint::new(-14, 2), RailDirection::Right);
+        let end_rail = start_rail
+            .move_forward_step()
+            .move_forward_step()
+            .move_forward_step();
+        // write_rail(
+        //     &mut surface,
+        //     &[start_rail.clone(), end_rail.clone()].to_vec(),
+        // )
+        // .unwrap();
+
+        mori_start(&mut surface, start_rail, end_rail);
+
+        let actual = format_surface_dump(&surface);
+        assert_eq!("asdf", actual);
+    }
+
+    fn draw_rail(surface: &mut VSurface, rail: &Rail) {
+        for point in rail.area() {
+            surface.set_pixel(point, Pixel::Rail).unwrap();
+        }
+        surface
+            .set_pixel(rail.endpoint, Pixel::Highlighter)
+            .unwrap();
+    }
+
+    fn format_surface_dump(surface: &VSurface) -> String {
+        let mut actual: Vec<Vec<String>> = Vec::new();
+        for chunk in &surface
+            .test_dump_pixels_xy()
+            .chunks((surface.get_radius() * 2) as usize)
+        {
+            let actual_row = chunk
+                .map(|v| match *v {
+                    Pixel::Empty => ".".to_string(),
+                    Pixel::Highlighter => "9".to_string(),
+                    Pixel::Rail => "5".to_string(),
+                    // _ => "1".to_string(),
+                    v => panic!("unhandled {:?}", v),
+                })
+                .collect();
+            actual.push(actual_row);
+        }
+        format_dump(actual.as_slice())
+    }
+
+    fn format_dump(binary_surface: &[Vec<String>]) -> String {
+        binary_surface
+            .iter()
+            .enumerate()
+            .map(|(i, chunk)| {
+                format!(
+                    "{}{}",
+                    chunk.iter().join(""),
+                    if i % 2 == 0 {
+                        format!(" // {}", i)
+                    } else {
+                        "".to_string()
+                    }
+                )
+            })
+            .join("\n")
+    }
+
+    #[test]
+    fn move_left_right_direction_test() {
+        let origin = Rail::new_straight(VPoint::zero(), RailDirection::Up);
+
+        assert_eq!(origin.move_left().direction, RailDirection::Left);
+        assert_eq!(origin.move_right().direction, RailDirection::Right);
+
+        let origin = Rail::new_straight(VPoint::zero(), RailDirection::Down);
+
+        assert_eq!(origin.move_left().direction, RailDirection::Right);
+        assert_eq!(origin.move_right().direction, RailDirection::Left);
+    }
+
+    //
+    //     // #[test]
+    //     // fn use_cloud() {
+    //     //     let mut surface = Surface::new(100, 100);
+    //     //     // surface.set_pixel(Pixel::IronOre, 50, 5);
+    //     //     devo_start(
+    //     //         &mut surface,
+    //     //         Rail::new_straight(PointU32 { x: 15, y: 15 }, RailDirection::Right),
+    //     //         Rail::new_straight(PointU32 { x: 85, y: 15 }, RailDirection::Right),
+    //     //     );
+    //     //     surface.save(Path::new("work/test"))
+    //     // }
+    //
+    //     #[test]
+    //     fn operator() {
+    //         let mut surface = Surface::new(200, 200);
+    //         let mut path: Vec<Rail> = Vec::new();
+    //
+    //         let origin = PointU32 { x: 75, y: 75 };
+    //         surface.set_pixel_point_u32(Pixel::Highlighter, origin);
+    //
+    //         path.extend(make_dash_left(origin));
+    //         path.extend(make_dash_right(origin));
+    //         path.extend(make_dash_up(origin));
+    //         path.extend(make_dash_down(origin));
+    //         //
+    //         path.extend(make_left_side_left_l(origin));
+    //         path.extend(make_left_side_right_l(origin));
+    //         //
+    //         path.extend(make_right_side_left_l(origin));
+    //         path.extend(make_right_side_right_l(origin));
+    //         //
+    //         path.extend(make_up_side_left_l(origin));
+    //         path.extend(make_up_side_right_l(origin));
+    //         //
+    //         path.extend(make_down_side_left_l(origin));
+    //         path.extend(make_down_side_right_l(origin));
+    //         //
+    //         path.extend(make_l_alone(origin));
+    //         path.extend(make_r_alone(origin));
+    //         write_rail(&mut surface, &path);
+    //
+    //         surface.save(Path::new("work/test"))
+    //     }
+    //
+    //     const DASH_STEP_SIZE: u32 = 6;
+    //
+    //     fn make_dash_left(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //                 y: origin.y,
+    //             },
+    //             RailDirection::Left,
+    //         ));
+    //
+    //         path
+    //     }
+    //
+    //     fn make_dash_right(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //                 y: origin.y,
+    //             },
+    //             RailDirection::Left,
+    //         ));
+    //
+    //         path
+    //     }
+    //
+    //     fn make_dash_up(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x,
+    //                 y: origin.y + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //             },
+    //             RailDirection::Up,
+    //         ));
+    //
+    //         path
+    //     }
+    //
+    //     fn make_dash_down(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x,
+    //                 y: origin.y - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //             },
+    //             RailDirection::Down,
+    //         ));
+    //
+    //         path
+    //     }
+    //
+    //     fn make_left_side_left_l(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //                 y: origin.y - (RAIL_STEP_SIZE * 2),
+    //             },
+    //             RailDirection::Left,
+    //         ));
+    //         path.push(path.last().unwrap().move_left().unwrap());
+    //         path.push(path.last().unwrap().move_forward().unwrap());
+    //
+    //         // for i in 0..(RAIL_STEP_SIZE * 2) {
+    //         //     surface.set_pixel(Pixel::Stone, 30, 35 + i);
+    //         // }
+    //         path
+    //     }
+    //
+    //     fn make_left_side_right_l(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //                 y: origin.y + (RAIL_STEP_SIZE * 2),
+    //             },
+    //             RailDirection::Left,
+    //         ));
+    //         // path.push(path.last().unwrap().move_forward().unwrap());
+    //         path.push(path.last().unwrap().move_right().unwrap());
+    //         path.push(path.last().unwrap().move_forward().unwrap());
+    //         path
+    //     }
+    //
+    //     fn make_right_side_left_l(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //                 y: origin.y + (RAIL_STEP_SIZE * 2),
+    //             },
+    //             RailDirection::Right,
+    //         ));
+    //
+    //         path.push(path.last().unwrap().move_forward().unwrap());
+    //
+    //         // for i in 0..(RAIL_STEP_SIZE * 2) {
+    //         //     surface.set_pixel(Pixel::Stone, 30, 35 + i);
+    //         // }
+    //         path
+    //     }
+    //
+    //     fn make_right_side_right_l(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //                 y: origin.y - (RAIL_STEP_SIZE * 2),
+    //             },
+    //             RailDirection::Right,
+    //         ));
+    //         // path.push(path.last().unwrap().move_forward().unwrap());
+    //         path.push(path.last().unwrap().move_right().unwrap());
+    //         path.push(path.last().unwrap().move_forward().unwrap());
+    //         path
+    //     }
+    //
+    //     fn make_up_side_left_l(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x - (RAIL_STEP_SIZE * 2),
+    //                 y: origin.y + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //             },
+    //             RailDirection::Up,
+    //         ));
+    //         path.push(path.last().unwrap().move_left().unwrap());
+    //         path.push(path.last().unwrap().move_forward().unwrap());
+    //
+    //         // for i in 0..(RAIL_STEP_SIZE * 2) {
+    //         //     surface.set_pixel(Pixel::Stone, 30, 35 + i);
+    //         // }
+    //         path
+    //     }
+    //
+    //     fn make_up_side_right_l(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x + (RAIL_STEP_SIZE * 2),
+    //                 y: origin.y + (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //             },
+    //             RailDirection::Up,
+    //         ));
+    //         // path.push(path.last().unwrap().move_forward().unwrap());
+    //         path.push(path.last().unwrap().move_right().unwrap());
+    //         path.push(path.last().unwrap().move_forward().unwrap());
+    //         path
+    //     }
+    //
+    //     fn make_down_side_left_l(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x + (RAIL_STEP_SIZE * 2),
+    //                 y: origin.y - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //             },
+    //             RailDirection::Down,
+    //         ));
+    //         path.push(path.last().unwrap().move_left().unwrap());
+    //         path.push(path.last().unwrap().move_forward().unwrap());
+    //
+    //         // for i in 0..(RAIL_STEP_SIZE * 2) {
+    //         //     surface.set_pixel(Pixel::Stone, 30, 35 + i);
+    //         // }
+    //         path
+    //     }
+    //
+    //     fn make_down_side_right_l(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x - (RAIL_STEP_SIZE * 2),
+    //                 y: origin.y - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //             },
+    //             RailDirection::Down,
+    //         ));
+    //         // path.push(path.last().unwrap().move_forward().unwrap());
+    //         path.push(path.last().unwrap().move_right().unwrap());
+    //         path.push(path.last().unwrap().move_forward().unwrap());
+    //         path
+    //     }
+    //
+    //     fn make_l_alone(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x - (RAIL_STEP_SIZE * 2),
+    //                 y: origin.y + 100 - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //             },
+    //             RailDirection::Down,
+    //         ));
+    //         path.push(path.last().unwrap().move_left().unwrap());
+    //
+    //         // [path.last().unwrap().clone()].into()
+    //         path
+    //     }
+    //
+    //     fn make_r_alone(origin: PointU32) -> Vec<Rail> {
+    //         let mut path = Vec::new();
+    //         path.push(Rail::new_straight(
+    //             PointU32 {
+    //                 x: origin.x - (RAIL_STEP_SIZE * 2),
+    //                 y: origin.y + 140 - (RAIL_STEP_SIZE * DASH_STEP_SIZE),
+    //             },
+    //             RailDirection::Down,
+    //         ));
+    //         path.push(path.last().unwrap().move_right().unwrap());
+    //
+    //         // Vec::from([path.last().unwrap().clone()])
+    //         path
+    //     }
+    //
+    //     #[test]
+    //     fn surface_vs_opencv() {
+    //         let mut surface = Surface::new(100, 100);
+    //         let center = PointU32 { x: 15, y: 15 };
+    //
+    //         surface.draw_square(&Pixel::Stone, 5, &center);
+    //
+    //         let mut img = surface.get_buffer_to_cv();
+    //         match img.at_2d_mut::<u8>(center.x as i32, center.y as i32) {
+    //             Ok(e) => *e = Pixel::EdgeWall as u8,
+    //             Err(e) => panic!("error {}", e),
+    //         }
+    //         surface.set_buffer_from_cv(img);
+    //
+    //         surface.save(Path::new("work/test2"))
+    //     }
+    //
+    //     #[test]
+    //     fn closed_circle_left_test() {
+    //         let mut surface = Surface::new(100, 100);
+    //         let start = PointU32 { x: 50, y: 50 };
+    //
+    //         let mut rail = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
+    //         rail.push(rail.last().unwrap().move_left().unwrap());
+    //         rail.push(rail.last().unwrap().move_left().unwrap());
+    //         rail.push(rail.last().unwrap().move_left().unwrap());
+    //         rail.push(rail.last().unwrap().move_left().unwrap());
+    //         assert_eq_rail(
+    //             rail.first().unwrap(),
+    //             rail.last().unwrap(),
+    //             &mut surface,
+    //             &rail,
+    //             |r| r.x + r.y,
+    //         );
+    //     }
+    //
+    //     #[test]
+    //     fn closed_circle_right_test() {
+    //         let mut surface = Surface::new(100, 100);
+    //         let start = PointU32 { x: 50, y: 50 };
+    //
+    //         // we are on X going up and down Y for turns
+    //         let mut rail = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
+    //         rail.push(rail.last().unwrap().move_right().unwrap());
+    //         rail.push(rail.last().unwrap().move_right().unwrap());
+    //         rail.push(rail.last().unwrap().move_right().unwrap());
+    //         rail.push(rail.last().unwrap().move_right().unwrap());
+    //         assert_eq_rail(
+    //             rail.first().unwrap(),
+    //             rail.last().unwrap(),
+    //             &mut surface,
+    //             &rail,
+    //             |r| r.y,
+    //         );
+    //     }
+    //
+    //     #[test]
+    //     fn return_to_center_line_right_test() {
+    //         let mut surface = Surface::new(100, 100);
+    //         let start = PointU32 { x: 30, y: 50 };
+    //
+    //         let mut rail = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
+    //         rail.push(rail.last().unwrap().move_right().unwrap());
+    //         rail.push(rail.last().unwrap().move_left().unwrap());
+    //         rail.push(rail.last().unwrap().move_left().unwrap());
+    //         rail.push(rail.last().unwrap().move_right().unwrap());
+    //         assert_eq_rail(
+    //             rail.first().unwrap(),
+    //             rail.last().unwrap(),
+    //             &mut surface,
+    //             &rail,
+    //             |r| r.y,
+    //         );
+    //     }
+    //
+    //     #[test]
+    //     fn return_to_center_line_left_test() {
+    //         let mut surface = Surface::new(100, 100);
+    //         let start = PointU32 { x: 30, y: 50 };
+    //
+    //         let mut rail: Vec<Rail> = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
+    //         rail.push(rail.last().unwrap().move_left().unwrap());
+    //         rail.push(rail.last().unwrap().move_right().unwrap());
+    //         rail.push(rail.last().unwrap().move_right().unwrap());
+    //         rail.push(rail.last().unwrap().move_left().unwrap());
+    //         assert_eq_rail(
+    //             rail.first().unwrap(),
+    //             rail.last().unwrap(),
+    //             &mut surface,
+    //             &rail,
+    //             |r| r.y,
+    //         );
+    //     }
+    //
+    //     #[test]
+    //     fn centerline_vs_left_right_distance_test() {
+    //         let mut surface = Surface::new(100, 100);
+    //         let start = PointU32 { x: 30, y: 50 };
+    //
+    //         let mut wavy_rail: Vec<Rail> = Vec::from([Rail::new_straight(start, RailDirection::Right)]);
+    //         wavy_rail.push(wavy_rail.last().unwrap().move_left().unwrap());
+    //         wavy_rail.push(wavy_rail.last().unwrap().move_right().unwrap());
+    //         wavy_rail.push(wavy_rail.last().unwrap().move_right().unwrap());
+    //         wavy_rail.push(wavy_rail.last().unwrap().move_left().unwrap());
+    //
+    //         let mut straight_rail: Vec<Rail> = Vec::from([Rail::new_straight(
+    //             PointU32 {
+    //                 x: start.x,
+    //                 y: start.y - 20,
+    //             },
+    //             RailDirection::Right,
+    //         )]);
+    //         straight_rail.push(straight_rail.last().unwrap().move_forward().unwrap());
+    //         straight_rail.push(straight_rail.last().unwrap().move_forward().unwrap());
+    //         straight_rail.push(straight_rail.last().unwrap().move_forward().unwrap());
+    //         straight_rail.push(straight_rail.last().unwrap().move_forward().unwrap());
+    //
+    //         let mut all_rail = Vec::new();
+    //         wavy_rail.clone().into_iter().for_each(|v| all_rail.push(v));
+    //         straight_rail
+    //             .clone()
+    //             .into_iter()
+    //             .for_each(|v| all_rail.push(v));
+    //
+    //         assert_eq_rail(
+    //             straight_rail.last().unwrap(),
+    //             wavy_rail.last().unwrap(),
+    //             &mut surface,
+    //             &all_rail,
+    //             |r| r.x,
+    //         );
+    //
+    //         for i in 0..wavy_rail.len() {
+    //             assert_eq_rail(
+    //                 &straight_rail[i],
+    //                 &wavy_rail[i],
+    //                 &mut surface,
+    //                 &all_rail,
+    //                 |r| r.x,
+    //             );
+    //         }
+    //     }
+    //
+    //     fn assert_eq_rail<T>(a: &Rail, b: &Rail, surface: &mut Surface, all_rail: &Vec<Rail>, test: T)
+    //     where
+    //         T: Fn(&RailPoint) -> i32,
+    //     {
+    //         let compare_a = test(&a.endpoint);
+    //         let compare_b = test(&b.endpoint);
+    //         if compare_a != compare_b {
+    //             write_rail(surface, all_rail);
+    //             surface.save(Path::new("work/test4"));
+    //
+    //             assert_eq!(
+    //                 compare_a, compare_b,
+    //                 "point left {:?} right {:?}",
+    //                 a.endpoint, b.endpoint
+    //             );
+    //         }
+    //     }
+}

@@ -224,8 +224,11 @@ impl VSurface {
         self.pixels.radius()
     }
 
-    pub fn get_pixel(&self, point: &VPoint) -> Option<Pixel> {
-        self.pixels.get_entity_by_point(point).map(|e| e.pixel)
+    pub fn get_pixel(&self, point: &VPoint) -> Pixel {
+        match self.pixels.get_entity_by_point(point) {
+            Some(e) => e.pixel,
+            None => Pixel::Empty,
+        }
     }
 
     pub fn set_pixel(&mut self, start: VPoint, pixel: Pixel) -> VResult<()> {
@@ -254,6 +257,10 @@ impl VSurface {
 
     pub fn is_xy_out_of_bounds(&self, x: i32, y: i32) -> bool {
         self.pixels.is_xy_out_of_bounds(x, y)
+    }
+
+    pub fn is_point_out_of_bounds(&self, point: &VPoint) -> bool {
+        self.pixels.is_point_out_of_bounds(point)
     }
 
     pub fn crop(&mut self, new_radius: u32) {
@@ -322,6 +329,11 @@ impl VSurface {
                 }
             }
         }
+    }
+
+    #[cfg(test)]
+    pub fn test_dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {
+        self.pixels.iter_xy_pixels()
     }
 
     // pub fn draw_debug_square(&mut self, point: &VPoint) {

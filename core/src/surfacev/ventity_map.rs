@@ -74,9 +74,10 @@ where
     pub fn xy_to_index(&self, x: i32, y: i32) -> usize {
         if self.is_xy_out_of_bounds(x, y) {
             panic!(
-                "Cannot make index {}",
+                "Cannot make index radius {} {}",
+                self.radius,
                 VError::XYOutOfBounds {
-                    positions: vec![],
+                    positions: vec![VPoint::new(x, y)],
                     backtrace: Backtrace::capture()
                 }
             )
@@ -163,6 +164,8 @@ where
             self.xy_to_entity.as_mut_slice()[xy_index] = entity_index;
         }
     }
+
+    pub fn remove(&mut self, entity_index: usize) {}
 
     fn remove_positions(&mut self, indexes: impl IntoIterator<Item = usize>) {
         for index in indexes.into_iter().sorted().unique().rev() {
@@ -400,11 +403,12 @@ where
     }
 
     pub fn get_entity_by_point(&self, point: &VPoint) -> Option<&E> {
-        if self.is_point_out_of_bounds(point) {
+        let index = self.xy_to_index(point.x(), point.y());
+        let entity_id = self.xy_to_entity.as_slice()[index];
+        if entity_id == EMPTY_XY_INDEX {
             None
         } else {
-            let index = self.xy_to_index_unchecked(point.x(), point.y());
-            Some(self.get_entity_by_index(index))
+            Some(self.get_entity_by_index(entity_id))
         }
     }
 

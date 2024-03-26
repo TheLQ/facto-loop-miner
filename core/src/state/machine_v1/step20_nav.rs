@@ -138,13 +138,13 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     }
         // }
 
-        let start = Rail::new_straight(patch_corner, RailDirection::Left).move_forward();
-        let end = start
-            .move_forward()
-            .move_forward()
-            .move_forward()
-            .move_forward();
-        // let end = Rail::new_straight(destination, RailDirection::Left);
+        let start = Rail::new_straight(patch_corner, RailDirection::Left).move_forward_step();
+        // let end = start
+        //     .move_forward_step()
+        //     .move_forward_step()
+        //     .move_forward_step()
+        //     .move_forward_step();
+        let end = Rail::new_straight(destination, RailDirection::Left);
 
         // if 1 + 1 == 2 {
         //     write_rail(surface, &Vec::from([start.clone(), end.clone()]))?;
@@ -161,7 +161,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     return Ok(());
         // }
 
-        if let Some(path) = mori_start(surface, start, end, params) {
+        if let Some(path) = mori_start(surface, start, end) {
             write_rail(surface, &path)?;
             // surface.draw_debug_square(&path[0].endpoint);
             params.metrics.borrow_mut().increment_slow("path-success")
