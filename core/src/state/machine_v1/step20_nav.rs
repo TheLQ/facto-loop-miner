@@ -50,7 +50,7 @@ impl Step for Step20 {
     }
 }
 
-const NEAREST_COUNT: usize = 100;
+const NEAREST_COUNT: usize = 5;
 const PATH_LIMIT: Option<u8> = Some(10);
 // const PATH_LIMIT: Option<u8> = None;
 
@@ -70,22 +70,18 @@ fn navigate_patches_to_base_speculation(
 }
 
 fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> VResult<()> {
-    // TODO: Port to VSurface
-    let x_start = -REMOVE_RESOURCE_BASE_TILES;
-    let x_end = REMOVE_RESOURCE_BASE_TILES;
-    let y_start = -REMOVE_RESOURCE_BASE_TILES;
-    let y_end = REMOVE_RESOURCE_BASE_TILES;
-
-    if 1 + 2 == 34 {
-        for set_x in x_start..x_end {
-            for set_y in x_start..x_end {
-                surface.set_pixel(VPoint::new(set_x, set_y), Pixel::Highlighter)?;
-            }
-        }
-        return Ok(());
-    }
-
-    // tracing::debug!("found {} patch {} away", pixel.as_ref(), patch_distance);
+    // if 1 + 2 == 34 {
+    //     let x_start = -REMOVE_RESOURCE_BASE_TILES;
+    //     let x_end = REMOVE_RESOURCE_BASE_TILES;
+    //     let y_start = -REMOVE_RESOURCE_BASE_TILES;
+    //     let y_end = REMOVE_RESOURCE_BASE_TILES;
+    //     for set_x in x_start..x_end {
+    //         for set_y in x_start..x_end {
+    //             surface.set_pixel(VPoint::new(set_x, set_y), Pixel::Highlighter)?;
+    //         }
+    //     }
+    //     return Ok(());
+    // }
 
     let mut destinations = main_base_destinations().into_iter();
 
@@ -96,16 +92,30 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         .into_iter()
         .cloned()
         .collect();
+    // for end in &ordered_patches {
+    //     for super_x in 0..100 {
+    //         for super_y in 0..100 {
+    //             let hpoint = end.area.start.move_xy(super_x, super_y);
+    //             if !surface.is_point_out_of_bounds(&hpoint) {
+    //                 surface.set_pixel(hpoint, Pixel::Highlighter).unwrap();
+    //             }
+    //         }
+    //     }
+    // }
+    // if true {
+    //     return Ok(());
+    // }
+
     let ordered_size = ordered_patches.len();
     for (nearest_count, patch_start) in ordered_patches.into_iter().enumerate() {
         debug!(
             "path {} of {} - actually made {} max {:?}",
             nearest_count, NEAREST_COUNT, made_paths, PATH_LIMIT,
         );
-        if x_start < patch_start.area.start.x()
-            && x_end > patch_start.area.start.x()
-            && y_start < patch_start.area.start.y()
-            && y_end > patch_start.area.start.y()
+        if patch_start
+            .area
+            .start
+            .is_within_center_radius(REMOVE_RESOURCE_BASE_TILES as u32)
         {
             warn!("broken patch in the remove area {:?}", patch_start);
             continue;
@@ -170,10 +180,10 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         }
         made_paths += 1;
 
-        if 1 + 1 == 2 {
-            info!("BREAK");
-            break;
-        }
+        // if nearest_count >= 2 {
+        //     info!("BREAK");
+        //     break;
+        // }
     }
     info!("out of patches in {}", ordered_size);
 
@@ -199,6 +209,11 @@ fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
     let patches: Vec<&VPatch> = surface
         .get_patches_slice()
         .iter()
+        .filter(|p| {
+            !p.area
+                .start
+                .is_within_center_radius(REMOVE_RESOURCE_BASE_TILES as u32)
+        })
         .filter(|v| v.resource == pixel)
         .collect();
     let cloud = map_vpatch_to_kdtree(patches.iter());

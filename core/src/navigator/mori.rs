@@ -1,13 +1,11 @@
 use crate::navigator::mori_cost::{calculate_cost_for_point, RailAction};
 use crate::navigator::resource_cloud::ResourceCloud;
 use crate::simd_diff::SurfaceDiff;
-use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::err::VResult;
 use crate::surfacev::rail_turn_templates::{
-    rail_turn_template_down_left, rail_turn_template_down_right, rail_turn_template_up_left,
-    rail_turn_template_up_right,
+    rail_turn_template_down_right, rail_turn_template_up_left, rail_turn_template_up_right,
 };
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
@@ -15,6 +13,7 @@ use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
+use std::cell::Cell;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
@@ -24,7 +23,7 @@ use tracing::debug;
 ///
 /// Makes a dual rail + spacing, +6 straight or 90 degree turning, path of rail from start to end.
 /// Without collisions into any point on the Surface.
-pub fn mori_start(surface: &VSurface, start: Rail, end: Rail) -> Option<Vec<Rail>> {
+pub fn mori_start(surface: &mut VSurface, start: Rail, end: Rail) -> Option<Vec<Rail>> {
     let pathfind_watch = BasicWatch::start();
 
     start.endpoint.assert_even_position();
@@ -32,16 +31,20 @@ pub fn mori_start(surface: &VSurface, start: Rail, end: Rail) -> Option<Vec<Rail
 
     // TODO: Benchmark this vs Vec (old version),
     let mut valid_destinations: HashSet<Rail> = HashSet::new();
-    for width in 0..RAIL_STEP_SIZE {
-        for height in 0..RAIL_STEP_SIZE {
+    let step = RAIL_STEP_SIZE as i32;
+    for width in -step..step {
+        for height in -step..step {
             let mut next = end.clone();
-            next.endpoint = next.endpoint.move_xy(width as i32, height as i32);
+            next.endpoint = next.endpoint.move_xy(width, height);
             // surface
             //     .set_pixel(next.endpoint, Pixel::Highlighter)
             //     .unwrap();
             valid_destinations.insert(next);
         }
     }
+    // if 1 + 1 == 2 {
+    //     return None;
+    // }
 
     let resource_cloud = ResourceCloud::from_surface(surface);
 
@@ -78,12 +81,13 @@ pub fn mori_start(surface: &VSurface, start: Rail, end: Rail) -> Option<Vec<Rail
     let end_time = Instant::now();
     debug!("+++ Mori finished in {}", pathfind_watch,);
 
-    debug!(
-        "metric successors called {}",
-        METRIC_SUCCESSOR
-            .swap(0, Ordering::Relaxed)
-            .to_formatted_string(&LOCALE),
-    );
+    unsafe {
+        debug!(
+            "metric successors called {}",
+            METRIC_SUCCESSORS .to_formatted_string(&LOCALE),
+        );
+        METRIC_SUCCESSORS = 0;
+    }
 
     result
 }
@@ -153,7 +157,8 @@ pub struct Rail {
 
 const DUAL_RAIL_SIZE: u32 = 3;
 
-static METRIC_SUCCESSOR: AtomicU64 = AtomicU64::new(0);
+// static METRIC_SUCCESSOR: AtomicU64 = AtomicU64::new(0);
+static mut METRIC_SUCCESSORS: u64 = 0;
 
 const RAIL_STEP_SIZE: u32 = 6;
 
@@ -423,12 +428,12 @@ impl Rail {
         // }
         // debug!("testing {:?}", self);
 
-        {
-            let cur = METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
-            if cur % 100_000 == 0 {
+        unsafe {
+            METRIC_SUCCESSORS += 1;
+            if METRIC_SUCCESSORS % 100_000 == 0 {
                 debug!(
                     "successor {} spot parents {} size {}",
-                    cur.to_formatted_string(&LOCALE),
+                    METRIC_SUCCESSORS.to_formatted_string(&LOCALE),
                     parents.len(),
                     surface.get_radius(),
                 );
@@ -440,26 +445,17 @@ impl Rail {
             .move_forward_step()
             .into_buildable(surface, working_buffer)
         {
-            let cost =
-                calculate_cost_for_point(RailAction::Straight, self, &rail, end, resource_cloud);
-            if !(rail.distance_to(end) < 400 && rail.direction != end.direction) {
-                res.push((rail, cost))
-            }
+            let cost = calculate_cost_for_point(&rail, end, resource_cloud, &parents);
+            res.push((rail, cost));
         }
 
         if let Some(rail) = self.move_left().into_buildable(surface, working_buffer) {
-            let cost =
-                calculate_cost_for_point(RailAction::TurnLeft, self, &rail, end, resource_cloud);
-            if !(rail.distance_to(end) < 400 && rail.direction != end.direction) {
-                res.push((rail, cost))
-            }
+            let cost = calculate_cost_for_point(&rail, end, resource_cloud, &parents);
+            res.push((rail, cost));
         }
         if let Some(rail) = self.move_right().into_buildable(surface, working_buffer) {
-            let cost =
-                calculate_cost_for_point(RailAction::TurnRight, self, &rail, end, resource_cloud);
-            if !(rail.distance_to(end) < 400 && rail.direction != end.direction) {
-                res.push((rail, cost))
-            }
+            let cost = calculate_cost_for_point(&rail, end, resource_cloud, &parents);
+            res.push((rail, cost))
         }
         // debug!(
         //     "for {:?} found {}",
@@ -474,12 +470,19 @@ impl Rail {
         // if self.endpoint.x() < 4000 {
         //     None
         // } else {
-        match 4 {
+        match 5 {
             // 1 => self.into_buildable_sequential(surface),
             // 2 => self.into_buildable_parallel(surface),
             // 3 => self.into_buildable_avx(surface, working_buffer),
             4 => {
                 if self.is_area_buildable(surface) {
+                    Some(self)
+                } else {
+                    None
+                }
+            }
+            5 => {
+                if self.is_area_buildable_fast(surface) {
                     Some(self)
                 } else {
                     None
@@ -506,6 +509,10 @@ impl Rail {
         self.area()
             .into_iter()
             .all(|area_point| is_buildable_point_ref(surface, area_point))
+    }
+
+    fn is_area_buildable_fast(&self, surface: &VSurface) -> bool {
+        surface.is_points_free(&self.area())
     }
 
     // fn into_buildable_sequential(self, surface: &VSurface) -> Option<Self> {
@@ -573,6 +580,20 @@ impl Rail {
     //     }
     //     None
     // }
+
+    pub fn distance_between_parallel_axis(&self, other: &Rail) -> i32 {
+        match self.direction {
+            RailDirection::Left | RailDirection::Right => self.endpoint.x() - other.endpoint.x(),
+            RailDirection::Up | RailDirection::Down => self.endpoint.y() - other.endpoint.y(),
+        }
+    }
+
+    pub fn distance_between_perpendicular_axis(&self, other: &Rail) -> i32 {
+        match self.direction {
+            RailDirection::Left | RailDirection::Right => self.endpoint.y() - other.endpoint.y(),
+            RailDirection::Up | RailDirection::Down => self.endpoint.x() - other.endpoint.x(),
+        }
+    }
 }
 
 // impl RailPoint {
@@ -646,9 +667,12 @@ fn is_buildable_point_ref(surface: &VSurface, point: VPoint) -> bool {
         return false;
     }
     match surface.get_pixel(&point) {
-        Pixel::Empty => true,
+        Pixel::Empty => {
+            // debug!("empty at {:?}", &point);
+            true
+        }
         _existing => {
-            // debug!("blocked at {:?} by {:?}", &position, existing);
+            // debug!("blocked at {:?} by {:?}", &point, _existing);
             false
         }
     }
@@ -672,11 +696,11 @@ pub fn write_rail(surface: &mut VSurface, path: &Vec<Rail>) -> VResult<()> {
 
     let mut total_rail = 0;
     for path_rail in path {
-        debug!("writing rail start at {:?}", path_rail.endpoint);
+        // debug!("writing rail start at {:?}", path_rail.endpoint);
         for path_area_point in path_rail.area() {
             total_rail += 1;
             surface.set_pixel(path_area_point, Pixel::Rail)?;
-            debug!("writing rail at {:?}", path_area_point);
+            // debug!("writing rail at {:?}", path_area_point);
 
             // TODO: wtf??
             // let mut new_pixel = match surface.get_pixel_point_u32(&path_area_point) {

@@ -263,6 +263,10 @@ impl VSurface {
         self.pixels.is_point_out_of_bounds(point)
     }
 
+    pub fn is_points_free(&self, points: &[VPoint]) -> bool {
+        self.pixels.is_points_free(points)
+    }
+
     pub fn crop(&mut self, new_radius: u32) {
         info!("Crop from {} to {}", self.entities.radius(), new_radius);
         self.entities.crop(new_radius);
