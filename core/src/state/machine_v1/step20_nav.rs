@@ -50,8 +50,8 @@ impl Step for Step20 {
     }
 }
 
-const NEAREST_COUNT: usize = 5;
-const PATH_LIMIT: Option<u8> = Some(10);
+const NEAREST_COUNT: usize = 25;
+const PATH_LIMIT: Option<u8> = Some(20);
 // const PATH_LIMIT: Option<u8> = None;
 
 enum SpeculationTypes {
@@ -83,6 +83,20 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     //     return Ok(());
     // }
 
+    //     write_rail(surface, &Vec::from([start.clone(), end.clone()]))?;
+    //     // surface.draw_debug_square(&start.endpoint);
+    //
+    // for base in main_base_destinations() {
+    //     // surface.set_pixel(base, Pixel::Rail).unwrap();
+    //     write_rail(
+    //         surface,
+    //         &Vec::from([Rail::new_straight(base, RailDirection::Left)]),
+    //     )?;
+    // }
+    // if 1 + 1 == 2 {
+    //     return Ok(());
+    // }
+
     let mut destinations = main_base_destinations().into_iter();
 
     let base_corner = base_bottom_right_corner();
@@ -103,6 +117,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     //     }
     // }
     // if true {
+    //     info!("DUMPING {} patches", ordered_patches.len());
     //     return Ok(());
     // }
 
@@ -156,21 +171,6 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     .move_forward_step();
         let end = Rail::new_straight(destination, RailDirection::Left);
 
-        // if 1 + 1 == 2 {
-        //     write_rail(surface, &Vec::from([start.clone(), end.clone()]))?;
-        //     // surface.draw_debug_square(&start.endpoint);
-        //
-        //     for base in main_base_destinations() {
-        //         // surface.set_pixel(base, Pixel::Rail).unwrap();
-        //         write_rail(
-        //             surface,
-        //             &Vec::from([Rail::new_straight(base, RailDirection::Left)]),
-        //         )?;
-        //     }
-        //
-        //     return Ok(());
-        // }
-
         if let Some(path) = mori_start(surface, start, end) {
             write_rail(surface, &path)?;
             // surface.draw_debug_square(&path[0].endpoint);
@@ -209,10 +209,16 @@ fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
     let patches: Vec<&VPatch> = surface
         .get_patches_slice()
         .iter()
+        // remove inner base patches
         .filter(|p| {
             !p.area
                 .start
                 .is_within_center_radius(REMOVE_RESOURCE_BASE_TILES as u32)
+        })
+        // temporary left of box only
+        .filter(|p| {
+            (-REMOVE_RESOURCE_BASE_TILES..REMOVE_RESOURCE_BASE_TILES).contains(&p.area.start.y())
+                && p.area.start.x() > REMOVE_RESOURCE_BASE_TILES
         })
         .filter(|v| v.resource == pixel)
         .collect();

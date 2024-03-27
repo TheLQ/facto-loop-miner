@@ -5,7 +5,7 @@ use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::err::VResult;
 use crate::surfacev::rail_turn_templates::{
-    rail_turn_template_down_right, rail_turn_template_up_left, rail_turn_template_up_right,
+    rail_turn_template_up_left, rail_turn_template_up_right,
 };
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
@@ -13,9 +13,7 @@ use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
-use std::cell::Cell;
 use std::collections::HashSet;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 use tracing::debug;
 
@@ -70,8 +68,8 @@ pub fn mori_start(surface: &mut VSurface, start: Rail, end: Rail) -> Option<Vec<
     );
     let mut result = None;
     if let Some(pathfind) = pathfind {
-        let (path, path_size) = pathfind;
-        debug!("built path {} long with {}", path.len(), path_size);
+        let (path, path_cost) = pathfind;
+        debug!("built path {} long with {}", path.len(), path_cost);
 
         result = Some(path);
     } else {
@@ -84,7 +82,7 @@ pub fn mori_start(surface: &mut VSurface, start: Rail, end: Rail) -> Option<Vec<
     unsafe {
         debug!(
             "metric successors called {}",
-            METRIC_SUCCESSORS .to_formatted_string(&LOCALE),
+            METRIC_SUCCESSORS.to_formatted_string(&LOCALE),
         );
         METRIC_SUCCESSORS = 0;
     }
@@ -423,9 +421,9 @@ impl Rail {
         resource_cloud: &ResourceCloud,
         working_buffer: &mut SurfaceDiff,
     ) -> Vec<(Self, u32)> {
-        // if parents.len() > 100 {
-        //     return Vec::new();
-        // }
+        if parents.len() > 700 {
+            return Vec::new();
+        }
         // debug!("testing {:?}", self);
 
         unsafe {
