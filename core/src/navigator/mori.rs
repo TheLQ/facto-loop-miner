@@ -1,12 +1,10 @@
-use crate::navigator::mori_cost::{calculate_cost_for_point, RailAction};
+use crate::navigator::mori_cost::calculate_cost_for_point;
 use crate::navigator::resource_cloud::ResourceCloud;
 use crate::simd_diff::SurfaceDiff;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::err::VResult;
-use crate::surfacev::rail_turn_templates::{
-    rail_turn_template_up_left, rail_turn_template_up_right,
-};
+use crate::surfacev::rail_turn_templates::rail_turn_template_up_right;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
@@ -30,6 +28,7 @@ pub fn mori_start(surface: &mut VSurface, start: Rail, end: Rail) -> Option<Vec<
     // TODO: Benchmark this vs Vec (old version),
     let mut valid_destinations: HashSet<Rail> = HashSet::new();
     let step = RAIL_STEP_SIZE as i32;
+    // let step = 3;
     for width in -step..step {
         for height in -step..step {
             let mut next = end.clone();
@@ -194,6 +193,16 @@ impl Rail {
                 let mut last_leg = self.clone();
                 last_leg.mode = RailMode::Straight;
                 res.extend_from_slice(&last_leg.area());
+
+                if turn_type == &TurnType::Turn90 {
+                    let mut corner_cover = self.clone();
+                    corner_cover.mode = RailMode::Straight;
+                    corner_cover.move_force_forward_single_num_mut(-3);
+                    res.extend_from_slice(&corner_cover.area());
+                    // this lazy way heavily overlaps last_leg
+                    res.sort();
+                    res.dedup();
+                }
 
                 let first_leg = self.move_force_rotate_clockwise(2).move_forward_step();
                 let first_leg = first_leg.move_force_rotate_clockwise(match &turn_type {
@@ -368,14 +377,14 @@ impl Rail {
 
     pub fn move_forward_single_num(&self, steps: u32) -> Self {
         let mut next = self.clone();
-        next.move_force_forward_single_num_mut(steps);
+        next.move_force_forward_single_num_mut(steps as i32);
         next
     }
 
-    fn move_force_forward_single_num_mut(&mut self, steps: u32) {
+    fn move_force_forward_single_num_mut(&mut self, steps: i32) {
         // rail is 2x2
-        const RAIL_ENTITY_SIZE: u32 = 2;
-        let steps = (steps * RAIL_ENTITY_SIZE) as i32;
+        const RAIL_ENTITY_SIZE: i32 = 2;
+        let steps = steps * RAIL_ENTITY_SIZE;
         self.endpoint = match self.direction {
             RailDirection::Up => self.endpoint.move_y(steps),
             RailDirection::Down => self.endpoint.move_y(-steps),
@@ -421,7 +430,7 @@ impl Rail {
         resource_cloud: &ResourceCloud,
         working_buffer: &mut SurfaceDiff,
     ) -> Vec<(Self, u32)> {
-        if parents.len() > 700 {
+        if parents.len() > 500 {
             return Vec::new();
         }
         // debug!("testing {:?}", self);

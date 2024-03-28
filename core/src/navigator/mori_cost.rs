@@ -73,7 +73,7 @@ fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail) -> f32 {
     for parent in parents {
         if let RailMode::Turn(_) = parent.mode {
             last_turns += 1;
-            total_cost += MULTI_TURN_COST_UNIT.pow(last_turns);
+            total_cost += MULTI_TURN_COST_UNIT.pow(last_turns.min(4));
         } else {
             last_turns = (last_turns - 1).max(0);
         }

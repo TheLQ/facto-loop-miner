@@ -1,5 +1,6 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::varea::VArea;
+use crate::surfacev::vpoint::VPoint;
 use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -30,5 +31,18 @@ impl VPatch {
             area: VArea::new_from_rect(&rect),
             pixel_indexes: Vec::new(),
         }
+    }
+
+    pub fn normalize_patch_6x6(&self) -> Self {
+        let x_adjust = self.area.start.x() % 6;
+        let y_adjust = self.area.start.y() % 6;
+
+        let mut new = self.clone();
+        new.area = VArea {
+            start: self.area.start.move_xy(-x_adjust, -y_adjust),
+            height: new.area.height + y_adjust as u32,
+            width: new.area.width + x_adjust as u32,
+        };
+        new
     }
 }
