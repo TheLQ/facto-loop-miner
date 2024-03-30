@@ -2,7 +2,8 @@
 
 const zlib = require("zlib");
 const util = require("util");
-
+const fs = require("fs");
+const process = require("process");
 
 class Parser {
     constructor(buf) {
@@ -361,19 +362,12 @@ function decode(s) {
     return data;
 }
 
-let test = `
->>>eNp1Uz2IE1EQnsklmosoKVKcoGfkUhzChhCtgmSfNmJhIZhScLN5
-0YXNbm5/wDsLU1xxhSDINdpo64k2YmEXsPFAQbSyOzkLBcE7PeQKIb7
-Zt2+zxNzAzM77ZuabmfdYBITTIEV/trHRzGdN17ABBrrSgun2+9zTXI
-9TkoJnTS/scM217BTKCtzhvWWtbfiUzACGUShvea4jGYYJQ84PXCdOi
-5HA49wXY0SjEHIk9AzHCnuydkC4rMeXv65vDlbngXR0F8qjEanwtgQj
-KeAgYkGBxZKdM10n8Fxb83kQWM7NhhHebrQtw5/VatV6jWRxWkrX40s
-hd8zlRi+0A6tvW9zL16tRQe3kZEXPtfwg9PgEs3Zg3lT6WvVsJDnTtr
-pdgPKFVqt1kVZCxDulF5e+rKzrKBerstjZj5FhWyGXY+fBc3ZQKKtCc
-E45OzrK7r9TjmwaiBZxVp6NHRlcpSDi7q3ttVf7e038+3T345X2DR2v
-fS0u+We+0+xH6W0yiXn0kOS1WgUU55Yehz7r+P4dyQ8dZ6higczOega
-wdvUQYPGYOD65J0z5BKjRmoqmxLAbyR+1ybZyPumTe1QYnifyeTJvye
-QgoRSToXTZfYbslIoeH6eI+jqkZ+iMN9xUbd+k+k8MUvnvIdJ7TCAVN
-uUZCtSwk5hvM8k04j4/HFYn9phFdwmUtScweZI/o6SS3yLDkvhE9x4T
-LbLM2k9Y+AcYCOn/<<<`;
-console.log(util.inspect(decode(test), {depth: 20, colors: true}));
+const file = process.argv[2];
+if (!file) {
+    console.log(`${process.argv[0]} ${process.argv[1]} [map exchange file]`);
+    return;
+}
+
+fs.readFile(file, 'utf8', (err, data) => {
+    console.log(util.inspect(decode(data), {depth: 20, colors: true}));
+})
