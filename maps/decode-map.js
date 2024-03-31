@@ -3,6 +3,7 @@
 const zlib = require("zlib");
 const util = require("util");
 const fs = require("fs");
+const path = require('node:path');
 const process = require("process");
 
 class Parser {
@@ -359,6 +360,13 @@ function decode(s) {
         return "data after end";
     }
 
+    // format of game.table_to_json(game.parse_map_exchange_string(..))
+    data = {
+        map_settings: data.map_settings,
+        map_gen_settings: data.map_gen_settings,
+        checksum: data.checksum
+    }
+
     return data;
 }
 
@@ -368,6 +376,32 @@ if (!file) {
     return;
 }
 
+function prettyJson(obj) {
+    let data = util.inspect(obj, {
+        depth: 20,
+        compact: false
+    })
+    data = data.replaceAll(/([a-z0-9_]+):/g, '"$1":')
+    data = data.replaceAll("'", '"');
+    return data;
+}
+
 fs.readFile(file, 'utf8', (err, data) => {
-    console.log(util.inspect(decode(data), {depth: 20, colors: true}));
+    let decoded = decode(data)
+
+    // let decodedJsonConsole = util.inspect(decoded, {depth: 20, colors: true});
+    // let decodedJsonFile = util.inspect(decoded, {depth: 20, compact: false}).replaceAll(/([a-z0-9_]+):/g, '"$1":');
+
+    let filePrefix = path.basename(file).split(".")[0]
+
+    let mapGenSettingsFile = `${filePrefix}.mapGenSettings.json`
+    let mapGenSettingsData = prettyJson(decoded.map_settings);
+    fs.writeFileSync(mapGenSettingsFile, mapGenSettingsData)
+    console.log(`write to ${mapGenSettingsFile}`);
+
+    let mapSettingsFile = `${filePrefix}.mapSettings.json`
+    let mapSettingsData = prettyJson(decoded.map_settings);
+    fs.writeFileSync(mapSettingsFile, mapSettingsData)
+    console.log(`write to ${mapSettingsFile}`);
 })
+
