@@ -12,7 +12,7 @@
     "lan: Game will be broadcast on LAN"
   ],
   "visibility": {
-    "public": true,
+    "public": false,
     "lan": true
   },
   "_comment_credentials": "Your factorio.com login credentials. Required for games with visibility public",
@@ -42,7 +42,7 @@
   "_comment_afk_autokick_interval": "How many minutes until someone is kicked when doing nothing, 0 for never.",
   "afk_autokick_interval": 0,
   "_comment_auto_pause": "Whether should the server be paused when no players are present.",
-  "auto_pause": true,
+  "auto_pause": false,
   "only_admins_can_pause_the_game": true,
   "_comment_autosave_only_on_server": "Whether autosaves should be saved only on server or also on all connected clients. Default is true.",
   "autosave_only_on_server": true,
