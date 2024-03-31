@@ -39,13 +39,17 @@
 
 extern crate core;
 
+use crate::admiral::executor::rcon::AdmiralClient;
+use crate::admiral::executor::LuaCompiler;
+use crate::admiral::lua_command::fac_log::FacLog;
+use crate::admiral::lua_command::scanner::facscan_hyper_scan;
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
 use kiddo::float;
 use num_format::Locale;
 use num_traits::PrimInt;
 use std::path::Path;
-use tracing::Level;
+use tracing::{info, Level};
 
 mod admiral;
 mod gamedata;
@@ -79,6 +83,29 @@ pub fn inner_main() {
         5 => admiral::client::admiral(),
         _ => panic!("wtf"),
     }
+}
+
+pub fn rcon_inner_main() {
+    let tracing_format = tracing_subscriber::fmt::format().compact();
+
+    log_init();
+
+    let mut admiral = AdmiralClient::new().unwrap();
+    admiral.auth().unwrap();
+    // let res = admiral
+    //     ._execute_statement(FacLog {
+    //         message: "asdf".to_string(),
+    //     })
+    //     .unwrap();
+
+    for command in facscan_hyper_scan() {
+        let res = admiral._execute_statement(command).unwrap();
+        info!("return: {}", res.body);
+    }
+    let res = admiral
+        ._execute_statement(FacLog::new("done".to_string()))
+        .unwrap();
+    info!("return: {}", res.body);
 }
 
 /// what is this called?

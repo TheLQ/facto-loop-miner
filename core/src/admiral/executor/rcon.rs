@@ -16,10 +16,14 @@ pub struct AdmiralClient {
 impl AdmiralClient {
     pub fn new() -> AdmiralResult<Self> {
         let client = RCONClient::new(RCONConfig {
-            url: "192.168.66.73:28016".to_string(),
+            url: "127.0.0.1:28016".to_string(),
             // Optional
-            read_timeout: Some(900),
-            write_timeout: Some(900),
+            // read_timeout: Some(900),
+            // write_timeout: Some(900),
+            // read_timeout: None,
+            // write_timeout: None,
+            read_timeout: Some(u64::MAX),
+            write_timeout: Some(u64::MAX),
         })
         .map_err(|e| AdmiralError::Rcon {
             source: e,
@@ -65,7 +69,13 @@ impl LuaCompiler for AdmiralClient {
 
         // Execute command request to RCON server (SERVERDATA_EXECCOMMAND)
         let request = RCONRequest::new(format!("/c {}", lua_text));
-        // debug!("executing\n{}", lua_text);
+        // let request = RCONRequest::new("/h".to_string());
+        // let request = RCONRequest {
+        //     id: 5,
+        //     body: "/h".to_string(),
+        //     request_type: 2,
+        // };
+        debug!("executing {:?}", request);
 
         let execute = self
             .client

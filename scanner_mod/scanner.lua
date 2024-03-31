@@ -1,17 +1,15 @@
 -- Exports all relevant entities and tiles positions into JSON. Consumer can reconstruct the Factorio map
+-- Local everything and wrapper function to hopefully make the Lua GC happy
 --
 -- Uses compressed one-big-array format: [name1, x1, y1, name2, ...]
--- Scales to
--- this avoids significant JSON overhead from [{name: "coal", position: { x: -5.5, y: -5.5 }, ...]
+-- Avoids significant JSON overhead from [{name: "coal", position: { x: -5.5, y: -5.5 }, ...]
 --
 -- Splits area into 4 sectors going to separate files.
 -- On extremely large 2000x2000 chunk plus maps,
 -- Factorio game.table_to_json() silently(!) won't write more than 4.2gb (u32::MAX) of JSON. Though JSON is valid.
 --
--- Local everything and wrapper function to hopefully make the Lua GC happy
---
 -- /c
-local function megacall()
+local function mega_export_tiles_compressed()
     local size = 32000
     local sectors = {
         { { -size, -size }, { 0, 0 } },
@@ -35,10 +33,10 @@ local function megacall()
         game.write_file(file, game.table_to_json(output))
     end
 end
-megacall()
+mega_export_tiles_compressed()
 
 -- /c
-local function megacall()
+local function mega_export_tiles_fat()
     local size = 32000
     local sectors = {
         { { -size, -size }, { 0, 0 } },
@@ -62,10 +60,10 @@ local function megacall()
 
     game.write_file(file, game.table_to_json(output))
 end
-megacall()
+mega_export_tiles_fat()
 
 -- /c
-local function inner()
+local function mega_export_entities_compressed()
     local file = "big-entities-a.json"
     log("write " .. file .. "...")
     local output = {}
@@ -80,18 +78,28 @@ local function inner()
     end
     game.write_file(file, game.table_to_json(output))
 end
-inner()
+mega_export_entities_compressed()
 
 -- /c
-local function hyper()
-    local size = 3000
+local function insert_0x0_crate()
+    game.surfaces[1].create_entity {
+        name = "crate",
+        position = { 0, 0 },
+        force = game.player.force,
+    }
+end
+insert_0x0_crate()
+
+-- /c
+local function hyper_scan()
+    local size = 2000
     log('start game chunk generate with ' .. size .. " chunks...")
-    game.surfaces[1].request_to_generate_chunks({0,0}, size)
+    game.surfaces[1].request_to_generate_chunks({ 0, 0 }, size)
     log('force_generate....')
     game.surfaces[1].force_generate_chunk_requests()
     log('exit function')
 end
-hyper()
+hyper_scan()
 
 --log('chart_all...')
 --game.forces[1].chart_all()

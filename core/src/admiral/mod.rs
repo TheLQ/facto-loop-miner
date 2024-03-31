@@ -3,4 +3,4 @@ mod err;
 pub mod executor;
 mod flexbox;
 mod generators;
-mod lua_command;
+pub mod lua_command;

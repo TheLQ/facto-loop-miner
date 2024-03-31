@@ -8,6 +8,8 @@ pub mod fac_log;
 pub mod fac_surface_create_entity;
 pub mod fac_surface_create_entity_safe;
 pub mod lua_batch;
+pub mod raw_lua;
+pub mod scanner;
 
 pub const DEFAULT_SURFACE_VAR: &str = "game.surfaces[1]";
 pub const DEFAULT_FORCE_VAR: &str = "game.forces[1]";
