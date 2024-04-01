@@ -76,6 +76,9 @@ pub fn inner_main() {
     log_init();
 
     tracing::debug!("hello");
+    // let mut data = String::new();
+    // stdin().read_line(&mut data).expect("asd");
+
     let root_dir = Path::new("work");
 
     match 1 {
@@ -100,10 +103,10 @@ pub fn rcon_inner_main() {
     //     })
     //     .unwrap();
 
-    // for command in facscan_hyper_scan() {
-    //     let res = admiral._execute_statement(command).unwrap();
-    //     info!("return: {}", res.body);
-    // }
+    for command in facscan_hyper_scan() {
+        let res = admiral._execute_statement(command).unwrap();
+        info!("return: {}", res.body);
+    }
     for command in facscan_mega_export_entities_compressed() {
         let res = admiral._execute_statement(command).unwrap();
         info!("return: {}", res.body);

@@ -90,7 +90,7 @@ insert_0x0_crate()
 
 -- /c
 local function hyper_scan()
-    local chunks = 900
+    local chunks = 150
     log('start game chunk generate with ' .. chunks .. " chunks...")
     game.surfaces[1].request_to_generate_chunks({ 0, 0 }, chunks)
     log('force_generate....')

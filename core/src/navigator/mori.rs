@@ -332,7 +332,6 @@ impl Rail {
         next
     }
 
-    ///
     // pub fn move_backwards_toward_water(
     //     &self,
     //     surface: &VSurface,
@@ -364,7 +363,11 @@ impl Rail {
     // }
 
     pub fn move_forward_step(&self) -> Self {
-        let mut next = self.move_forward_single_num(RAIL_STEP_SIZE);
+        self.move_forward_step_num(1)
+    }
+
+    pub fn move_forward_step_num(&self, steps: u32) -> Self {
+        let mut next = self.move_forward_single_num(RAIL_STEP_SIZE * steps);
         next.mode = RailMode::Straight;
         next
     }
@@ -403,11 +406,11 @@ impl Rail {
     //     }
     // }
 
-    fn move_left(&self) -> Self {
+    pub fn move_left(&self) -> Self {
         self.move_rotating(TurnType::Turn270)
     }
 
-    fn move_right(&self) -> Self {
+    pub fn move_right(&self) -> Self {
         self.move_rotating(TurnType::Turn90)
     }
 
@@ -430,7 +433,7 @@ impl Rail {
         resource_cloud: &ResourceCloud,
         working_buffer: &mut SurfaceDiff,
     ) -> Vec<(Self, u32)> {
-        if parents.len() > 500 {
+        if parents.len() > 800 {
             return Vec::new();
         }
         // debug!("testing {:?}", self);

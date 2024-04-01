@@ -28,7 +28,7 @@ impl VPatch {
         }
         VPatch {
             resource,
-            area: VArea::new_from_rect(&rect),
+            area: VArea::from_rect(&rect),
             pixel_indexes: Vec::new(),
         }
     }

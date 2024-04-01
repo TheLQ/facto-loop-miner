@@ -4,7 +4,7 @@ factorio_saves="$factorio_root/saves"
 set -x
 
 $factorio_bin \
-  --start-server "lm-artful-hyperscan" \
+  --start-server "lm-artful-work" \
   --rcon-port 28016 \
   --rcon-password xana \
   --server-settings "server-settings.json" \

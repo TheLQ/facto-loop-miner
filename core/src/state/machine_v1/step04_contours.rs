@@ -191,7 +191,7 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree)
             .iter()
             .map(|patch_rect| {
                 cloud.within::<Manhattan>(
-                    &VArea::new_from_rect(patch_rect).start.to_slice_f32(),
+                    &VArea::from_rect(patch_rect).start.to_slice_f32(),
                     search_distance as f32,
                 )
             })
@@ -278,7 +278,7 @@ fn detect_merge_nearby_patches_slow(
         .iter()
         .map(|patch_rect| {
             cloud.within::<Manhattan>(
-                &VArea::new_from_rect(patch_rect).start.to_slice_f32(),
+                &VArea::from_rect(patch_rect).start.to_slice_f32(),
                 search_square_size as f32,
             )
         })

@@ -20,7 +20,7 @@ pub fn calculate_cost_for_point(
     // base distance
     let base_distance = match 2 {
         1 => distance_basic_manhattan(next, end),
-        2 => distance_with_less_parent_turns(parents, next),
+        2 => distance_with_less_parent_turns(parents, next, end),
         _ => panic!("Asd"),
     };
     let end_landing_bias = into_end_landing_bias(parents, next, end, base_distance);
@@ -56,14 +56,16 @@ fn distance_basic_manhattan(next: &Rail, end: &Rail) -> f32 {
     next.distance_to(end) as f32
 }
 
-fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail) -> f32 {
+fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail, end: &Rail) -> f32 {
     const STRAIGHT_COST_UNIT: f32 = 1.0;
     const TURN_COST_UNIT: f32 = 2.0;
     // const MULTI_TURN_LOOKBACK: usize = 10;
     const MULTI_TURN_COST_UNIT: f32 = 6.0;
 
     // turning is costly
-    let mut total_cost = match next.mode {
+    let mut total_cost = distance_basic_manhattan(next, end);
+
+    total_cost += match next.mode {
         RailMode::Straight => STRAIGHT_COST_UNIT,
         RailMode::Turn(_) => TURN_COST_UNIT,
     };
@@ -73,7 +75,8 @@ fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail) -> f32 {
     for parent in parents {
         if let RailMode::Turn(_) = parent.mode {
             last_turns += 1;
-            total_cost += MULTI_TURN_COST_UNIT.pow(last_turns.min(4));
+            // TODO: If this is too low, direction bias takes over and forces rail all the way to the end
+            total_cost += MULTI_TURN_COST_UNIT.pow(last_turns.min(3));
         } else {
             last_turns = (last_turns - 1).max(0);
         }
@@ -92,7 +95,7 @@ fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail) -> f32 {
 fn into_end_landing_bias(parents: &[Rail], next: &Rail, end: &Rail, base_distance: f32) -> f32 {
     // const BIAS_DISTANCE_START: f32 = 30.0;
     const DIRECTION_COST_UNIT: f32 = 10.0;
-    const AXIS_COST_UNIT: f32 = 60.0;
+    const AXIS_COST_UNIT: f32 = 300.0;
 
     // if next.endpoint.distance_to(&end.endpoint) > BIAS_DISTANCE_START as u32 {
     //     return 0.0;
@@ -111,7 +114,8 @@ fn into_end_landing_bias(parents: &[Rail], next: &Rail, end: &Rail, base_distanc
     let axis_distance = end.distance_between_perpendicular_axis(next).abs();
     let axis_distance = (axis_distance - 3).max(1) as f32;
     // let axis_bias = axis_distance as f32 * AXIS_COST_UNIT;
-    (base_distance + direction_bias) * (axis_distance)
+    // (base_distance + direction_bias) * (axis_distance)
+    (base_distance + direction_bias) + (axis_distance * AXIS_COST_UNIT)
 
     // base_distance + direction_bias + axis_bias
 }

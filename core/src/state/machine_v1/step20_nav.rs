@@ -7,12 +7,15 @@ use crate::surface::pixel::Pixel;
 use crate::surface::sector::SectorSide;
 use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::err::VResult;
+use crate::surfacev::varea::VArea;
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use kiddo::{Manhattan, NearestNeighbour};
 use opencv::core::Point;
-use tracing::{debug, info, warn};
+use std::num::FpCategory::Infinite;
+use tracing::field::debug;
+use tracing::{debug, info, trace, warn};
 
 pub struct Step20 {}
 
@@ -51,7 +54,7 @@ impl Step for Step20 {
 }
 
 const NEAREST_COUNT: usize = 25;
-const PATH_LIMIT: Option<u8> = Some(20);
+const PATH_LIMIT: Option<u8> = Some(5);
 // const PATH_LIMIT: Option<u8> = None;
 
 enum SpeculationTypes {
@@ -97,15 +100,22 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     //     return Ok(());
     // }
 
-    let mut destinations = main_base_destinations().into_iter();
+    // let mut destinations = main_base_destinations_base_corner().into_iter();
+    let mut destinations_positive = main_base_destinations_positive_side().into_iter();
+    let mut destinations_negative = main_base_destinations_negative_side().into_iter();
 
     let base_corner = base_bottom_right_corner();
     let mut made_paths: u8 = 0;
 
-    let ordered_patches: Vec<VPatch> = ordered_patches_by_radial_base_corner(surface)
-        .into_iter()
-        .cloned()
-        .collect();
+    let resource = Pixel::IronOre;
+    let ordered_patches: Vec<VPatch> = match 2 {
+        1 => patches_by_radial_base_corner(surface, resource),
+        2 => patches_by_cross_sign_expanding(surface, resource),
+        _ => panic!("asd"),
+    }
+    .into_iter()
+    .cloned()
+    .collect();
     // for end in &ordered_patches {
     //     for super_x in 0..100 {
     //         for super_y in 0..100 {
@@ -142,7 +152,16 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
                 break;
             }
         }
-        let Some(destination) = destinations.next() else {
+        // let Some(destination) = destinations.next() else {
+        //     debug!("Out of destinations, stopping");
+        //     break;
+        // };
+        let destination = if patch_start.area.start.y() > 0 {
+            destinations_positive.next()
+        } else {
+            destinations_negative.next()
+        };
+        let Some(destination) = destination else {
             debug!("Out of destinations, stopping");
             break;
         };
@@ -156,13 +175,6 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     },
         // );
 
-        // endpoint box
-        // for super_x in 0..100 {
-        //     for super_y in 0..100 {
-        //         surface.set_pixel(Pixel::Rail, end.x + super_x, end.y + super_y);
-        //     }
-        // }
-
         let start = Rail::new_straight(patch_corner, RailDirection::Left).move_forward_step();
         // let end = start
         //     .move_forward_step()
@@ -170,6 +182,33 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     .move_forward_step()
         //     .move_forward_step();
         let end = Rail::new_straight(destination, RailDirection::Left);
+
+        // // start box
+        // for super_x in 0..100 {
+        //     for super_y in 0..100 {
+        //         surface
+        //             .set_pixel(
+        //                 VPoint::new(start.endpoint.x() + super_x, start.endpoint.y() + super_y),
+        //                 Pixel::Highlighter,
+        //             )
+        //             .unwrap();
+        //     }
+        // }
+        // // endpoint box
+        // for super_x in 0..100 {
+        //     for super_y in 0..100 {
+        //         surface
+        //             .set_pixel(
+        //                 VPoint::new(end.endpoint.x() + super_x, end.endpoint.y() + super_y),
+        //                 Pixel::Rail,
+        //             )
+        //             .unwrap();
+        //     }
+        // }
+        // if 1 + 1 == 2 {
+        //     info!("TOO BREAK");
+        //     break;
+        // }
 
         if let Some(path) = mori_start(surface, start, end) {
             write_rail(surface, &path)?;
@@ -180,17 +219,22 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         }
         made_paths += 1;
 
-        // if nearest_count >= 2 {
-        //     info!("BREAK");
+        // if 1 + 1 == 2 {
+        //     info!("TOO BREAK");
         //     break;
         // }
+
+        if nearest_count >= 2 {
+            info!("BREAK");
+            break;
+        }
     }
     info!("out of patches in {}", ordered_size);
 
     Ok(())
 }
 
-fn main_base_destinations() -> Vec<VPoint> {
+fn main_base_destinations_base_corner() -> Vec<VPoint> {
     let mut res = Vec::new();
 
     let base_corner = base_bottom_right_corner().move_x(10);
@@ -202,10 +246,25 @@ fn main_base_destinations() -> Vec<VPoint> {
     res
 }
 
+fn main_base_destinations_positive_side() -> Vec<VPoint> {
+    let mut res = Vec::new();
+    for nearest_count in 0..PATH_LIMIT.unwrap() as i32 {
+        res.push(VPoint::new(CENTRAL_BASE_TILES, nearest_count * 20));
+    }
+    res
+}
+
+fn main_base_destinations_negative_side() -> Vec<VPoint> {
+    let mut res = Vec::new();
+    for nearest_count in 0..PATH_LIMIT.unwrap() as i32 {
+        res.push(VPoint::new(CENTRAL_BASE_TILES, nearest_count * -20));
+    }
+    res
+}
+
 fn ordered_patches_by_base_side(surface: &Surface, side: SectorSide) {}
 
-fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
-    let pixel = Pixel::CopperOre;
+fn patches_by_radial_base_corner(surface: &VSurface, resource: Pixel) -> Vec<&VPatch> {
     let patches: Vec<&VPatch> = surface
         .get_patches_slice()
         .iter()
@@ -220,7 +279,7 @@ fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
             (-REMOVE_RESOURCE_BASE_TILES..REMOVE_RESOURCE_BASE_TILES).contains(&p.area.start.y())
                 && p.area.start.x() > REMOVE_RESOURCE_BASE_TILES
         })
-        .filter(|v| v.resource == pixel)
+        .filter(|v| v.resource == resource)
         .collect();
     let cloud = map_vpatch_to_kdtree(patches.iter());
 
@@ -233,6 +292,76 @@ fn ordered_patches_by_radial_base_corner(surface: &VSurface) -> Vec<&VPatch> {
         .iter()
         .map(|neighbor| patches[neighbor.item])
         .collect()
+}
+
+fn patches_by_cross_sign_expanding(surface: &VSurface, resource: Pixel) -> Vec<&VPatch> {
+    let cross_sides = [Rail::new_straight(
+        VPoint::new(REMOVE_RESOURCE_BASE_TILES, 0),
+        RailDirection::Right,
+    )];
+    let mut patches = Vec::new();
+    for cross_side in cross_sides {
+        for perpendicular_scan_area in (1i32..150).flat_map(|i| [i, -i]) {
+            let mut parallel_scan_area = 0;
+            loop {
+                parallel_scan_area += 1;
+
+                // let scan_start = {
+                //     let mut rail = cross_side.clone();
+                //     for _ in 0..(parallel_scan_area - 1) {
+                //         rail = rail.move_forward_step();
+                //     }
+                //     rail
+                // };
+
+                let scan_start = {
+                    let mut rail = cross_side.move_forward_step_num(parallel_scan_area - 1);
+                    // trace!("start moving forward {}", parallel_scan_area - 1);
+                    rail = if perpendicular_scan_area > 0 {
+                        rail.move_force_rotate_clockwise(1)
+                    } else {
+                        rail.move_force_rotate_clockwise(3)
+                    };
+                    rail = rail.move_forward_step_num(perpendicular_scan_area.unsigned_abs() - 1);
+                    // trace!(
+                    //     "start moving side {}",
+                    //     perpendicular_scan_area.unsigned_abs() - 1
+                    // );
+                    rail
+                };
+
+                let scan_end = {
+                    let mut rail = cross_side.move_forward_step_num(parallel_scan_area);
+                    // trace!("end moving forward {}", parallel_scan_area);
+                    rail = if perpendicular_scan_area > 0 {
+                        rail.move_force_rotate_clockwise(1)
+                    } else {
+                        rail.move_force_rotate_clockwise(3)
+                    };
+                    rail = rail.move_forward_step_num(perpendicular_scan_area.unsigned_abs());
+                    // trace!("end moving side {}", perpendicular_scan_area.unsigned_abs());
+                    rail
+                };
+
+                if !scan_end
+                    .endpoint
+                    .is_within_center_radius(surface.get_radius())
+                {
+                    break;
+                }
+
+                let search_area =
+                    VArea::from_arbitrary_points(&scan_start.endpoint, &scan_end.endpoint);
+                trace!("Searching {:?}", search_area);
+                for patch in surface.get_patches_slice() {
+                    if resource == patch.resource && search_area.contains_point(&patch.area.start) {
+                        patches.push(patch);
+                    }
+                }
+            }
+        }
+    }
+    patches
 }
 
 fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {
