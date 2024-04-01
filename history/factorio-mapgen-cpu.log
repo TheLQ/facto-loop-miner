@@ -1,3 +1,6 @@
+# Generating 0 to 1000, Crashed OOM with 2000
+# lm-artful
+
    0.784 Info RemoteCommandProcessor.cpp:133: Starting RCON interface at IP ADDR:({0.0.0.0:28016})
    0.785 Info CommandLineMultiplayer.cpp:297: Maximum segment size = 100; minimum segment size = 25; maximum-segment-size peer count = 10
 ; minimum-segment-size peer count = 20
@@ -23,3 +26,36 @@ end
 2024-04-01T00:33:35.168228Z DEBUG facto_loop_miner::admiral::executor::rcon: Execute Result id 1069524696 type 0 body 0
 2024-04-01T00:33:35.169014Z DEBUG facto_loop_miner::admiral::executor::rcon: executing RCONRequest { id: 9602239868908393393, request_type: 2, body: "/c log('done')" }
 2024-04-01T00:33:56.384353Z DEBUG facto_loop_miner::admiral::executor::rcon: Execute Result id 845206449 type 0 body 0
+
+---
+
+# Generating 1000 to 1500
+# lm-artful
+
+17775.504 Info RemoteCommandProcessor.cpp:252: New RCON connection from IP ADDR:({127.0.0.1:53234})
+2024-03-31 21:22:49 [COMMAND] <server> (command): function hyper_scan()
+    local size = 1500
+    log('start game chunk generate with ' .. size .. " chunks...")
+    game.surfaces[1].request_to_generate_chunks({ 0, 0 }, size)
+    log('force_generate....')
+    game.surfaces[1].force_generate_chunk_requests()
+    log('exit function')
+end
+2024-03-31 21:22:49 [COMMAND] <server> (command): hyper_scan()
+17775.534 Script function ...:3: start game chunk generate with 1500 chunks...
+17836.911 Script function ...:5: force_generate....
+22968.638 Script function ...:7: exit function
+2024-03-31 22:49:54 [COMMAND] <server> (command): log('done')
+23000.801 Script log('done'):1: done
+
+$ top -b -n1 -e m | grep fact
+ 388810 vu-desk+  20   0  174.0g 172.2g   8.0m R 107.7  68.4     17,03 factorio
+
+---
+
+# Saving 1500
+# lm-artful
+
+23899.069 Verbose Scenario.cpp:1027: Time to save game: 376.212
+
+---
