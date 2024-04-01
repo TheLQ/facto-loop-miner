@@ -42,6 +42,6 @@ pub trait LuaCommand: Debug {
     fn make_lua(&self) -> String;
 }
 
-pub trait LuaCommandBatch {
+pub trait LuaCommandBatch: Debug {
     fn make_lua_batch(self, lua_commands: &mut Vec<Box<dyn LuaCommand>>);
 }

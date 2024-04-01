@@ -15,9 +15,10 @@ pub struct FastMetrics {
 
 impl FastMetrics {
     pub fn new(log_prefix: String) -> Self {
-        let mut res = FastMetrics::default();
-        res.log_prefix = log_prefix;
-        res
+        FastMetrics {
+            log_prefix,
+            ..Default::default()
+        }
     }
 
     pub fn increment(&mut self, metric_name: FastMetric) {

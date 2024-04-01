@@ -13,7 +13,7 @@ pub mod rcon;
 pub trait LuaCompiler {
     fn _execute_statement<L: LuaCommand>(&mut self, lua: L) -> AdmiralResult<ExecuteResponse<L>>;
 
-    fn _execute_statement_empty(&mut self, lua: impl LuaCommand + Debug) -> AdmiralResult<()> {
+    fn _execute_statement_empty(&mut self, lua: impl LuaCommand) -> AdmiralResult<()> {
         self._execute_statement(lua).and_then(|response| {
             if response.body.is_empty() {
                 Ok(())
@@ -34,7 +34,7 @@ pub trait LuaCompiler {
         self._execute_statement(lua_define)
     }
 
-    fn execute_block(&mut self, lua: impl LuaCommandBatch + Debug) -> AdmiralResult<()> {
+    fn execute_block(&mut self, lua: impl LuaCommandBatch) -> AdmiralResult<()> {
         let mut commands: Vec<Box<dyn LuaCommand>> = Vec::new();
         info!("Executing {:?}", lua);
         lua.make_lua_batch(&mut commands);

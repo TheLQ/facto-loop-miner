@@ -47,6 +47,7 @@ impl VArray {
         }
     }
 
+    #[allow(clippy::len_without_is_empty)] // this is never empty
     pub fn len(&self) -> usize {
         self.as_slice().len()
     }

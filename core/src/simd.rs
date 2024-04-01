@@ -95,7 +95,7 @@ pub fn compare_m256_count(
     total
 }
 
-pub fn any_bit_equal_m256_bool<'a>(a: &Vec<SseUnit>, b: &[SseUnit]) -> bool {
+pub fn any_bit_equal_m256_bool<'a>(a: &[SseUnit], b: &[SseUnit]) -> bool {
     let mut total: SseUnit = m256_zero();
 
     for i in 0..a.len() {
