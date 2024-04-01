@@ -42,7 +42,9 @@ extern crate core;
 use crate::admiral::executor::rcon::AdmiralClient;
 use crate::admiral::executor::LuaCompiler;
 use crate::admiral::lua_command::fac_log::FacLog;
-use crate::admiral::lua_command::scanner::facscan_hyper_scan;
+use crate::admiral::lua_command::scanner::{
+    facscan_hyper_scan, facscan_mega_export_entities_compressed,
+};
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
 use kiddo::float;
@@ -98,7 +100,11 @@ pub fn rcon_inner_main() {
     //     })
     //     .unwrap();
 
-    for command in facscan_hyper_scan() {
+    // for command in facscan_hyper_scan() {
+    //     let res = admiral._execute_statement(command).unwrap();
+    //     info!("return: {}", res.body);
+    // }
+    for command in facscan_mega_export_entities_compressed() {
         let res = admiral._execute_statement(command).unwrap();
         info!("return: {}", res.body);
     }

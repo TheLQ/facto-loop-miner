@@ -1,10 +1,16 @@
 use crate::admiral::lua_command::raw_lua::RawLuaCommand;
-use crate::admiral::lua_command::LuaCommand;
 
 const RAW_SCAN: &str = include_str!("../../../../scanner_mod/scanner.lua");
 
-pub fn facscan_hyper_scan() -> [impl LuaCommand; 2] {
-    let lua_function = "hyper_scan()";
+pub fn facscan_hyper_scan() -> Vec<RawLuaCommand> {
+    extract_commands_from_scanner_mod("hyper_scan()")
+}
+
+pub fn facscan_mega_export_entities_compressed() -> Vec<RawLuaCommand> {
+    extract_commands_from_scanner_mod("mega_export_entities_compressed()")
+}
+
+fn extract_commands_from_scanner_mod(lua_function: &str) -> Vec<RawLuaCommand> {
     // grab the define
     let start_str = format!("function {}", lua_function);
 
@@ -22,8 +28,8 @@ pub fn facscan_hyper_scan() -> [impl LuaCommand; 2] {
 
     let extracted_command = &RAW_SCAN[start_pos..end_pos].trim();
 
-    [
-        RawLuaCommand::new(extracted_command.to_string()),
-        RawLuaCommand::new(lua_function.to_string()),
-    ]
+    let mut res = Vec::new();
+    res.push(RawLuaCommand::new(extracted_command.to_string()));
+    res.push(RawLuaCommand::new(lua_function.to_string()));
+    res
 }

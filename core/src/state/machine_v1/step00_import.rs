@@ -1,6 +1,7 @@
 use crate::gamedata::lua::{read_lua_tiles, LuaEntity, LuaPoint, LuaThing};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
+use crate::surface::pixel::Pixel;
 use crate::surfacev::err::VResult;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
@@ -23,7 +24,7 @@ impl Step for Step00 {
     }
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
-        let lua_dir = Path::new("work/chunk1000");
+        let lua_dir = Path::new("work/lm-artful");
         let lua_tiles = read_lua_tiles(lua_dir);
 
         let convert_watch = BasicWatch::start();
@@ -31,6 +32,11 @@ impl Step for Step00 {
         let mut surface = VSurface::new(radius);
         translate_entities_to_image(&lua_tiles, &mut surface, &params)?;
         info!("Converted in {}", convert_watch);
+
+        let center = surface.get_pixel(&VPoint::new(0, 0));
+        if center != Pixel::SteelChest {
+            panic!("unexpeted centerpoint {:?}", center);
+        }
 
         surface.save(&params.step_out_dir)?;
 

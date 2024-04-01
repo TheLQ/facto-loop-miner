@@ -28,13 +28,15 @@ use strum::{AsRefStr, EnumIter};
 #[repr(u8)]
 pub enum Pixel {
     Empty = 10,
-    IronOre = 25,
-    CopperOre = 50,
-    Stone = 75,
-    Coal = 100,
-    UraniumOre = 125,
-    Water = 150,
-    CrudeOil = 175,
+    IronOre = 20,
+    CopperOre = 21,
+    Stone = 22,
+    Coal = 23,
+    UraniumOre = 24,
+    Water = 25,
+    CrudeOil = 26,
+    //
+    SteelChest = 70,
     //
     EdgeWall = 200,
     Rail = 225,
@@ -60,6 +62,8 @@ impl Pixel {
             Pixel::Water => [0xFF, 0xFF, 0xFF],
             Pixel::CrudeOil => [0x20, 0x66, 0xFF],
             //
+            Pixel::SteelChest => [0x5c, 0x60, 0x66], //grey?
+            //
             Pixel::Empty => [0x00, 0x00, 0x00],
             Pixel::EdgeWall => [0xBD, 0x5F, 0x5F],
             Pixel::Rail => [0xB9, 0x7A, 0x57],
@@ -76,6 +80,8 @@ impl Pixel {
             "uranium-ore" => Ok(Pixel::UraniumOre),
             "water" => Ok(Pixel::Water),
             "crude-oil" => Ok(Pixel::CrudeOil),
+            //
+            "steel-chest" => Ok(Pixel::SteelChest),
             _ => Err(VError::UnknownName {
                 name: input.to_string(),
                 backtrace: Backtrace::force_capture(),

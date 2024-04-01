@@ -64,12 +64,13 @@ mega_export_tiles_fat()
 
 -- /c
 local function mega_export_entities_compressed()
+    local chunks = 900 * 32
     local file = "big-entities-a.json"
     log("write " .. file .. "...")
     local output = {}
-    local all_entities = game.player.surface.find_entities_filtered {
-        area = { { -32000, -32000 }, { 32000, 32000 } },
-        name = { "iron-ore", "copper-ore", "stone", "coal", "uranium-ore", "crude-oil" }
+    local all_entities = game.surfaces[1].find_entities_filtered {
+        area = { { -chunks, -chunks }, { chunks, chunks } },
+        name = { "iron-ore", "copper-ore", "stone", "coal", "uranium-ore", "crude-oil", 'steel-chest' }
     }
     for _, entity in ipairs(all_entities) do
         table.insert(output, entity.name)
@@ -80,21 +81,18 @@ local function mega_export_entities_compressed()
 end
 mega_export_entities_compressed()
 
+-- /c local test = game.surfaces[1].find_entity('steel-chest', {0.5,0.5}) if test == nill then log('nope') else log('exists') end
 -- /c
 local function insert_0x0_crate()
-    game.surfaces[1].create_entity {
-        name = "crate",
-        position = { 0, 0 },
-        force = game.player.force,
-    }
+    game.surfaces[1].create_entity { name = "steel-chest", position = { 0.5, 0.5 } }
 end
 insert_0x0_crate()
 
 -- /c
 local function hyper_scan()
-    local size = 2000
-    log('start game chunk generate with ' .. size .. " chunks...")
-    game.surfaces[1].request_to_generate_chunks({ 0, 0 }, size)
+    local chunks = 900
+    log('start game chunk generate with ' .. chunks .. " chunks...")
+    game.surfaces[1].request_to_generate_chunks({ 0, 0 }, chunks)
     log('force_generate....')
     game.surfaces[1].force_generate_chunk_requests()
     log('exit function')

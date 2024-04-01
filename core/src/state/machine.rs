@@ -85,7 +85,7 @@ impl Machine {
                 RefCell::into_inner(Rc::into_inner(metrics).unwrap()).log_final();
 
                 if read_dir(&step_out_dir).unwrap().count() == 0 {
-                    tracing::debug!("=== detected empty dir, removing for future re-processing");
+                    debug!("=== detected empty dir, removing for future re-processing");
                     remove_dir(&step_out_dir).unwrap();
                 } else {
                     // dir modify date updated after writing to folder
