@@ -1,4 +1,5 @@
 // source: https://gist.github.com/Hornwitser/f291638024e7e3c0271b1f3a4723e05a
+// with improvements to create factorio cli ready args for map gen
 
 const zlib = require("zlib");
 const util = require("util");
