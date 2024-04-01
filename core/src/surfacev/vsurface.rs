@@ -108,6 +108,7 @@ impl VSurface {
         Ok(surface)
     }
 
+    #[allow(clippy::type_complexity)]
     fn load_entity_buffers(
         &mut self,
         out_dir: &Path,
@@ -116,20 +117,26 @@ impl VSurface {
         JoinHandle<VResult<VEntityMap<VEntity>>>,
     ) {
         let out_dir_buf = out_dir.to_path_buf();
-        let pixel_thread = thread::spawn(move || {
-            trace!("start pixel thread");
-            let pixel_path = &path_pixel_xy_indexes(&out_dir_buf);
-            let mut buffer = VEntityMap::<VPixel>::new(0);
-            buffer.load_xy_file(pixel_path).map(|_| buffer)
-        });
+        let pixel_thread = thread::Builder::new()
+            .name("pixel-loader".to_string())
+            .spawn(move || {
+                trace!("start pixel thread");
+                let pixel_path = &path_pixel_xy_indexes(&out_dir_buf);
+                let mut buffer = VEntityMap::<VPixel>::new(0);
+                buffer.load_xy_file(pixel_path).map(|_| buffer)
+            })
+            .unwrap();
 
         let out_dir_buf = out_dir.to_path_buf();
-        let entity_thread = thread::spawn(move || {
-            trace!("start entity thread");
-            let entity_path = &path_entity_xy_indexes(&out_dir_buf);
-            let mut buffer = VEntityMap::<VEntity>::new(0);
-            buffer.load_xy_file(entity_path).map(|_| buffer)
-        });
+        let entity_thread = thread::Builder::new()
+            .name("entity-loader".to_string())
+            .spawn(move || {
+                trace!("start entity thread");
+                let entity_path = &path_entity_xy_indexes(&out_dir_buf);
+                let mut buffer = VEntityMap::<VEntity>::new(0);
+                buffer.load_xy_file(entity_path).map(|_| buffer)
+            })
+            .unwrap();
 
         (pixel_thread, entity_thread)
     }
