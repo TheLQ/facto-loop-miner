@@ -1,0 +1,25 @@
+   0.784 Info RemoteCommandProcessor.cpp:133: Starting RCON interface at IP ADDR:({0.0.0.0:28016})
+   0.785 Info CommandLineMultiplayer.cpp:297: Maximum segment size = 100; minimum segment size = 25; maximum-segment-size peer count = 10
+; minimum-segment-size peer count = 20
+  16.881 Info RemoteCommandProcessor.cpp:252: New RCON connection from IP ADDR:({127.0.0.1:59390})
+2024-03-31 16:26:50 [COMMAND] <server> (command): function hyper_scan()
+    local size = 1000
+    log('start game chunk generate with ' .. size .. " chunks...")
+    game.surfaces[1].request_to_generate_chunks({ 0, 0 }, size)
+    log('force_generate....')
+    game.surfaces[1].force_generate_chunk_requests()
+    log('exit function')
+end
+2024-03-31 16:26:50 [COMMAND] <server> (command): hyper_scan()
+  16.901 Script function ...:3: start game chunk generate with 1000 chunks...
+  66.911 Script function ...:5: force_generate....
+4021.505 Script function ...:7: exit function
+2024-03-31 17:33:56 [COMMAND] <server> (command): log('done')
+4042.735 Script log('done'):1: done
+
+2024-03-31T23:26:50.529829Z DEBUG facto_loop_miner::admiral::executor::rcon: executing RCONRequest { id: 14255920126433615383, request_type: 2, body: "/c function hyper_scan()\n    local size = 1000\n    log('start game chunk generate with ' .. size .. \" chunks...\")\n    game.surfaces[1].request_to_generate_chunks({ 0, 0 }, size)\n    log('force_generate....')\n    game.surfaces[1].force_generate_chunk_requests()\n    log('exit function')\nend" }
+2024-03-31T23:26:50.533759Z DEBUG facto_loop_miner::admiral::executor::rcon: Execute Result id -362095081 type 0 body 0
+2024-03-31T23:26:50.533806Z DEBUG facto_loop_miner::admiral::executor::rcon: executing RCONRequest { id: 3988824141334554328, request_type: 2, body: "/c hyper_scan()" }
+2024-04-01T00:33:35.168228Z DEBUG facto_loop_miner::admiral::executor::rcon: Execute Result id 1069524696 type 0 body 0
+2024-04-01T00:33:35.169014Z DEBUG facto_loop_miner::admiral::executor::rcon: executing RCONRequest { id: 9602239868908393393, request_type: 2, body: "/c log('done')" }
+2024-04-01T00:33:56.384353Z DEBUG facto_loop_miner::admiral::executor::rcon: Execute Result id 845206449 type 0 body 0
