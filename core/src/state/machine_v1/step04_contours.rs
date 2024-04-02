@@ -122,8 +122,8 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: Pixel) -> Vec<VP
         .into_iter()
         .map(|patch_rect| {
             let centered_patch_rect = Rect {
-                x: patch_rect.x - surface_meta.get_radius() as i32,
-                y: patch_rect.y - surface_meta.get_radius() as i32,
+                x: patch_rect.x - surface_meta.get_radius_i32(),
+                y: patch_rect.y - surface_meta.get_radius_i32(),
                 width: patch_rect.width,
                 height: patch_rect.height,
             };

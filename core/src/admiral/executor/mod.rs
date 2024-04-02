@@ -4,7 +4,6 @@ use crate::admiral::lua_command::fac_execution_run::FacExectionRun;
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
 use crate::surface::metric::Metrics;
 use std::backtrace::Backtrace;
-use std::fmt::Debug;
 use tracing::{debug, info, trace, warn};
 
 pub mod file;

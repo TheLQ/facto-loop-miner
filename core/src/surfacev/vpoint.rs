@@ -84,6 +84,11 @@ impl VPoint {
         assert_eq!(self.y % 2, 0, "y={} is not even", self.y);
     }
 
+    pub fn assert_6x6_position(&self) {
+        assert_eq!(self.x % 6, 0, "x={} is not 6", self.x);
+        assert_eq!(self.y % 6, 0, "y={} is not 6", self.y);
+    }
+
     pub fn move_x(&self, steps: i32) -> Self {
         VPoint {
             x: self.x + steps,

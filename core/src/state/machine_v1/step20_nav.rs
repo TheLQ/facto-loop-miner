@@ -13,8 +13,6 @@ use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use kiddo::{Manhattan, NearestNeighbour};
 use opencv::core::Point;
-use std::num::FpCategory::Infinite;
-use tracing::field::debug;
 use tracing::{debug, info, trace, warn};
 
 pub struct Step20 {}
@@ -166,7 +164,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             break;
         };
 
-        let patch_corner = patch_start.area.start.move_round2_down();
+        let patch_corner = patch_start.area.start;
         // surface.draw_text(
         //     "start",
         //     Point {
@@ -210,7 +208,24 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     break;
         // }
 
-        if let Some(path) = mori_start(surface, start, end) {
+        let search_area = VArea::from_arbitrary_points(
+            &VPoint::new(CENTRAL_BASE_TILES, -REMOVE_RESOURCE_BASE_TILES),
+            &VPoint::new(surface.get_radius() as i32, REMOVE_RESOURCE_BASE_TILES),
+        );
+        // if 1 + 1 == 2 {
+        //     let radius = surface.get_radius() as i32;
+        //     for x in -radius..radius {
+        //         for y in -radius..radius {
+        //             let point = VPoint::new(x, y);
+        //             if search_area.contains_point(&point) {
+        //                 surface.set_pixel(point, Pixel::Highlighter).unwrap();
+        //             }
+        //         }
+        //     }
+        //     break;
+        // }
+
+        if let Some(path) = mori_start(surface, start, end, search_area) {
             write_rail(surface, &path)?;
             // surface.draw_debug_square(&path[0].endpoint);
             params.metrics.borrow_mut().increment_slow("path-success")
@@ -246,10 +261,12 @@ fn main_base_destinations_base_corner() -> Vec<VPoint> {
     res
 }
 
+const CENTRAL_BASE_TILES_6X6: i32 = CENTRAL_BASE_TILES + (6 - (CENTRAL_BASE_TILES % 6));
+
 fn main_base_destinations_positive_side() -> Vec<VPoint> {
     let mut res = Vec::new();
     for nearest_count in 0..PATH_LIMIT.unwrap() as i32 {
-        res.push(VPoint::new(CENTRAL_BASE_TILES, nearest_count * 20));
+        res.push(VPoint::new(CENTRAL_BASE_TILES_6X6, nearest_count * 12));
     }
     res
 }
@@ -257,7 +274,7 @@ fn main_base_destinations_positive_side() -> Vec<VPoint> {
 fn main_base_destinations_negative_side() -> Vec<VPoint> {
     let mut res = Vec::new();
     for nearest_count in 0..PATH_LIMIT.unwrap() as i32 {
-        res.push(VPoint::new(CENTRAL_BASE_TILES, nearest_count * -20));
+        res.push(VPoint::new(CENTRAL_BASE_TILES_6X6, nearest_count * -12));
     }
     res
 }
@@ -352,7 +369,6 @@ fn patches_by_cross_sign_expanding(surface: &VSurface, resource: Pixel) -> Vec<&
 
                 let search_area =
                     VArea::from_arbitrary_points(&scan_start.endpoint, &scan_end.endpoint);
-                trace!("Searching {:?}", search_area);
                 for patch in surface.get_patches_slice() {
                     if resource == patch.resource && search_area.contains_point(&patch.area.start) {
                         patches.push(patch);

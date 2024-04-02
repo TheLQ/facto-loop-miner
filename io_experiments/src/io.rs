@@ -288,6 +288,7 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
     let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
 
+    debug!("mmapping...");
     let mut mmap = unsafe {
         MmapOptions::new()
             .populate()

@@ -1,9 +1,8 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::varea::VArea;
-use crate::surfacev::vpoint::VPoint;
 use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
-use tracing::warn;
+use tracing::{trace, warn};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VPatch {
@@ -40,9 +39,10 @@ impl VPatch {
         let mut new = self.clone();
         new.area = VArea {
             start: self.area.start.move_xy(-x_adjust, -y_adjust),
-            height: new.area.height + y_adjust as u32,
-            width: new.area.width + x_adjust as u32,
+            height: (new.area.height as i32 + y_adjust) as u32,
+            width: (new.area.width as i32 + x_adjust) as u32,
         };
+        new.area.start.assert_6x6_position();
         new
     }
 }

@@ -1,17 +1,19 @@
 use crate::navigator::mori_cost::calculate_cost_for_point;
 use crate::navigator::resource_cloud::ResourceCloud;
+use crate::navigator::threaded_search::threaded_searcher;
 use crate::simd_diff::SurfaceDiff;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::err::VResult;
-use crate::surfacev::rail_turn_templates::rail_turn_template_up_right;
+use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use num_format::ToFormattedString;
-use pathfinding::prelude::astar_mori;
+use pathfinding::prelude::dfs_reach;
 use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 use std::time::Instant;
 use tracing::debug;
 
@@ -19,11 +21,16 @@ use tracing::debug;
 ///
 /// Makes a dual rail + spacing, +6 straight or 90 degree turning, path of rail from start to end.
 /// Without collisions into any point on the Surface.
-pub fn mori_start(surface: &mut VSurface, start: Rail, end: Rail) -> Option<Vec<Rail>> {
+pub fn mori_start(
+    surface: &mut VSurface,
+    start: Rail,
+    end: Rail,
+    search_area: VArea,
+) -> Option<Vec<Rail>> {
     let pathfind_watch = BasicWatch::start();
 
-    start.endpoint.assert_even_position();
-    end.endpoint.assert_even_position();
+    start.endpoint.assert_6x6_position();
+    end.endpoint.assert_6x6_position();
 
     // TODO: Benchmark this vs Vec (old version),
     let mut valid_destinations: HashSet<Rail> = HashSet::new();
@@ -50,19 +57,28 @@ pub fn mori_start(surface: &mut VSurface, start: Rail, end: Rail) -> Option<Vec<
 
     debug!("Mori start {:?} end {:?}", start, end);
     // Forked function adds parents and cost params to each successor call. Used for limits
-    let pathfind = astar_mori(
-        &start,
-        |(rail, parents, total_cost)| {
-            rail.successors(
-                parents,
-                total_cost,
-                surface,
-                &end,
-                &resource_cloud,
-                &mut working_buffer,
-            )
+    // let pathfind = astar_mori(
+    //     &start,
+    //     |(rail, parents, total_cost)| {
+    //         rail.successors(
+    //             parents,
+    //             total_cost,
+    //             surface,
+    //             &end,
+    //             &resource_cloud,
+    //             &mut working_buffer,
+    //             &search_area,
+    //         )
+    //     },
+    //     |_p| 1,
+    //     |p| valid_destinations.contains(p),
+    // );
+    let pathfind = threaded_searcher::<Rail, _, _>(
+        start.clone(),
+        |parents| {
+            let (rail, parents) = parents.split_last().unwrap();
+            rail.successors(parents, surface, &end, &resource_cloud, &search_area)
         },
-        |_p| 1,
         |p| valid_destinations.contains(p),
     );
     let mut result = None;
@@ -145,7 +161,7 @@ const RAIL_DIRECTION_CLOCKWISE: [RailDirection; 4] = [
     RailDirection::Left,
 ];
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Rail {
     pub endpoint: VPoint,
     pub direction: RailDirection,
@@ -426,21 +442,25 @@ impl Rail {
 
     fn successors(
         &self,
-        parents: Vec<Rail>,
-        total_cost: u32,
+        parents: &[Rail],
         surface: &VSurface,
         end: &Rail,
         resource_cloud: &ResourceCloud,
-        working_buffer: &mut SurfaceDiff,
+        // working_buffer: &mut SurfaceDiff,
+        search_area: &VArea,
     ) -> Vec<(Self, u32)> {
         if parents.len() > 800 {
             return Vec::new();
         }
+        self.endpoint.assert_6x6_position();
         // debug!("testing {:?}", self);
+
+        let mut working_buffer_owned = SurfaceDiff::TODO_new();
+        let working_buffer = &mut working_buffer_owned;
 
         unsafe {
             METRIC_SUCCESSORS += 1;
-            if METRIC_SUCCESSORS % 100_000 == 0 {
+            if METRIC_SUCCESSORS % 1_000_000 == 0 {
                 debug!(
                     "successor {} spot parents {} size {}",
                     METRIC_SUCCESSORS.to_formatted_string(&LOCALE),
@@ -451,20 +471,26 @@ impl Rail {
         }
 
         let mut res = Vec::new();
-        if let Some(rail) = self
-            .move_forward_step()
-            .into_buildable(surface, working_buffer)
+        if let Some(rail) =
+            self.move_forward_step()
+                .into_buildable(surface, working_buffer, search_area, parents)
         {
-            let cost = calculate_cost_for_point(&rail, end, resource_cloud, &parents);
+            let cost = calculate_cost_for_point(&rail, end, resource_cloud, parents);
             res.push((rail, cost));
         }
 
-        if let Some(rail) = self.move_left().into_buildable(surface, working_buffer) {
-            let cost = calculate_cost_for_point(&rail, end, resource_cloud, &parents);
+        if let Some(rail) =
+            self.move_left()
+                .into_buildable(surface, working_buffer, search_area, parents)
+        {
+            let cost = calculate_cost_for_point(&rail, end, resource_cloud, parents);
             res.push((rail, cost));
         }
-        if let Some(rail) = self.move_right().into_buildable(surface, working_buffer) {
-            let cost = calculate_cost_for_point(&rail, end, resource_cloud, &parents);
+        if let Some(rail) =
+            self.move_right()
+                .into_buildable(surface, working_buffer, search_area, parents)
+        {
+            let cost = calculate_cost_for_point(&rail, end, resource_cloud, parents);
             res.push((rail, cost))
         }
         // debug!(
@@ -475,7 +501,32 @@ impl Rail {
         res
     }
 
-    fn into_buildable(self, surface: &VSurface, working_buffer: &mut SurfaceDiff) -> Option<Self> {
+    fn into_buildable(
+        self,
+        surface: &VSurface,
+        working_buffer: &mut SurfaceDiff,
+        search_area: &VArea,
+        parents: &[Rail],
+    ) -> Option<Self> {
+        self.endpoint.assert_6x6_position();
+        if !search_area.contains_point(&self.endpoint) {
+            return None;
+        }
+
+        // anti-recursion
+        if parents.iter().any(|p| p.endpoint == self.endpoint) {
+            return None;
+        }
+        // extra anti-recursion
+        // let mut set: HashSet<&Rail> = HashSet::new();
+        // set.insert(&self);
+        // for parent in parents {
+        //     if set.contains(parent) {
+        //         return None;
+        //     }
+        //     set.insert(parent);
+        // }
+
         const SIZE: u32 = 0;
         // if self.endpoint.x() < 4000 {
         //     None
@@ -603,6 +654,12 @@ impl Rail {
             RailDirection::Left | RailDirection::Right => self.endpoint.y() - other.endpoint.y(),
             RailDirection::Up | RailDirection::Down => self.endpoint.x() - other.endpoint.x(),
         }
+    }
+}
+
+impl Hash for Rail {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.endpoint.hash(state)
     }
 }
 

@@ -231,6 +231,10 @@ impl VSurface {
         self.pixels.radius()
     }
 
+    pub fn get_radius_i32(&self) -> i32 {
+        self.pixels.radius() as i32
+    }
+
     pub fn get_pixel(&self, point: &VPoint) -> Pixel {
         match self.pixels.get_entity_by_point(point) {
             Some(e) => e.pixel,
