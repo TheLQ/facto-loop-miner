@@ -12,7 +12,7 @@ use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use crossbeam::atomic::AtomicCell;
 use num_format::ToFormattedString;
-use pathfinding::prelude::dfs_reach;
+use pathfinding::prelude::{astar_mori, dfs_reach};
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::mem;
@@ -58,59 +58,44 @@ pub fn mori_start(
     // TODO let mut working_buffer = surface.surface_diff();
     let mut working_buffer = SurfaceDiff::TODO_new();
 
-    let mut metric_successors = AtomicU64::new(1);
-    let mut metric_start = AtomicCell::new(Instant::now());
+    let metric_successors = AtomicU64::new(1);
+    let metric_start = AtomicCell::new(Instant::now());
 
     debug!("Mori start {:?} end {:?}", start, end);
     // Forked function adds parents and cost params to each successor call. Used for limits
-    // let pathfind = astar_mori(
-    //     &start,
-    //     |(rail, parents, total_cost)| {
+    let pathfind = astar_mori(
+        &start,
+        |(_rail, parents, _total_cost)| {
+            let (rail, parents) = parents.split_last().unwrap();
+            rail.successors(
+                parents,
+                surface,
+                &end,
+                &resource_cloud,
+                &search_area,
+                &metric_successors,
+                &metric_start,
+            )
+        },
+        |_p| 1,
+        |p| valid_destinations.contains(p),
+    );
+    // let pathfind = threaded_searcher::<Rail, _, _>(
+    //     start.clone(),
+    //     |parents| {
+    //         let (rail, parents) = parents.split_last().unwrap();
     //         rail.successors(
     //             parents,
-    //             total_cost,
     //             surface,
     //             &end,
     //             &resource_cloud,
-    //             &mut working_buffer,
     //             &search_area,
+    //             &metric_successors,
+    //             &metric_start,
     //         )
     //     },
-    //     |_p| 1,
     //     |p| valid_destinations.contains(p),
     // );
-    let pathfind = threaded_searcher::<Rail, _, _>(
-        start.clone(),
-        |parents| {
-            // unsafe {
-            //     METRIC_SUCCESSORS += 1;
-            //     if METRIC_SUCCESSORS % 1_000_000 == 0 {
-            // METRIC_SUCCESSORS.to_formatted_string(&LOCALE),
-            // }
-            // let size = METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
-
-            let metric_successors = metric_successors.fetch_add(1, Ordering::Relaxed);
-            if metric_successors % 1_000_000 == 0 {
-                let now = Instant::now();
-                // let metric_start = metric_start.swap(now);
-                // let rate_paths_per_second = 1_000_000.0 / since_last;
-                let metric_start = metric_start.load();
-                let since_last = (now - metric_start).as_secs().max(1) as f32;
-                let rate_paths_per_second = metric_successors as f32 / since_last;
-                debug!(
-                    "successor {} spot parents {} in {} paths/second total {} seconds",
-                    metric_successors.to_formatted_string(&LOCALE),
-                    parents.len(),
-                    (rate_paths_per_second as u32).to_formatted_string(&LOCALE),
-                    since_last,
-                );
-            }
-
-            let (rail, parents) = parents.split_last().unwrap();
-            rail.successors(parents, surface, &end, &resource_cloud, &search_area)
-        },
-        |p| valid_destinations.contains(p),
-    );
     let mut result = None;
     if let Some(pathfind) = pathfind {
         let (path, path_cost) = pathfind;
@@ -480,7 +465,26 @@ impl Rail {
         resource_cloud: &ResourceCloud,
         // working_buffer: &mut SurfaceDiff,
         search_area: &VArea,
+        metric_successors: &AtomicU64,
+        metric_start: &AtomicCell<Instant>,
     ) -> Vec<(Self, u32)> {
+        let metric_successors = metric_successors.fetch_add(1, Ordering::Relaxed);
+        if metric_successors % 1_000_000 == 0 {
+            let now = Instant::now();
+            // let metric_start = metric_start.swap(now);
+            // let rate_paths_per_second = 1_000_000.0 / since_last;
+            let metric_start = metric_start.load();
+            let since_last = (now - metric_start).as_secs().max(1) as f32;
+            let rate_paths_per_second = metric_successors as f32 / since_last;
+            debug!(
+                "successor {} spot parents {} in {} paths/second total {} seconds",
+                metric_successors.to_formatted_string(&LOCALE),
+                parents.len(),
+                (rate_paths_per_second as u32).to_formatted_string(&LOCALE),
+                since_last,
+            );
+        }
+
         if parents.len() > 800 {
             return Vec::new();
         }
