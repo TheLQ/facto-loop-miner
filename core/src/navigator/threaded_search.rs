@@ -16,12 +16,17 @@ where
             info!("spawing success");
             let mut best_cost = u32::MAX;
             let mut best_path = Vec::new();
+            let mut total = 0u64;
 
             while let Some((path, cost)) = success_recv.recv().unwrap() {
                 if cost < best_cost {
                     best_cost = cost;
                     best_path = path;
                     trace!("new lowest {} {}", best_path.len(), best_cost);
+                }
+                total += 1;
+                if total % 100_000 == 0 {
+                    trace!("success parsed {}", total)
                 }
             }
 

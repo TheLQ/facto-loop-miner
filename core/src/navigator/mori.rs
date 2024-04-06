@@ -10,11 +10,14 @@ use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
+use crossbeam::atomic::AtomicCell;
 use num_format::ToFormattedString;
 use pathfinding::prelude::dfs_reach;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
-use std::time::Instant;
+use std::mem;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tracing::debug;
 
 /// Pathfinder v1, Mori Calliope
@@ -55,6 +58,9 @@ pub fn mori_start(
     // TODO let mut working_buffer = surface.surface_diff();
     let mut working_buffer = SurfaceDiff::TODO_new();
 
+    let mut metric_successors = AtomicU64::new(1);
+    let mut metric_start = AtomicCell::new(Instant::now());
+
     debug!("Mori start {:?} end {:?}", start, end);
     // Forked function adds parents and cost params to each successor call. Used for limits
     // let pathfind = astar_mori(
@@ -76,6 +82,30 @@ pub fn mori_start(
     let pathfind = threaded_searcher::<Rail, _, _>(
         start.clone(),
         |parents| {
+            // unsafe {
+            //     METRIC_SUCCESSORS += 1;
+            //     if METRIC_SUCCESSORS % 1_000_000 == 0 {
+            // METRIC_SUCCESSORS.to_formatted_string(&LOCALE),
+            // }
+            // let size = METRIC_SUCCESSOR.fetch_add(1, Ordering::Relaxed);
+
+            let metric_successors = metric_successors.fetch_add(1, Ordering::Relaxed);
+            if metric_successors % 1_000_000 == 0 {
+                let now = Instant::now();
+                // let metric_start = metric_start.swap(now);
+                // let rate_paths_per_second = 1_000_000.0 / since_last;
+                let metric_start = metric_start.load();
+                let since_last = (now - metric_start).as_secs().max(1) as f32;
+                let rate_paths_per_second = metric_successors as f32 / since_last;
+                debug!(
+                    "successor {} spot parents {} in {} paths/second total {} seconds",
+                    metric_successors.to_formatted_string(&LOCALE),
+                    parents.len(),
+                    (rate_paths_per_second as u32).to_formatted_string(&LOCALE),
+                    since_last,
+                );
+            }
+
             let (rail, parents) = parents.split_last().unwrap();
             rail.successors(parents, surface, &end, &resource_cloud, &search_area)
         },
@@ -94,13 +124,14 @@ pub fn mori_start(
     let end_time = Instant::now();
     debug!("+++ Mori finished in {}", pathfind_watch,);
 
-    unsafe {
-        debug!(
-            "metric successors called {}",
-            METRIC_SUCCESSORS.to_formatted_string(&LOCALE),
-        );
-        METRIC_SUCCESSORS = 0;
-    }
+    // unsafe {
+    //     debug!(
+    //         "metric successors called {}",
+    //         METRIC_SUCCESSORS.to_formatted_string(&LOCALE),
+    //     );
+    //     METRIC_SUCCESSORS = 0;
+    // }
+    // METRIC_SUCCESSOR.swap(0, Ordering::Relaxed);
 
     result
 }
@@ -171,7 +202,8 @@ pub struct Rail {
 const DUAL_RAIL_SIZE: u32 = 3;
 
 // static METRIC_SUCCESSOR: AtomicU64 = AtomicU64::new(0);
-static mut METRIC_SUCCESSORS: u64 = 0;
+// // static mut METRIC_SUCCESSORS: u64 = 0;
+// static mut METRIC_SUCCESSOR_START: Instant = lazy_static::Instant::now();
 
 const RAIL_STEP_SIZE: u32 = 6;
 
@@ -455,20 +487,12 @@ impl Rail {
         self.endpoint.assert_6x6_position();
         // debug!("testing {:?}", self);
 
+        if parents.iter().any(|p| p == self) {
+            panic!("crashing found myself!");
+        }
+
         let mut working_buffer_owned = SurfaceDiff::TODO_new();
         let working_buffer = &mut working_buffer_owned;
-
-        unsafe {
-            METRIC_SUCCESSORS += 1;
-            if METRIC_SUCCESSORS % 1_000_000 == 0 {
-                debug!(
-                    "successor {} spot parents {} size {}",
-                    METRIC_SUCCESSORS.to_formatted_string(&LOCALE),
-                    parents.len(),
-                    surface.get_radius(),
-                );
-            }
-        }
 
         let mut res = Vec::new();
         if let Some(rail) =
@@ -790,6 +814,13 @@ pub fn write_rail(surface: &mut VSurface, path: &Vec<Rail>) -> VResult<()> {
     }
     debug!("wrote {} rail", total_rail);
     Ok(())
+}
+
+fn get_current_unix_time_millis() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
 }
 
 #[cfg(test)]
