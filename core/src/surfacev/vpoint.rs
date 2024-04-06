@@ -152,6 +152,14 @@ impl VPoint {
     pub fn distance_to(&self, other: &Self) -> u32 {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
     }
+
+    pub fn subtract_x(&self, other: &Self) -> i32 {
+        self.x - other.x
+    }
+
+    pub fn subtract_y(&self, other: &Self) -> i32 {
+        self.y - other.y
+    }
 }
 
 const VPOINT_ABS_0: VPoint = VPoint { x: 0, y: 0 };

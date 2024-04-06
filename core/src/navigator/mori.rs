@@ -70,6 +70,7 @@ pub fn mori_start(
             rail.successors(
                 parents,
                 surface,
+                &start,
                 &end,
                 &resource_cloud,
                 &search_area,
@@ -168,6 +169,17 @@ impl RailDirection {
         }
         new_direction.clone()
     }
+
+    pub fn is_same_axis(&self, other: &Self) -> bool {
+        match self {
+            RailDirection::Up | RailDirection::Down => {
+                *other == RailDirection::Up || *other == RailDirection::Down
+            }
+            RailDirection::Left | RailDirection::Right => {
+                *other == RailDirection::Left || *other == RailDirection::Right
+            }
+        }
+    }
 }
 
 const RAIL_DIRECTION_CLOCKWISE: [RailDirection; 4] = [
@@ -190,7 +202,7 @@ const DUAL_RAIL_SIZE: u32 = 3;
 // // static mut METRIC_SUCCESSORS: u64 = 0;
 // static mut METRIC_SUCCESSOR_START: Instant = lazy_static::Instant::now();
 
-const RAIL_STEP_SIZE: u32 = 6;
+pub const RAIL_STEP_SIZE: u32 = 6;
 
 impl Rail {
     pub fn new_straight(endpoint: VPoint, direction: RailDirection) -> Self {
@@ -461,6 +473,7 @@ impl Rail {
         &self,
         parents: &[Rail],
         surface: &VSurface,
+        start: &Rail,
         end: &Rail,
         resource_cloud: &ResourceCloud,
         // working_buffer: &mut SurfaceDiff,
@@ -503,7 +516,7 @@ impl Rail {
             self.move_forward_step()
                 .into_buildable(surface, working_buffer, search_area, parents)
         {
-            let cost = calculate_cost_for_point(&rail, end, resource_cloud, parents);
+            let cost = calculate_cost_for_point(&rail, start, end, resource_cloud, parents);
             res.push((rail, cost));
         }
 
@@ -511,14 +524,14 @@ impl Rail {
             self.move_left()
                 .into_buildable(surface, working_buffer, search_area, parents)
         {
-            let cost = calculate_cost_for_point(&rail, end, resource_cloud, parents);
+            let cost = calculate_cost_for_point(&rail, start, end, resource_cloud, parents);
             res.push((rail, cost));
         }
         if let Some(rail) =
             self.move_right()
                 .into_buildable(surface, working_buffer, search_area, parents)
         {
-            let cost = calculate_cost_for_point(&rail, end, resource_cloud, parents);
+            let cost = calculate_cost_for_point(&rail, start, end, resource_cloud, parents);
             res.push((rail, cost))
         }
         // debug!(
@@ -672,15 +685,15 @@ impl Rail {
 
     pub fn distance_between_parallel_axis(&self, other: &Rail) -> i32 {
         match self.direction {
-            RailDirection::Left | RailDirection::Right => self.endpoint.x() - other.endpoint.x(),
-            RailDirection::Up | RailDirection::Down => self.endpoint.y() - other.endpoint.y(),
+            RailDirection::Left | RailDirection::Right => self.endpoint.subtract_x(&other.endpoint),
+            RailDirection::Up | RailDirection::Down => self.endpoint.subtract_y(&other.endpoint),
         }
     }
 
     pub fn distance_between_perpendicular_axis(&self, other: &Rail) -> i32 {
         match self.direction {
-            RailDirection::Left | RailDirection::Right => self.endpoint.y() - other.endpoint.y(),
-            RailDirection::Up | RailDirection::Down => self.endpoint.x() - other.endpoint.x(),
+            RailDirection::Left | RailDirection::Right => self.endpoint.subtract_y(&other.endpoint),
+            RailDirection::Up | RailDirection::Down => self.endpoint.subtract_x(&other.endpoint),
         }
     }
 }
@@ -936,9 +949,17 @@ mod test {
         const TEST_RADIUS: usize = 30;
         let mut surface = VSurface::new(TEST_RADIUS as u32);
 
-        let origin_rail = Rail::new_straight(VPoint::new(-5, 2), RailDirection::Down);
-        draw_rail(&mut surface, &origin_rail);
-        let turn_rail = origin_rail.move_left();
+        let turn_rail = Rail::new_straight(VPoint::new(-5, 2), RailDirection::Down);
+        draw_rail(&mut surface, &turn_rail);
+        let turn_rail = turn_rail.move_left();
+        draw_rail(&mut surface, &turn_rail);
+        let turn_rail = turn_rail.move_left();
+        draw_rail(&mut surface, &turn_rail);
+        let turn_rail = turn_rail.move_left();
+        draw_rail(&mut surface, &turn_rail);
+        let turn_rail = turn_rail.move_left();
+        draw_rail(&mut surface, &turn_rail);
+        let turn_rail = turn_rail.move_left();
         draw_rail(&mut surface, &turn_rail);
         // draw_rail(&mut surface, VPoint::new(1, -5), RailDirection::Down);
 
@@ -994,7 +1015,8 @@ mod test {
         // )
         // .unwrap();
 
-        mori_start(&mut surface, start_rail, end_rail);
+        let search_area = surface.test_global_area();
+        mori_start(&mut surface, start_rail, end_rail, search_area);
 
         let actual = format_surface_dump(&surface);
         assert_eq!("asdf", actual);

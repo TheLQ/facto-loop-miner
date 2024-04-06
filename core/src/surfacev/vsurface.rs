@@ -3,6 +3,7 @@ use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
+use crate::surfacev::varea::VArea;
 use crate::surfacev::ventity_map::{VEntityMap, VEntityXY};
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::VPoint;
@@ -349,6 +350,12 @@ impl VSurface {
     #[cfg(test)]
     pub fn test_dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {
         self.pixels.iter_xy_pixels()
+    }
+
+    #[cfg(test)]
+    pub fn test_global_area(&self) -> VArea {
+        let radius = self.get_radius_i32();
+        VArea::from_arbitrary_points(&VPoint::new(-radius, -radius), &VPoint::new(radius, radius))
     }
 
     // pub fn draw_debug_square(&mut self, point: &VPoint) {

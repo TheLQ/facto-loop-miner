@@ -1,4 +1,4 @@
-use crate::navigator::mori::{mori_start, write_rail, Rail, RailDirection};
+use crate::navigator::mori::{mori_start, write_rail, Rail, RailDirection, RAIL_STEP_SIZE};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::state::machine_v1::step10_base::{CENTRAL_BASE_TILES, REMOVE_RESOURCE_BASE_TILES};
@@ -51,8 +51,8 @@ impl Step for Step20 {
     }
 }
 
-const NEAREST_COUNT: usize = 25;
-const PATH_LIMIT: Option<u8> = Some(5);
+const NEAREST_COUNT: usize = 50;
+const PATH_LIMIT: Option<u8> = Some(30);
 // const PATH_LIMIT: Option<u8> = None;
 
 enum SpeculationTypes {
@@ -99,16 +99,22 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     // }
 
     // let mut destinations = main_base_destinations_base_corner().into_iter();
-    let mut destinations_positive = main_base_destinations_positive_side().into_iter();
-    let mut destinations_negative = main_base_destinations_negative_side().into_iter();
+    let mut destinations_positive = main_base_destinations_positive_side()
+        .into_iter()
+        .peekable();
+    let mut destinations_negative = main_base_destinations_negative_side()
+        .into_iter()
+        .peekable();
 
     let base_corner = base_bottom_right_corner();
     let mut made_paths: u8 = 0;
 
-    let resource = Pixel::IronOre;
     let ordered_patches: Vec<VPatch> = match 2 {
-        1 => patches_by_radial_base_corner(surface, resource),
-        2 => patches_by_cross_sign_expanding(surface, resource),
+        1 => patches_by_radial_base_corner(surface, Pixel::IronOre),
+        2 => patches_by_cross_sign_expanding(
+            surface,
+            &[Pixel::IronOre, Pixel::CopperOre, Pixel::Stone, Pixel::Coal],
+        ),
         _ => panic!("asd"),
     }
     .into_iter()
@@ -129,7 +135,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     //     return Ok(());
     // }
 
-    let ordered_size = ordered_patches.len();
+    let ordered_patches_len = ordered_patches.len();
     for (nearest_count, patch_start) in ordered_patches.into_iter().enumerate() {
         debug!(
             "path {} of {} - actually made {} max {:?}",
@@ -154,12 +160,12 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     debug!("Out of destinations, stopping");
         //     break;
         // };
-        let destination = if patch_start.area.start.y() > 0 {
-            destinations_positive.next()
+        let destinations_iter = if patch_start.area.start.y() > 0 {
+            &mut destinations_positive
         } else {
-            destinations_negative.next()
+            &mut destinations_negative
         };
-        let Some(destination) = destination else {
+        let Some(destination) = destinations_iter.peek() else {
             debug!("Out of destinations, stopping");
             break;
         };
@@ -173,13 +179,13 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     },
         // );
 
-        let start = Rail::new_straight(patch_corner, RailDirection::Left).move_forward_step();
+        let start = Rail::new_straight(patch_corner, RailDirection::Right).move_forward_step();
         // let end = start
         //     .move_forward_step()
         //     .move_forward_step()
         //     .move_forward_step()
         //     .move_forward_step();
-        let end = Rail::new_straight(destination, RailDirection::Left);
+        let end = Rail::new_straight(*destination, RailDirection::Right);
 
         // // start box
         // for super_x in 0..100 {
@@ -225,26 +231,30 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     break;
         // }
 
-        if let Some(path) = mori_start(surface, start, end, search_area) {
+        if let Some(path) = mori_start(surface, end, start, search_area) {
             write_rail(surface, &path)?;
+
+            // destination no longer usable
+            destinations_iter.next();
+            made_paths += 1;
+
             // surface.draw_debug_square(&path[0].endpoint);
             params.metrics.borrow_mut().increment_slow("path-success")
         } else {
             params.metrics.borrow_mut().increment_slow("path-failure")
         }
-        made_paths += 1;
 
         // if 1 + 1 == 2 {
         //     info!("TOO BREAK");
         //     break;
         // }
 
-        if nearest_count >= 2 {
-            info!("BREAK");
-            break;
-        }
+        // if nearest_count >= 2 {
+        //     info!("BREAK");
+        //     break;
+        // }
     }
-    info!("out of patches in {}", ordered_size);
+    info!("Total found patches {}", ordered_patches_len);
 
     Ok(())
 }
@@ -265,7 +275,7 @@ const CENTRAL_BASE_TILES_6X6: i32 = CENTRAL_BASE_TILES + (6 - (CENTRAL_BASE_TILE
 
 fn main_base_destinations_positive_side() -> Vec<VPoint> {
     let mut res = Vec::new();
-    for nearest_count in 0..PATH_LIMIT.unwrap() as i32 {
+    for nearest_count in 1..PATH_LIMIT.unwrap() as i32 {
         res.push(VPoint::new(CENTRAL_BASE_TILES_6X6, nearest_count * 12));
     }
     res
@@ -273,7 +283,7 @@ fn main_base_destinations_positive_side() -> Vec<VPoint> {
 
 fn main_base_destinations_negative_side() -> Vec<VPoint> {
     let mut res = Vec::new();
-    for nearest_count in 0..PATH_LIMIT.unwrap() as i32 {
+    for nearest_count in 1..PATH_LIMIT.unwrap() as i32 {
         res.push(VPoint::new(CENTRAL_BASE_TILES_6X6, nearest_count * -12));
     }
     res
@@ -311,14 +321,22 @@ fn patches_by_radial_base_corner(surface: &VSurface, resource: Pixel) -> Vec<&VP
         .collect()
 }
 
-fn patches_by_cross_sign_expanding(surface: &VSurface, resource: Pixel) -> Vec<&VPatch> {
+#[allow(clippy::never_loop)]
+fn patches_by_cross_sign_expanding<'a>(
+    surface: &'a VSurface,
+    resources: &[Pixel],
+) -> Vec<&'a VPatch> {
     let cross_sides = [Rail::new_straight(
         VPoint::new(REMOVE_RESOURCE_BASE_TILES, 0),
         RailDirection::Right,
     )];
     let mut patches = Vec::new();
     for cross_side in cross_sides {
-        for perpendicular_scan_area in (1i32..150).flat_map(|i| [i, -i]) {
+        for perpendicular_scan_area in (1i32..).flat_map(|i| [i, -i]) {
+            if perpendicular_scan_area.unsigned_abs() * RAIL_STEP_SIZE > surface.get_radius() {
+                break;
+            }
+
             let mut parallel_scan_area = 0;
             loop {
                 parallel_scan_area += 1;
@@ -370,7 +388,9 @@ fn patches_by_cross_sign_expanding(surface: &VSurface, resource: Pixel) -> Vec<&
                 let search_area =
                     VArea::from_arbitrary_points(&scan_start.endpoint, &scan_end.endpoint);
                 for patch in surface.get_patches_slice() {
-                    if resource == patch.resource && search_area.contains_point(&patch.area.start) {
+                    if resources.contains(&patch.resource)
+                        && search_area.contains_point(&patch.area.start)
+                    {
                         patches.push(patch);
                     }
                 }
