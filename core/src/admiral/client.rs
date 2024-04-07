@@ -6,7 +6,7 @@ use crate::admiral::generators::assembler_farm::{AssemblerChest, AssemblerFarmGe
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::terapower::Terapower;
 use crate::admiral::lua_command::fac_destroy::FacDestroy;
-use crate::admiral::lua_command::lua_batch::BasicLuaBatch;
+use crate::admiral::lua_command::lua_batch::LuaBatchCommand;
 use opencv::core::{Point, Point2f};
 use tracing::error;
 
