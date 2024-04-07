@@ -4,27 +4,35 @@ use crate::admiral::executor::LuaCompiler;
 use crate::admiral::generators::rail90::{
     rail_degrees_east, rail_degrees_north, rail_degrees_south, rail_degrees_west,
 };
+use crate::admiral::lua_command::chart_pulse::ChartPulse;
 use crate::admiral::lua_command::fac_destroy::FacDestroy;
 use crate::admiral::lua_command::fac_log::FacLog;
+use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::lua_batch::LuaBatchCommand;
 use crate::admiral::lua_command::raw_lua::RawLuaCommand;
 use crate::admiral::lua_command::scanner::{
     facscan_hyper_scan, facscan_mega_export_entities_compressed, BaseScanner,
 };
 use crate::admiral::lua_command::LuaCommand;
-use crate::state::machine_v1::CROP_RADIUS;
+use crate::navigator::mori::RailMode;
+use crate::state::machine_v1::{CROP_RADIUS, REMOVE_RESOURCE_BASE_TILES};
+use crate::surface::surface::Surface;
 use crate::surfacev::vpoint::VPoint;
+use crate::surfacev::vsurface::VSurface;
+use std::path::Path;
 use tracing::info;
 
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 1 {
-        1 => admiral_entrypoint_testing(&mut admiral)
-            .map_err(pretty_panic_admiral)
-            .unwrap(),
+    match 2 {
+        1 => admiral_entrypoint_testing(&mut admiral),
+        2 => admiral_entrypoint_prod(&mut admiral),
+
         _ => panic!("asdf"),
     }
+    .map_err(pretty_panic_admiral)
+    .unwrap();
 
     // validate we have space for us
 
@@ -42,16 +50,23 @@ pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     // info!("return: {}", res.body);
 }
 
+const WORK_RADIUS: u32 = REMOVE_RESOURCE_BASE_TILES as u32 + 20;
+
 fn admiral_entrypoint_prod(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     scan_area(admiral)?;
     destroy_placed_entities(admiral)?;
+
+    let surface = VSurface::load(Path::new("work/out0/step20-nav"))?;
+    insert_rail_from_surface(admiral, &surface)?;
+
+    chart_pulse(admiral)?;
 
     Ok(())
 }
 
 fn scan_area(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     // Need to have generated space for our testing
-    let command = BaseScanner::new_radius(CROP_RADIUS);
+    let command = BaseScanner::new_radius(WORK_RADIUS);
     admiral.execute_checked_command(command.into_boxed())?;
 
     Ok(())
@@ -59,6 +74,33 @@ fn scan_area(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
 fn destroy_placed_entities(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     let command = FacDestroy::new_filtered(150, vec!["straight-rail", "curved-rail"]);
+    admiral.execute_checked_command(command.into_boxed())?;
+
+    Ok(())
+}
+
+fn insert_rail_from_surface(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
+    for rail in surface.get_rail() {
+        if !rail.endpoint.is_within_center_radius(WORK_RADIUS) {
+            continue;
+        }
+        if rail.mode != RailMode::Straight {
+            continue;
+        }
+        info!("writing {:?}", rail);
+
+        let command = FacSurfaceCreateEntity::new_rail_straight(
+            rail.endpoint.to_f32_with_offset(1.0),
+            rail.direction.clone(),
+        );
+        admiral.execute_checked_command(command.into_boxed())?;
+    }
+
+    Ok(())
+}
+
+fn chart_pulse(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    let command = ChartPulse::new_radius(WORK_RADIUS);
     admiral.execute_checked_command(command.into_boxed())?;
 
     Ok(())

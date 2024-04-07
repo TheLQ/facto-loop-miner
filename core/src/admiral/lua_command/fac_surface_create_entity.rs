@@ -5,7 +5,7 @@ use opencv::core::Point2f;
 use strum::AsRefStr;
 
 const DEBUG_PRE_COLLISION: bool = false;
-const DEBUG_POSITION_EXPECTED: bool = true;
+const DEBUG_POSITION_EXPECTED: bool = false;
 
 #[derive(Debug)]
 pub struct FacSurfaceCreateEntity {
@@ -178,7 +178,7 @@ impl CreateParam {
         match self {
             CreateParam::Direction(direction) => (
                 "direction",
-                format!("defines.direction.{}", direction.as_ref().to_lowercase()),
+                format!("defines.direction.{}", direction.to_factorio()),
             ),
             CreateParam::DirectionFacto(direction) => (
                 "direction",

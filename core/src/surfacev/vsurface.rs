@@ -355,6 +355,10 @@ impl VSurface {
         self.place_rail.append(&mut rails)
     }
 
+    pub fn get_rail(&self) -> &[Rail] {
+        &self.place_rail
+    }
+
     #[cfg(test)]
     pub fn test_dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {
         self.pixels.iter_xy_pixels()

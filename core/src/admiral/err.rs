@@ -1,3 +1,4 @@
+use crate::surfacev::err::VError;
 use rcon_client::RCONError;
 use std::backtrace::Backtrace;
 use std::io;
@@ -62,6 +63,8 @@ pub enum AdmiralError {
         e: io::Error,
         backtrace: Backtrace,
     },
+    #[error("VError")]
+    SurfaceError(#[from] VError),
 }
 
 impl AdmiralError {
@@ -78,6 +81,7 @@ impl AdmiralError {
             | AdmiralError::DefineFailed { backtrace, .. }
             | AdmiralError::TooLargeRequest { backtrace, .. }
             | AdmiralError::IoError { backtrace, .. } => backtrace,
+            AdmiralError::SurfaceError(v) => v.my_backtrace(),
         }
     }
 }

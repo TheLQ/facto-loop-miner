@@ -180,6 +180,15 @@ impl RailDirection {
             }
         }
     }
+
+    pub fn to_factorio(&self) -> &'static str {
+        match self {
+            RailDirection::Up => "north",
+            RailDirection::Down => "south",
+            RailDirection::Left => "west",
+            RailDirection::Right => "east",
+        }
+    }
 }
 
 const RAIL_DIRECTION_CLOCKWISE: [RailDirection; 4] = [
