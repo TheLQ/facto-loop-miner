@@ -55,7 +55,7 @@ impl AdmiralFile {
 }
 
 impl LuaCompiler for AdmiralFile {
-    fn _execute_statement<L: LuaCommand>(&mut self, lua: L) -> AdmiralResult<ExecuteResponse<L>> {
+    fn _execute_statement(&mut self, lua: impl LuaCommand) -> AdmiralResult<ExecuteResponse> {
         let mut lua_text = lua.make_lua();
         lua_text = lua_text.replace("rcon.print", "log");
         self.output_file
@@ -66,18 +66,17 @@ impl LuaCompiler for AdmiralFile {
         Ok(ExecuteResponse {
             lua_text: String::new(),
             body: "luafile_success".to_string(),
-            lua,
         })
     }
 
-    fn _execute_define(
-        &mut self,
-        lua_define: FacExectionDefine,
-    ) -> AdmiralResult<ExecuteResponse<FacExectionDefine>> {
-        LuaCompiler::_execute_statement(self, lua_define).map(|r| ExecuteResponse {
-            lua_text: String::new(),
-            body: "facexecution_define".to_string(),
-            lua: r.lua,
-        })
-    }
+    // fn _execute_define(
+    //     &mut self,
+    //     lua_define: FacExectionDefine,
+    // ) -> AdmiralResult<ExecuteResponse<FacExectionDefine>> {
+    //     LuaCompiler::_execute_statement(self, lua_define).map(|r| ExecuteResponse {
+    //         lua_text: String::new(),
+    //         body: "facexecution_define".to_string(),
+    //         lua: r.lua,
+    //     })
+    // }
 }

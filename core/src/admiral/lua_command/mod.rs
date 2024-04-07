@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+pub mod checked_command;
 pub mod fac_destroy;
 pub mod fac_execution_define;
 pub mod fac_execution_run;

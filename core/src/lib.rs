@@ -40,6 +40,7 @@
 extern crate core;
 
 use crate::admiral::executor::client::AdmiralClient;
+use crate::admiral::executor::entrypoint::admiral_entrypoint;
 use crate::admiral::executor::LuaCompiler;
 use crate::admiral::lua_command::fac_log::FacLog;
 use crate::admiral::lua_command::scanner::{
@@ -97,24 +98,8 @@ pub fn rcon_inner_main() {
 
     let mut admiral = AdmiralClient::new().unwrap();
     admiral.auth().unwrap();
-    // let res = admiral
-    //     ._execute_statement(FacLog {
-    //         message: "asdf".to_string(),
-    //     })
-    //     .unwrap();
 
-    for command in facscan_hyper_scan() {
-        let res = admiral._execute_statement(command).unwrap();
-        info!("return: {}", res.body);
-    }
-    for command in facscan_mega_export_entities_compressed() {
-        let res = admiral._execute_statement(command).unwrap();
-        info!("return: {}", res.body);
-    }
-    let res = admiral
-        ._execute_statement(FacLog::new("done".to_string()))
-        .unwrap();
-    info!("return: {}", res.body);
+    admiral_entrypoint(admiral);
 }
 
 /// what is this called?

@@ -21,52 +21,52 @@ pub fn inner_admiral() -> AdmiralResult<()> {
     // admiral.auth()?;
     // admiral.log("init admiral")?;
 
-    let mut admiral = AdmiralFile::new()?;
+    // let mut admiral = AdmiralFile::new()?;
 
-    admiral.execute_block(BasicLuaBatch {
-        commands: vec![Box::new(FacDestroy {})],
-    })?;
+    // admiral.execute_block(BasicLuaBatch {
+    //     commands: vec![Box::new(FacDestroy {})],
+    // })?;
 
     // let res = admiral.execute_block(RailStationGenerator {
     //     wagon_size: 8,
     //     start: Point2f { x: 200.0, y: 200.0 },
     // })?;
 
-    admiral.execute_block(Terapower {
-        start: Point { x: 0, y: 0 },
-        height: 600,
-        width: 600,
-    })?;
-
-    admiral.execute_block(AssemblerFarmGenerator {
-        inner: BeaconFarmGenerator {
-            cell_size: 3,
-            width: 5,
-            height: 5,
-            start: Point2f { x: 200.5, y: 200.5 },
-            module: "speed-module-3".to_string(),
-        },
-        chests: vec![
-            AssemblerChest::Output { is_purple: false },
-            AssemblerChest::Output { is_purple: true },
-            AssemblerChest::Input {
-                name: "plastic-bar".to_string(),
-                count: 500,
-            },
-            AssemblerChest::Input {
-                name: "steel-chest".to_string(),
-                count: 500,
-            },
-            AssemblerChest::Buffer {
-                name: "plastic-bar".to_string(),
-                count: 500,
-            },
-            AssemblerChest::Buffer {
-                name: "steel-chest".to_string(),
-                count: 500,
-            },
-        ],
-    })?;
+    // admiral.execute_block(Terapower {
+    //     start: Point { x: 0, y: 0 },
+    //     height: 600,
+    //     width: 600,
+    // })?;
+    //
+    // admiral.execute_block(AssemblerFarmGenerator {
+    //     inner: BeaconFarmGenerator {
+    //         cell_size: 3,
+    //         width: 5,
+    //         height: 5,
+    //         start: Point2f { x: 200.5, y: 200.5 },
+    //         module: "speed-module-3".to_string(),
+    //     },
+    //     chests: vec![
+    //         AssemblerChest::Output { is_purple: false },
+    //         AssemblerChest::Output { is_purple: true },
+    //         AssemblerChest::Input {
+    //             name: "plastic-bar".to_string(),
+    //             count: 500,
+    //         },
+    //         AssemblerChest::Input {
+    //             name: "steel-chest".to_string(),
+    //             count: 500,
+    //         },
+    //         AssemblerChest::Buffer {
+    //             name: "plastic-bar".to_string(),
+    //             count: 500,
+    //         },
+    //         AssemblerChest::Buffer {
+    //             name: "steel-chest".to_string(),
+    //             count: 500,
+    //         },
+    //     ],
+    // })?;
 
     // let origin = Point2f {
     //     x: 1000.0,
@@ -126,7 +126,7 @@ pub fn inner_admiral() -> AdmiralResult<()> {
     //     },
     // })?;
 
-    admiral.end_file()?;
+    // admiral.end_file()?;
     Ok(())
 }
 

@@ -42,24 +42,24 @@ impl AdmiralClient {
 
     pub fn log(&mut self, line: &str) -> AdmiralResult<()> {
         info!("[Game Log] {}", line);
-        self._execute_statement_empty(FacLog {
-            message: line.to_string(),
-        })
+        self.execute_checked_command(
+            FacLog {
+                message: line.to_string(),
+            }
+            .into_boxed(),
+        )?;
+        Ok(())
     }
 }
 
 impl LuaCompiler for AdmiralClient {
-    fn _execute_statement<L>(&mut self, lua: L) -> AdmiralResult<ExecuteResponse<L>>
-    where
-        L: LuaCommand,
-    {
+    fn _execute_statement(&mut self, lua: impl LuaCommand) -> AdmiralResult<ExecuteResponse> {
         let lua_text = lua.make_lua();
         if lua_text.trim().is_empty() {
             return Err(AdmiralError::LuaBlankCommand {
                 backtrace: Backtrace::capture(),
             });
         };
-        trace!("Characters {}", lua_text.len().to_formatted_string(&LOCALE));
         if lua_text.len() >= 100 * 1000 * 1000 {
             return Err(AdmiralError::TooLargeRequest {
                 lua_text,
@@ -68,14 +68,9 @@ impl LuaCompiler for AdmiralClient {
         }
 
         // Execute command request to RCON server (SERVERDATA_EXECCOMMAND)
-        let request = RCONRequest::new(format!("/c {}", lua_text));
-        // let request = RCONRequest::new("/h".to_string());
-        // let request = RCONRequest {
-        //     id: 5,
-        //     body: "/h".to_string(),
-        //     request_type: 2,
-        // };
-        debug!("executing {:?}", request);
+        let final_command = format!("/c {}", lua_text);
+        debug!("executing {}", final_command);
+        let request = RCONRequest::new(final_command);
 
         let execute = self
             .client
@@ -91,10 +86,8 @@ impl LuaCompiler for AdmiralClient {
             execute.body.len()
         );
 
-        // Ok((execute.body, lua, lua_text))
         Ok(ExecuteResponse {
             lua_text,
-            lua,
             body: execute.body,
         })
     }

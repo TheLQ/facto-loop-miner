@@ -26,6 +26,17 @@ pub enum AdmiralError {
         command: String,
         backtrace: Backtrace,
     },
+    #[error("LuaCheckedEmpty")]
+    LuaCheckedEmpty {
+        command: String,
+        backtrace: Backtrace,
+    },
+    #[error("LuaCheckedUnknown")]
+    LuaCheckedUnknown {
+        command: String,
+        body: String,
+        backtrace: Backtrace,
+    },
     #[error("DestroyFailed")]
     DestroyFailed { backtrace: Backtrace },
     #[error("DefineFailed {}", truncate_huge_lua(lua_text))]
@@ -54,6 +65,8 @@ impl AdmiralError {
             | AdmiralError::LuaBlankCommand { backtrace }
             | AdmiralError::LuaResultNotEmpty { backtrace, .. }
             | AdmiralError::LuaResultEmpty { backtrace, .. }
+            | AdmiralError::LuaCheckedEmpty { backtrace, .. }
+            | AdmiralError::LuaCheckedUnknown { backtrace, .. }
             | AdmiralError::DestroyFailed { backtrace, .. }
             | AdmiralError::DefineFailed { backtrace, .. }
             | AdmiralError::TooLargeRequest { backtrace, .. }
