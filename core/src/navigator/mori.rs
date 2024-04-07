@@ -1,3 +1,4 @@
+use crate::admiral::generators::rail90::rail_degrees_east;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori_cost::calculate_cost_for_point;
@@ -377,7 +378,7 @@ impl Rail {
     }
 
     pub fn to_factorio_entities(&self, result: &mut Vec<Box<dyn LuaCommand>>) {
-        match self.mode {
+        match &self.mode {
             RailMode::Straight => {
                 for inner_step in 0..RAIL_STEP_SIZE {
                     // main rail
@@ -403,7 +404,61 @@ impl Rail {
                     );
                 }
             }
-            _ => todo!(),
+            RailMode::Turn(turn_type) => {
+                match (&self.direction, turn_type) {
+                    (RailDirection::Left, TurnType::Turn270) => {
+                        // outer first leg
+                        self.move_force_rotate_clockwise(2)
+                            .move_forward_single_num(12)
+                            .move_force_rotate_clockwise(1)
+                            .move_forward_single_num(6)
+                            .to_facto_entities_line(result, 0, 6);
+
+                        // outer turn
+                        result.append(&mut rail_degrees_east(
+                            self.endpoint.move_x(14).move_y(-10).to_f32_with_offset(0.0),
+                        ));
+
+                        // outer last leg before endpoint
+                        self.move_force_rotate_clockwise(2)
+                            .to_facto_entities_line(result, 0, 7);
+
+                        // --
+
+                        // inner first leg
+                        self.move_force_rotate_clockwise(2)
+                            .move_forward_single_num(10)
+                            .move_force_rotate_clockwise(1)
+                            .move_forward_single_num(8)
+                            .to_facto_entities_line(result, 0, 4);
+
+                        // inner turn
+                        result.append(&mut rail_degrees_east(
+                            self.endpoint.move_x(10).move_y(-14).to_f32_with_offset(0.0),
+                        ));
+
+                        // inner second leg before endpoint
+                        self.move_force_rotate_clockwise(3)
+                            .move_forward_single_num(2)
+                            .move_force_rotate_clockwise(3)
+                            .to_facto_entities_line(result, 0, 5);
+                    }
+                    (direction, turn_type) => todo!("asdf {:?} {:?}", direction, turn_type),
+                };
+            }
+        }
+    }
+
+    fn to_facto_entities_line(&self, result: &mut Vec<Box<dyn LuaCommand>>, start: u32, end: u32) {
+        for i in start..end {
+            let next = self.move_forward_single_num(i);
+            result.push(
+                FacSurfaceCreateEntity::new_rail_straight(
+                    next.endpoint.to_f32_with_offset(1.0),
+                    self.direction.clone(),
+                )
+                .into_boxed(),
+            );
         }
     }
 
@@ -504,9 +559,10 @@ impl Rail {
     fn move_rotating(&self, turn_type: TurnType) -> Self {
         let next = self.clone();
         let next = next.move_forward_step();
+        let next = next.move_forward_step();
         let next = next.move_force_rotate_clockwise(turn_type.rotations());
+        let next = next.move_forward_step();
         let mut next = next.move_forward_step();
-        // next.mode = RailMode::Turn90(self.endpoint, self.direction.clone());
         next.mode = RailMode::Turn(turn_type);
         next
     }

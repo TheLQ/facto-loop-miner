@@ -6,8 +6,8 @@ use crate::admiral::lua_command::fac_surface_create_entity::{
 use crate::admiral::lua_command::LuaCommand;
 use opencv::core::Point2f;
 
-pub fn rail_degrees_south(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
-    [
+pub fn rail_degrees_south(start: Point2f) -> Vec<Box<dyn LuaCommand>> {
+    vec![
         FacSurfaceCreateEntity::new_rail_curved_facto(
             Point2f {
                 x: start.x + 2.0,
@@ -35,8 +35,8 @@ pub fn rail_degrees_south(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
     ]
 }
 
-pub fn rail_degrees_west(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
-    [
+pub fn rail_degrees_west(start: Point2f) -> Vec<Box<dyn LuaCommand>> {
+    vec![
         FacSurfaceCreateEntity::new_rail_curved_facto(
             Point2f {
                 x: start.x + 8.0,
@@ -64,8 +64,8 @@ pub fn rail_degrees_west(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
     ]
 }
 
-pub fn rail_degrees_north(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
-    [
+pub fn rail_degrees_north(start: Point2f) -> Vec<Box<dyn LuaCommand>> {
+    vec![
         FacSurfaceCreateEntity::new_rail_curved_facto(
             Point2f {
                 x: start.x + 10.0,
@@ -93,8 +93,8 @@ pub fn rail_degrees_north(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
     ]
 }
 
-pub fn rail_degrees_east(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
-    [
+pub fn rail_degrees_east(start: Point2f) -> Vec<Box<dyn LuaCommand>> {
+    vec![
         FacSurfaceCreateEntity::new_rail_curved_facto(
             Point2f {
                 x: start.x + 4.0,

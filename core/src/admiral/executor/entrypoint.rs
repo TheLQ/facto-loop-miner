@@ -14,7 +14,7 @@ use crate::admiral::lua_command::scanner::{
     facscan_hyper_scan, facscan_mega_export_entities_compressed, BaseScanner,
 };
 use crate::admiral::lua_command::LuaCommand;
-use crate::navigator::mori::RailMode;
+use crate::navigator::mori::{Rail, RailDirection, RailMode};
 use crate::state::machine_v1::{CROP_RADIUS, REMOVE_RESOURCE_BASE_TILES};
 use crate::surface::surface::Surface;
 use crate::surfacev::vpoint::VPoint;
@@ -25,7 +25,7 @@ use tracing::info;
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 2 {
+    match 1 {
         1 => admiral_entrypoint_testing(&mut admiral),
         2 => admiral_entrypoint_prod(&mut admiral),
 
@@ -127,21 +127,43 @@ fn admiral_entrypoint_testing(admiral: &mut AdmiralClient) -> AdmiralResult<()> 
     destroy_placed_entities(admiral, WORK_RADIUS)?;
 
     {
-        let command = rail_degrees_south(VPoint::new(0, 0).to_f32_with_offset(0.0));
-        let command = LuaBatchCommand::new(Vec::from(command));
+        let command = RawLuaCommand::new("rendering.clear()".to_string());
         admiral.execute_checked_command(command.into_boxed())?;
 
-        let command = rail_degrees_west(VPoint::new(32, 0).to_f32_with_offset(0.0));
-        let command = LuaBatchCommand::new(Vec::from(command));
-        admiral.execute_checked_command(command.into_boxed())?;
+        let mut rails = Vec::new();
 
-        let command = rail_degrees_north(VPoint::new(64, 0).to_f32_with_offset(0.0));
-        let command = LuaBatchCommand::new(Vec::from(command));
-        admiral.execute_checked_command(command.into_boxed())?;
+        let rail = Rail::new_straight(VPoint::new(64, 64), RailDirection::Up);
+        rails.push(rail.clone());
 
-        let command = rail_degrees_east(VPoint::new(96, 0).to_f32_with_offset(0.0));
-        let command = LuaBatchCommand::new(Vec::from(command));
-        admiral.execute_checked_command(command.into_boxed())?;
+        let rail = rail.move_left();
+        rails.push(rail.clone());
+
+        let rail = rail.move_forward_step();
+        rails.push(rail.clone());
+
+        for rail in rails {
+            info!("-----");
+            let mut entities = Vec::new();
+            rail.to_factorio_entities(&mut entities);
+            for entity in entities {
+                admiral.execute_checked_command(entity)?;
+            }
+
+            let command = RawLuaCommand::new(format!(
+                "rendering.draw_rectangle{{ \
+            surface = game.surfaces[1], \
+            left_top = {{ {}, {} }}, \
+            right_bottom =  {{ {}, {} }}, \
+            color = {{ 1, 1, 1 }} }}",
+                rail.endpoint.x() - 1,
+                rail.endpoint.y() - 1,
+                rail.endpoint.x() + 1,
+                rail.endpoint.y() + 1
+            ));
+            admiral.execute_checked_command(command.into_boxed())?;
+
+            info!("-----");
+        }
     }
 
     Ok(())
