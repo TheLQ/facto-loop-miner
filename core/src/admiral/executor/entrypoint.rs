@@ -2,7 +2,7 @@ use crate::admiral::err::AdmiralResult;
 use crate::admiral::executor::client::AdmiralClient;
 use crate::admiral::executor::LuaCompiler;
 use crate::admiral::generators::rail90::{
-    rail_degrees_180, rail_degrees_270, rail_degrees_360, rail_degrees_90,
+    rail_degrees_east, rail_degrees_north, rail_degrees_south, rail_degrees_west,
 };
 use crate::admiral::lua_command::fac_destroy::FacDestroy;
 use crate::admiral::lua_command::fac_log::FacLog;
@@ -53,19 +53,19 @@ fn admiral_entrypoint_testing(admiral: &mut AdmiralClient) -> AdmiralResult<()> 
     }
 
     {
-        let command = rail_degrees_90(VPoint::new(0, 0).to_f32_with_offset(0.0));
+        let command = rail_degrees_south(VPoint::new(0, 0).to_f32_with_offset(0.0));
         let command = LuaBatchCommand::new(Vec::from(command));
         admiral.execute_checked_command(command.into_boxed())?;
 
-        let command = rail_degrees_180(VPoint::new(32, 0).to_f32_with_offset(0.0));
+        let command = rail_degrees_west(VPoint::new(32, 0).to_f32_with_offset(0.0));
         let command = LuaBatchCommand::new(Vec::from(command));
         admiral.execute_checked_command(command.into_boxed())?;
 
-        let command = rail_degrees_270(VPoint::new(64, 0).to_f32_with_offset(0.0));
+        let command = rail_degrees_north(VPoint::new(64, 0).to_f32_with_offset(0.0));
         let command = LuaBatchCommand::new(Vec::from(command));
         admiral.execute_checked_command(command.into_boxed())?;
 
-        let command = rail_degrees_360(VPoint::new(96, 0).to_f32_with_offset(0.0));
+        let command = rail_degrees_east(VPoint::new(96, 0).to_f32_with_offset(0.0));
         let command = LuaBatchCommand::new(Vec::from(command));
         admiral.execute_checked_command(command.into_boxed())?;
     }

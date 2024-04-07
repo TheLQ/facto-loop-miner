@@ -1,10 +1,12 @@
+//! How Factorio does rail turning
+
 use crate::admiral::lua_command::fac_surface_create_entity::{
     FacSurfaceCreateEntity, FactoDirection,
 };
 use crate::admiral::lua_command::LuaCommand;
 use opencv::core::Point2f;
 
-pub fn rail_degrees_90(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
+pub fn rail_degrees_south(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
     [
         FacSurfaceCreateEntity::new_rail_curved_facto(
             Point2f {
@@ -33,7 +35,7 @@ pub fn rail_degrees_90(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
     ]
 }
 
-pub fn rail_degrees_180(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
+pub fn rail_degrees_west(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
     [
         FacSurfaceCreateEntity::new_rail_curved_facto(
             Point2f {
@@ -62,14 +64,14 @@ pub fn rail_degrees_180(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
     ]
 }
 
-pub fn rail_degrees_270(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
+pub fn rail_degrees_north(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
     [
         FacSurfaceCreateEntity::new_rail_curved_facto(
             Point2f {
-                x: start.x + 4.0,
-                y: start.y + 2.0,
+                x: start.x + 10.0,
+                y: start.y + 8.0,
             },
-            FactoDirection::SouthEast,
+            FactoDirection::North,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_straight_facto(
@@ -82,23 +84,23 @@ pub fn rail_degrees_270(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_curved_facto(
             Point2f {
-                x: start.x + 10.0,
-                y: start.y + 8.0,
+                x: start.x + 4.0,
+                y: start.y + 2.0,
             },
-            FactoDirection::North,
+            FactoDirection::SouthEast,
         )
         .into_boxed(),
     ]
 }
 
-pub fn rail_degrees_360(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
+pub fn rail_degrees_east(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
     [
         FacSurfaceCreateEntity::new_rail_curved_facto(
             Point2f {
-                x: start.x + 10.0,
-                y: start.y + 4.0,
+                x: start.x + 4.0,
+                y: start.y + 10.0,
             },
-            FactoDirection::SouthWest,
+            FactoDirection::East,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_straight_facto(
@@ -111,10 +113,10 @@ pub fn rail_degrees_360(start: Point2f) -> [Box<dyn LuaCommand>; 3] {
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_curved_facto(
             Point2f {
-                x: start.x + 4.0,
-                y: start.y + 10.0,
+                x: start.x + 10.0,
+                y: start.y + 4.0,
             },
-            FactoDirection::East,
+            FactoDirection::SouthWest,
         )
         .into_boxed(),
     ]

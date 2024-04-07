@@ -1,6 +1,6 @@
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::join_commands;
-use crate::admiral::generators::rail90::rail_degrees_90;
+use crate::admiral::generators::rail90::rail_degrees_south;
 use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
 use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori::RailDirection;
@@ -40,7 +40,7 @@ impl LuaCommand for RailBeaconFarmGenerator {
             }
         }
 
-        rail_degrees_90(self.inner.start)
+        rail_degrees_south(self.inner.start)
             .into_iter()
             .for_each(|e| creation_commands.push(e));
 
