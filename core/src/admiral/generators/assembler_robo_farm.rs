@@ -2,12 +2,8 @@ use crate::admiral::generators::assembler_farm::{AssemblerChest, AssemblerFarmGe
 use crate::admiral::generators::beacon_farm::{BeaconFarmGenerator, BEACON_SIZE};
 use crate::admiral::generators::xy_grid;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
-use crate::admiral::lua_command::fac_surface_create_entity_safe::FacSurfaceCreateEntitySafe;
-use crate::admiral::lua_command::{
-    recipe_params_exact, LuaCommand, LuaCommandBatch, DEFAULT_SURFACE_VAR,
-};
+use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
 use opencv::core::Point2f;
-use std::collections::HashMap;
 use tracing::{debug, trace};
 
 const ROBOPORT_SIZE: u32 = 4;
@@ -74,18 +70,16 @@ impl LuaCommandBatch for AssemblerRoboFarmGenerator {
                 .make_lua_batch(lua_commands);
 
                 // big pole connects top of assembly to robo's big pole
-                lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                    inner: FacSurfaceCreateEntity {
-                        name: "big-electric-pole".to_string(),
-                        params: HashMap::new(),
-                        position: Point2f {
+                lua_commands.push(
+                    FacSurfaceCreateEntity::new(
+                        "big-electric-pole",
+                        Point2f {
                             x: self.start.x - 5.0 + row_height,
                             y: assembler_start_y,
                         },
-                        surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                        extra: Vec::new(),
-                    },
-                }));
+                    )
+                    .into_boxed(),
+                );
             }
         }
     }
@@ -109,56 +103,49 @@ fn make_robo_square(
             if (pos.ix % ROBO_POLE_STEP) + 1 == ROBO_POLE_STEP_MIDDLE
                 && (pos.iy % ROBO_POLE_STEP) + 1 == ROBO_POLE_STEP_MIDDLE
             {
-                lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                    inner: FacSurfaceCreateEntity {
-                        name: "substation".to_string(),
-                        params: HashMap::new(),
-                        position: Point2f {
+                lua_commands.push(
+                    FacSurfaceCreateEntity::new(
+                        "substation",
+                        Point2f {
                             x: pos.x as f32 - 1.0,
                             y: pos.y as f32,
                         },
-                        surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                        extra: Vec::new(),
-                    },
-                }));
-                lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                    inner: FacSurfaceCreateEntity {
-                        name: "big-electric-pole".to_string(),
-                        params: HashMap::new(),
-                        position: Point2f {
+                    )
+                    .into_boxed(),
+                );
+
+                lua_commands.push(
+                    FacSurfaceCreateEntity::new(
+                        "big-electric-pole",
+                        Point2f {
                             x: pos.x as f32 + 1.0,
                             y: pos.y as f32,
                         },
-                        surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                        extra: Vec::new(),
-                    },
-                }));
+                    )
+                    .into_boxed(),
+                );
 
-                lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                    inner: FacSurfaceCreateEntity {
-                        name: "small-lamp".to_string(),
-                        params: HashMap::new(),
-                        position: Point2f {
+                lua_commands.push(
+                    FacSurfaceCreateEntity::new(
+                        "small-lamp",
+                        Point2f {
                             x: pos.x as f32 - 1.5,
                             y: pos.y as f32 + 1.5,
                         },
-                        surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                        extra: Vec::new(),
-                    },
-                }));
+                    )
+                    .into_boxed(),
+                );
             } else {
-                lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                    inner: FacSurfaceCreateEntity {
-                        name: "roboport".to_string(),
-                        params: recipe_params_exact("beacon"),
-                        position: Point2f {
+                lua_commands.push(
+                    FacSurfaceCreateEntity::new(
+                        "roboport",
+                        Point2f {
                             x: pos.x as f32,
                             y: pos.y as f32,
                         },
-                        surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                        extra: Vec::new(),
-                    },
-                }));
+                    )
+                    .into_boxed(),
+                );
             }
         }
     }

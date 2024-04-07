@@ -1,11 +1,9 @@
 use crate::admiral::generators::rail90::{rail_degrees_270, rail_degrees_360};
-use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
-use crate::admiral::lua_command::fac_surface_create_entity_safe::FacSurfaceCreateEntitySafe;
-use crate::admiral::lua_command::{
-    DEFAULT_SURFACE_VAR, direction_params, LuaCommand, LuaCommandBatch,
-};
-use opencv::core::Point2f;
+use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
+use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
+use crate::navigator::mori::RailDirection;
 use crate::surfacev::vpoint::{must_even_number, must_whole_number};
+use opencv::core::Point2f;
 
 #[derive(Debug)]
 pub struct RailStationGenerator {
@@ -35,19 +33,18 @@ impl RailStationGenerator {
         // Parallel lines
         for y in [self.start.y as i32, self.start.y as i32 + 22] {
             for x in (self.start.x as i32..x_end + 2).step_by(2) {
-                creation_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                    inner: FacSurfaceCreateEntity {
-                        name: "straight-rail".to_string(),
-                        position: Point2f {
+                creation_commands.push(
+                    FacSurfaceCreateEntity::new_params(
+                        "straight-rail",
+                        Point2f {
                             // must be odd
                             x: x as f32 + 1.0,
                             y: y as f32 + 1.0,
                         },
-                        surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                        extra: Vec::new(),
-                        params: direction_params("east"),
-                    },
-                }));
+                        CreateParam::direction(RailDirection::Left),
+                    )
+                    .into_boxed(),
+                );
             }
         }
 
@@ -75,19 +72,18 @@ impl RailStationGenerator {
     /// ---------------------
     fn make_station(&self, creation_commands: &mut Vec<Box<dyn LuaCommand>>) {
         let x_end = self.x_end();
-        creation_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-            inner: FacSurfaceCreateEntity {
-                name: "train-stop".to_string(),
-                position: Point2f {
+        creation_commands.push(
+            FacSurfaceCreateEntity::new_params(
+                "train-stop",
+                Point2f {
                     // must be odd
                     x: x_end as f32 + 1.0,
                     y: self.start.y + 3.0,
                 },
-                surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                extra: Vec::new(),
-                params: direction_params("east"),
-            },
-        }));
+                CreateParam::direction(RailDirection::Left),
+            )
+            .into_boxed(),
+        );
     }
 
     fn x_end(&self) -> i32 {

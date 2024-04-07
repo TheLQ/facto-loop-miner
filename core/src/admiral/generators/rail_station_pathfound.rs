@@ -1,8 +1,6 @@
-use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
-use crate::admiral::lua_command::fac_surface_create_entity_safe::FacSurfaceCreateEntitySafe;
-use crate::admiral::lua_command::{
-    direction_params, LuaCommand, LuaCommandBatch, DEFAULT_SURFACE_VAR,
-};
+use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
+use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
+use crate::navigator::mori::RailDirection;
 use opencv::core::Point2f;
 
 #[derive(Debug)]
@@ -14,43 +12,40 @@ pub struct RailStationPathfoundGenerator {
 
 impl LuaCommandBatch for RailStationPathfoundGenerator {
     fn make_lua_batch(self, lua_commands: &mut Vec<Box<dyn LuaCommand>>) {
-        lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-            inner: FacSurfaceCreateEntity {
-                name: "straight-rail".to_string(),
-                position: Point2f {
+        lua_commands.push(
+            FacSurfaceCreateEntity::new_params(
+                "straight-rail",
+                Point2f {
                     x: self.start.x,
                     y: self.start.y,
                 },
-                surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                extra: Vec::new(),
-                params: direction_params("east"),
-            },
-        }));
+                CreateParam::direction(RailDirection::Left),
+            )
+            .into_boxed(),
+        );
 
-        lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-            inner: FacSurfaceCreateEntity {
-                name: "straight-rail".to_string(),
-                position: Point2f {
+        lua_commands.push(
+            FacSurfaceCreateEntity::new_params(
+                "straight-rail",
+                Point2f {
                     x: self.station.x,
                     y: self.station.y,
                 },
-                surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                extra: Vec::new(),
-                params: direction_params("east"),
-            },
-        }));
+                CreateParam::direction(RailDirection::Left),
+            )
+            .into_boxed(),
+        );
 
-        lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-            inner: FacSurfaceCreateEntity {
-                name: "straight-rail".to_string(),
-                position: Point2f {
+        lua_commands.push(
+            FacSurfaceCreateEntity::new_params(
+                "straight-rail",
+                Point2f {
                     x: self.pan.x,
                     y: self.pan.y,
                 },
-                surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                extra: Vec::new(),
-                params: direction_params("east"),
-            },
-        }));
+                CreateParam::direction(RailDirection::Left),
+            )
+            .into_boxed(),
+        );
     }
 }

@@ -1,12 +1,9 @@
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::{xy_grid, XyGridPosition};
-use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
-use crate::admiral::lua_command::fac_surface_create_entity_safe::FacSurfaceCreateEntitySafe;
-use crate::admiral::lua_command::{
-    direction_params, recipe_params_exact, LuaCommand, LuaCommandBatch, DEFAULT_SURFACE_VAR,
-};
+use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
+use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
+use crate::navigator::mori::RailDirection;
 use opencv::core::Point2f;
-use std::collections::HashMap;
 
 pub const ASSEMBLER_SIZE: u32 = 3;
 
@@ -49,21 +46,21 @@ impl AssemblerFarmGenerator {
 
     fn make_assemblers(&self, lua_commands: &mut Vec<Box<dyn LuaCommand>>) {
         for pos in self.assembler_xy_grid() {
-            lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                inner: FacSurfaceCreateEntity {
-                    name: "assembling-machine-3".to_string(),
-                    params: recipe_params_exact("beacon"),
-                    position: Point2f {
+            lua_commands.push(
+                FacSurfaceCreateEntity::new_params_commands(
+                    "assembling-machine-3",
+                    Point2f {
                         x: pos.x as f32 + 5.5,
                         y: pos.y as f32 + 5.5,
                     },
-                    surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                    extra: vec![
+                    CreateParam::recipe_str("steel-crate"),
+                    vec![
                         "admiral_create.get_module_inventory().insert(\"speed-module-3\")"
                             .to_string(),
                     ],
-                },
-            }));
+                )
+                .into_boxed(),
+            );
         }
     }
 
@@ -74,37 +71,32 @@ impl AssemblerFarmGenerator {
                 if let AssemblerChest::Output { is_purple } = chest {
                     let x = pos.x as f32 + 6.5 - total;
 
-                    lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                        inner: FacSurfaceCreateEntity {
-                            name: "stack-inserter".to_string(),
-                            params: direction_params("south"),
-                            position: Point2f {
+                    lua_commands.push(
+                        FacSurfaceCreateEntity::new_params(
+                            "assembling-machine-3",
+                            Point2f {
                                 x,
                                 y: pos.y as f32 + 3.5,
                             },
-                            surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                            extra: Vec::new(),
-                        },
-                    }));
+                            CreateParam::direction(RailDirection::Down),
+                        )
+                        .into_boxed(),
+                    );
 
-                    let name = if *is_purple {
-                        "logistic-chest-active-provider"
-                    } else {
-                        "logistic-chest-passive-provider"
-                    }
-                    .to_string();
-                    lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                        inner: FacSurfaceCreateEntity {
-                            name,
-                            params: HashMap::new(),
-                            position: Point2f {
+                    lua_commands.push(
+                        FacSurfaceCreateEntity::new(
+                            if *is_purple {
+                                "logistic-chest-active-provider"
+                            } else {
+                                "logistic-chest-passive-provider"
+                            },
+                            Point2f {
                                 x,
                                 y: pos.y as f32 + 2.5,
                             },
-                            surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                            extra: Vec::new(),
-                        },
-                    }));
+                        )
+                        .into_boxed(),
+                    );
                     total += 1.0;
                 }
             }
@@ -117,37 +109,35 @@ impl AssemblerFarmGenerator {
             for chest in &self.chests {
                 if let AssemblerChest::Input { name, count } = chest {
                     let y = pos.y as f32 + 6.5 - total;
-                    lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                        inner: FacSurfaceCreateEntity {
-                            name: "stack-inserter".to_string(),
-                            params: direction_params("east"),
-                            position: Point2f {
+                    lua_commands.push(
+                        FacSurfaceCreateEntity::new_params(
+                            "stack-inserter",
+                            Point2f {
                                 x: pos.x as f32 + 3.5,
                                 y,
                             },
-                            surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                            extra: Vec::new(),
-                        },
-                    }));
+                            CreateParam::direction(RailDirection::Left),
+                        )
+                        .into_boxed(),
+                    );
 
-                    lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                        inner: FacSurfaceCreateEntity {
-                            name: "logistic-chest-requester".to_string(),
-                            params: HashMap::new(),
-                            position: Point2f {
+                    lua_commands.push(
+                        FacSurfaceCreateEntity::new_commands(
+                            "logistic-chest-requester",
+                            Point2f {
                                 x: pos.x as f32 + 2.5,
                                 y,
                             },
-                            surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                            extra: vec![
+                            vec![
                                 "admiral_create.request_from_buffers = true".to_string(),
                                 format!(
                                     "admiral_create.set_request_slot({{ name='{}', count={} }},1) ",
                                     name, count
                                 ),
                             ],
-                        },
-                    }));
+                        )
+                        .into_boxed(),
+                    );
                     total += 1.0;
                 }
             }
@@ -159,21 +149,20 @@ impl AssemblerFarmGenerator {
             let mut total = 0.0;
             for num in &self.chests {
                 if let AssemblerChest::Buffer { name, count } = num {
-                    lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                        inner: FacSurfaceCreateEntity {
-                            name: "logistic-chest-buffer".to_string(),
-                            params: HashMap::new(),
-                            position: Point2f {
+                    lua_commands.push(
+                        FacSurfaceCreateEntity::new_commands(
+                            "logistic-chest-buffer",
+                            Point2f {
                                 x: pos.x as f32 + 2.5 + total,
                                 y: pos.y as f32 + 7.5,
                             },
-                            surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                            extra: vec![format!(
+                            vec![format!(
                                 "admiral_create.set_request_slot({{ name='{}', count={} }},1) ",
                                 name, count
                             )],
-                        },
-                    }));
+                        )
+                        .into_boxed(),
+                    );
                     total += 1.0;
                 }
             }
@@ -185,45 +174,40 @@ impl AssemblerFarmGenerator {
             if pos.ix % 2 != 0 {
                 continue;
             }
-            lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                inner: FacSurfaceCreateEntity {
-                    name: "substation".to_string(),
-                    params: HashMap::new(),
-                    position: Point2f {
+            lua_commands.push(
+                FacSurfaceCreateEntity::new(
+                    "substation",
+                    Point2f {
                         x: pos.x as f32 + 3.0,
                         y: pos.y as f32 + 3.0,
                     },
-                    surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                    extra: Vec::new(),
-                },
-            }));
-            lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                inner: FacSurfaceCreateEntity {
-                    name: "small-lamp".to_string(),
-                    params: HashMap::new(),
-                    position: Point2f {
+                )
+                .into_boxed(),
+            );
+
+            lua_commands.push(
+                FacSurfaceCreateEntity::new(
+                    "small-lamp",
+                    Point2f {
                         x: pos.x as f32 + 7.5,
                         y: pos.y as f32 + 7.5,
                     },
-                    surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                    extra: Vec::new(),
-                },
-            }));
+                )
+                .into_boxed(),
+            );
         }
     }
 
     fn make_power_interface(&self, lua_commands: &mut Vec<Box<dyn LuaCommand>>) {
-        lua_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-            inner: FacSurfaceCreateEntity {
-                name: "electric-energy-interface".to_string(),
-                params: HashMap::new(),
-                position: Point2f {
+        lua_commands.push(
+            FacSurfaceCreateEntity::new(
+                "electric-energy-interface",
+                Point2f {
                     x: self.inner.start.x - 2.5,
                     y: self.inner.start.y - 0.5,
                 },
-                surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                extra: Vec::new(),
-            },
-        }));
+            )
+            .into_boxed(),
+        );
     }
 }

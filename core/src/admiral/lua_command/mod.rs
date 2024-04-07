@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fmt::Debug;
 
 pub mod fac_destroy;
@@ -14,32 +13,16 @@ pub mod scanner;
 pub const DEFAULT_SURFACE_VAR: &str = "game.surfaces[1]";
 pub const DEFAULT_FORCE_VAR: &str = "game.forces[1]";
 
-pub fn direction_params(direction: &str) -> HashMap<String, String> {
-    direction_params_exact(&format!("defines.direction.{}", direction))
-}
-
-pub fn direction_params_exact(value: &str) -> HashMap<String, String> {
-    let mut map = HashMap::new();
-    map.insert("direction".to_string(), value.to_string());
-    map
-}
-
-pub fn recipe_params_exact(value: &str) -> HashMap<String, String> {
-    let mut map = HashMap::new();
-    map.insert("recipe".to_string(), format!("\"{}\"", value));
-    map
-}
-
-pub fn recipe_module_params_exact(value: &str, module: &str) -> HashMap<String, String> {
-    let mut map = HashMap::new();
-    map.insert("recipe".to_string(), format!("\"{}\"", value));
-    map.insert("modules".to_string(), format!("\"{}\"", module));
-    map
-}
-
 /// Main Generator - Nestable commands
 pub trait LuaCommand: Debug {
     fn make_lua(&self) -> String;
+
+    fn into_boxed(self) -> Box<dyn LuaCommand>
+    where
+        Self: Sized + 'static,
+    {
+        Box::new(self)
+    }
 }
 
 pub trait LuaCommandBatch: Debug {

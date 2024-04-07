@@ -2,7 +2,7 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::varea::VArea;
 use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
-use tracing::{trace, warn};
+use tracing::warn;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VPatch {

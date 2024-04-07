@@ -1,9 +1,9 @@
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::join_commands;
 use crate::admiral::generators::rail90::rail_degrees_90;
-use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
-use crate::admiral::lua_command::fac_surface_create_entity_safe::FacSurfaceCreateEntitySafe;
-use crate::admiral::lua_command::{direction_params, LuaCommand, DEFAULT_SURFACE_VAR};
+use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
+use crate::admiral::lua_command::LuaCommand;
+use crate::navigator::mori::RailDirection;
 use opencv::core::Point2f;
 use tracing::info;
 
@@ -26,18 +26,17 @@ impl LuaCommand for RailBeaconFarmGenerator {
         //
         for y in [0, self.inner.height * (self.inner.cell_size) * 3] {
             for x in 0..(self.inner.width * self.inner.cell_size) {
-                creation_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                    inner: FacSurfaceCreateEntity {
-                        name: "straight-rail".to_string(),
-                        position: Point2f {
+                creation_commands.push(
+                    FacSurfaceCreateEntity::new_params(
+                        "straight-rail",
+                        Point2f {
                             x: (self.inner.start.x + (x * 2) as f32).round(),
                             y: self.inner.start.y + y as f32,
                         },
-                        surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                        extra: Vec::new(),
-                        params: direction_params("east"),
-                    },
-                }));
+                        CreateParam::direction(RailDirection::Left),
+                    )
+                    .into_boxed(),
+                );
             }
         }
 

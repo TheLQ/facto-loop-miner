@@ -1,15 +1,14 @@
 use crate::admiral::lua_command::{LuaCommand, DEFAULT_FORCE_VAR};
+use crate::navigator::mori::RailDirection;
 use itertools::Itertools;
 use opencv::core::Point2f;
-use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct FacSurfaceCreateEntity {
-    pub surface_var: String,
     pub name: String,
     pub position: Point2f,
-    pub params: HashMap<String, String>,
-    pub extra: Vec<String>,
+    pub params: Vec<CreateParam>,
+    pub commands: Vec<String>,
 }
 
 impl LuaCommand for FacSurfaceCreateEntity {
@@ -17,21 +16,140 @@ impl LuaCommand for FacSurfaceCreateEntity {
         let params_str = self
             .params
             .iter()
-            .map(|(key, value)| format!("{}={}", key, value))
+            .map(|v| {
+                let (key, value) = v.to_param();
+                format!("{}={}", key, value)
+            })
             .join(",");
-        format!(
-            "{}.create_entity{{ \
+        let create = format!(
+            "game.surface[1].create_entity{{ \
             name=\"{}\", \
             position={{ x={},y={} }}, \
             force={},\
             {}\
             }};",
-            self.surface_var,
-            self.name,
-            self.position.x,
-            self.position.y,
-            DEFAULT_FORCE_VAR,
-            params_str
+            self.name, self.position.x, self.position.y, DEFAULT_FORCE_VAR, params_str
+        );
+
+        if self.commands.is_empty() {
+            create
+        } else {
+            format!(
+                "local admiral_create = {} {}",
+                create,
+                self.commands.join(" ")
+            )
+        }
+    }
+}
+
+impl FacSurfaceCreateEntity {
+    pub fn new(name: &'static str, position: Point2f) -> Self {
+        FacSurfaceCreateEntity {
+            name: name.to_string(),
+            position,
+            params: Vec::new(),
+            commands: Vec::new(),
+        }
+    }
+
+    pub fn new_params(name: &'static str, position: Point2f, params: Vec<CreateParam>) -> Self {
+        FacSurfaceCreateEntity {
+            name: name.to_string(),
+            position,
+            params,
+            commands: Vec::new(),
+        }
+    }
+
+    pub fn new_commands(name: &'static str, position: Point2f, commands: Vec<String>) -> Self {
+        FacSurfaceCreateEntity {
+            name: name.to_string(),
+            position,
+            params: Vec::new(),
+            commands,
+        }
+    }
+
+    pub fn new_params_commands(
+        name: &'static str,
+        position: Point2f,
+        params: Vec<CreateParam>,
+        commands: Vec<String>,
+    ) -> Self {
+        FacSurfaceCreateEntity {
+            name: name.to_string(),
+            position,
+            params,
+            commands,
+        }
+    }
+
+    pub fn new_rail_straight(position: Point2f, direction: RailDirection) -> Self {
+        Self::new_params("straight-rail", position, CreateParam::direction(direction))
+    }
+
+    pub fn new_rail_straight_direction_num(position: Point2f, direction: u8) -> Self {
+        Self::new_params(
+            "straight-rail",
+            position,
+            vec![CreateParam::DirectionNum(direction)],
         )
+    }
+
+    pub fn new_rail_curved(position: Point2f, direction: RailDirection) -> Self {
+        Self::new_params("curved-rail", position, CreateParam::direction(direction))
+    }
+
+    pub fn new_rail_curved_direction_num(position: Point2f, direction: u8) -> Self {
+        Self::new_params(
+            "curved-rail",
+            position,
+            vec![CreateParam::DirectionNum(direction)],
+        )
+    }
+
+    pub fn new_rail_signal(position: Point2f, direction: RailDirection) -> Self {
+        Self::new_params(
+            "rail-signal",
+            position,
+            vec![CreateParam::Direction(direction)],
+        )
+    }
+
+    pub fn new_electric_pole_big(position: Point2f) -> Self {
+        Self::new("big-electric-pole", position)
+    }
+
+    pub fn new_radar(position: Point2f) -> Self {
+        Self::new("radar", position)
+    }
+}
+
+#[derive(Debug)]
+pub enum CreateParam {
+    Direction(RailDirection),
+    DirectionNum(u8),
+    Recipe(String),
+}
+
+impl CreateParam {
+    pub fn to_param(&self) -> (&'static str, String) {
+        match self {
+            CreateParam::Direction(direction) => (
+                "direction",
+                format!("defines.direction.{}", direction.as_ref().to_lowercase()),
+            ),
+            CreateParam::DirectionNum(num) => ("direction", num.to_string()),
+            CreateParam::Recipe(name) => ("recipe", name.clone()),
+        }
+    }
+
+    pub fn direction(direction: RailDirection) -> Vec<Self> {
+        vec![CreateParam::Direction(direction)]
+    }
+
+    pub fn recipe_str(recipe: &'static str) -> Vec<Self> {
+        vec![CreateParam::Recipe(recipe.to_string())]
     }
 }

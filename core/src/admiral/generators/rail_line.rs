@@ -1,8 +1,7 @@
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
-use crate::admiral::lua_command::fac_surface_create_entity_safe::FacSurfaceCreateEntitySafe;
-use crate::admiral::lua_command::{LuaCommand, DEFAULT_SURFACE_VAR};
+use crate::admiral::lua_command::LuaCommand;
+use crate::navigator::mori::RailDirection;
 use opencv::core::Point2f;
-use std::collections::HashMap;
 use tracing::debug;
 
 #[derive(Debug)]
@@ -50,68 +49,50 @@ impl LuaCommand for RailLineGenerator {
 
                 let start_y: f32 = self.start.y + length as f32;
 
-                creation_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                    inner: FacSurfaceCreateEntity {
-                        name: "straight-rail".to_string(),
-                        position: Point2f {
+                creation_commands.push(
+                    FacSurfaceCreateEntity::new_rail_straight(
+                        Point2f {
                             x: start_x,
                             y: start_y,
                         },
-                        surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                        extra: Vec::new(),
-                        params: HashMap::new(),
-                    },
-                }));
+                        RailDirection::Down,
+                    )
+                    .into_boxed(),
+                );
 
-                creation_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                    inner: FacSurfaceCreateEntity {
-                        name: "straight-rail".to_string(),
-                        position: Point2f {
+                creation_commands.push(
+                    FacSurfaceCreateEntity::new_rail_straight(
+                        Point2f {
                             x: start_x + 4.0,
                             y: start_y,
                         },
-                        surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                        extra: Vec::new(),
-                        params: HashMap::new(),
-                    },
-                }));
+                        RailDirection::Down,
+                    )
+                    .into_boxed(),
+                );
 
                 if length % 32 == 0 {
-                    let mut params = HashMap::new();
-                    params.insert(
-                        "direction".to_string(),
-                        "defines.direction.south".to_string(),
-                    );
-                    creation_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                        inner: FacSurfaceCreateEntity {
-                            name: "rail-signal".to_string(),
-                            position: Point2f {
+                    creation_commands.push(
+                        FacSurfaceCreateEntity::new_rail_signal(
+                            Point2f {
                                 x: start_x + 1.5,
                                 y: start_y - 0.5,
                             },
-                            surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                            extra: Vec::new(),
-                            params,
-                        },
-                    }));
-
-                    let mut params = HashMap::new();
-                    params.insert(
-                        "direction".to_string(),
-                        "defines.direction.north".to_string(),
+                            RailDirection::Down,
+                        )
+                        .into_boxed(),
                     );
-                    creation_commands.push(Box::new(FacSurfaceCreateEntitySafe {
-                        inner: FacSurfaceCreateEntity {
-                            name: "rail-signal".to_string(),
-                            position: Point2f {
+
+                    creation_commands.push(
+                        FacSurfaceCreateEntity::new_rail_signal(
+                            Point2f {
                                 x: start_x + 2.5,
                                 y: start_y - 0.5,
                             },
-                            surface_var: DEFAULT_SURFACE_VAR.to_string(),
-                            extra: Vec::new(),
-                            params,
-                        },
-                    }));
+                            RailDirection::Up,
+                        )
+                        .into_boxed(),
+                    );
                 }
             }
         }

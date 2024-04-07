@@ -2,7 +2,7 @@ use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEnti
 use crate::admiral::lua_command::LuaCommand;
 
 #[derive(Debug)]
-pub struct FacSurfaceCreateEntitySafe {
+struct FacSurfaceCreateEntitySafe {
     pub inner: FacSurfaceCreateEntity,
 }
 
@@ -22,7 +22,8 @@ else
     rcon.print('create_entity_success_{}')
 end"#,
             self.inner.make_lua(),
-            self.inner.extra.join("\n"),
+            // self.inner.extra.join("\n"),
+            "",
             self.inner.position.x,
             self.inner.position.y,
             format!("{:?}", self.inner)
