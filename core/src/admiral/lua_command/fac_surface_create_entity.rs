@@ -2,6 +2,7 @@ use crate::admiral::lua_command::{LuaCommand, DEFAULT_FORCE_VAR};
 use crate::navigator::mori::RailDirection;
 use itertools::Itertools;
 use opencv::core::Point2f;
+use strum::AsRefStr;
 
 #[derive(Debug)]
 pub struct FacSurfaceCreateEntity {
@@ -22,7 +23,7 @@ impl LuaCommand for FacSurfaceCreateEntity {
             })
             .join(",");
         let create = format!(
-            "game.surface[1].create_entity{{ \
+            "game.surfaces[1].create_entity{{ \
             name=\"{}\", \
             position={{ x={},y={} }}, \
             force={},\
@@ -89,11 +90,11 @@ impl FacSurfaceCreateEntity {
         Self::new_params("straight-rail", position, CreateParam::direction(direction))
     }
 
-    pub fn new_rail_straight_direction_num(position: Point2f, direction: u8) -> Self {
+    pub fn new_rail_straight_facto(position: Point2f, direction: FactoDirection) -> Self {
         Self::new_params(
             "straight-rail",
             position,
-            vec![CreateParam::DirectionNum(direction)],
+            vec![CreateParam::DirectionFacto(direction)],
         )
     }
 
@@ -101,11 +102,11 @@ impl FacSurfaceCreateEntity {
         Self::new_params("curved-rail", position, CreateParam::direction(direction))
     }
 
-    pub fn new_rail_curved_direction_num(position: Point2f, direction: u8) -> Self {
+    pub fn new_rail_curved_facto(position: Point2f, direction: FactoDirection) -> Self {
         Self::new_params(
             "curved-rail",
             position,
-            vec![CreateParam::DirectionNum(direction)],
+            vec![CreateParam::DirectionFacto(direction)],
         )
     }
 
@@ -129,7 +130,7 @@ impl FacSurfaceCreateEntity {
 #[derive(Debug)]
 pub enum CreateParam {
     Direction(RailDirection),
-    DirectionNum(u8),
+    DirectionFacto(FactoDirection),
     Recipe(String),
 }
 
@@ -140,7 +141,10 @@ impl CreateParam {
                 "direction",
                 format!("defines.direction.{}", direction.as_ref().to_lowercase()),
             ),
-            CreateParam::DirectionNum(num) => ("direction", num.to_string()),
+            CreateParam::DirectionFacto(direction) => (
+                "direction",
+                format!("defines.direction.{}", direction.as_ref().to_lowercase()),
+            ),
             CreateParam::Recipe(name) => ("recipe", name.clone()),
         }
     }
@@ -152,4 +156,16 @@ impl CreateParam {
     pub fn recipe_str(recipe: &'static str) -> Vec<Self> {
         vec![CreateParam::Recipe(recipe.to_string())]
     }
+}
+
+#[derive(Debug, AsRefStr)]
+pub enum FactoDirection {
+    North,
+    NorthEast,
+    East,
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest,
 }
