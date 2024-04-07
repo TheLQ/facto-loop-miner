@@ -1,7 +1,6 @@
 use crate::gamedata::lua::{read_lua_tiles, LuaEntity, LuaPoint, LuaThing};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
-use crate::surface::pixel::Pixel;
 use crate::surfacev::err::VResult;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;

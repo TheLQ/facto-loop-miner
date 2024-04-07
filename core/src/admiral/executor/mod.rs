@@ -1,11 +1,15 @@
 use crate::admiral::err::{AdmiralError, AdmiralResult};
 use crate::admiral::lua_command::checked_command::CheckedLuaCommand;
+use crate::admiral::lua_command::lua_batch::LuaBatchCommand;
 use crate::admiral::lua_command::LuaCommand;
+use itertools::Itertools;
 use std::backtrace::Backtrace;
 
 pub mod client;
 pub mod entrypoint;
 pub mod file;
+
+const BATCH_SIZE: usize = 100;
 
 pub trait LuaCompiler {
     fn _execute_statement(&mut self, lua: impl LuaCommand) -> AdmiralResult<ExecuteResponse>;
@@ -41,6 +45,18 @@ pub trait LuaCompiler {
         } else {
             Ok(res)
         }
+    }
+
+    fn execute_checked_commands_in_wrapper_function(
+        &mut self,
+        commands: Vec<Box<dyn LuaCommand>>,
+    ) -> AdmiralResult<()> {
+        for batch in &commands.into_iter().chunks(BATCH_SIZE) {
+            let command = LuaBatchCommand::new(batch.collect()).into_boxed();
+            self.execute_checked_command(command)?;
+        }
+
+        Ok(())
     }
 
     // fn _execute_statement_empty(&mut self, lua: impl LuaCommand) -> AdmiralResult<()> {

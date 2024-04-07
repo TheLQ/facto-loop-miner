@@ -86,8 +86,8 @@ impl AdmiralError {
     }
 }
 
-fn truncate_huge_lua(input: &str) -> String {
-    if input.len() < 100 {
+pub fn truncate_huge_lua(input: &str) -> String {
+    if input.len() < 300 {
         input.to_string()
     } else {
         format!(

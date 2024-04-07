@@ -34,7 +34,7 @@ impl LuaCommand for FacSurfaceCreateEntity {
 
         if DEBUG_PRE_COLLISION {
             let direction = self.params.iter().find_map(|v| match v {
-                CreateParam::Direction(direction) => Some(direction.as_ref()),
+                CreateParam::Direction(direction) => Some(direction.to_factorio()),
                 CreateParam::DirectionFacto(direction) => Some(direction.as_ref()),
                 _ => None,
             });

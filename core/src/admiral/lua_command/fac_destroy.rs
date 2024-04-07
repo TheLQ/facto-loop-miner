@@ -34,12 +34,18 @@ impl LuaCommand for FacDestroy {
             .iter()
             .map(|v| format!("\"{}\"", v))
             .join(",");
-        format!(r"
-local entities = game.surfaces[1].find_entities_filtered{{ {{ {{ -{radius}, -{radius} }} , {{ {radius}, {radius} }} }}, {{ {filters} }} }}
+        format!(
+            r"
+local entities = game.surfaces[1].find_entities_filtered{{ 
+    area = {{ {{ -{radius}, -{radius} }} , {{ {radius}, {radius} }} }}, 
+    name = {{ {filters} }} 
+}}
 for _, entity in ipairs(entities) do
     entity.destroy()
 end
-        ")
-            .trim().replace('\n', "")
+        "
+        )
+        .trim()
+        .replace('\n', "")
     }
 }

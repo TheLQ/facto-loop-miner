@@ -1,3 +1,5 @@
+use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
+use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori_cost::calculate_cost_for_point;
 use crate::navigator::resource_cloud::ResourceCloud;
 use crate::simd_diff::SurfaceDiff;
@@ -372,6 +374,37 @@ impl Rail {
         }
 
         res
+    }
+
+    pub fn to_factorio_entities(&self, result: &mut Vec<Box<dyn LuaCommand>>) {
+        match self.mode {
+            RailMode::Straight => {
+                for inner_step in 0..RAIL_STEP_SIZE {
+                    // main rail
+                    let next = self.move_force_rotate_clockwise(2);
+                    let next = next.move_forward_single_num(inner_step);
+                    result.push(
+                        FacSurfaceCreateEntity::new_rail_straight(
+                            next.endpoint.to_f32_with_offset(1.0),
+                            self.direction.clone(),
+                        )
+                        .into_boxed(),
+                    );
+
+                    // adjacent dual rail
+                    let next = next.move_force_rotate_clockwise(1);
+                    let next = next.move_forward_single_num(DUAL_RAIL_SIZE - /*not self rail*/1);
+                    result.push(
+                        FacSurfaceCreateEntity::new_rail_straight(
+                            next.endpoint.to_f32_with_offset(1.0),
+                            self.direction.clone(),
+                        )
+                        .into_boxed(),
+                    );
+                }
+            }
+            _ => todo!(),
+        }
     }
 
     pub fn distance_to(&self, other: &Rail) -> u32 {

@@ -1,4 +1,4 @@
-use crate::admiral::err::{AdmiralError, AdmiralResult};
+use crate::admiral::err::{truncate_huge_lua, AdmiralError, AdmiralResult};
 use crate::admiral::executor::ExecuteResponse;
 use crate::admiral::executor::LuaCompiler;
 use crate::admiral::lua_command::fac_log::FacLog;
@@ -68,8 +68,13 @@ impl LuaCompiler for AdmiralClient {
         }
 
         // Execute command request to RCON server (SERVERDATA_EXECCOMMAND)
-        let final_command = format!("/c {}", lua_text);
-        debug!("executing {}", final_command);
+        let exec_type = if lua_text.len() > 2000 {
+            "/silent-command "
+        } else {
+            "/c"
+        };
+        let final_command = format!("{} {}", exec_type, lua_text);
+        debug!("executing {}", truncate_huge_lua(&final_command));
         let request = RCONRequest::new(final_command);
 
         let execute = self
