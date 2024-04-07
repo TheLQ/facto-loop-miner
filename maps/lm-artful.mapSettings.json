@@ -1,6 +1,6 @@
 {
   "pollution": {
-    "enabled": true,
+    "enabled": false,
     "diffusion_ratio": 0.02,
     "min_to_diffuse": 15,
     "ageing": 1,
@@ -28,13 +28,13 @@
     }
   },
   "enemy_evolution": {
-    "enabled": true,
+    "enabled": false,
     "time_factor": 0.000004,
     "destroy_factor": 0.002,
     "pollution_factor": 9e-7
   },
   "enemy_expansion": {
-    "enabled": true,
+    "enabled": false,
     "max_expansion_distance": 7,
     "friendly_base_influence_radius": 2,
     "enemy_building_influence_radius": 2,

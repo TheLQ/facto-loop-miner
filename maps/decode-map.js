@@ -396,7 +396,7 @@ fs.readFile(file, 'utf8', (err, data) => {
     let filePrefix = path.basename(file).split(".")[0]
 
     let mapGenSettingsFile = `${filePrefix}.mapGenSettings.json`
-    let mapGenSettingsData = prettyJson(decoded.map_settings);
+    let mapGenSettingsData = prettyJson(decoded.map_gen_settings);
     fs.writeFileSync(mapGenSettingsFile, mapGenSettingsData)
     console.log(`write to ${mapGenSettingsFile}`);
 
