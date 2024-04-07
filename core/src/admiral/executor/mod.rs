@@ -25,11 +25,19 @@ pub trait LuaCompiler {
                 backtrace: Backtrace::capture(),
             })
         } else if body != checked_id.to_string() {
-            Err(AdmiralError::LuaCheckedUnknown {
-                command: res.lua_text,
-                body: res.body,
-                backtrace: Backtrace::capture(),
-            })
+            if body.contains("[Admiral]") {
+                Err(AdmiralError::LuaCheckedError {
+                    command: res.lua_text,
+                    errors: res.body,
+                    backtrace: Backtrace::capture(),
+                })
+            } else {
+                Err(AdmiralError::LuaCheckedUnknown {
+                    command: res.lua_text,
+                    body: res.body,
+                    backtrace: Backtrace::capture(),
+                })
+            }
         } else {
             Ok(res)
         }

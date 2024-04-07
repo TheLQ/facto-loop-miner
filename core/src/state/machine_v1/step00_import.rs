@@ -34,9 +34,9 @@ impl Step for Step00 {
         info!("Converted in {}", convert_watch);
 
         let center = surface.get_pixel(&VPoint::new(0, 0));
-        if center != Pixel::SteelChest {
-            panic!("unexpeted centerpoint {:?}", center);
-        }
+        // if center != Pixel::SteelChest {
+        //     panic!("unexpeted centerpoint {:?}", center);
+        // }
 
         surface.save(&params.step_out_dir)?;
 

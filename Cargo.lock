@@ -557,6 +557,7 @@ dependencies = [
  "num-traits",
  "opencv",
  "pathfinding",
+ "rand",
  "rayon",
  "rcon-client",
  "regex",

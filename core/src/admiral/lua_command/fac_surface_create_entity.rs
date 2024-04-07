@@ -4,6 +4,9 @@ use itertools::Itertools;
 use opencv::core::Point2f;
 use strum::AsRefStr;
 
+const DEBUG_PRE_COLLISION: bool = false;
+const DEBUG_POSITION_EXPECTED: bool = true;
+
 #[derive(Debug)]
 pub struct FacSurfaceCreateEntity {
     pub name: String,
@@ -22,25 +25,61 @@ impl LuaCommand for FacSurfaceCreateEntity {
                 format!("{}={}", key, value)
             })
             .join(",");
-        let create = format!(
-            "game.surfaces[1].create_entity{{ \
-            name=\"{}\", \
-            position={{ x={},y={} }}, \
-            force={},\
-            {}\
-            }};",
-            self.name, self.position.x, self.position.y, DEFAULT_FORCE_VAR, params_str
-        );
 
-        if self.commands.is_empty() {
-            create
-        } else {
-            format!(
-                "local admiral_create = {} {}",
-                create,
-                self.commands.join(" ")
+        let mut lua: Vec<String> = Vec::new();
+
+        let name = &self.name;
+        let x = self.position.x;
+        let y = self.position.y;
+
+        if DEBUG_PRE_COLLISION {
+            let direction = self.params.iter().find_map(|v| match v {
+                CreateParam::Direction(direction) => Some(direction.as_ref()),
+                CreateParam::DirectionFacto(direction) => Some(direction.as_ref()),
+                _ => None,
+            });
+
+            let direction_param = if let Some(direction) = direction {
+                format!("defines.direction.{}", direction.to_lowercase())
+            } else {
+                "".to_string()
+            };
+
+            lua.push(
+                format!(
+                    r#"
+            if game.surfaces[1].entity_prototype_collides("{name}", {{ {x}, {y} }}, false, {direction_param}) then
+                rcon.print("[Admiral] Collision {name} {x}x{y}")             
+            end 
+            "#
+                )
+                .trim()
+                .replace('\n', ""),
             )
         }
+
+        if self.commands.is_empty() || DEBUG_POSITION_EXPECTED {
+            lua.push("local admiral_create =".to_string());
+        }
+
+        lua.push(format!(
+            "game.surfaces[1].create_entity{{ \
+            name=\"{name}\", \
+            position={{ {x}, {y} }}, \
+            force={DEFAULT_FORCE_VAR},\
+            {params_str}\
+            }} ",
+        ));
+
+        lua.extend_from_slice(&self.commands);
+
+        if DEBUG_POSITION_EXPECTED {
+            lua.push(format!(r#"if admiral_create.position.x ~= {x} or admiral_create.position.y ~= {y} then
+            rcon.print("[Admiral] Inserted {name} at {x}x{y} but was placed at " .. admiral_create.position.x .. "x" .. admiral_create.position.y)
+            end"#).trim().replace('\n', ""))
+        }
+
+        lua.join(" ")
     }
 }
 

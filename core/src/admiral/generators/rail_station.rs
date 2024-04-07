@@ -1,4 +1,4 @@
-use crate::admiral::generators::rail90::{rail_degrees_270, rail_degrees_360};
+use crate::admiral::generators::rail90::{rail_degrees_east, rail_degrees_north};
 use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
 use crate::navigator::mori::RailDirection;
@@ -49,7 +49,7 @@ impl RailStationGenerator {
         }
 
         // Curve up
-        rail_degrees_360(Point2f {
+        rail_degrees_east(Point2f {
             x: x_end as f32,
             y: self.start.y + 10.0,
         })
@@ -57,7 +57,7 @@ impl RailStationGenerator {
         .for_each(|e| creation_commands.push(e));
 
         // Curve down
-        rail_degrees_270(Point2f {
+        rail_degrees_north(Point2f {
             x: x_end as f32 + 2.0,
             y: self.start.y,
         })

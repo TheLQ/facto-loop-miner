@@ -64,7 +64,7 @@ mega_export_tiles_fat()
 
 -- /c
 local function mega_export_entities_compressed()
-    local chunks = 900 * 32
+    local chunks = 125 * 32
     local file = "big-entities-a.json"
     log("write " .. file .. "...")
     local output = {}

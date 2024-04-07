@@ -31,6 +31,12 @@ pub enum AdmiralError {
         command: String,
         backtrace: Backtrace,
     },
+    #[error("LuaCheckedError {errors}")]
+    LuaCheckedError {
+        command: String,
+        errors: String,
+        backtrace: Backtrace,
+    },
     #[error("LuaCheckedUnknown")]
     LuaCheckedUnknown {
         command: String,
@@ -66,6 +72,7 @@ impl AdmiralError {
             | AdmiralError::LuaResultNotEmpty { backtrace, .. }
             | AdmiralError::LuaResultEmpty { backtrace, .. }
             | AdmiralError::LuaCheckedEmpty { backtrace, .. }
+            | AdmiralError::LuaCheckedError { backtrace, .. }
             | AdmiralError::LuaCheckedUnknown { backtrace, .. }
             | AdmiralError::DestroyFailed { backtrace, .. }
             | AdmiralError::DefineFailed { backtrace, .. }
