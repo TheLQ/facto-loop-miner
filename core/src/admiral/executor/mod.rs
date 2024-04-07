@@ -6,8 +6,8 @@ use crate::surface::metric::Metrics;
 use std::backtrace::Backtrace;
 use tracing::{debug, info, trace, warn};
 
+pub mod client;
 pub mod file;
-pub mod rcon;
 
 pub trait LuaCompiler {
     fn _execute_statement<L: LuaCommand>(&mut self, lua: L) -> AdmiralResult<ExecuteResponse<L>>;

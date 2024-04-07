@@ -1,6 +1,6 @@
 use crate::admiral::err::AdmiralResult;
+use crate::admiral::executor::client::AdmiralClient;
 use crate::admiral::executor::file::AdmiralFile;
-use crate::admiral::executor::rcon::AdmiralClient;
 use crate::admiral::executor::LuaCompiler;
 use crate::admiral::generators::assembler_farm::{AssemblerChest, AssemblerFarmGenerator};
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;

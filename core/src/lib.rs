@@ -39,7 +39,7 @@
 
 extern crate core;
 
-use crate::admiral::executor::rcon::AdmiralClient;
+use crate::admiral::executor::client::AdmiralClient;
 use crate::admiral::executor::LuaCompiler;
 use crate::admiral::lua_command::fac_log::FacLog;
 use crate::admiral::lua_command::scanner::{
