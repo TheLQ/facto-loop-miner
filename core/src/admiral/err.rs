@@ -94,3 +94,7 @@ fn truncate_huge_lua(input: &str) -> String {
         )
     }
 }
+
+pub fn pretty_panic_admiral(err: AdmiralError) -> String {
+    format!("{}", err)
+}

@@ -1,4 +1,4 @@
-use crate::admiral::err::AdmiralResult;
+use crate::admiral::err::{pretty_panic_admiral, AdmiralError, AdmiralResult};
 use crate::admiral::executor::client::AdmiralClient;
 use crate::admiral::executor::LuaCompiler;
 use crate::admiral::generators::rail90::{
@@ -20,7 +20,9 @@ pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
     match 1 {
-        1 => admiral_entrypoint_testing(&mut admiral).unwrap(),
+        1 => admiral_entrypoint_testing(&mut admiral)
+            .map_err(pretty_panic_admiral)
+            .unwrap(),
         _ => panic!("asdf"),
     }
 
@@ -40,17 +42,31 @@ pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     // info!("return: {}", res.body);
 }
 
-fn admiral_entrypoint_testing(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    {
-        // Need to have generated space for our testing
-        let command = BaseScanner::new_radius(CROP_RADIUS);
-        admiral.execute_checked_command(command.into_boxed())?;
-    }
+fn admiral_entrypoint_prod(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    scan_area(admiral)?;
+    destroy_placed_entities(admiral)?;
 
-    {
-        let command = FacDestroy::new(150);
-        admiral.execute_checked_command(command.into_boxed())?;
-    }
+    Ok(())
+}
+
+fn scan_area(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    // Need to have generated space for our testing
+    let command = BaseScanner::new_radius(CROP_RADIUS);
+    admiral.execute_checked_command(command.into_boxed())?;
+
+    Ok(())
+}
+
+fn destroy_placed_entities(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    let command = FacDestroy::new_filtered(150, vec!["straight-rail", "curved-rail"]);
+    admiral.execute_checked_command(command.into_boxed())?;
+
+    Ok(())
+}
+
+fn admiral_entrypoint_testing(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    scan_area(admiral)?;
+    destroy_placed_entities(admiral)?;
 
     {
         let command = rail_degrees_south(VPoint::new(0, 0).to_f32_with_offset(0.0));
@@ -72,3 +88,5 @@ fn admiral_entrypoint_testing(admiral: &mut AdmiralClient) -> AdmiralResult<()> 
 
     Ok(())
 }
+
+pub fn testing_rail_turns() {}
