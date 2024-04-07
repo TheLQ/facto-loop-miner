@@ -13,6 +13,8 @@ mod step10_base;
 mod step20_nav;
 mod step99_death;
 
+pub use step03_crop::CROP_RADIUS;
+
 pub fn new_v1_machine() -> Machine {
     Machine {
         steps: Vec::from([

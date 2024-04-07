@@ -1,11 +1,7 @@
 use crate::admiral::err::{AdmiralError, AdmiralResult};
 use crate::admiral::lua_command::checked_command::CheckedLuaCommand;
-use crate::admiral::lua_command::fac_execution_define::FacExectionDefine;
-use crate::admiral::lua_command::fac_execution_run::FacExectionRun;
-use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
-use crate::surface::metric::Metrics;
+use crate::admiral::lua_command::LuaCommand;
 use std::backtrace::Backtrace;
-use tracing::{debug, info, trace, warn};
 
 pub mod client;
 pub mod entrypoint;
@@ -22,12 +18,13 @@ pub trait LuaCompiler {
         let checked_id = checked.id();
         let res = self._execute_statement(checked)?;
 
-        if res.body.is_empty() {
+        let body = res.body.trim();
+        if body.is_empty() {
             Err(AdmiralError::LuaCheckedEmpty {
                 command: res.lua_text,
                 backtrace: Backtrace::capture(),
             })
-        } else if res.body != checked_id.to_string() {
+        } else if body != checked_id.to_string() {
             Err(AdmiralError::LuaCheckedUnknown {
                 command: res.lua_text,
                 body: res.body,

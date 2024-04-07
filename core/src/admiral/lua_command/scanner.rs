@@ -1,4 +1,8 @@
 use crate::admiral::lua_command::raw_lua::RawLuaCommand;
+use crate::admiral::lua_command::LuaCommand;
+use crate::surfacev::vsurface::VSurface;
+use crate::TILES_PER_CHUNK;
+use itertools::Itertools;
 
 const RAW_SCAN: &str = include_str!("../../../../scanner_mod/scanner.lua");
 
@@ -32,4 +36,36 @@ fn extract_commands_from_scanner_mod(lua_function: &str) -> Vec<RawLuaCommand> {
     res.push(RawLuaCommand::new(extracted_command.to_string()));
     res.push(RawLuaCommand::new(lua_function.to_string()));
     res
+}
+
+#[derive(Debug)]
+pub struct BaseScanner {
+    radius: u32,
+}
+
+impl BaseScanner {
+    pub fn new_radius(radius: u32) -> Self {
+        BaseScanner { radius }
+    }
+
+    pub fn new(surface: &VSurface) -> Self {
+        Self::new_radius(surface.get_radius())
+    }
+}
+
+impl LuaCommand for BaseScanner {
+    fn make_lua(&self) -> String {
+        // not sure if chunks on the exact edge are generated...
+        let chunks = self.radius as usize / TILES_PER_CHUNK;
+        format!(r#"
+if not game.surfaces[1].is_chunk_generated({{ -{chunks}, -{chunks} }}) or not game.surfaces[1].is_chunk_generated({{ {chunks}, {chunks} }})
+then
+    log("Generating {chunks} Chunks...")
+    game.surfaces[1].request_to_generate_chunks({{ 0, 0 }}, {chunks})
+    log("force_generate....")
+    game.surfaces[1].force_generate_chunk_requests()
+    log("Generate Complete")
+end
+        "#).trim().replace('\n', " ")
+    }
 }
