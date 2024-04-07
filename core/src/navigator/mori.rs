@@ -1,6 +1,5 @@
 use crate::navigator::mori_cost::calculate_cost_for_point;
 use crate::navigator::resource_cloud::ResourceCloud;
-use crate::navigator::threaded_search::threaded_searcher;
 use crate::simd_diff::SurfaceDiff;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
@@ -12,12 +11,13 @@ use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use crossbeam::atomic::AtomicCell;
 use num_format::ToFormattedString;
-use pathfinding::prelude::{astar_mori, dfs_reach};
+use pathfinding::prelude::astar_mori;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
-use std::mem;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use strum::AsRefStr;
 use tracing::debug;
 
 /// Pathfinder v1, Mori Calliope
@@ -56,7 +56,7 @@ pub fn mori_start(
     let resource_cloud = ResourceCloud::from_surface(surface);
 
     // TODO let mut working_buffer = surface.surface_diff();
-    let mut working_buffer = SurfaceDiff::TODO_new();
+    let working_buffer = SurfaceDiff::TODO_new();
 
     let metric_successors = AtomicU64::new(1);
     let metric_start = AtomicCell::new(Instant::now());
@@ -128,13 +128,13 @@ pub fn mori_start(
 //     pub(crate) y: i32,
 // }
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum RailMode {
     Straight,
     Turn(TurnType),
 }
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum TurnType {
     Turn90,
     Turn270,
@@ -149,7 +149,7 @@ impl TurnType {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize, AsRefStr)]
 pub enum RailDirection {
     Up,
     Down,
@@ -189,7 +189,7 @@ const RAIL_DIRECTION_CLOCKWISE: [RailDirection; 4] = [
     RailDirection::Left,
 ];
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Rail {
     pub endpoint: VPoint,
     pub direction: RailDirection,

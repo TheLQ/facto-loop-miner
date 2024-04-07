@@ -13,7 +13,7 @@ use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use kiddo::{Manhattan, NearestNeighbour};
 use opencv::core::Point;
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, info, warn};
 
 pub struct Step20 {}
 
@@ -233,6 +233,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
 
         if let Some(path) = mori_start(surface, end, start, search_area) {
             write_rail(surface, &path)?;
+            surface.add_rail(path);
 
             // destination no longer usable
             destinations_iter.next();

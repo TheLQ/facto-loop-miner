@@ -1,9 +1,10 @@
+use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
+use crate::navigator::mori::Rail;
 use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
-use crate::surfacev::varea::VArea;
 use crate::surfacev::ventity_map::{VEntityMap, VEntityXY};
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::VPoint;
@@ -33,6 +34,8 @@ pub struct VSurface {
     pixels: VEntityMap<VPixel>,
     entities: VEntityMap<VEntity>,
     patches: Vec<VPatch>,
+    #[serde(default)]
+    place_rail: Vec<Rail>,
 }
 
 impl VSurface {
@@ -43,6 +46,7 @@ impl VSurface {
             pixels: VEntityMap::new(radius),
             entities: VEntityMap::new(radius),
             patches: Vec::new(),
+            place_rail: Vec::new(),
         }
     }
 
@@ -347,6 +351,10 @@ impl VSurface {
         }
     }
 
+    pub fn add_rail(&mut self, mut rails: Vec<Rail>) {
+        self.place_rail.append(&mut rails)
+    }
+
     #[cfg(test)]
     pub fn test_dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {
         self.pixels.iter_xy_pixels()
@@ -463,4 +471,8 @@ impl VEntityXY for VEntity {
     fn get_xy(&self) -> &[VPoint] {
         &self.points
     }
+}
+
+pub trait PlaceableEntity: Serialize + for<'a> Deserialize<'a> {
+    fn place_lua_command(&self) -> Vec<FacSurfaceCreateEntity>;
 }

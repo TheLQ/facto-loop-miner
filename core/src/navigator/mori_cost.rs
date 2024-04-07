@@ -1,6 +1,5 @@
-use crate::navigator::mori::{Rail, RailMode};
+use crate::navigator::mori::{Rail, RailMode, RAIL_STEP_SIZE};
 use crate::navigator::resource_cloud::ResourceCloud;
-use num_traits::Pow;
 
 const ANTI_WRONG_BIAS_EFFECT: f32 = 10f32;
 const RESOURCE_BIAS_EFFECT: f32 = 20f32;
@@ -64,7 +63,7 @@ fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail, end: &Rail) ->
     const MULTI_TURN_COST_UNIT: f32 = 48.0;
 
     // turning is costly
-    let mut total_cost = distance_basic_manhattan(next, end);
+    let mut total_cost = distance_basic_manhattan(next, end) / RAIL_STEP_SIZE as f32;
 
     total_cost += match next.mode {
         RailMode::Straight => STRAIGHT_COST_UNIT,
@@ -73,7 +72,7 @@ fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail, end: &Rail) ->
 
     // add extra cost for previous turns
     let mut last_turns = 0u32;
-    for parent in parents {
+    for parent in parents.iter().rev().take(5) {
         if let RailMode::Turn(_) = parent.mode {
             last_turns += 25;
             // TODO: If this is too low, direction bias takes over and forces rail all the way to the end
