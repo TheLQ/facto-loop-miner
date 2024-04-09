@@ -3,11 +3,9 @@ use crate::admiral::executor::ExecuteResponse;
 use crate::admiral::executor::LuaCompiler;
 use crate::admiral::lua_command::fac_log::FacLog;
 use crate::admiral::lua_command::LuaCommand;
-use crate::LOCALE;
-use num_format::ToFormattedString;
 use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONRequest};
 use std::backtrace::Backtrace;
-use tracing::{debug, info, trace};
+use tracing::{debug, info};
 
 pub struct AdmiralClient {
     client: RCONClient,
@@ -62,7 +60,7 @@ impl LuaCompiler for AdmiralClient {
         };
         if lua_text.len() >= 100 * 1000 * 1000 {
             return Err(AdmiralError::TooLargeRequest {
-                lua_text,
+                command: lua_text,
                 backtrace: Backtrace::capture(),
             });
         }

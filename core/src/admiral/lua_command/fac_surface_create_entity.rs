@@ -62,14 +62,18 @@ impl LuaCommand for FacSurfaceCreateEntity {
             lua.push("local admiral_create =".to_string());
         }
 
-        lua.push(format!(
-            "game.surfaces[1].create_entity{{ \
-            name=\"{name}\", \
-            position={{ {x}, {y} }}, \
-            force={DEFAULT_FORCE_VAR},\
-            {params_str}\
-            }} ",
-        ));
+        lua.push(
+            format!(
+                r#"game.surfaces[1].create_entity{{ 
+            name="{name}", 
+            position={{ {x}, {y} }}, 
+            force={DEFAULT_FORCE_VAR},
+            {params_str}
+            }}"#,
+            )
+            .trim()
+            .replace("\n", ""),
+        );
 
         lua.extend_from_slice(&self.commands);
 

@@ -3,6 +3,7 @@ use rcon_client::RCONError;
 use std::backtrace::Backtrace;
 use std::io;
 use thiserror::Error;
+use tracing::error;
 
 pub type AdmiralResult<T> = Result<T, AdmiralError>;
 
@@ -38,7 +39,7 @@ pub enum AdmiralError {
         errors: String,
         backtrace: Backtrace,
     },
-    #[error("LuaCheckedUnknown")]
+    #[error("LuaCheckedUnknown {body}")]
     LuaCheckedUnknown {
         command: String,
         body: String,
@@ -46,15 +47,15 @@ pub enum AdmiralError {
     },
     #[error("DestroyFailed")]
     DestroyFailed { backtrace: Backtrace },
-    #[error("DefineFailed {}", truncate_huge_lua(lua_text))]
+    #[error("DefineFailed {}", truncate_huge_lua(command))]
     // #[error("DefineFailed")]
     DefineFailed {
-        lua_text: String,
+        command: String,
         backtrace: Backtrace,
     },
-    #[error("TooLargeRequest {}", truncate_huge_lua(lua_text))]
+    #[error("TooLargeRequest {}", truncate_huge_lua(command))]
     TooLargeRequest {
-        lua_text: String,
+        command: String,
         backtrace: Backtrace,
     },
     #[error("IoError {path} {e}")]
@@ -84,6 +85,23 @@ impl AdmiralError {
             AdmiralError::SurfaceError(v) => v.my_backtrace(),
         }
     }
+
+    pub fn my_command(&self) -> Option<&String> {
+        match self {
+            AdmiralError::Rcon { .. }
+            | AdmiralError::SurfaceError { .. }
+            | AdmiralError::DestroyFailed { .. }
+            | AdmiralError::IoError { .. }
+            | AdmiralError::LuaBlankCommand { .. } => None,
+            AdmiralError::LuaResultNotEmpty { command, .. }
+            | AdmiralError::LuaResultEmpty { command, .. }
+            | AdmiralError::LuaCheckedEmpty { command, .. }
+            | AdmiralError::LuaCheckedError { command, .. }
+            | AdmiralError::LuaCheckedUnknown { command, .. }
+            | AdmiralError::DefineFailed { command, .. }
+            | AdmiralError::TooLargeRequest { command, .. } => Some(command),
+        }
+    }
 }
 
 pub fn truncate_huge_lua(input: &str) -> String {
@@ -100,5 +118,8 @@ pub fn truncate_huge_lua(input: &str) -> String {
 }
 
 pub fn pretty_panic_admiral(err: AdmiralError) -> String {
+    if let Some(cmd) = err.my_command() {
+        error!("raw command -- {}", cmd);
+    }
     format!("{}", err)
 }
