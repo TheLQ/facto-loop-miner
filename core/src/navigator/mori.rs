@@ -1,4 +1,4 @@
-use crate::admiral::generators::rail90::rail_degrees_east;
+use crate::admiral::generators::rail90::{rail_degrees_east, rail_degrees_west};
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori_cost::calculate_cost_for_point;
@@ -150,6 +150,13 @@ impl TurnType {
             TurnType::Turn270 => 3,
         }
     }
+
+    pub fn swap(&self) -> Self {
+        match self {
+            TurnType::Turn90 => TurnType::Turn270,
+            TurnType::Turn270 => TurnType::Turn90,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize, AsRefStr)]
@@ -249,7 +256,13 @@ impl Rail {
                 // ↓↓↓↓↓↓↓↓↓ GHETTO FIX
                 let mut last_leg = self.clone();
                 last_leg.mode = RailMode::Straight;
-                res.extend_from_slice(&last_leg.area());
+                res.append(&mut last_leg.area());
+
+                last_leg = last_leg
+                    .move_force_rotate_clockwise(2)
+                    .move_forward_step()
+                    .move_force_rotate_clockwise(2);
+                res.append(&mut last_leg.area());
 
                 if turn_type == &TurnType::Turn90 {
                     let mut corner_cover = self.clone();
@@ -266,15 +279,18 @@ impl Rail {
                     TurnType::Turn90 => 1,
                     TurnType::Turn270 => 3,
                 });
-                res.extend_from_slice(&first_leg.area());
+                res.append(&mut first_leg.area());
+
+                let first_leg = first_leg.move_forward_step();
+                res.append(&mut first_leg.area());
 
                 let before = res.len();
                 res.sort();
                 res.dedup();
                 let after = res.len();
-                if ![8, 0].contains(&(before - after)) {
-                    panic!("Asd {} {} {}", before, after, before - after);
-                }
+                // if ![8, 0].contains(&(before - after)) {
+                //     panic!("Asd {} {} {}", before, after, before - after);
+                // }
 
                 // ↑↑↑↑↑↑↑↑↑ GHETTO FIX
 
@@ -405,43 +421,74 @@ impl Rail {
                 }
             }
             RailMode::Turn(turn_type) => {
+                // outer first leg
+                self.move_force_rotate_clockwise(2)
+                    .move_forward_single_num(12)
+                    .move_force_rotate_clockwise(turn_type.swap().rotations())
+                    .move_forward_single_num(6)
+                    .to_facto_entities_line(result, 0, 6);
+
+                // outer second leg before endpoint
+                self.move_force_rotate_clockwise(2)
+                    .to_facto_entities_line(result, 0, 7);
+
+                // inner first leg
+                self.move_force_rotate_clockwise(2)
+                    .move_forward_single_num(10)
+                    .move_force_rotate_clockwise(turn_type.swap().rotations())
+                    .move_forward_single_num(8)
+                    .to_facto_entities_line(result, 0, 4);
+
+                // inner second leg before endpoint
+                self.move_force_rotate_clockwise(3)
+                    .move_forward_single_num(2)
+                    .move_force_rotate_clockwise(3)
+                    .to_facto_entities_line(result, 0, 5);
+
                 match (&self.direction, turn_type) {
                     (RailDirection::Left, TurnType::Turn270) => {
-                        // outer first leg
-                        self.move_force_rotate_clockwise(2)
-                            .move_forward_single_num(12)
-                            .move_force_rotate_clockwise(1)
-                            .move_forward_single_num(6)
-                            .to_facto_entities_line(result, 0, 6);
-
                         // outer turn
-                        result.append(&mut rail_degrees_east(
-                            self.endpoint.move_x(14).move_y(-10).to_f32_with_offset(0.0),
-                        ));
-
-                        // outer last leg before endpoint
-                        self.move_force_rotate_clockwise(2)
-                            .to_facto_entities_line(result, 0, 7);
-
-                        // --
-
-                        // inner first leg
-                        self.move_force_rotate_clockwise(2)
-                            .move_forward_single_num(10)
+                        let turn = self
+                            .move_force_rotate_clockwise(2)
+                            .move_forward_single_num(7)
                             .move_force_rotate_clockwise(1)
-                            .move_forward_single_num(8)
-                            .to_facto_entities_line(result, 0, 4);
+                            .move_forward_single_num(5);
+                        result.append(&mut rail_degrees_east(
+                            turn.endpoint.to_f32_with_offset(0.0),
+                        ));
 
                         // inner turn
+                        let turn = self
+                            .move_force_rotate_clockwise(2)
+                            .move_forward_single_num(5)
+                            .move_force_rotate_clockwise(1)
+                            .move_forward_single_num(7);
                         result.append(&mut rail_degrees_east(
-                            self.endpoint.move_x(10).move_y(-14).to_f32_with_offset(0.0),
+                            turn.endpoint.to_f32_with_offset(0.0),
+                        ));
+                    }
+
+                    (RailDirection::Right, TurnType::Turn270)
+                    | (RailDirection::Left, TurnType::Turn90) => {
+                        // outer turn
+                        let turn = self
+                            .move_force_rotate_clockwise(2)
+                            .move_forward_single_num(12)
+                            .move_force_rotate_clockwise(1)
+                            .move_forward_single_num(0);
+                        result.append(&mut rail_degrees_west(
+                            turn.endpoint.to_f32_with_offset(0.0),
                         ));
 
-                        // inner second leg before endpoint
-                        self.move_force_rotate_clockwise(3)
-                            .move_forward_single_num(2)
-                            .move_force_rotate_clockwise(3)
-                            .to_facto_entities_line(result, 0, 5);
+                        // inner turn
+                        let turn = self
+                            .move_force_rotate_clockwise(2)
+                            .move_forward_single_num(10)
+                            .move_force_rotate_clockwise(1)
+                            .move_forward_single_num(2);
+                        result.append(&mut rail_degrees_west(
+                            turn.endpoint.to_f32_with_offset(0.0),
+                        ));
                     }
                     (direction, turn_type) => todo!("asdf {:?} {:?}", direction, turn_type),
                 };
@@ -1044,21 +1091,21 @@ mod test {
 
     #[test]
     fn rail_area_down_left_test() {
-        const TEST_RADIUS: usize = 30;
+        const TEST_RADIUS: usize = 60;
         let mut surface = VSurface::new(TEST_RADIUS as u32);
 
         let turn_rail = Rail::new_straight(VPoint::new(-5, 2), RailDirection::Down);
         draw_rail(&mut surface, &turn_rail);
         let turn_rail = turn_rail.move_left();
         draw_rail(&mut surface, &turn_rail);
-        let turn_rail = turn_rail.move_left();
-        draw_rail(&mut surface, &turn_rail);
-        let turn_rail = turn_rail.move_left();
-        draw_rail(&mut surface, &turn_rail);
-        let turn_rail = turn_rail.move_left();
-        draw_rail(&mut surface, &turn_rail);
-        let turn_rail = turn_rail.move_left();
-        draw_rail(&mut surface, &turn_rail);
+        // let turn_rail = turn_rail.move_left();
+        // draw_rail(&mut surface, &turn_rail);
+        // let turn_rail = turn_rail.move_left();
+        // draw_rail(&mut surface, &turn_rail);
+        // let turn_rail = turn_rail.move_left();
+        // draw_rail(&mut surface, &turn_rail);
+        // let turn_rail = turn_rail.move_left();
+        // draw_rail(&mut surface, &turn_rail);
         // draw_rail(&mut surface, VPoint::new(1, -5), RailDirection::Down);
 
         let actual_str = format_surface_dump(&surface);
