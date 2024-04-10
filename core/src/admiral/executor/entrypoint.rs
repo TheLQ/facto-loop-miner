@@ -14,8 +14,15 @@ use crate::admiral::lua_command::scanner::{facscan_mega_export_entities_compress
 use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori::{Rail, RailDirection, RailMode};
 use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
+use crate::surfacev::bit_grid::BitGrid;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
+use bitvec::prelude::*;
+use bitvec::vec::BitVec;
+use opencv::core::Point2f;
+use regex::Replacer;
+use simd_json::{to_owned_value, to_string, OwnedValue, StaticNode};
+use std::collections::HashMap;
 use std::path::Path;
 use tracing::info;
 
@@ -225,6 +232,82 @@ pub fn admiral_entrypoint_turn_area_extractor(admiral: &mut AdmiralClient) -> Ad
     }
 
     admiral.execute_checked_command(LuaBatchCommand::new(commands).into_boxed())?;
+
+    // fetch position of steel crates
+
+    let command = RawLuaCommand::new(
+        r#"
+    local entities = game.surfaces[1].find_entities_filtered{
+        area = {{0, -64}, {128, -48}}, 
+        name = "steel-chest"
+    }
+    local output = {}
+    for _, entity in ipairs(entities) do
+        table.insert(output, entity.position.x)
+        table.insert(output, entity.position.y)
+    end
+    rcon.print(game.table_to_json(output))
+    "#
+        .trim()
+        .replace('\n', ""),
+    );
+
+    let response = admiral._execute_statement(command).unwrap();
+
+    let mut body = response.body.into_bytes();
+    let main_array = if let Ok(OwnedValue::Array(raw)) = to_owned_value(body.as_mut()) {
+        raw
+    } else {
+        panic!("no wrapper array?")
+    };
+
+    let mut chest_positions = Vec::new();
+    for [x_value, y_value] in main_array.into_iter().array_chunks() {
+        let x = if let OwnedValue::Static(StaticNode::F64(raw)) = x_value {
+            raw as f32
+        } else {
+            panic!("not x");
+        };
+        let y = if let OwnedValue::Static(StaticNode::F64(raw)) = y_value {
+            raw as f32
+        } else {
+            panic!("not y");
+        };
+        chest_positions.push(VPoint::from_f32_with_offset(Point2f { x, y }, 0.5)?);
+    }
+    info!("Loaded {} chests", chest_positions.len());
+
+    // bucketize chest points
+    let mut turn_grids = [
+        BitGrid::new(),
+        BitGrid::new(),
+        BitGrid::new(),
+        BitGrid::new(),
+    ];
+
+    for chest in chest_positions {
+        let (turn, relative_chest) = match chest.x() {
+            0..16 => (0, chest.move_xy(0, -chunk_y_offset)),
+            32..48 => (1, chest.move_xy(-32, -chunk_y_offset)),
+            64..80 => (2, chest.move_xy(-64, -chunk_y_offset)),
+            96..112 => (3, chest.move_xy(-96, -chunk_y_offset)),
+            _ => panic!("asdf {:?}", chest),
+        };
+        turn_grids[turn].set(
+            relative_chest.x() as usize,
+            relative_chest.y() as usize,
+            true,
+        );
+    }
+
+    // magic!
+    for turn_grid in turn_grids {
+        println!();
+        println!("Numbay");
+        for info in turn_grid.to_hex_strings() {
+            println!("{}", info);
+        }
+    }
 
     Ok(())
 }
