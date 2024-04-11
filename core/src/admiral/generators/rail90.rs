@@ -5,8 +5,11 @@ use crate::admiral::lua_command::fac_surface_create_entity::{
 };
 use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori::RailDirection;
+use crate::surfacev::bit_grid::BitGrid;
 use crate::surfacev::vpoint::VPoint;
+use lazy_static::lazy_static;
 use opencv::core::Point2f;
+use std::cell::LazyCell;
 
 pub fn rail_degrees_north(start: Point2f) -> Vec<Box<dyn LuaCommand>> {
     vec![
@@ -125,6 +128,8 @@ pub fn rail_degrees_east(start: Point2f) -> Vec<Box<dyn LuaCommand>> {
 }
 
 pub fn dual_rail_north(top_right_corner: VPoint, commands: &mut Vec<Box<dyn LuaCommand>>) {
+    top_right_corner.assert_even_position();
+
     commands.append(&mut rail_degrees_north(
         top_right_corner.move_xy(4, 0).to_f32_with_offset(0.0),
     ));
@@ -153,7 +158,19 @@ pub fn dual_rail_north(top_right_corner: VPoint, commands: &mut Vec<Box<dyn LuaC
     );
 }
 
+pub fn dual_rail_north_empty() -> BitGrid {
+    const DUAL_RAIL_NORTH_EMPTY_SPACES_CONFIG: [u64; 4] = [
+        0xff003ffe1fff0f,
+        0xfc703e3e1f1f0f1,
+        0xfc78fe3cff1cff1c,
+        0xff8cffccffccffcc,
+    ];
+    BitGrid::from_u64(DUAL_RAIL_NORTH_EMPTY_SPACES_CONFIG)
+}
+
 pub fn dual_rail_south(top_right_corner: VPoint, commands: &mut Vec<Box<dyn LuaCommand>>) {
+    top_right_corner.assert_even_position();
+
     commands.append(&mut rail_degrees_south(
         top_right_corner.move_xy(4, 0).to_f32_with_offset(0.0),
     ));
@@ -182,7 +199,20 @@ pub fn dual_rail_south(top_right_corner: VPoint, commands: &mut Vec<Box<dyn LuaC
     );
 }
 
+pub fn dual_rail_south_empty() -> BitGrid {
+    const DUAL_RAIL_SOUTH_EMPTY_SPACES_CONFIG: [u64; 4] = [
+        0x33ff33ff33ff31ff,
+        0x38ff38ff3c7f1e3f,
+        0x8f0f8f87c7c0e3f0,
+        0xf0fff87ffc00ff00,
+    ];
+
+    BitGrid::from_u64(DUAL_RAIL_SOUTH_EMPTY_SPACES_CONFIG)
+}
+
 pub fn dual_rail_east(top_right_corner: VPoint, commands: &mut Vec<Box<dyn LuaCommand>>) {
+    top_right_corner.assert_even_position();
+
     commands.append(&mut rail_degrees_east(
         top_right_corner.move_xy(4, 4).to_f32_with_offset(0.0),
     ));
@@ -215,7 +245,19 @@ pub fn dual_rail_east(top_right_corner: VPoint, commands: &mut Vec<Box<dyn LuaCo
     );
 }
 
+pub fn dual_rail_east_empty() -> BitGrid {
+    const DUAL_RAIL_EAST_EMPTY_SPACES_CONFIG: [u64; 4] = [
+        0xffccffccffccff8c,
+        0xff1cff1cfe3cfc78,
+        0xf0f1e1f103e30fc7,
+        0xff0ffe1f003f00ff,
+    ];
+    BitGrid::from_u64(DUAL_RAIL_EAST_EMPTY_SPACES_CONFIG)
+}
+
 pub fn dual_rail_west(top_right_corner: VPoint, commands: &mut Vec<Box<dyn LuaCommand>>) {
+    top_right_corner.assert_even_position();
+
     commands.append(&mut rail_degrees_west(
         top_right_corner.move_xy(4, 4).to_f32_with_offset(0.0),
     ));
@@ -248,9 +290,19 @@ pub fn dual_rail_west(top_right_corner: VPoint, commands: &mut Vec<Box<dyn LuaCo
     );
 }
 
+pub fn dual_rail_west_empty() -> BitGrid {
+    const DUAL_RAIL_WEST_EMPTY_SPACES_CONFIG: [u64; 4] = [
+        0xff00fc00f87ff0ff,
+        0xe3f0c7c08f878f0f,
+        0x1e3f3c7f38ff38ff,
+        0x31ff33ff33ff33ff,
+    ];
+    BitGrid::from_u64(DUAL_RAIL_WEST_EMPTY_SPACES_CONFIG)
+}
+
 fn add_rail(point: VPoint, direction: RailDirection, commands: &mut Vec<Box<dyn LuaCommand>>) {
     commands.push(
-        FacSurfaceCreateEntity::new_rail_straight(point.to_f32_with_offset(0.0), direction)
+        FacSurfaceCreateEntity::new_rail_straight(point.to_f32_with_offset(1.0), direction)
             .into_boxed(),
     );
 }

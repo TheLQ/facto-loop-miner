@@ -27,7 +27,7 @@ impl BitGrid {
         }
     }
 
-    pub fn get(&mut self, x: usize, y: usize) -> bool {
+    pub fn get(&self, x: usize, y: usize) -> bool {
         let index = self.xy_to_index(x, y);
         *self.data.get(index).unwrap()
     }

@@ -33,6 +33,7 @@ tracing = "0.1.37"
 tracing-subscriber = "0.3.17"
 tracing-test = "0.2.4"
 rcon-client = "0.1.2"
+#rcon-client = { path = "../../rcon-rs" }
 thiserror = "1.0.50"
 regex = "1.10.2"
 crossbeam = "0.8.2"

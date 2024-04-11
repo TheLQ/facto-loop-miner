@@ -66,14 +66,18 @@ impl LuaCompiler for AdmiralClient {
         }
 
         // Execute command request to RCON server (SERVERDATA_EXECCOMMAND)
-        let exec_type = if lua_text.len() > 2000 {
-            "/silent-command "
-        } else {
-            "/c"
-        };
+        let exec_type = "/silent-command";
         let final_command = format!("{} {}", exec_type, lua_text);
-        debug!("executing {}", truncate_huge_lua(&final_command));
-        let request = RCONRequest::new(final_command);
+
+        // debug!("executing {}", truncate_huge_lua(&final_command));
+        debug!("executing {}", final_command);
+
+        // let request = RCONRequest::new(final_command);
+        let request = RCONRequest {
+            request_type: 2,
+            id: 1,
+            body: final_command,
+        };
 
         let execute = self
             .client

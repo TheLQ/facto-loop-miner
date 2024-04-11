@@ -48,31 +48,33 @@ impl LuaCommand for FacSurfaceCreateEntity {
             lua.push(
                 format!(
                     r#"
-            if game.surfaces[1].entity_prototype_collides("{name}", {{ {x}, {y} }}, false, {direction_param}) then
-                rcon.print("[Admiral] Collision {name} {x}x{y}")             
-            end 
-            "#
+                    if game.surfaces[1].entity_prototype_collides("{name}", {{ {x}, {y} }}, false, {direction_param}) then
+                        rcon.print("[Admiral] Collision {name} {x}x{y}")           
+                    end 
+                    "#
                 )
                 .trim()
-                .replace('\n', ""),
+                .replace('\n', "")
+                .replace("    ", ""),
             )
         }
 
-        if self.commands.is_empty() || DEBUG_POSITION_EXPECTED {
+        if !self.commands.is_empty() || DEBUG_POSITION_EXPECTED {
             lua.push("local admiral_create =".to_string());
         }
 
         lua.push(
             format!(
                 r#"game.surfaces[1].create_entity{{ 
-            name="{name}", 
-            position={{ {x}, {y} }}, 
-            force={DEFAULT_FORCE_VAR},
-            {params_str}
-            }}"#,
+                    name="{name}", 
+                    position={{ {x}, {y} }}, 
+                    force={DEFAULT_FORCE_VAR},
+                    {params_str}
+                }}"#,
             )
             .trim()
-            .replace("\n", ""),
+            .replace('\n', "")
+            .replace("    ", ""),
         );
 
         lua.extend_from_slice(&self.commands);

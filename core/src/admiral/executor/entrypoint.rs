@@ -2,7 +2,8 @@ use crate::admiral::err::{pretty_panic_admiral, AdmiralResult};
 use crate::admiral::executor::client::AdmiralClient;
 use crate::admiral::executor::LuaCompiler;
 use crate::admiral::generators::rail90::{
-    dual_rail_east, dual_rail_north, dual_rail_south, dual_rail_west, rail_degrees_east,
+    dual_rail_east, dual_rail_east_empty, dual_rail_north, dual_rail_north_empty, dual_rail_south,
+    dual_rail_south_empty, dual_rail_west, dual_rail_west_empty, rail_degrees_east,
     rail_degrees_north, rail_degrees_south, rail_degrees_west,
 };
 use crate::admiral::lua_command::chart_pulse::ChartPulse;
@@ -215,6 +216,20 @@ pub fn admiral_entrypoint_turn_area_extractor(admiral: &mut AdmiralClient) -> Ad
     let chunk_x_offset = 96;
     dual_rail_west(VPoint::new(chunk_x_offset, chunk_y_offset), &mut commands);
 
+    match 2 {
+        1 => create_minified_bitgrid(admiral, commands, chunk_y_offset),
+        2 => insert_minified_kit(admiral, commands, chunk_y_offset),
+        _ => panic!("asdf"),
+    }?;
+
+    Ok(())
+}
+
+pub fn create_minified_bitgrid(
+    admiral: &mut AdmiralClient,
+    mut commands: Vec<Box<dyn LuaCommand>>,
+    chunk_y_offset: i32,
+) -> AdmiralResult<()> {
     for chunk_x_offset in [0, 32, 64, 96] {
         for lamp_x_offset in 0..16 {
             for lamp_y_offset in 0..16 {
@@ -308,6 +323,41 @@ pub fn admiral_entrypoint_turn_area_extractor(admiral: &mut AdmiralClient) -> Ad
             println!("{}", info);
         }
     }
+
+    Ok(())
+}
+
+fn insert_minified_kit(
+    admiral: &mut AdmiralClient,
+    mut commands: Vec<Box<dyn LuaCommand>>,
+    chunk_y_offset: i32,
+) -> AdmiralResult<()> {
+    for (chunk_x_offset, grid) in [
+        (0, dual_rail_south_empty()),
+        (32, dual_rail_north_empty()),
+        (64, dual_rail_east_empty()),
+        (96, dual_rail_west_empty()),
+    ] {
+        for lamp_x_offset in 0..16 {
+            for lamp_y_offset in 0..16 {
+                if !grid.get(lamp_x_offset, lamp_y_offset) {
+                    continue;
+                }
+                commands.push(
+                    FacSurfaceCreateEntity::new(
+                        "steel-chest",
+                        Point2f {
+                            x: (chunk_x_offset + lamp_x_offset) as f32,
+                            y: (chunk_y_offset + lamp_y_offset as i32) as f32,
+                        },
+                    )
+                    .into_boxed(),
+                )
+            }
+        }
+    }
+
+    admiral.execute_checked_command(LuaBatchCommand::new(commands).into_boxed())?;
 
     Ok(())
 }

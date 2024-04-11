@@ -64,7 +64,7 @@ pub enum AdmiralError {
         e: io::Error,
         backtrace: Backtrace,
     },
-    #[error("VError")]
+    #[error("VError {0}")]
     SurfaceError(#[from] VError),
 }
 
