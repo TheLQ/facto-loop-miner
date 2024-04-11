@@ -315,13 +315,18 @@ pub fn create_minified_bitgrid(
         );
     }
 
-    // magic!
+    // // magic!
+    // for turn_grid in turn_grids {
+    //     println!();
+    //     println!("Numbay");
+    //     for info in turn_grid.to_hex_strings() {
+    //         println!("{}", info);
+    //     }
+    // }
+
+    // less magic
     for turn_grid in turn_grids {
-        println!();
-        println!("Numbay");
-        for info in turn_grid.to_hex_strings() {
-            println!("{}", info);
-        }
+        println!("{}", turn_grid.to_array_string());
     }
 
     Ok(())

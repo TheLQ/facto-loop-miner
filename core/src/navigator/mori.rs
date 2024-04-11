@@ -13,6 +13,7 @@ use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use crossbeam::atomic::AtomicCell;
+use itertools::Itertools;
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
 use serde::{Deserialize, Serialize};
@@ -253,46 +254,46 @@ impl Rail {
                 }
             }
             RailMode::Turn(turn_type) => {
-                // ↓↓↓↓↓↓↓↓↓ GHETTO FIX
-                let mut last_leg = self.clone();
-                last_leg.mode = RailMode::Straight;
-                res.append(&mut last_leg.area());
-
-                last_leg = last_leg
-                    .move_force_rotate_clockwise(2)
-                    .move_forward_step()
-                    .move_force_rotate_clockwise(2);
-                res.append(&mut last_leg.area());
-
-                if turn_type == &TurnType::Turn90 {
-                    let mut corner_cover = self.clone();
-                    corner_cover.mode = RailMode::Straight;
-                    corner_cover.move_force_forward_single_num_mut(-3);
-                    res.extend_from_slice(&corner_cover.area());
-                    // this lazy way heavily overlaps last_leg
-                    res.sort();
-                    res.dedup();
-                }
-
-                let first_leg = self.move_force_rotate_clockwise(2).move_forward_step();
-                let first_leg = first_leg.move_force_rotate_clockwise(match &turn_type {
-                    TurnType::Turn90 => 1,
-                    TurnType::Turn270 => 3,
-                });
-                res.append(&mut first_leg.area());
-
-                let first_leg = first_leg.move_forward_step();
-                res.append(&mut first_leg.area());
-
-                let before = res.len();
-                res.sort();
-                res.dedup();
-                let after = res.len();
-                // if ![8, 0].contains(&(before - after)) {
-                //     panic!("Asd {} {} {}", before, after, before - after);
+                // // ↓↓↓↓↓↓↓↓↓ GHETTO FIX
+                // let mut last_leg = self.clone();
+                // last_leg.mode = RailMode::Straight;
+                // res.append(&mut last_leg.area());
+                //
+                // last_leg = last_leg
+                //     .move_force_rotate_clockwise(2)
+                //     .move_forward_step()
+                //     .move_force_rotate_clockwise(2);
+                // res.append(&mut last_leg.area());
+                //
+                // if turn_type == &TurnType::Turn90 {
+                //     let mut corner_cover = self.clone();
+                //     corner_cover.mode = RailMode::Straight;
+                //     corner_cover.move_force_forward_single_num_mut(-3);
+                //     res.extend_from_slice(&corner_cover.area());
+                //     // this lazy way heavily overlaps last_leg
+                //     res.sort();
+                //     res.dedup();
                 // }
-
-                // ↑↑↑↑↑↑↑↑↑ GHETTO FIX
+                //
+                // let first_leg = self.move_force_rotate_clockwise(2).move_forward_step();
+                // let first_leg = first_leg.move_force_rotate_clockwise(match &turn_type {
+                //     TurnType::Turn90 => 1,
+                //     TurnType::Turn270 => 3,
+                // });
+                // res.append(&mut first_leg.area());
+                //
+                // let first_leg = first_leg.move_forward_step();
+                // res.append(&mut first_leg.area());
+                //
+                // let before = res.len();
+                // res.sort();
+                // res.dedup();
+                // let after = res.len();
+                // // if ![8, 0].contains(&(before - after)) {
+                // //     panic!("Asd {} {} {}", before, after, before - after);
+                // // }
+                //
+                // // ↑↑↑↑↑↑↑↑↑ GHETTO FIX
 
                 // ----- PROPER FIX
                 // let endpoint = self.endpoint;
@@ -322,7 +323,9 @@ impl Rail {
 
                 // // TODO: Temporary solution
 
-                //
+                // match turn_type {
+                //     TurnType::Turn270 => {}
+                // }
 
                 // let next = self.move_force_rotate_clockwise(2);
                 // let next = next.move_forward_step();
@@ -985,6 +988,53 @@ fn get_current_unix_time_millis() -> u128 {
         .as_millis()
 }
 
+pub fn draw_rail(surface: &mut VSurface, rail: &Rail) {
+    for point in rail.area() {
+        surface.set_pixel(point, Pixel::Rail).unwrap();
+    }
+    surface
+        .set_pixel(rail.endpoint, Pixel::Highlighter)
+        .unwrap();
+}
+
+pub fn format_surface_dump(surface: &VSurface) -> String {
+    let mut actual: Vec<Vec<String>> = Vec::new();
+    for chunk in &surface
+        .dump_pixels_xy()
+        .chunks((surface.get_radius() * 2) as usize)
+    {
+        let actual_row = chunk
+            .map(|v| match *v {
+                Pixel::Empty => ".".to_string(),
+                Pixel::Highlighter => "9".to_string(),
+                Pixel::Rail => "5".to_string(),
+                // _ => "1".to_string(),
+                v => panic!("unhandled {:?}", v),
+            })
+            .collect();
+        actual.push(actual_row);
+    }
+    format_dump(actual.as_slice())
+}
+
+fn format_dump(binary_surface: &[Vec<String>]) -> String {
+    binary_surface
+        .iter()
+        .enumerate()
+        .map(|(i, chunk)| {
+            format!(
+                "{}{}",
+                chunk.iter().join(""),
+                if i % 2 == 0 {
+                    format!(" // {}", i)
+                } else {
+                    "".to_string()
+                }
+            )
+        })
+        .join("\n")
+}
+
 #[cfg(test)]
 mod test {
     use crate::log_init;
@@ -1165,53 +1215,6 @@ mod test {
 
         let actual = format_surface_dump(&surface);
         assert_eq!("asdf", actual);
-    }
-
-    fn draw_rail(surface: &mut VSurface, rail: &Rail) {
-        for point in rail.area() {
-            surface.set_pixel(point, Pixel::Rail).unwrap();
-        }
-        surface
-            .set_pixel(rail.endpoint, Pixel::Highlighter)
-            .unwrap();
-    }
-
-    fn format_surface_dump(surface: &VSurface) -> String {
-        let mut actual: Vec<Vec<String>> = Vec::new();
-        for chunk in &surface
-            .test_dump_pixels_xy()
-            .chunks((surface.get_radius() * 2) as usize)
-        {
-            let actual_row = chunk
-                .map(|v| match *v {
-                    Pixel::Empty => ".".to_string(),
-                    Pixel::Highlighter => "9".to_string(),
-                    Pixel::Rail => "5".to_string(),
-                    // _ => "1".to_string(),
-                    v => panic!("unhandled {:?}", v),
-                })
-                .collect();
-            actual.push(actual_row);
-        }
-        format_dump(actual.as_slice())
-    }
-
-    fn format_dump(binary_surface: &[Vec<String>]) -> String {
-        binary_surface
-            .iter()
-            .enumerate()
-            .map(|(i, chunk)| {
-                format!(
-                    "{}{}",
-                    chunk.iter().join(""),
-                    if i % 2 == 0 {
-                        format!(" // {}", i)
-                    } else {
-                        "".to_string()
-                    }
-                )
-            })
-            .join("\n")
     }
 
     #[test]
