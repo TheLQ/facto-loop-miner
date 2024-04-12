@@ -49,20 +49,22 @@ impl RailStationGenerator {
         }
 
         // Curve up
-        rail_degrees_east(Point2f {
-            x: x_end as f32,
-            y: self.start.y + 10.0,
-        })
-        .into_iter()
-        .for_each(|e| creation_commands.push(e));
+        todo!("");
+        // rail_degrees_east(Point2f {
+        //     x: x_end as f32,
+        //     y: self.start.y + 10.0,
+        // })
+        // .into_iter()
+        // .for_each(|e| creation_commands.push(e));
 
         // Curve down
-        rail_degrees_north(Point2f {
-            x: x_end as f32 + 2.0,
-            y: self.start.y,
-        })
-        .into_iter()
-        .for_each(|e| creation_commands.push(e));
+        todo!("");
+        // rail_degrees_north(Point2f {
+        //     x: x_end as f32 + 2.0,
+        //     y: self.start.y,
+        // })
+        // .into_iter()
+        // .for_each(|e| creation_commands.push(e));
     }
 
     /// ---------------------

@@ -40,9 +40,10 @@ impl LuaCommand for RailBeaconFarmGenerator {
             }
         }
 
-        rail_degrees_south(self.inner.start)
-            .into_iter()
-            .for_each(|e| creation_commands.push(e));
+        todo!();
+        // rail_degrees_south(self.inner.start)
+        //     .into_iter()
+        //     .for_each(|e| creation_commands.push(e));
 
         info!("creating {} elements", creation_commands.len());
         join_commands(creation_commands.iter())
