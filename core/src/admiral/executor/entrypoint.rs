@@ -11,26 +11,22 @@ use crate::admiral::lua_command::fac_destroy::FacDestroy;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::lua_batch::LuaBatchCommand;
 use crate::admiral::lua_command::raw_lua::RawLuaCommand;
-use crate::admiral::lua_command::scanner::{facscan_mega_export_entities_compressed, BaseScanner};
+use crate::admiral::lua_command::scanner::BaseScanner;
 use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori::{Rail, RailDirection, RailMode};
 use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
 use crate::surfacev::bit_grid::BitGrid;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
-use bitvec::prelude::*;
-use bitvec::vec::BitVec;
 use opencv::core::Point2f;
-use regex::Replacer;
-use simd_json::{to_owned_value, to_string, OwnedValue, StaticNode};
-use std::collections::HashMap;
+use simd_json::{to_owned_value, OwnedValue, StaticNode};
 use std::path::Path;
 use tracing::info;
 
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 3 {
+    match 1 {
         1 => admiral_entrypoint_testing(&mut admiral),
         2 => admiral_entrypoint_prod(&mut admiral),
         3 => admiral_entrypoint_turn_area_extractor(&mut admiral),

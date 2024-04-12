@@ -1,13 +1,7 @@
 use crate::admiral::err::AdmiralResult;
 use crate::admiral::executor::client::AdmiralClient;
-use crate::admiral::executor::file::AdmiralFile;
-use crate::admiral::executor::LuaCompiler;
-use crate::admiral::generators::assembler_farm::{AssemblerChest, AssemblerFarmGenerator};
-use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
-use crate::admiral::generators::terapower::Terapower;
-use crate::admiral::lua_command::fac_destroy::FacDestroy;
-use crate::admiral::lua_command::lua_batch::LuaBatchCommand;
-use opencv::core::{Point, Point2f};
+use crate::admiral::generators::assembler_farm::AssemblerFarmGenerator;
+use opencv::core::Point2f;
 use tracing::error;
 
 pub fn admiral() {

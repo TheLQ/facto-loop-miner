@@ -2,7 +2,6 @@ use crate::admiral::lua_command::raw_lua::RawLuaCommand;
 use crate::admiral::lua_command::LuaCommand;
 use crate::surfacev::vsurface::VSurface;
 use crate::TILES_PER_CHUNK;
-use itertools::Itertools;
 
 const RAW_SCAN: &str = include_str!("../../../../scanner_mod/scanner.lua");
 

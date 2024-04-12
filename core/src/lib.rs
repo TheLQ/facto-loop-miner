@@ -41,11 +41,7 @@ extern crate core;
 
 use crate::admiral::executor::client::AdmiralClient;
 use crate::admiral::executor::entrypoint::admiral_entrypoint;
-use crate::admiral::executor::LuaCompiler;
-use crate::admiral::lua_command::fac_log::FacLog;
-use crate::admiral::lua_command::scanner::{
-    facscan_hyper_scan, facscan_mega_export_entities_compressed,
-};
+use crate::admiral::lua_command::scanner::facscan_mega_export_entities_compressed;
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
 use kiddo::float;

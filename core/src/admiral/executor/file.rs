@@ -1,7 +1,6 @@
 use crate::admiral::err::{AdmiralError, AdmiralResult};
 use crate::admiral::executor::ExecuteResponse;
 use crate::admiral::executor::LuaCompiler;
-use crate::admiral::lua_command::fac_execution_define::FacExectionDefine;
 use crate::admiral::lua_command::LuaCommand;
 use std::backtrace::Backtrace;
 use std::fs::{File, OpenOptions};
