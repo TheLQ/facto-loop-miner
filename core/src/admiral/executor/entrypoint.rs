@@ -26,8 +26,8 @@ use tracing::info;
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 3 {
-        1 => admiral_entrypoint_testing(&mut admiral),
+    match 1 {
+        1 => admiral_entrypoint_draw_rail_8(&mut admiral),
         2 => admiral_entrypoint_prod(&mut admiral),
         3 => admiral_entrypoint_turn_area_extractor(&mut admiral),
         4 => admiral_entrypoint_turn_viewer(&mut admiral),
@@ -125,7 +125,7 @@ fn chart_pulse(admiral: &mut AdmiralClient, radius: u32) -> AdmiralResult<()> {
     Ok(())
 }
 
-fn admiral_entrypoint_testing(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+fn admiral_entrypoint_draw_rail_8(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     const WORK_RADIUS: u32 = REMOVE_RESOURCE_BASE_TILES as u32 + 20;
 
     scan_area(admiral, WORK_RADIUS)?;
@@ -137,7 +137,7 @@ fn admiral_entrypoint_testing(admiral: &mut AdmiralClient) -> AdmiralResult<()> 
 
         let mut rails = Vec::new();
 
-        let rail = Rail::new_straight(VPoint::new(65, 65), RailDirection::Down);
+        let rail = Rail::new_straight(VPoint::new(65, 65), RailDirection::Right);
         rails.push(rail.clone());
 
         {
@@ -146,15 +146,45 @@ fn admiral_entrypoint_testing(admiral: &mut AdmiralClient) -> AdmiralResult<()> 
 
             let rail = rail.move_forward_step();
             rails.push(rail.clone());
+
+            let rail = rail.move_left();
+            rails.push(rail.clone());
+
+            let rail = rail.move_forward_step();
+            rails.push(rail.clone());
+
+            let rail = rail.move_left();
+            rails.push(rail.clone());
+
+            let rail = rail.move_forward_step();
+            rails.push(rail.clone());
+
+            let rail = rail.move_left();
+            rails.push(rail.clone());
         }
-        //
-        // {
-        //     let rail = rail.move_right();
-        //     rails.push(rail.clone());
-        //
-        //     let rail = rail.move_forward_step();
-        //     rails.push(rail.clone());
-        // }
+
+        {
+            let rail = rail.move_right();
+            rails.push(rail.clone());
+
+            let rail = rail.move_forward_step();
+            rails.push(rail.clone());
+
+            let rail = rail.move_right();
+            rails.push(rail.clone());
+
+            let rail = rail.move_forward_step();
+            rails.push(rail.clone());
+
+            let rail = rail.move_right();
+            rails.push(rail.clone());
+
+            let rail = rail.move_forward_step();
+            rails.push(rail.clone());
+
+            let rail = rail.move_right();
+            rails.push(rail.clone());
+        }
 
         for rail in rails {
             info!("-----");

@@ -1,7 +1,7 @@
 use crate::admiral::generators::rail90::{
-    dual_rail_east_empty, dual_rail_empty_index_to_xy, dual_rail_north, dual_rail_north_empty,
-    dual_rail_south_empty, dual_rail_west, dual_rail_west_empty, rail_degrees_east,
-    rail_degrees_north, rail_degrees_west,
+    dual_rail_east, dual_rail_east_empty, dual_rail_empty_index_to_xy, dual_rail_north,
+    dual_rail_north_empty, dual_rail_south, dual_rail_south_empty, dual_rail_west,
+    dual_rail_west_empty, rail_degrees_east, rail_degrees_north, rail_degrees_west,
 };
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::LuaCommand;
@@ -438,6 +438,36 @@ impl Rail {
                     .to_facto_entities_line(result, 0, RAIL_STEP_SIZE);
             }
             RailMode::Turn(turn_type) => {
+                // ending with 2x rails
+                let point = self.clone();
+                point
+                    .move_force_rotate_clockwise(1)
+                    .move_forward_single_num(1)
+                    .move_force_rotate_clockwise(1)
+                    .to_facto_entities_line(result, 0, 2);
+                point
+                    .move_force_rotate_clockwise(3)
+                    .move_forward_single_num(1)
+                    .move_force_rotate_clockwise(3)
+                    .to_facto_entities_line(result, 0, 2);
+
+                // starting with 2x rails
+                let point = self
+                    .move_force_rotate_clockwise(2)
+                    .move_forward_step()
+                    .move_force_rotate_clockwise(turn_type.swap().rotations())
+                    .move_forward_step();
+                point
+                    .move_force_rotate_clockwise(1)
+                    .move_forward_single_num(1)
+                    .move_force_rotate_clockwise(1)
+                    .to_facto_entities_line(result, 1, 2);
+                point
+                    .move_force_rotate_clockwise(3)
+                    .move_forward_single_num(1)
+                    .move_force_rotate_clockwise(3)
+                    .to_facto_entities_line(result, 1, 2);
+
                 // // outer first leg
                 // self.move_force_rotate_clockwise(2)
                 //     .move_forward_single_num(12)
@@ -462,16 +492,49 @@ impl Rail {
                 //     .move_force_rotate_clockwise(3)
                 //     .to_facto_entities_line(result, 0, 4);
 
+                const OFFSET_8X_RAIL: i32 = RAIL_STEP_SIZE as i32 * 2;
+                const OFFSET_8X_RAIL_2: i32 = OFFSET_8X_RAIL + 2;
+                const OFFSET_8X_RAIL_4: i32 = OFFSET_8X_RAIL - 4;
                 match (&self.direction, turn_type) {
+                    // Straight Down Turn Left
                     (RailDirection::Left, TurnType::Turn90) => {
-                        dual_rail_north(self.endpoint.move_xy(6, -4), result);
+                        dual_rail_north(self.endpoint.move_xy(4, -2), result);
                     }
+                    // Straight Down Turn Right
                     (RailDirection::Right, TurnType::Turn270) => {
-                        dual_rail_west(
-                            self.endpoint.move_xy(-(RAIL_STEP_SIZE as i32 * 2), -4),
+                        dual_rail_west(self.endpoint.move_xy(-OFFSET_8X_RAIL_2, -2), result);
+                    }
+                    // Straight Up Turn Left
+                    (RailDirection::Left, TurnType::Turn270) => {
+                        dual_rail_east(self.endpoint.move_xy(4, -OFFSET_8X_RAIL_4), result);
+                    }
+                    // Straight Up Turn Right
+                    (RailDirection::Right, TurnType::Turn90) => {
+                        dual_rail_south(
+                            self.endpoint.move_xy(-OFFSET_8X_RAIL_2, -OFFSET_8X_RAIL_4),
                             result,
                         );
                     }
+                    // Straight Left Turn Left
+                    (RailDirection::Down, TurnType::Turn270) => {
+                        dual_rail_south(self.endpoint.move_xy(-2, 4), result);
+                    }
+                    // Straight Left Turn Right
+                    (RailDirection::Up, TurnType::Turn90) => {
+                        dual_rail_west(self.endpoint.move_xy(-2, -OFFSET_8X_RAIL_2), result);
+                    }
+                    // Straight Right Turn Left
+                    (RailDirection::Up, TurnType::Turn270) => {
+                        dual_rail_north(
+                            self.endpoint.move_xy(-OFFSET_8X_RAIL_4, -OFFSET_8X_RAIL_2),
+                            result,
+                        );
+                    }
+                    // Straight Right Turn Right
+                    (RailDirection::Down, TurnType::Turn90) => {
+                        dual_rail_east(self.endpoint.move_xy(-OFFSET_8X_RAIL_4, 4), result);
+                    }
+
                     // (RailDirection::Left, TurnType::Turn270) => {
                     //     // outer turn
                     //     let turn = self

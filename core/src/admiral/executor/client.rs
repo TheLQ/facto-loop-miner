@@ -87,12 +87,12 @@ impl LuaCompiler for AdmiralClient {
                 source: e,
                 backtrace: Backtrace::capture(),
             })?;
-        debug!(
-            "Execute Result id {} type {} body {}",
-            execute.id,
-            execute.response_type,
-            execute.body.len()
-        );
+        // debug!(
+        //     "Execute Result id {} type {} body {}",
+        //     execute.id,
+        //     execute.response_type,
+        //     execute.body.len()
+        // );
 
         Ok(ExecuteResponse {
             lua_text,
