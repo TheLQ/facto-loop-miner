@@ -26,7 +26,7 @@ use tracing::info;
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 1 {
+    match 2 {
         1 => admiral_entrypoint_draw_rail_8(&mut admiral),
         2 => admiral_entrypoint_prod(&mut admiral),
         3 => admiral_entrypoint_turn_area_extractor(&mut admiral),
@@ -98,9 +98,9 @@ fn insert_rail_from_surface(admiral: &mut AdmiralClient, surface: &VSurface) -> 
         // {
         //     continue;
         // }
-        if rail.mode != RailMode::Straight {
-            continue;
-        }
+        // if rail.mode != RailMode::Straight {
+        //     continue;
+        // }
         info!("writing {:?}", rail);
 
         rail.to_factorio_entities(&mut entities);
@@ -186,13 +186,19 @@ fn admiral_entrypoint_draw_rail_8(admiral: &mut AdmiralClient) -> AdmiralResult<
             rails.push(rail.clone());
         }
 
+        let mut entities = Vec::new();
+        for rail in &rails {
+            rail.to_factorio_entities(&mut entities);
+        }
+        admiral.execute_checked_command(LuaBatchCommand::new(entities).into_boxed())?;
+
         for rail in rails {
             info!("-----");
-            let mut entities = Vec::new();
-            rail.to_factorio_entities(&mut entities);
-            for entity in entities {
-                admiral.execute_checked_command(entity)?;
-            }
+            // let mut entities = Vec::new();
+            // rail.to_factorio_entities(&mut entities);
+            // for entity in entities {
+            //     admiral.execute_checked_command(entity)?;
+            // }
 
             let command = RawLuaCommand::new(format!(
                 "rendering.draw_rectangle{{ \

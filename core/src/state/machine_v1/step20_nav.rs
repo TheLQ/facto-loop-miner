@@ -1,4 +1,6 @@
-use crate::navigator::mori::{mori_start, write_rail, Rail, RailDirection, RAIL_STEP_SIZE};
+use crate::navigator::mori::{
+    mori_start, write_rail, Rail, RailDirection, RAIL_STEP_SIZE, RAIL_STEP_SIZE_I32,
+};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::state::machine_v1::step10_base::{CENTRAL_BASE_TILES, REMOVE_RESOURCE_BASE_TILES};
@@ -9,7 +11,7 @@ use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::err::VResult;
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vpoint::VPoint;
+use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
 use kiddo::{Manhattan, NearestNeighbour};
 use opencv::core::Point;
@@ -179,7 +181,8 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     },
         // );
 
-        let start = Rail::new_straight(patch_corner, RailDirection::Right).move_forward_step();
+        let start = Rail::new_straight(patch_corner + SHIFT_POINT_ONE, RailDirection::Right)
+            .move_forward_step();
         // let end = start
         //     .move_forward_step()
         //     .move_forward_step()
@@ -272,12 +275,18 @@ fn main_base_destinations_base_corner() -> Vec<VPoint> {
     res
 }
 
-const CENTRAL_BASE_TILES_6X6: i32 = CENTRAL_BASE_TILES + (6 - (CENTRAL_BASE_TILES % 6));
+const CENTRAL_BASE_TILES_BY_RAIL_STEP: i32 =
+    CENTRAL_BASE_TILES + (RAIL_STEP_SIZE_I32 - (CENTRAL_BASE_TILES % RAIL_STEP_SIZE_I32));
 
 fn main_base_destinations_positive_side() -> Vec<VPoint> {
     let mut res = Vec::new();
     for nearest_count in 1..PATH_LIMIT.unwrap() as i32 {
-        res.push(VPoint::new(CENTRAL_BASE_TILES_6X6, nearest_count * 12));
+        res.push(
+            VPoint::new(
+                CENTRAL_BASE_TILES_BY_RAIL_STEP,
+                nearest_count * RAIL_STEP_SIZE_I32 * 2,
+            ) + SHIFT_POINT_ONE,
+        );
     }
     res
 }
@@ -285,7 +294,12 @@ fn main_base_destinations_positive_side() -> Vec<VPoint> {
 fn main_base_destinations_negative_side() -> Vec<VPoint> {
     let mut res = Vec::new();
     for nearest_count in 1..PATH_LIMIT.unwrap() as i32 {
-        res.push(VPoint::new(CENTRAL_BASE_TILES_6X6, nearest_count * -12));
+        res.push(
+            VPoint::new(
+                CENTRAL_BASE_TILES_BY_RAIL_STEP,
+                nearest_count * -(RAIL_STEP_SIZE_I32 * 2),
+            ) + SHIFT_POINT_ONE,
+        );
     }
     res
 }

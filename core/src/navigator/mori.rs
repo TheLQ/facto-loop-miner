@@ -26,7 +26,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use strum::AsRefStr;
-use tracing::debug;
+use tracing::{debug, warn};
 
 /// Pathfinder v1, Mori Calliope
 ///
@@ -40,15 +40,14 @@ pub fn mori_start(
 ) -> Option<Vec<Rail>> {
     let pathfind_watch = BasicWatch::start();
 
-    start.endpoint.assert_8x8_position();
-    end.endpoint.assert_8x8_position();
+    start.endpoint.assert_odd_8x8_position();
+    end.endpoint.assert_odd_8x8_position();
 
     // TODO: Benchmark this vs Vec (old version),
     let mut valid_destinations: HashSet<Rail> = HashSet::new();
-    let step = RAIL_STEP_SIZE as i32;
     // let step = 3;
-    for width in -step..step {
-        for height in -step..step {
+    for width in -RAIL_STEP_SIZE_I32..RAIL_STEP_SIZE_I32 {
+        for height in -RAIL_STEP_SIZE_I32..RAIL_STEP_SIZE_I32 {
             let mut next = end.clone();
             next.endpoint = next.endpoint.move_xy(width, height);
             // surface
@@ -227,6 +226,7 @@ const DUAL_RAIL_SIZE: u32 = 3;
 // static mut METRIC_SUCCESSOR_START: Instant = lazy_static::Instant::now();
 
 pub const RAIL_STEP_SIZE: u32 = 8;
+pub const RAIL_STEP_SIZE_I32: i32 = RAIL_STEP_SIZE as i32;
 
 impl Rail {
     pub fn new_straight(endpoint: VPoint, direction: RailDirection) -> Self {
@@ -244,20 +244,26 @@ impl Rail {
         let mut res = Vec::new();
         match &self.mode {
             RailMode::Straight => {
-                // Going BACKWARDS from endpoint
-                for inner_step in 0..RAIL_STEP_SIZE {
-                    // main rail
-                    let next = self.move_force_rotate_clockwise(2);
-                    let next = next.move_forward_single_num(inner_step);
-                    res.extend_from_slice(&next.endpoint.get_entity_area_2x2());
-
-                    // adjacent dual rail
-                    let next = next.move_force_rotate_clockwise(1);
-                    let next = next.move_forward_single_num(DUAL_RAIL_SIZE - /*not self rail*/1);
-                    res.extend_from_slice(&next.endpoint.get_entity_area_2x2());
+                for rail in &self.build_dual_straight_behind_rail(RAIL_STEP_SIZE) {
+                    res.extend_from_slice(&rail.endpoint.get_entity_area_2x2());
                 }
             }
             RailMode::Turn(turn_type) => {
+                // ↓↓↓↓↓↓↓↓↓ OK-ish FIX
+                let leg = self.clone();
+                for rail in leg.build_dual_straight_behind_rail(RAIL_STEP_SIZE) {
+                    res.extend_from_slice(&rail.endpoint.get_entity_area_2x2());
+                }
+
+                let leg = self
+                    .move_force_rotate_clockwise(2)
+                    .move_forward_step()
+                    .move_force_rotate_clockwise(turn_type.rotations());
+                for rail in leg.build_dual_straight_behind_rail(RAIL_STEP_SIZE) {
+                    res.extend_from_slice(&rail.endpoint.get_entity_area_2x2());
+                }
+                // ↑↑↑↑↑↑↑↑↑ OK-ish FIX
+
                 // // ↓↓↓↓↓↓↓↓↓ GHETTO FIX
                 // let mut last_leg = self.clone();
                 // last_leg.mode = RailMode::Straight;
@@ -327,32 +333,34 @@ impl Rail {
 
                 // // TODO: Temporary solution
 
-                let (grid, top_right_corner_rail) = match (&self.direction, turn_type) {
-                    (RailDirection::Right, TurnType::Turn270) => (
-                        dual_rail_west_empty(),
-                        self.move_force_rotate_clockwise(2).move_forward_step(),
-                    ),
-                    (RailDirection::Left, TurnType::Turn90) => (
-                        dual_rail_north_empty(),
-                        // self.move_force_rotate_clockwise(2)
-                        //     .move_forward_step()
-                        //     .move_force_rotate_clockwise(3)
-                        //     .move_forward_step(),
-                        self.clone(),
-                    ),
-                    (direction, turn) => {
-                        unimplemented!("no template for {:?} {:?}", direction, turn)
-                    }
-                };
-                let grid_bool = grid.into_inner();
-                for (i, is_empty) in grid_bool.iter().enumerate() {
-                    if !is_empty {
-                        let not_empty_point = top_right_corner_rail.endpoint
-                            + dual_rail_empty_index_to_xy(&grid_bool, i);
-                        println!("drawing {:?}", not_empty_point);
-                        res.push(not_empty_point);
-                    }
-                }
+                // ↓↓↓↓↓↓↓↓↓ GRID
+                // let (grid, top_right_corner_rail) = match (&self.direction, turn_type) {
+                //     (RailDirection::Right, TurnType::Turn270) => (
+                //         dual_rail_west_empty(),
+                //         self.move_force_rotate_clockwise(2).move_forward_step(),
+                //     ),
+                //     (RailDirection::Left, TurnType::Turn90) => (
+                //         dual_rail_north_empty(),
+                //         // self.move_force_rotate_clockwise(2)
+                //         //     .move_forward_step()
+                //         //     .move_force_rotate_clockwise(3)
+                //         //     .move_forward_step(),
+                //         self.clone(),
+                //     ),
+                //     (direction, turn) => {
+                //         unimplemented!("no template for {:?} {:?}", direction, turn)
+                //     }
+                // };
+                // let grid_bool = grid.into_inner();
+                // for (i, is_empty) in grid_bool.iter().enumerate() {
+                //     if !is_empty {
+                //         let not_empty_point = top_right_corner_rail.endpoint
+                //             + dual_rail_empty_index_to_xy(&grid_bool, i);
+                //         println!("drawing {:?}", not_empty_point);
+                //         res.push(not_empty_point);
+                //     }
+                // }
+                // ↑↑↑↑↑↑↑↑↑ GRID
 
                 // let next = self.move_force_rotate_clockwise(2);
                 // let next = next.move_forward_step();
@@ -409,16 +417,16 @@ impl Rail {
         // for entry in &res {
         //     debug!("ENTRY {:?}", entry);
         // }
-        let before = res.len();
-        res.sort();
-        res.dedup();
-        let after = res.len();
-        if before != after {
-            panic!(
-                "reduced area duplicates from {} to {} for {:?}",
-                before, after, self
-            );
-        }
+        // let before = res.len();
+        // res.sort();
+        // res.dedup();
+        // let after = res.len();
+        // if before != after {
+        //     warn!(
+        //         "reduced area duplicates from {} to {} for {:?}",
+        //         before, after, self
+        //     );
+        // }
 
         res
     }
@@ -427,15 +435,9 @@ impl Rail {
         self.endpoint.assert_odd_position();
         match &self.mode {
             RailMode::Straight => {
-                self.move_force_rotate_clockwise(1)
-                    .move_forward_single_num(1)
-                    .move_force_rotate_clockwise(1)
-                    .to_facto_entities_line(result, 0, RAIL_STEP_SIZE);
-
-                self.move_force_rotate_clockwise(3)
-                    .move_forward_single_num(1)
-                    .move_force_rotate_clockwise(3)
-                    .to_facto_entities_line(result, 0, RAIL_STEP_SIZE);
+                for rail in self.build_dual_straight_behind_rail(RAIL_STEP_SIZE) {
+                    rail.to_facto_entity(result);
+                }
             }
             RailMode::Turn(turn_type) => {
                 // ending with 2x rails
@@ -468,31 +470,7 @@ impl Rail {
                     .move_force_rotate_clockwise(3)
                     .to_facto_entities_line(result, 1, 2);
 
-                // // outer first leg
-                // self.move_force_rotate_clockwise(2)
-                //     .move_forward_single_num(12)
-                //     .move_force_rotate_clockwise(turn_type.swap().rotations())
-                //     .move_forward_single_num(6)
-                //     .to_facto_entities_line(result, 0, 3);
-                //
-                // // outer second leg before endpoint
-                // self.move_force_rotate_clockwise(2)
-                //     .to_facto_entities_line(result, 0, 4);
-                //
-                // // inner first leg
-                // self.move_force_rotate_clockwise(2)
-                //     .move_forward_single_num(10)
-                //     .move_force_rotate_clockwise(turn_type.swap().rotations())
-                //     .move_forward_single_num(8)
-                //     .to_facto_entities_line(result, 0, 3);
-                //
-                // // inner second leg before endpoint
-                // self.move_force_rotate_clockwise(3)
-                //     .move_forward_single_num(2)
-                //     .move_force_rotate_clockwise(3)
-                //     .to_facto_entities_line(result, 0, 4);
-
-                const OFFSET_8X_RAIL: i32 = RAIL_STEP_SIZE as i32 * 2;
+                const OFFSET_8X_RAIL: i32 = RAIL_STEP_SIZE_I32 * 2;
                 const OFFSET_8X_RAIL_2: i32 = OFFSET_8X_RAIL + 2;
                 const OFFSET_8X_RAIL_4: i32 = OFFSET_8X_RAIL - 4;
                 match (&self.direction, turn_type) {
@@ -534,68 +512,49 @@ impl Rail {
                     (RailDirection::Down, TurnType::Turn90) => {
                         dual_rail_east(self.endpoint.move_xy(-OFFSET_8X_RAIL_4, 4), result);
                     }
-
-                    // (RailDirection::Left, TurnType::Turn270) => {
-                    //     // outer turn
-                    //     let turn = self
-                    //         .move_force_rotate_clockwise(2)
-                    //         .move_forward_single_num(7)
-                    //         .move_force_rotate_clockwise(1)
-                    //         .move_forward_single_num(5);
-                    //     result.append(&mut rail_degrees_east(
-                    //         turn.endpoint.to_f32_with_offset(0.0),
-                    //     ));
-                    //
-                    //     // inner turn
-                    //     let turn = self
-                    //         .move_force_rotate_clockwise(2)
-                    //         .move_forward_single_num(5)
-                    //         .move_force_rotate_clockwise(1)
-                    //         .move_forward_single_num(7);
-                    //     result.append(&mut rail_degrees_east(
-                    //         turn.endpoint.to_f32_with_offset(0.0),
-                    //     ));
-                    // }
-                    //
-                    // (RailDirection::Right, TurnType::Turn270)
-                    // | (RailDirection::Left, TurnType::Turn90) => {
-                    //     // outer turn
-                    //     let turn = self
-                    //         .move_force_rotate_clockwise(2)
-                    //         .move_forward_single_num(12)
-                    //         .move_force_rotate_clockwise(1)
-                    //         .move_forward_single_num(0);
-                    //     result.append(&mut rail_degrees_west(
-                    //         turn.endpoint.to_f32_with_offset(0.0),
-                    //     ));
-                    //
-                    //     // inner turn
-                    //     let turn = self
-                    //         .move_force_rotate_clockwise(2)
-                    //         .move_forward_single_num(10)
-                    //         .move_force_rotate_clockwise(1)
-                    //         .move_forward_single_num(2);
-                    //     result.append(&mut rail_degrees_west(
-                    //         turn.endpoint.to_f32_with_offset(0.0),
-                    //     ));
-                    // }
-                    (direction, turn_type) => todo!("asdf {:?} {:?}", direction, turn_type),
                 };
             }
+        }
+    }
+
+    pub fn build_dual_straight_behind_rail(&self, length: u32) -> Vec<Rail> {
+        let mut result = Vec::with_capacity(length as usize * 2);
+
+        self.move_force_rotate_clockwise(1)
+            .move_forward_single_num(1)
+            .move_force_rotate_clockwise(1)
+            .build_straight_rail_line(&mut result, 0, length);
+
+        self.move_force_rotate_clockwise(3)
+            .move_forward_single_num(1)
+            .move_force_rotate_clockwise(3)
+            .build_straight_rail_line(&mut result, 0, length);
+
+        result
+    }
+
+    fn build_straight_rail_line(&self, result: &mut Vec<Rail>, start: u32, end: u32) {
+        for i in start..end {
+            let next = self.move_forward_single_num(i);
+            result.push(next);
         }
     }
 
     fn to_facto_entities_line(&self, result: &mut Vec<Box<dyn LuaCommand>>, start: u32, end: u32) {
         for i in start..end {
             let next = self.move_forward_single_num(i);
-            result.push(
-                FacSurfaceCreateEntity::new_rail_straight(
-                    next.endpoint.to_f32(),
-                    self.direction.clone(),
-                )
-                .into_boxed(),
-            );
+            next.to_facto_entity(result);
         }
+    }
+
+    fn to_facto_entity(&self, result: &mut Vec<Box<dyn LuaCommand>>) {
+        result.push(
+            FacSurfaceCreateEntity::new_rail_straight(
+                self.endpoint.to_f32(),
+                self.direction.clone(),
+            )
+            .into_boxed(),
+        );
     }
 
     pub fn distance_to(&self, other: &Rail) -> u32 {
@@ -735,7 +694,7 @@ impl Rail {
         if parents.len() > 800 {
             return Vec::new();
         }
-        self.endpoint.assert_8x8_position();
+        // self.endpoint.assert_odd_8x8_position();
         // debug!("testing {:?}", self);
 
         if parents.iter().any(|p| p == self) {
@@ -783,7 +742,7 @@ impl Rail {
         search_area: &VArea,
         parents: &[Rail],
     ) -> Option<Self> {
-        self.endpoint.assert_8x8_position();
+        self.endpoint.assert_odd_8x8_position();
         if !search_area.contains_point(&self.endpoint) {
             return None;
         }

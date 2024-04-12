@@ -9,8 +9,8 @@ fn main() {
     let turn_rail = Rail::new_straight(VPoint::new(-6, 2), RailDirection::Down);
     draw_rail(&mut surface, &turn_rail);
 
-    // let turn_rail = turn_rail.move_left();
-    let turn_rail = turn_rail.move_right();
+    let turn_rail = turn_rail.move_left();
+    // let turn_rail = turn_rail.move_right();
     draw_rail(&mut surface, &turn_rail);
 
     let turn_rail = turn_rail.move_forward_step();

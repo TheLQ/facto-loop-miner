@@ -94,14 +94,21 @@ impl VPoint {
         assert_eq!(self.y % 2, 0, "y={} is not even", self.y);
     }
 
-    pub fn assert_odd_position(&self) {
-        assert_eq!((self.x % 2).abs(), 1, "x={} is not odd", self.x);
-        assert_eq!((self.y % 2).abs(), 1, "y={} is not odd", self.y);
+    pub fn assert_even_8x8_position(&self) {
+        self.assert_even_position();
+        assert_eq!(self.x % 8, 0, "x={} is not 8", self.x);
+        assert_eq!(self.y % 8, 0, "y={} is not 8", self.y);
     }
 
-    pub fn assert_8x8_position(&self) {
-        assert_eq!(self.x % 8, 0, "x={} is not 6", self.x);
-        assert_eq!(self.y % 8, 0, "y={} is not 6", self.y);
+    pub fn assert_odd_position(&self) {
+        assert_eq!((self.x - 1) % 2, 0, "x={} is not odd", self.x);
+        assert_eq!((self.y - 1) % 2, 0, "y={} is not odd", self.y);
+    }
+
+    pub fn assert_odd_8x8_position(&self) {
+        self.assert_odd_position();
+        assert_eq!((self.x - 1) % 8, 0, "x={} is not 8", self.x);
+        assert_eq!((self.y - 1) % 8, 0, "y={} is not 8", self.y);
     }
 
     pub fn move_x(&self, steps: i32) -> Self {
@@ -125,7 +132,7 @@ impl VPoint {
         }
     }
 
-    pub fn move_round2_down(&self) -> Self {
+    fn move_round2_down(&self) -> Self {
         self.move_round_down(2)
     }
 
