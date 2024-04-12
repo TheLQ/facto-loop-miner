@@ -359,8 +359,7 @@ impl VSurface {
         &self.place_rail
     }
 
-    #[cfg(test)]
-    pub fn test_dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {
+    pub fn dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {
         self.pixels.iter_xy_pixels()
     }
 

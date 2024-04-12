@@ -13,6 +13,8 @@ pub struct VPoint {
     y: i32,
 }
 
+pub const SHIFT_POINT_ONE: VPoint = VPoint { x: 1, y: 1 };
+
 impl VPoint {
     pub fn x(&self) -> i32 {
         self.x
@@ -53,6 +55,14 @@ impl VPoint {
     }
 
     /// Factorio export. Offset is half the entity width
+    pub fn to_f32(&self) -> Point2f {
+        Point2f {
+            x: self.x as f32,
+            y: self.y as f32,
+        }
+    }
+
+    /// Factorio export. Offset is half the entity width
     pub fn to_f32_with_offset(&self, offset: f32) -> Point2f {
         Point2f {
             x: self.x as f32 + offset,
@@ -84,9 +94,14 @@ impl VPoint {
         assert_eq!(self.y % 2, 0, "y={} is not even", self.y);
     }
 
-    pub fn assert_6x6_position(&self) {
-        assert_eq!(self.x % 6, 0, "x={} is not 6", self.x);
-        assert_eq!(self.y % 6, 0, "y={} is not 6", self.y);
+    pub fn assert_odd_position(&self) {
+        assert_eq!((self.x % 2).abs(), 1, "x={} is not odd", self.x);
+        assert_eq!((self.y % 2).abs(), 1, "y={} is not odd", self.y);
+    }
+
+    pub fn assert_8x8_position(&self) {
+        assert_eq!(self.x % 8, 0, "x={} is not 6", self.x);
+        assert_eq!(self.y % 8, 0, "y={} is not 6", self.y);
     }
 
     pub fn move_x(&self, steps: i32) -> Self {

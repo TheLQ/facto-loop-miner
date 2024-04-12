@@ -16,7 +16,7 @@ use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori::{Rail, RailDirection, RailMode};
 use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
 use crate::surfacev::bit_grid::BitGrid;
-use crate::surfacev::vpoint::VPoint;
+use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
 use opencv::core::Point2f;
 use simd_json::{to_owned_value, OwnedValue, StaticNode};
@@ -26,10 +26,11 @@ use tracing::info;
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 1 {
+    match 4 {
         1 => admiral_entrypoint_testing(&mut admiral),
         2 => admiral_entrypoint_prod(&mut admiral),
         3 => admiral_entrypoint_turn_area_extractor(&mut admiral),
+        4 => admiral_entrypoint_turn_viewer(&mut admiral),
         _ => panic!("asdf"),
     }
     .map_err(pretty_panic_admiral)
@@ -130,38 +131,30 @@ fn admiral_entrypoint_testing(admiral: &mut AdmiralClient) -> AdmiralResult<()> 
     scan_area(admiral, WORK_RADIUS)?;
     destroy_placed_entities(admiral, WORK_RADIUS)?;
 
-    // {
-    //     let command = rail_degrees_south(VPoint::new(0, 0).to_f32_with_offset(0.0));
-    //     let command = LuaBatchCommand::new(Vec::from(command));
-    //     admiral.execute_checked_command(command.into_boxed())?;
-    //
-    //     let command = rail_degrees_west(VPoint::new(32, 0).to_f32_with_offset(0.0));
-    //     let command = LuaBatchCommand::new(Vec::from(command));
-    //     admiral.execute_checked_command(command.into_boxed())?;
-    //
-    //     let command = rail_degrees_north(VPoint::new(64, 0).to_f32_with_offset(0.0));
-    //     let command = LuaBatchCommand::new(Vec::from(command));
-    //     admiral.execute_checked_command(command.into_boxed())?;
-    //
-    //     let command = rail_degrees_east(VPoint::new(96, 0).to_f32_with_offset(0.0));
-    //     let command = LuaBatchCommand::new(Vec::from(command));
-    //     admiral.execute_checked_command(command.into_boxed())?;
-    // }
-
     {
         let command = RawLuaCommand::new("rendering.clear()".to_string());
         admiral.execute_checked_command(command.into_boxed())?;
 
         let mut rails = Vec::new();
 
-        let rail = Rail::new_straight(VPoint::new(64, 64), RailDirection::Down);
+        let rail = Rail::new_straight(VPoint::new(65, 65), RailDirection::Down);
         rails.push(rail.clone());
 
-        let rail = rail.move_right();
-        rails.push(rail.clone());
+        {
+            let rail = rail.move_left();
+            rails.push(rail.clone());
 
-        let rail = rail.move_forward_step();
-        rails.push(rail.clone());
+            let rail = rail.move_forward_step();
+            rails.push(rail.clone());
+        }
+        //
+        // {
+        //     let rail = rail.move_right();
+        //     rails.push(rail.clone());
+        //
+        //     let rail = rail.move_forward_step();
+        //     rails.push(rail.clone());
+        // }
 
         for rail in rails {
             info!("-----");
@@ -186,6 +179,33 @@ fn admiral_entrypoint_testing(admiral: &mut AdmiralClient) -> AdmiralResult<()> 
 
             info!("-----");
         }
+    }
+
+    Ok(())
+}
+
+pub fn admiral_entrypoint_turn_viewer(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    const WORK_RADIUS: u32 = REMOVE_RESOURCE_BASE_TILES as u32 + 20;
+
+    scan_area(admiral, WORK_RADIUS)?;
+    destroy_placed_entities(admiral, WORK_RADIUS)?;
+
+    {
+        let command = rail_degrees_south(VPoint::new(0, 0) + SHIFT_POINT_ONE);
+        let command = LuaBatchCommand::new(Vec::from(command));
+        admiral.execute_checked_command(command.into_boxed())?;
+
+        let command = rail_degrees_west(VPoint::new(32, 0) + SHIFT_POINT_ONE);
+        let command = LuaBatchCommand::new(Vec::from(command));
+        admiral.execute_checked_command(command.into_boxed())?;
+
+        let command = rail_degrees_north(VPoint::new(64, 0) + SHIFT_POINT_ONE);
+        let command = LuaBatchCommand::new(Vec::from(command));
+        admiral.execute_checked_command(command.into_boxed())?;
+
+        let command = rail_degrees_east(VPoint::new(96, 0) + SHIFT_POINT_ONE);
+        let command = LuaBatchCommand::new(Vec::from(command));
+        admiral.execute_checked_command(command.into_boxed())?;
     }
 
     Ok(())

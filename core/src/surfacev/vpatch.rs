@@ -42,7 +42,7 @@ impl VPatch {
             height: (new.area.height as i32 + y_adjust) as u32,
             width: (new.area.width as i32 + x_adjust) as u32,
         };
-        new.area.start.assert_6x6_position();
+        new.area.start.assert_8x8_position();
         new
     }
 }

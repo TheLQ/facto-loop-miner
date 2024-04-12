@@ -9,20 +9,20 @@ use crate::surfacev::bit_grid::{StaticBitGrid, GRID_16X16_SIZE};
 use crate::surfacev::vpoint::VPoint;
 
 pub fn rail_degrees_north(start: VPoint) -> Vec<Box<dyn LuaCommand>> {
-    // start.assert_odd_position();
+    start.assert_odd_position();
     vec![
         FacSurfaceCreateEntity::new_rail_curved_facto(
-            start.move_xy(10, 8).to_f32(),
+            start.move_xy(9, 7).to_f32(),
             FactoDirection::North,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_straight_facto(
-            start.move_xy(7, 5).to_f32(),
+            start.move_xy(6, 4).to_f32(),
             FactoDirection::NorthEast,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_curved_facto(
-            start.move_xy(4, 2).to_f32(),
+            start.move_xy(3, 1).to_f32(),
             FactoDirection::SouthEast,
         )
         .into_boxed(),
@@ -33,17 +33,17 @@ pub fn rail_degrees_south(start: VPoint) -> Vec<Box<dyn LuaCommand>> {
     start.assert_odd_position();
     vec![
         FacSurfaceCreateEntity::new_rail_curved_facto(
-            start.move_xy(2, 4).to_f32(),
+            start.move_xy(1, 3).to_f32(),
             FactoDirection::South,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_straight_facto(
-            start.move_xy(5, 7).to_f32(),
+            start.move_xy(4, 6).to_f32(),
             FactoDirection::SouthWest,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_curved_facto(
-            start.move_xy(8, 10).to_f32(),
+            start.move_xy(7, 9).to_f32(),
             FactoDirection::NorthWest,
         )
         .into_boxed(),
@@ -54,17 +54,17 @@ pub fn rail_degrees_west(start: VPoint) -> Vec<Box<dyn LuaCommand>> {
     start.assert_odd_position();
     vec![
         FacSurfaceCreateEntity::new_rail_curved_facto(
-            start.move_xy(8, 2).to_f32(),
+            start.move_xy(7, 1).to_f32(),
             FactoDirection::West,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_straight_facto(
-            start.move_xy(5, 5).to_f32(),
+            start.move_xy(4, 4).to_f32(),
             FactoDirection::NorthWest,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_curved_facto(
-            start.move_xy(2, 8).to_f32(),
+            start.move_xy(1, 7).to_f32(),
             FactoDirection::NorthEast, // wtf?
         )
         .into_boxed(),
@@ -75,17 +75,17 @@ pub fn rail_degrees_east(start: VPoint) -> Vec<Box<dyn LuaCommand>> {
     start.assert_odd_position();
     vec![
         FacSurfaceCreateEntity::new_rail_curved_facto(
-            start.move_xy(4, 10).to_f32(),
+            start.move_xy(3, 9).to_f32(),
             FactoDirection::East,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_straight_facto(
-            start.move_xy(7, 7).to_f32(),
+            start.move_xy(6, 6).to_f32(),
             FactoDirection::SouthEast,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_curved_facto(
-            start.move_xy(10, 4).to_f32(),
+            start.move_xy(9, 3).to_f32(),
             FactoDirection::SouthWest,
         )
         .into_boxed(),
@@ -93,7 +93,7 @@ pub fn rail_degrees_east(start: VPoint) -> Vec<Box<dyn LuaCommand>> {
 }
 
 pub fn dual_rail_north(top_right_corner: VPoint, commands: &mut Vec<Box<dyn LuaCommand>>) {
-    top_right_corner.assert_even_position();
+    top_right_corner.assert_odd_position();
 
     commands.append(&mut rail_degrees_north(top_right_corner.move_xy(4, 0)));
     commands.append(&mut rail_degrees_north(top_right_corner.move_xy(0, 4)));
@@ -146,7 +146,7 @@ pub const fn dual_rail_north_empty() -> StaticBitGrid {
 }
 
 pub fn dual_rail_south(top_right_corner: VPoint, commands: &mut Vec<Box<dyn LuaCommand>>) {
-    top_right_corner.assert_even_position();
+    top_right_corner.assert_odd_position();
 
     commands.append(&mut rail_degrees_south(top_right_corner.move_xy(4, 0)));
     commands.append(&mut rail_degrees_south(top_right_corner.move_xy(0, 4)));
@@ -199,7 +199,7 @@ pub const fn dual_rail_south_empty() -> StaticBitGrid {
 }
 
 pub fn dual_rail_east(top_right_corner: VPoint, commands: &mut Vec<Box<dyn LuaCommand>>) {
-    top_right_corner.assert_even_position();
+    top_right_corner.assert_odd_position();
 
     commands.append(&mut rail_degrees_east(top_right_corner.move_xy(4, 4)));
     commands.append(&mut rail_degrees_east(top_right_corner.move_xy(0, 0)));
@@ -256,7 +256,7 @@ pub const fn dual_rail_east_empty() -> StaticBitGrid {
 }
 
 pub fn dual_rail_west(top_right_corner: VPoint, commands: &mut Vec<Box<dyn LuaCommand>>) {
-    top_right_corner.assert_even_position();
+    top_right_corner.assert_odd_position();
 
     commands.append(&mut rail_degrees_west(top_right_corner.move_xy(4, 4)));
     commands.append(&mut rail_degrees_west(top_right_corner.move_xy(0, 0)));
@@ -313,10 +313,8 @@ pub const fn dual_rail_west_empty() -> StaticBitGrid {
 }
 
 fn add_rail(point: VPoint, direction: RailDirection, commands: &mut Vec<Box<dyn LuaCommand>>) {
-    commands.push(
-        FacSurfaceCreateEntity::new_rail_straight(point.to_f32_with_offset(1.0), direction)
-            .into_boxed(),
-    );
+    commands
+        .push(FacSurfaceCreateEntity::new_rail_straight(point.to_f32(), direction).into_boxed());
 }
 
 pub fn dual_rail_empty_index_to_xy(grid: &[bool; GRID_16X16_SIZE], index: usize) -> VPoint {
