@@ -26,7 +26,7 @@ use tracing::info;
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 4 {
+    match 3 {
         1 => admiral_entrypoint_testing(&mut admiral),
         2 => admiral_entrypoint_prod(&mut admiral),
         3 => admiral_entrypoint_turn_area_extractor(&mut admiral),
@@ -221,18 +221,30 @@ pub fn admiral_entrypoint_turn_area_extractor(admiral: &mut AdmiralClient) -> Ad
 
     let chunk_x_offset = 0;
     let chunk_y_offset = -64;
-    dual_rail_north(VPoint::new(chunk_x_offset, chunk_y_offset), &mut commands);
+    dual_rail_north(
+        VPoint::new(chunk_x_offset, chunk_y_offset) + SHIFT_POINT_ONE,
+        &mut commands,
+    );
 
     let chunk_x_offset = 32;
-    dual_rail_south(VPoint::new(chunk_x_offset, chunk_y_offset), &mut commands);
+    dual_rail_south(
+        VPoint::new(chunk_x_offset, chunk_y_offset) + SHIFT_POINT_ONE,
+        &mut commands,
+    );
 
     let chunk_x_offset = 64;
-    dual_rail_east(VPoint::new(chunk_x_offset, chunk_y_offset), &mut commands);
+    dual_rail_east(
+        VPoint::new(chunk_x_offset, chunk_y_offset) + SHIFT_POINT_ONE,
+        &mut commands,
+    );
 
     let chunk_x_offset = 96;
-    dual_rail_west(VPoint::new(chunk_x_offset, chunk_y_offset), &mut commands);
+    dual_rail_west(
+        VPoint::new(chunk_x_offset, chunk_y_offset) + SHIFT_POINT_ONE,
+        &mut commands,
+    );
 
-    match 2 {
+    match 1 {
         1 => create_minified_bitgrid(admiral, commands, chunk_y_offset),
         2 => insert_minified_kit(admiral, commands, chunk_y_offset),
         _ => panic!("asdf"),

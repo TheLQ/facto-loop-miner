@@ -1,10 +1,9 @@
-use crate::bucket_div;
 use bitvec::array::BitArray;
 use bitvec::order::Msb0;
-use bitvec::vec::BitVec;
 use itertools::Itertools;
 use std::default::Default;
-use tracing_subscriber::fmt::format;
+
+pub const GRID_16X16_SIZE: usize = 256;
 
 const CHUNKS: usize = 4;
 const MAX_AXIS_SIZE: usize = 16;
@@ -65,6 +64,10 @@ impl StaticBitGrid {
     pub fn get(&self, x: usize, y: usize) -> bool {
         let index = xy_to_index(x, y);
         *self.inner.get(index).unwrap()
+    }
+
+    pub const fn into_inner(self) -> [bool; GRID_16X16_SIZE] {
+        self.inner
     }
 }
 
