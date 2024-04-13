@@ -134,7 +134,16 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: Pixel) -> Vec<VP
                 patch_rect,
                 surface_meta.is_xy_out_of_bounds(centered_patch_rect.x, centered_patch_rect.y)
             );
-            VPatch::new_from_rect(centered_patch_rect, pixel).normalize_patch_odd_8x8()
+            let centered_patch = VArea::from_rect(&centered_patch_rect);
+            let mut points = Vec::new();
+            for point in centered_patch.get_points() {
+                if surface_meta.get_pixel(&point) == pixel {
+                    points.push(point);
+                }
+            }
+            assert_ne!(points.len(), 0);
+
+            VPatch::new(centered_patch, pixel, points).normalize_patch_odd_8x8()
         })
         .collect()
 }

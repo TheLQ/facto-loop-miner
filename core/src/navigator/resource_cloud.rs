@@ -32,7 +32,7 @@ impl ResourceCloud {
         let mut pixels = Vec::new();
 
         for patch in surface.get_patches_slice() {
-            for patch_pixel in surface.get_xy_in_patch(patch) {
+            for patch_pixel in &patch.pixel_indexes {
                 positions.push(patch_pixel.to_slice_f32());
                 pixels.push(patch.resource);
             }

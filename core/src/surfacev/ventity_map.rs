@@ -19,6 +19,7 @@ use crate::LOCALE;
 use facto_loop_miner_io::varray::{VArray, EMPTY_XY_INDEX};
 
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
+use crate::surfacev::varea::VArea;
 use facto_loop_miner_io::{
     get_mebibytes_of_slice_usize, read_entire_file_varray_mmap_lib, write_entire_file,
 };
@@ -114,6 +115,10 @@ where
     //</editor-fold>
 
     //<editor-fold desc="query point">
+    pub fn point_to_index(&self, point: VPoint) -> usize {
+        self.xy_to_index(point.x(), point.y())
+    }
+
     pub fn is_point_out_of_bounds(&self, point: &VPoint) -> bool {
         self.is_xy_out_of_bounds(point.x(), point.y())
     }
@@ -186,8 +191,9 @@ where
 
     pub fn remove(&mut self, entity_index: usize) {}
 
-    fn remove_positions(&mut self, indexes: impl IntoIterator<Item = usize>) {
-        for index in indexes.into_iter().sorted().unique().rev() {
+    pub fn remove_positions(&mut self, points: &[VPoint]) {
+        for point in points {
+            let index = self.point_to_index(point);
             self.xy_to_entity.as_mut_slice()[index] = EMPTY_XY_INDEX;
         }
     }
@@ -414,7 +420,10 @@ where
     // }
 
     pub fn get_entity_by_index(&self, index: usize) -> &E {
-        self.entities.get(index).unwrap()
+        match self.entities.get(index) {
+            Some(v) => v,
+            None => panic!("bad index {}", index),
+        }
     }
 
     pub fn get_entity_by_index_mut(&mut self, index: usize) -> &mut E {

@@ -5,6 +5,7 @@ use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
+use crate::surfacev::varea::VArea;
 use crate::surfacev::ventity_map::{VEntityMap, VEntityXY};
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::VPoint;
@@ -225,12 +226,11 @@ impl VSurface {
 
         Ok(())
     }
+    //</editor-fold>
 
     pub fn to_pixel_cv_image(&self, filter: Option<Pixel>) -> Mat {
         self.pixels.map_pixel_xy_to_cv(filter)
     }
-
-    //</editor-fold>
 
     pub fn get_radius(&self) -> u32 {
         self.pixels.radius()
@@ -238,6 +238,10 @@ impl VSurface {
 
     pub fn get_radius_i32(&self) -> i32 {
         self.pixels.radius() as i32
+    }
+
+    pub fn get_diameter(&self) -> usize {
+        self.entities.diameter()
     }
 
     pub fn get_pixel(&self, point: &VPoint) -> Pixel {
@@ -263,13 +267,9 @@ impl VSurface {
         &self.patches
     }
 
-    pub fn get_xy_in_patch(&self, patch: &VPatch) -> Vec<VPoint> {
-        patch
-            .pixel_indexes
-            .iter()
-            .map(|v| self.pixels.get_entity_by_index(*v).starts[0])
-            .collect()
-    }
+    // pub fn get_xy_and_indexes_in_area(&self, area: &VArea) -> Vec<(VPoint, usize, Pixel)> {
+    //     self.pixels.get_xy_and_indexes_in_area(area)
+    // }
 
     pub fn is_xy_out_of_bounds(&self, x: i32, y: i32) -> bool {
         self.pixels.is_xy_out_of_bounds(x, y)
@@ -289,30 +289,26 @@ impl VSurface {
         self.pixels.crop(new_radius);
     }
 
-    pub fn xy_side_length(&self) -> usize {
-        self.entities.diameter()
-    }
-
     pub fn remove_patches_within_radius(&mut self, radius: u32) {
-        let mut removed_points: Vec<usize> = Vec::new();
+        let mut removed_points: Vec<VPoint> = Vec::new();
         for patch in &self.patches {
-            if !patch.area.start.is_within_center_radius(radius * 2) {
+            if !patch.area.start.is_within_center_radius(radius) {
+                trace!("asdf {:?}\tfor {:?}", patch.area.start, patch.resource);
                 continue;
             }
-            for index in &patch.pixel_indexes {
-                let pixel = self.pixels.get_entity_by_index(*index);
-                if pixel.get_xy()[0].is_within_center_radius(radius) {
-                    removed_points.push(*index);
-                }
-            }
+            trace!("hello {:?}", patch);
+            removed_points.extend_from_slice(&patch.pixel_indexes);
+            // for index in &patch.pixel_indexes {
+            // let pixel = self.pixels.get_entity_by_index(*index);
+            // removed_points.push(*index);
+            // }
         }
         info!(
             "removing {} patches within {} radius",
             removed_points.len(),
             radius
         );
-        // TODO
-        // self.pixels.remove_positions(removed_points);
+        self.pixels.remove_positions(&removed_points);
     }
 
     pub fn to_surface_diff(&self) -> SurfaceDiff {

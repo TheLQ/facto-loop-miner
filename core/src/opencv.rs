@@ -13,7 +13,7 @@ pub fn load_raw_image_with_surface(
     surface_meta: &VSurface,
     pixel_opt: Option<&Pixel>,
 ) -> Mat {
-    let side_length = surface_meta.xy_side_length();
+    let side_length = surface_meta.get_diameter();
     debug!("side length {}", side_length);
     debug!("Loading {}", surface_meta);
     debug!("path {}", path.display());

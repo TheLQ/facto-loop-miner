@@ -26,7 +26,7 @@ impl Step for Step10 {
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let mut surface = VSurface::load_from_last_step(&params)?;
-        surface.remove_patches_within_radius(CENTRAL_BASE_TILES as u32);
+        surface.remove_patches_within_radius(REMOVE_RESOURCE_BASE_TILES as u32);
 
         println!("drawing");
         draw_mega_box(&mut surface, &mut params.metrics.borrow_mut())?;
@@ -57,7 +57,7 @@ pub fn draw_mega_box(surface: &mut VSurface, metrics: &mut Metrics) -> VResult<(
             metrics.increment_slow("base-box");
         }
     }
-    debug!("megabox?");
+    debug!("megabox? for {}", tiles);
     Ok(())
 }
 
