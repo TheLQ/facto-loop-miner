@@ -92,16 +92,7 @@ fn insert_rail_from_surface(admiral: &mut AdmiralClient, surface: &VSurface) -> 
     let mut entities = Vec::new();
 
     for rail in surface.get_rail() {
-        // if !rail
-        //     .endpoint
-        //     .is_within_center_radius(REMOVE_RESOURCE_BASE_TILES as u32 + 20)
-        // {
-        //     continue;
-        // }
-        // if rail.mode != RailMode::Straight {
-        //     continue;
-        // }
-        info!("writing {:?}", rail);
+        // info!("writing {:?}", rail);
 
         rail.to_factorio_entities(&mut entities);
     }

@@ -115,7 +115,7 @@ where
     //</editor-fold>
 
     //<editor-fold desc="query point">
-    pub fn point_to_index(&self, point: VPoint) -> usize {
+    pub fn point_to_index(&self, point: &VPoint) -> usize {
         self.xy_to_index(point.x(), point.y())
     }
 

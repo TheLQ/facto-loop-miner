@@ -58,7 +58,7 @@ fn distance_basic_manhattan(next: &Rail, end: &Rail) -> f32 {
 
 fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail, end: &Rail) -> f32 {
     const STRAIGHT_COST_UNIT: f32 = 1.0;
-    const TURN_COST_UNIT: f32 = 2.0;
+    const TURN_COST_UNIT: f32 = 4.0;
     // const MULTI_TURN_LOOKBACK: usize = 10;
     const MULTI_TURN_COST_UNIT: f32 = 48.0;
 

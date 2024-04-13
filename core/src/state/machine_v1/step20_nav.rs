@@ -53,8 +53,8 @@ impl Step for Step20 {
     }
 }
 
-const NEAREST_COUNT: usize = 50;
-const PATH_LIMIT: Option<u8> = Some(30);
+const MAX_PATCHES: usize = 200;
+const PATH_LIMIT: Option<u8> = Some(70);
 // const PATH_LIMIT: Option<u8> = None;
 
 enum SpeculationTypes {
@@ -138,10 +138,10 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     // }
 
     let ordered_patches_len = ordered_patches.len();
-    for (nearest_count, patch_start) in ordered_patches.into_iter().enumerate() {
+    for (ordered_patch_index, patch_start) in ordered_patches.into_iter().enumerate() {
         debug!(
-            "path {} of {} - actually made {} max {:?}",
-            nearest_count, NEAREST_COUNT, made_paths, PATH_LIMIT,
+            "path {} of {} - actual paths created {} max {:?}",
+            ordered_patch_index, ordered_patches_len, made_paths, PATH_LIMIT,
         );
         if patch_start
             .area
@@ -217,10 +217,16 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     break;
         // }
 
+        // Search area
+        // let search_area = VArea::from_arbitrary_points(
+        //     &VPoint::new(CENTRAL_BASE_TILES, -REMOVE_RESOURCE_BASE_TILES),
+        //     &VPoint::new(surface.get_radius() as i32, REMOVE_RESOURCE_BASE_TILES),
+        // );
         let search_area = VArea::from_arbitrary_points(
-            &VPoint::new(CENTRAL_BASE_TILES, -REMOVE_RESOURCE_BASE_TILES),
-            &VPoint::new(surface.get_radius() as i32, REMOVE_RESOURCE_BASE_TILES),
+            &VPoint::new(CENTRAL_BASE_TILES, -surface.get_radius_i32()),
+            &VPoint::new(surface.get_radius_i32(), surface.get_radius_i32()),
         );
+
         // if 1 + 1 == 2 {
         //     let radius = surface.get_radius() as i32;
         //     for x in -radius..radius {
@@ -327,7 +333,7 @@ fn patches_by_radial_base_corner(surface: &VSurface, resource: Pixel) -> Vec<&VP
 
     let base_corner = base_bottom_right_corner();
     let nearest: Vec<NearestNeighbour<f32, usize>> =
-        cloud.nearest_n::<Manhattan>(&base_corner.to_slice_f32(), NEAREST_COUNT);
+        cloud.nearest_n::<Manhattan>(&base_corner.to_slice_f32(), MAX_PATCHES);
     debug!("found {} from {}", nearest.len(), cloud.size());
 
     nearest

@@ -111,7 +111,7 @@ pub fn mori_start(
 
         result = Some(path);
     } else {
-        debug!("failed to pathfind from {:?} to {:?}", start, end);
+        warn!("failed to pathfind from {:?} to {:?}", start, end);
     }
 
     let end_time = Instant::now();
@@ -691,9 +691,9 @@ impl Rail {
             );
         }
 
-        if parents.len() > 800 {
-            return Vec::new();
-        }
+        // if parents.len() > 800 {
+        //     return Vec::new();
+        // }
         // self.endpoint.assert_odd_8x8_position();
         // debug!("testing {:?}", self);
 

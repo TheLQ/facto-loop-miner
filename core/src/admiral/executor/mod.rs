@@ -9,7 +9,7 @@ pub mod client;
 pub mod entrypoint;
 pub mod file;
 
-const BATCH_SIZE: usize = 100;
+const BATCH_SIZE: usize = 200;
 
 pub trait LuaCompiler {
     fn _execute_statement(&mut self, lua: impl LuaCommand) -> AdmiralResult<ExecuteResponse>;
