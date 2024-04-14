@@ -1,5 +1,6 @@
 use crate::navigator::mori::{Rail, RailMode, RAIL_STEP_SIZE};
 use crate::navigator::resource_cloud::ResourceCloud;
+use crate::surfacev::vpoint::VPoint;
 
 const ANTI_WRONG_BIAS_EFFECT: f32 = 10f32;
 const RESOURCE_BIAS_EFFECT: f32 = 20f32;
@@ -13,7 +14,7 @@ pub enum RailAction {
 pub fn calculate_cost_for_point(
     next: &Rail,
     start: &Rail,
-    end: &Rail,
+    end: &VPoint,
     resource_cloud: &ResourceCloud,
     parents: &[Rail],
 ) -> u32 {
@@ -52,11 +53,11 @@ pub fn calculate_cost_for_point(
     //
 }
 
-fn distance_basic_manhattan(next: &Rail, end: &Rail) -> f32 {
-    next.distance_to(end) as f32
+fn distance_basic_manhattan(next: &Rail, end: &VPoint) -> f32 {
+    next.endpoint.distance_to(end) as f32
 }
 
-fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail, end: &Rail) -> f32 {
+fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail, end: &VPoint) -> f32 {
     const STRAIGHT_COST_UNIT: f32 = 1.0;
     const TURN_COST_UNIT: f32 = 4.0;
     // const MULTI_TURN_LOOKBACK: usize = 10;
@@ -97,7 +98,7 @@ fn into_end_landing_bias(
     parents: &[Rail],
     next: &Rail,
     start: &Rail,
-    end: &Rail,
+    end: &VPoint,
     base_distance: f32,
 ) -> f32 {
     // const BIAS_DISTANCE_START: f32 = 30.0;

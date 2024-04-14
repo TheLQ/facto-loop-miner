@@ -54,9 +54,9 @@ impl Pixel {
 
     pub fn color(&self) -> [u8; 3] {
         match self {
-            Pixel::IronOre => [0x68, 0x82, 0x90],
-            Pixel::CopperOre => [0xc8, 0x62, 0x30],
-            Pixel::Stone => [0xb0, 0x98, 0x68],
+            Pixel::IronOre => [0x6b, 0x86, 0x94],
+            Pixel::CopperOre => [0xce, 0x61, 0x31],
+            Pixel::Stone => [0xad, 0x9a, 0x6b],
             Pixel::Coal => [0x5e, 0x62, 0x66],
             Pixel::UraniumOre => [0x0b, 0x20, 0x00],
             Pixel::Water => [0xFF, 0xFF, 0xFF],

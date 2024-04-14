@@ -143,7 +143,7 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: Pixel) -> Vec<VP
             }
             assert_ne!(points.len(), 0);
 
-            VPatch::new(centered_patch, pixel, points).normalize_patch_odd_8x8()
+            VPatch::new(centered_patch, pixel, points).normalize_patch_even_8x8()
         })
         .collect()
 }

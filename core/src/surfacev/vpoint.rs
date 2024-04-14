@@ -14,6 +14,7 @@ pub struct VPoint {
 }
 
 pub const SHIFT_POINT_ONE: VPoint = VPoint { x: 1, y: 1 };
+pub const SHIFT_POINT_EIGHT: VPoint = VPoint { x: 8, y: 8 };
 
 impl VPoint {
     pub fn x(&self) -> i32 {

@@ -2,12 +2,9 @@ use crate::navigator::mori::Rail;
 use crate::surfacev::vsurface::VSurface;
 use crossbeam::queue::SegQueue;
 
-/// Pathfinder executor v1, Josuiji Shinri
+/// Pathfinder executor v2, Josuiji Shinri
 ///
-/// Pathfinders have several possible destinations. They also start from multiple places.
-/// Normal sequential search is slow and not always optimal.
-///
-/// This manages the execution
+/// Rail that
 pub struct ShinriExecutor {
     surface: VSurface,
 }

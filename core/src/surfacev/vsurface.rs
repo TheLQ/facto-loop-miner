@@ -293,10 +293,10 @@ impl VSurface {
         let mut removed_points: Vec<VPoint> = Vec::new();
         for patch in &self.patches {
             if !patch.area.start.is_within_center_radius(radius) {
-                trace!("asdf {:?}\tfor {:?}", patch.area.start, patch.resource);
+                // trace!("asdf {:?}\tfor {:?}", patch.area.start, patch.resource);
                 continue;
             }
-            trace!("hello {:?}", patch);
+            // trace!("hello {:?}", patch);
             removed_points.extend_from_slice(&patch.pixel_indexes);
             // for index in &patch.pixel_indexes {
             // let pixel = self.pixels.get_entity_by_index(*index);
@@ -342,6 +342,25 @@ impl VSurface {
                     self.set_pixel(cur_point, Pixel::Highlighter).unwrap();
                 } else {
                     self.set_pixel(cur_point, Pixel::EdgeWall).unwrap();
+                }
+            }
+        }
+    }
+
+    pub fn draw_debug_varea_square(&mut self, area: &VArea) {
+        let border = 10;
+        for x in (area.start.x() - border)..(area.end_x_exclusive() + border) {
+            for y in (area.start.y() - border)..(area.end_y_exclusive() + border) {
+                let cur = VPoint::new(x, y);
+                if self.pixels.is_point_out_of_bounds(&cur) {
+                    continue;
+                }
+                if !area.contains_point(&cur) {
+                    if self.get_pixel(&cur) != Pixel::Empty {
+                        self.set_pixel(cur, Pixel::EdgeWall).unwrap();
+                    } else {
+                        self.set_pixel(cur, Pixel::Highlighter).unwrap();
+                    }
                 }
             }
         }

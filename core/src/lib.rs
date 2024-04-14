@@ -42,8 +42,11 @@ extern crate core;
 use crate::admiral::executor::client::AdmiralClient;
 use crate::admiral::executor::entrypoint::admiral_entrypoint;
 use crate::admiral::lua_command::scanner::facscan_mega_export_entities_compressed;
+use crate::navigator::mori::{draw_rail, Rail, RailDirection};
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
+use crate::surfacev::vpoint::VPoint;
+use crate::surfacev::vsurface::VSurface;
 use kiddo::float;
 use num_format::Locale;
 use num_traits::PrimInt;
@@ -89,13 +92,37 @@ pub fn inner_main() {
 
 pub fn rcon_inner_main() {
     let tracing_format = tracing_subscriber::fmt::format().compact();
-
     log_init();
 
     let mut admiral = AdmiralClient::new().unwrap();
     admiral.auth().unwrap();
 
     admiral_entrypoint(admiral);
+}
+
+pub fn inner_surface_tester() {
+    let tracing_format = tracing_subscriber::fmt::format().compact();
+    log_init();
+
+    let mut surface = VSurface::load(Path::new("./work/out0/step20-nav")).unwrap();
+
+    // Rail { endpoint: VPoint { x: 649, y: 49 }, direction: Right, mode: Straight } to Rail { endpoint: VPoint { x: 2273, y: 121 }, direction: Right, mode: Straight }
+    let start = Rail::new_straight(VPoint::new(649, 49), RailDirection::Right);
+    let end = Rail::new_straight(VPoint::new(2273, 121), RailDirection::Right);
+
+    let rail = end;
+    let rail = rail.move_force_rotate_clockwise(2);
+    draw_rail(&mut surface, &rail);
+
+    // let rail = rail.move_forward_step();
+    // draw_rail(&mut surface, &rail);
+
+    let rail = rail.move_right();
+    draw_rail(&mut surface, &rail);
+
+    let out_dir = Path::new("./work/test5");
+    std::fs::create_dir(out_dir).unwrap();
+    surface.save(out_dir).unwrap()
 }
 
 /// what is this called?

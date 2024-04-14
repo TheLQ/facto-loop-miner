@@ -31,15 +31,15 @@ impl ResourceCloud {
         let mut positions: Vec<[f32; 2]> = Vec::new();
         let mut pixels = Vec::new();
 
-        for patch in surface.get_patches_slice() {
-            for patch_pixel in &patch.pixel_indexes {
-                positions.push(patch_pixel.to_slice_f32());
-                pixels.push(patch.resource);
-            }
-        }
-        tracing::debug!("built total {}", positions.len());
-        // positions.sort();
-        positions.dedup();
+        // for patch in surface.get_patches_slice() {
+        //     for patch_pixel in &patch.pixel_indexes {
+        //         positions.push(patch_pixel.to_slice_f32());
+        //         pixels.push(patch.resource);
+        //     }
+        // }
+        // tracing::debug!("built total {}", positions.len());
+        // // positions.sort();
+        // positions.dedup();
 
         ResourceCloud {
             kdtree: (&positions).into(),

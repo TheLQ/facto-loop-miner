@@ -20,6 +20,7 @@ use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
+use rustc_hash::{FxHashSet, FxHasher};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
@@ -35,29 +36,28 @@ use tracing::{debug, warn};
 pub fn mori_start(
     surface: &mut VSurface,
     start: Rail,
-    end: Rail,
+    ends: &[VPoint],
     search_area: VArea,
 ) -> Option<Vec<Rail>> {
     let pathfind_watch = BasicWatch::start();
 
     start.endpoint.assert_odd_8x8_position();
-    end.endpoint.assert_odd_8x8_position();
+    for end in ends {
+        end.assert_odd_8x8_position();
+    }
 
     // TODO: Benchmark this vs Vec (old version),
-    let mut valid_destinations: HashSet<Rail> = HashSet::new();
-    // let step = 3;
-    for width in -RAIL_STEP_SIZE_I32..RAIL_STEP_SIZE_I32 {
-        for height in -RAIL_STEP_SIZE_I32..RAIL_STEP_SIZE_I32 {
-            let mut next = end.clone();
-            next.endpoint = next.endpoint.move_xy(width, height);
-            // surface
-            //     .set_pixel(next.endpoint, Pixel::Highlighter)
-            //     .unwrap();
-            valid_destinations.insert(next);
-        }
-    }
-    // if 1 + 1 == 2 {
-    //     return None;
+    // let mut valid_destinations: FxHashSet<Rail> = FxHashSet::new();
+    // // let step = 3;
+    // for width in -RAIL_STEP_SIZE_I32..RAIL_STEP_SIZE_I32 {
+    //     for height in -RAIL_STEP_SIZE_I32..RAIL_STEP_SIZE_I32 {
+    //         let mut next = end.clone();
+    //         next.endpoint = next.endpoint.move_xy(width, height);
+    //         // surface
+    //         //     .set_pixel(next.endpoint, Pixel::Highlighter)
+    //         //     .unwrap();
+    //         valid_destinations.insert(next);
+    //     }
     // }
 
     let resource_cloud = ResourceCloud::from_surface(surface);
@@ -68,6 +68,7 @@ pub fn mori_start(
     let metric_successors = AtomicU64::new(1);
     let metric_start = AtomicCell::new(Instant::now());
 
+    let end = &ends[0];
     debug!("Mori start {:?} end {:?}", start, end);
     // Forked function adds parents and cost params to each successor call. Used for limits
     let pathfind = astar_mori(
@@ -86,7 +87,7 @@ pub fn mori_start(
             )
         },
         |_p| 1,
-        |p| valid_destinations.contains(p),
+        |p| ends.contains(&p.endpoint),
     );
     // let pathfind = threaded_searcher::<Rail, _, _>(
     //     start.clone(),
@@ -667,7 +668,7 @@ impl Rail {
         parents: &[Rail],
         surface: &VSurface,
         start: &Rail,
-        end: &Rail,
+        end: &VPoint,
         resource_cloud: &ResourceCloud,
         // working_buffer: &mut SurfaceDiff,
         search_area: &VArea,
