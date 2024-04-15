@@ -36,14 +36,14 @@ use tracing::{debug, warn};
 pub fn mori_start(
     surface: &mut VSurface,
     start: Rail,
-    ends: &[VPoint],
+    ends: &[Rail],
     search_area: VArea,
 ) -> Option<Vec<Rail>> {
     let pathfind_watch = BasicWatch::start();
 
     start.endpoint.assert_odd_8x8_position();
     for end in ends {
-        end.assert_odd_8x8_position();
+        end.endpoint.assert_odd_8x8_position();
     }
 
     // TODO: Benchmark this vs Vec (old version),
@@ -68,7 +68,8 @@ pub fn mori_start(
     let metric_successors = AtomicU64::new(1);
     let metric_start = AtomicCell::new(Instant::now());
 
-    let end = &ends[0];
+    let end_points: Vec<VPoint> = ends.iter().map(|r| r.endpoint).collect();
+    let end = VArea::from_arbitrary_points(&end_points).point_center();
     debug!("Mori start {:?} end {:?}", start, end);
     // Forked function adds parents and cost params to each successor call. Used for limits
     let pathfind = astar_mori(
@@ -87,7 +88,7 @@ pub fn mori_start(
             )
         },
         |_p| 1,
-        |p| ends.contains(&p.endpoint),
+        |p| ends.contains(p),
     );
     // let pathfind = threaded_searcher::<Rail, _, _>(
     //     start.clone(),
@@ -112,10 +113,9 @@ pub fn mori_start(
 
         result = Some(path);
     } else {
-        warn!("failed to pathfind from {:?} to {:?}", start, end);
+        warn!("failed to pathfind from {:?} to {:?}", start, ends);
     }
 
-    let end_time = Instant::now();
     debug!("+++ Mori finished in {}", pathfind_watch,);
 
     // unsafe {
@@ -993,7 +993,7 @@ fn is_buildable_point_u32<'p>(surface: &Surface, point: &'p PointU32) -> Option<
     }
 }
 
-pub fn write_rail(surface: &mut VSurface, path: &Vec<Rail>) -> VResult<()> {
+pub fn write_rail(surface: &mut VSurface, path: &[Rail]) -> VResult<()> {
     // let special_endpoint_pixels: Vec<VPoint> = path.iter().map(|v| v.endpoint).collect();
 
     let mut total_rail = 0;

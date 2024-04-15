@@ -1,5 +1,5 @@
 use crate::navigator::mori::{
-    mori_start, write_rail, Rail, RailDirection, RAIL_STEP_SIZE, RAIL_STEP_SIZE_I32,
+    draw_rail, mori_start, write_rail, Rail, RailDirection, RAIL_STEP_SIZE, RAIL_STEP_SIZE_I32,
 };
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
@@ -15,7 +15,7 @@ use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_EIGHT, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
 use kiddo::{Manhattan, NearestNeighbour};
 use opencv::core::Point;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
 pub struct Step20 {}
 
@@ -54,7 +54,7 @@ impl Step for Step20 {
 }
 
 const MAX_PATCHES: usize = 200;
-const PATH_LIMIT: Option<u8> = Some(70);
+const PATH_LIMIT: Option<u8> = Some(15);
 // const PATH_LIMIT: Option<u8> = None;
 
 enum SpeculationTypes {
@@ -122,6 +122,22 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     .into_iter()
     .cloned()
     .collect();
+
+    // Wrap patches in a no touching zone, so rail doesn't drive between start and the patch
+    for patch in &ordered_patches {
+        let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(&patch);
+
+        let padding = 6;
+        surface.draw_square(
+            patch_top_left.x() + padding,
+            patch_bottom_right.x() - padding,
+            patch_top_left.y() + padding,
+            patch_bottom_right.y() - padding,
+            Pixel::SteelChest,
+            Some(patch.resource),
+        )
+    }
+
     // for end in &ordered_patches {
     //     for super_x in 0..100 {
     //         for super_y in 0..100 {
@@ -159,6 +175,18 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
                 break;
             }
         }
+
+        if patch_start
+            .area
+            .start
+            .is_within_center_radius(REMOVE_RESOURCE_BASE_TILES as u32)
+        {
+            error!(
+                "WTF? remove within {} but patch in {:?}",
+                REMOVE_RESOURCE_BASE_TILES, patch_start
+            );
+        }
+
         // let Some(destination) = destinations.next() else {
         //     debug!("Out of destinations, stopping");
         //     break;
@@ -187,17 +215,19 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     RailDirection::Right,
         // );
         // .move_forward_step();
-        let mut patch_rail_starts = Vec::new();
+        let mut patch_rail_ends = Vec::new();
         {
-            // top right
-            let patch_rail_start = patch_corner + SHIFT_POINT_ONE - SHIFT_POINT_EIGHT;
-            patch_rail_start.assert_odd_8x8_position();
-            patch_rail_starts.push(patch_rail_start);
+            let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(&patch_start);
 
-            let patch_rail_start =
-                patch_start.area.point_bottom_left() + SHIFT_POINT_EIGHT + SHIFT_POINT_ONE;
-            patch_rail_start.assert_odd_8x8_position();
-            patch_rail_starts.push(patch_rail_start);
+            patch_rail_ends.push(Rail::new_straight(patch_top_left, RailDirection::Right));
+            patch_rail_ends.push(Rail::new_straight(patch_bottom_right, RailDirection::Left));
+
+            // opposite corners
+            let patch_bottom_left = VPoint::new(patch_top_left.x(), patch_bottom_right.y());
+            let patch_top_right = VPoint::new(patch_bottom_right.x(), patch_top_left.y());
+
+            patch_rail_ends.push(Rail::new_straight(patch_bottom_left, RailDirection::Right));
+            patch_rail_ends.push(Rail::new_straight(patch_top_right, RailDirection::Left));
         }
 
         // let end = start
@@ -205,41 +235,14 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     .move_forward_step()
         //     .move_forward_step()
         //     .move_forward_step();
-        let end = Rail::new_straight(*destination, RailDirection::Right);
-
-        // // start box
-        // for super_x in 0..100 {
-        //     for super_y in 0..100 {
-        //         surface
-        //             .set_pixel(
-        //                 VPoint::new(start.endpoint.x() + super_x, start.endpoint.y() + super_y),
-        //                 Pixel::Highlighter,
-        //             )
-        //             .unwrap();
-        //     }
-        // }
-        // // endpoint box
-        // for super_x in 0..100 {
-        //     for super_y in 0..100 {
-        //         surface
-        //             .set_pixel(
-        //                 VPoint::new(end.endpoint.x() + super_x, end.endpoint.y() + super_y),
-        //                 Pixel::Rail,
-        //             )
-        //             .unwrap();
-        //     }
-        // }
-        // if 1 + 1 == 2 {
-        //     info!("TOO BREAK");
-        //     break;
-        // }
+        let base_start = Rail::new_straight(*destination, RailDirection::Right);
 
         // Search area
         // let search_area = VArea::from_arbitrary_points(
         //     &VPoint::new(CENTRAL_BASE_TILES, -REMOVE_RESOURCE_BASE_TILES),
         //     &VPoint::new(surface.get_radius() as i32, REMOVE_RESOURCE_BASE_TILES),
         // );
-        let search_area = VArea::from_arbitrary_points(
+        let search_area = VArea::from_arbitrary_points_pair(
             &VPoint::new(CENTRAL_BASE_TILES, -surface.get_radius_i32()),
             &VPoint::new(surface.get_radius_i32(), surface.get_radius_i32()),
         );
@@ -257,7 +260,8 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     break;
         // }
 
-        if let Some(path) = mori_start(surface, end.clone(), &patch_rail_starts, search_area) {
+        if let Some(path) = mori_start(surface, base_start.clone(), &patch_rail_ends, search_area) {
+            let last_path = path.last().unwrap().clone();
             write_rail(surface, &path)?;
             surface.add_rail(path);
 
@@ -266,36 +270,54 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             made_paths += 1;
 
             // surface.draw_debug_square(&path[0].endpoint);
-            params.metrics.borrow_mut().increment_slow("path-success")
-        } else {
-            // // start box
-            // for super_x in 0..100 {
-            //     for super_y in 0..100 {
-            //         surface
-            //             .set_pixel(
-            //                 VPoint::new(start.endpoint.x() + super_x, start.endpoint.y() + super_y),
-            //                 Pixel::Highlighter,
-            //             )
-            //             .unwrap();
-            //     }
-            // }
+            params.metrics.borrow_mut().increment_slow("path-success");
 
+            let blocking_area = VArea::from_arbitrary_points_pair(
+                &last_path.endpoint,
+                &patch_start.area.point_center(),
+            );
+            // if made_paths > 4 {
+            //     surface.draw_debug_square(&last_path.endpoint);
+            //     surface.draw_debug_square(&patch_start.area.point_center());
+            //
+            //     error!("last {:?}", last_path.endpoint);
+            //     surface
+            //         .set_pixel(last_path.endpoint, Pixel::CopperOre)
+            //         .unwrap();
+            //     error!("patch {:?}", patch_start);
+            //     error!("patch center {:?}", patch_start.area.point_center());
+            //     surface
+            //         .set_pixel(patch_start.area.point_center(), Pixel::CrudeOil)
+            //         .unwrap();
+            //     break;
+            // }
+        } else {
             params.metrics.borrow_mut().increment_slow("path-failure");
 
             fail_counter += 1;
-            if fail_counter >= 2 {
-                debug_patch(surface, &patch_start);
-                // endpoint box
-                for super_x in 0..100 {
-                    for super_y in 0..100 {
-                        surface
-                            .set_pixel(
-                                VPoint::new(end.endpoint.x() + super_x, end.endpoint.y() + super_y),
-                                Pixel::Rail,
-                            )
-                            .unwrap();
-                    }
-                }
+            if fail_counter >= 1 {
+                // debug_patch(surface, &patch_start);
+                let patch_center = patch_start.area.point_center();
+                surface.draw_square(
+                    patch_center.x() - 20,
+                    patch_center.x() + 20,
+                    patch_center.y() - 20,
+                    patch_center.y() + 20,
+                    Pixel::CrudeOil,
+                    None,
+                );
+
+                surface.draw_square(
+                    base_start.endpoint.x() - 10,
+                    base_start.endpoint.x() + 10,
+                    base_start.endpoint.y() - 10,
+                    base_start.endpoint.y() + 10,
+                    Pixel::CrudeOil,
+                    None,
+                );
+
+                write_rail(surface, &patch_rail_ends).unwrap();
+                error!("over fail");
                 break;
             }
         }
@@ -453,7 +475,7 @@ fn patches_by_cross_sign_expanding<'a>(
                 }
 
                 let search_area =
-                    VArea::from_arbitrary_points(&scan_start.endpoint, &scan_end.endpoint);
+                    VArea::from_arbitrary_points_pair(&scan_start.endpoint, &scan_end.endpoint);
                 for patch in surface.get_patches_slice() {
                     if resources.contains(&patch.resource)
                         && search_area.contains_point(&patch.area.start)
@@ -490,12 +512,31 @@ fn base_bottom_right_corner() -> VPoint {
     VPoint::new(CENTRAL_BASE_TILES, CENTRAL_BASE_TILES)
 }
 
-fn debug_patch(surface: &mut VSurface, patch_start: &VPatch) {
-    surface.draw_debug_varea_square(&patch_start.area);
-    surface
-        .set_pixel(patch_start.area.start, Pixel::CrudeOil)
-        .unwrap();
+fn get_expanded_patch_points(patch: &VPatch) -> (VPoint, VPoint) {
+    // main corners
+    let mut patch_top_left = patch.area.start + SHIFT_POINT_ONE;
+    patch_top_left.assert_odd_8x8_position();
+
+    let mut patch_bottom_right = patch.area.point_bottom_left() + SHIFT_POINT_ONE;
+    patch_bottom_right.assert_odd_8x8_position();
+
+    for _ in 0..3 {
+        patch_top_left = patch_top_left - SHIFT_POINT_EIGHT;
+        patch_bottom_right = patch_bottom_right + SHIFT_POINT_EIGHT;
+    }
+
+    (patch_top_left, patch_bottom_right)
 }
+
+// fn debug_patch(surface: &mut VSurface, patch_start: &VPatch) {
+//     surface.draw_debug_varea_square(&patch_start.area);
+//     surface
+//         .set_pixel(patch_start.area.start, Pixel::CrudeOil)
+//         .unwrap();
+//     surface
+//         .set_pixel(patch_start.area.point_bottom_left(), Pixel::CrudeOil)
+//         .unwrap();
+// }
 
 // #[allow(unused)]
 // fn base_resource_bottom_right_corner(surface: &Surface) -> Point {

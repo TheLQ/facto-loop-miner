@@ -291,7 +291,8 @@ impl VSurface {
 
     pub fn remove_patches_within_radius(&mut self, radius: u32) {
         let mut removed_points: Vec<VPoint> = Vec::new();
-        for patch in &self.patches {
+        let mut patches_to_remove = Vec::new();
+        for (patch_index, patch) in self.patches.iter().enumerate() {
             if !patch.area.start.is_within_center_radius(radius) {
                 // trace!("asdf {:?}\tfor {:?}", patch.area.start, patch.resource);
                 continue;
@@ -302,13 +303,21 @@ impl VSurface {
             // let pixel = self.pixels.get_entity_by_index(*index);
             // removed_points.push(*index);
             // }
+
+            patches_to_remove.push(patch_index);
         }
         info!(
-            "removing {} patches within {} radius",
+            "removing {} patches with {} entities within {} radius",
+            patches_to_remove.len(),
             removed_points.len(),
             radius
         );
         self.pixels.remove_positions(&removed_points);
+
+        patches_to_remove.reverse();
+        for patch_index in patches_to_remove {
+            self.patches.remove(patch_index);
+        }
     }
 
     pub fn to_surface_diff(&self) -> SurfaceDiff {
@@ -327,24 +336,6 @@ impl VSurface {
             metrics.increment(FastMetric::VSurface_Pixel(*entity.pixel()));
         }
         metrics.log_final();
-    }
-
-    pub fn draw_debug_square(&mut self, point: &VPoint) {
-        const SIZE: i32 = 100;
-
-        for x in (point.x() - SIZE)..(point.x() + SIZE) {
-            for y in (point.y() - SIZE)..(point.y() + SIZE) {
-                if self.pixels.is_xy_out_of_bounds(x, y) {
-                    continue;
-                }
-                let cur_point = VPoint::new(x, y);
-                if point == &cur_point {
-                    self.set_pixel(cur_point, Pixel::Highlighter).unwrap();
-                } else {
-                    self.set_pixel(cur_point, Pixel::EdgeWall).unwrap();
-                }
-            }
-        }
     }
 
     pub fn draw_debug_varea_square(&mut self, area: &VArea) {
@@ -366,6 +357,36 @@ impl VSurface {
         }
     }
 
+    pub fn draw_square(
+        &mut self,
+        start_x: i32,
+        end_x_exclusive: i32,
+        start_y: i32,
+        end_y_exclusive: i32,
+        empty_map: Pixel,
+        existing_map: Option<Pixel>,
+    ) {
+        for x in start_x..end_x_exclusive {
+            for y in start_y..end_y_exclusive {
+                let cur = VPoint::new(x, y);
+                if self.pixels.is_point_out_of_bounds(&cur) {
+                    continue;
+                }
+
+                let pixel_to_set = if self.get_pixel(&cur) != Pixel::Empty {
+                    if let Some(existing_map) = existing_map {
+                        existing_map
+                    } else {
+                        empty_map
+                    }
+                } else {
+                    empty_map
+                };
+                self.set_pixel(cur, pixel_to_set).unwrap();
+            }
+        }
+    }
+
     pub fn add_rail(&mut self, mut rails: Vec<Rail>) {
         self.place_rail.append(&mut rails)
     }
@@ -381,7 +402,10 @@ impl VSurface {
     #[cfg(test)]
     pub fn test_global_area(&self) -> VArea {
         let radius = self.get_radius_i32();
-        VArea::from_arbitrary_points(&VPoint::new(-radius, -radius), &VPoint::new(radius, radius))
+        VArea::from_arbitrary_points_pair(
+            &VPoint::new(-radius, -radius),
+            &VPoint::new(radius, radius),
+        )
     }
 
     // pub fn draw_debug_square(&mut self, point: &VPoint) {

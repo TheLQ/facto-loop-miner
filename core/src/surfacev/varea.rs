@@ -18,11 +18,31 @@ impl VArea {
         }
     }
 
-    pub fn from_arbitrary_points(a: &VPoint, b: &VPoint) -> VArea {
+    pub fn from_arbitrary_points_pair(a: &VPoint, b: &VPoint) -> VArea {
         let x_min = a.x().min(b.x());
         let x_max = a.x().max(b.x());
         let y_min = a.y().min(b.y());
         let y_max = a.y().max(b.y());
+
+        let start = VPoint::new(x_min, y_min);
+        VArea {
+            start,
+            width: (x_max - start.x()).try_into().unwrap(),
+            height: (y_max - start.y()).try_into().unwrap(),
+        }
+    }
+
+    pub fn from_arbitrary_points(points: &[VPoint]) -> VArea {
+        let mut x_min = 0;
+        let mut x_max = 0;
+        let mut y_min = 0;
+        let mut y_max = 0;
+        for point in points {
+            x_min = x_min.min(point.x());
+            x_max = x_max.max(point.x());
+            y_min = y_min.min(point.y());
+            y_max = y_max.max(point.y());
+        }
 
         let start = VPoint::new(x_min, y_min);
         VArea {
@@ -89,5 +109,14 @@ impl VArea {
 
         new.point_bottom_left().assert_even_8x8_position();
         new
+    }
+
+    pub fn point_center(&self) -> VPoint {
+        VPoint::new(
+            // (self.end_x_exclusive() - self.start.x()) / 2,
+            // (self.end_y_exclusive() - self.start.y()) / 2,
+            self.start.x() + (self.width as i32 / 2),
+            self.start.y() + (self.height as i32 / 2),
+        )
     }
 }

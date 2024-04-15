@@ -103,7 +103,7 @@ fn into_end_landing_bias(
 ) -> f32 {
     // const BIAS_DISTANCE_START: f32 = 30.0;
     const DIRECTION_COST_UNIT: f32 = 10.0;
-    const AXIS_COST_UNIT: f32 = 10.0;
+    const AXIS_COST_UNIT: f32 = 1.0;
 
     let mut total_cost = base_distance;
 

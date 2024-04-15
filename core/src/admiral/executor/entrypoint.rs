@@ -13,7 +13,7 @@ use crate::admiral::lua_command::lua_batch::LuaBatchCommand;
 use crate::admiral::lua_command::raw_lua::RawLuaCommand;
 use crate::admiral::lua_command::scanner::BaseScanner;
 use crate::admiral::lua_command::LuaCommand;
-use crate::navigator::mori::{Rail, RailDirection, RailMode};
+use crate::navigator::mori::{draw_rail, Rail, RailDirection, RailMode};
 use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
 use crate::surfacev::bit_grid::BitGrid;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
@@ -31,6 +31,7 @@ pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
         2 => admiral_entrypoint_prod(&mut admiral),
         3 => admiral_entrypoint_turn_area_extractor(&mut admiral),
         4 => admiral_entrypoint_turn_viewer(&mut admiral),
+        5 => admiral_quick_test(&mut admiral),
         _ => panic!("asdf"),
     }
     .map_err(pretty_panic_admiral)
@@ -418,6 +419,25 @@ fn insert_minified_kit(
     }
 
     admiral.execute_checked_command(LuaBatchCommand::new(commands).into_boxed())?;
+
+    Ok(())
+}
+
+fn admiral_quick_test(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    const WORK_RADIUS: u32 = 10;
+
+    scan_area(admiral, WORK_RADIUS)?;
+    destroy_placed_entities(admiral, WORK_RADIUS)?;
+
+    let mut rail_to_place = Vec::new();
+
+    let rail = Rail::new_straight(VPoint::new(5, 5), RailDirection::Left);
+    rail.to_factorio_entities(&mut rail_to_place);
+
+    let rail = rail.move_left();
+    rail.to_factorio_entities(&mut rail_to_place);
+
+    admiral.execute_checked_command(LuaBatchCommand::new(rail_to_place).into_boxed())?;
 
     Ok(())
 }
