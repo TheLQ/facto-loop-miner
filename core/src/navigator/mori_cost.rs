@@ -1,4 +1,5 @@
 use crate::navigator::mori::{Rail, RailMode, RAIL_STEP_SIZE};
+use crate::navigator::rail_point_compare::RailPointCompare;
 use crate::navigator::resource_cloud::ResourceCloud;
 use crate::surfacev::vpoint::VPoint;
 
@@ -16,16 +17,17 @@ pub fn calculate_cost_for_point(
     start: &Rail,
     end: &VPoint,
     resource_cloud: &ResourceCloud,
-    parents: &[Rail],
+    parents_compare: &[RailPointCompare],
 ) -> u32 {
     // base distance
-    let base_distance = match 2 {
+    let base_distance = match 1 {
         1 => distance_basic_manhattan(next, end),
-        2 => distance_with_less_parent_turns(parents, next, end),
+        2 => distance_with_less_parent_turns(parents_compare, next, end),
         _ => panic!("Asd"),
     };
-    let end_landing_bias = into_end_landing_bias(parents, next, start, end, base_distance);
+    let end_landing_bias = into_end_landing_bias(next, start, end, base_distance);
     end_landing_bias as u32
+    // base_distance as u32
 
     // // block it closer to base
     // let anti_wrong = if distance < 400.0 {
@@ -57,7 +59,11 @@ fn distance_basic_manhattan(next: &Rail, end: &VPoint) -> f32 {
     next.endpoint.distance_to(end) as f32
 }
 
-fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail, end: &VPoint) -> f32 {
+fn distance_with_less_parent_turns(
+    parents_compare: &[RailPointCompare],
+    next: &Rail,
+    end: &VPoint,
+) -> f32 {
     const STRAIGHT_COST_UNIT: f32 = 1.0;
     const TURN_COST_UNIT: f32 = 4.0;
     // const MULTI_TURN_LOOKBACK: usize = 10;
@@ -73,8 +79,8 @@ fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail, end: &VPoint) 
 
     // add extra cost for previous turns
     let mut last_turns = 0u32;
-    for parent in parents.iter().rev().take(5) {
-        if let RailMode::Turn(_) = parent.mode {
+    for parent in parents_compare.iter().rev().take(5) {
+        if let RailMode::Turn(_) = parent.inner.mode {
             last_turns += 25;
             // TODO: If this is too low, direction bias takes over and forces rail all the way to the end
             // .pow(last_turns.min(3))
@@ -94,13 +100,7 @@ fn distance_with_less_parent_turns(parents: &[Rail], next: &Rail, end: &VPoint) 
     total_cost
 }
 
-fn into_end_landing_bias(
-    parents: &[Rail],
-    next: &Rail,
-    start: &Rail,
-    end: &VPoint,
-    base_distance: f32,
-) -> f32 {
+fn into_end_landing_bias(next: &Rail, start: &Rail, end: &VPoint, base_distance: f32) -> f32 {
     // const BIAS_DISTANCE_START: f32 = 30.0;
     const DIRECTION_COST_UNIT: f32 = 10.0;
     const AXIS_COST_UNIT: f32 = 1.0;

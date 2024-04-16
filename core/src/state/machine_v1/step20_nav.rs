@@ -125,7 +125,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
 
     // Wrap patches in a no touching zone, so rail doesn't drive between start and the patch
     for patch in &ordered_patches {
-        let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(&patch);
+        let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(patch);
 
         let padding = 6;
         surface.draw_square(
@@ -246,21 +246,25 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             &VPoint::new(CENTRAL_BASE_TILES, -surface.get_radius_i32()),
             &VPoint::new(surface.get_radius_i32(), surface.get_radius_i32()),
         );
-
+        // surface.draw_square_area(&search_area, Pixel::Highlighter, None);
         // if 1 + 1 == 2 {
-        //     let radius = surface.get_radius() as i32;
-        //     for x in -radius..radius {
-        //         for y in -radius..radius {
-        //             let point = VPoint::new(x, y);
-        //             if search_area.contains_point(&point) {
-        //                 surface.set_pixel(point, Pixel::Highlighter).unwrap();
-        //             }
-        //         }
-        //     }
-        //     break;
+        //     return Ok(());
         // }
 
-        if let Some(path) = mori_start(surface, base_start.clone(), &patch_rail_ends, search_area) {
+        let mut found_path = None;
+        for threaded_end in &patch_rail_ends {
+            found_path = mori_start(
+                surface,
+                base_start.clone(),
+                threaded_end.clone(),
+                &search_area,
+            );
+            if found_path.is_some() {
+                break;
+            }
+        }
+
+        if let Some(path) = found_path {
             let last_path = path.last().unwrap().clone();
             write_rail(surface, &path)?;
             surface.add_rail(path);

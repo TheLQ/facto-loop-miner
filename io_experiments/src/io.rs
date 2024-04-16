@@ -9,7 +9,7 @@ use crate::err::{VIoError, VIoResult};
 use crate::varray::VArray;
 use libc::munmap;
 use memmap2::{Mmap, MmapOptions};
-use tracing::debug;
+use tracing::{debug, info};
 
 pub const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
 
@@ -127,7 +127,9 @@ pub fn read_entire_file_usize_mmap_custom(
     let xy_array_len_aligned_u8 = file_size + alignment_padding;
     let xy_array_len_aligned_u64 = xy_array_len_aligned_u8 / USIZE_BYTES;
 
+    info!("hello mmap");
     let vec: Vec<usize> = unsafe {
+        info!("starting mmap");
         let mmap_ptr = libc::mmap(
             ptr::null_mut(),
             xy_array_len_aligned_u8,
@@ -143,6 +145,7 @@ pub fn read_entire_file_usize_mmap_custom(
         if mmap_ptr == libc::MAP_FAILED {
             panic!("failed to mmap {}", xy_array_len_u8);
         }
+        info!("mmapped");
 
         if (sequential || willneed)
             && libc::madvise(

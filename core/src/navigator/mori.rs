@@ -6,6 +6,7 @@ use crate::admiral::generators::rail90::{
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori_cost::calculate_cost_for_point;
+use crate::navigator::rail_point_compare::RailPointCompare;
 use crate::navigator::resource_cloud::ResourceCloud;
 use crate::simd_diff::SurfaceDiff;
 use crate::surface::pixel::Pixel;
@@ -18,6 +19,7 @@ use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
+use num_format::Locale::pa;
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
 use rustc_hash::{FxHashSet, FxHasher};
@@ -27,7 +29,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use strum::AsRefStr;
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
 /// Pathfinder v1, Mori Calliope
 ///
@@ -36,15 +38,16 @@ use tracing::{debug, warn};
 pub fn mori_start(
     surface: &mut VSurface,
     start: Rail,
-    ends: &[Rail],
-    search_area: VArea,
+    end: Rail,
+    search_area: &VArea,
 ) -> Option<Vec<Rail>> {
     let pathfind_watch = BasicWatch::start();
 
     start.endpoint.assert_odd_8x8_position();
-    for end in ends {
-        end.endpoint.assert_odd_8x8_position();
-    }
+    // for end in ends {
+    //     end.endpoint.assert_odd_8x8_position();
+    // }
+    end.endpoint.assert_odd_position();
 
     // TODO: Benchmark this vs Vec (old version),
     // let mut valid_destinations: FxHashSet<Rail> = FxHashSet::new();
@@ -68,27 +71,29 @@ pub fn mori_start(
     let metric_successors = AtomicU64::new(1);
     let metric_start = AtomicCell::new(Instant::now());
 
-    let end_points: Vec<VPoint> = ends.iter().map(|r| r.endpoint).collect();
-    let end = VArea::from_arbitrary_points(&end_points).point_center();
+    // let end_points: Vec<VPoint> = ends.iter().map(|r| r.endpoint).collect();
+    // let end = VArea::from_arbitrary_points(&end_points).point_center();
+    // let end = end_points[0];
     debug!("Mori start {:?} end {:?}", start, end);
     // Forked function adds parents and cost params to each successor call. Used for limits
+    let start_compare = RailPointCompare::new(start);
     let pathfind = astar_mori(
-        &start,
+        &start_compare,
         |(_rail, parents, _total_cost)| {
             let (rail, parents) = parents.split_last().unwrap();
-            rail.successors(
+            rail.inner.successors(
                 parents,
                 surface,
-                &start,
+                &start_compare.inner,
                 &end,
                 &resource_cloud,
-                &search_area,
+                search_area,
                 &metric_successors,
                 &metric_start,
             )
         },
         |_p| 1,
-        |p| ends.contains(p),
+        |p| end == p.inner,
     );
     // let pathfind = threaded_searcher::<Rail, _, _>(
     //     start.clone(),
@@ -111,9 +116,12 @@ pub fn mori_start(
         let (path, path_cost) = pathfind;
         debug!("built path {} long with {}", path.len(), path_cost);
 
-        result = Some(path);
+        result = Some(path.into_iter().map(|c| c.inner).collect());
     } else {
-        warn!("failed to pathfind from {:?} to {:?}", start, ends);
+        warn!(
+            "failed to pathfind from {:?} to {:?}",
+            start_compare.inner, end
+        );
     }
 
     debug!("+++ Mori finished in {}", pathfind_watch,);
@@ -665,18 +673,19 @@ impl Rail {
 
     fn successors(
         &self,
-        parents: &[Rail],
+        parents_compare: &[RailPointCompare],
         surface: &VSurface,
         start: &Rail,
-        end: &VPoint,
+        end: &Rail,
+        // ends: &[Rail],
         resource_cloud: &ResourceCloud,
         // working_buffer: &mut SurfaceDiff,
         search_area: &VArea,
         metric_successors: &AtomicU64,
         metric_start: &AtomicCell<Instant>,
-    ) -> Vec<(Self, u32)> {
+    ) -> Vec<(RailPointCompare, u32)> {
         let metric_successors = metric_successors.fetch_add(1, Ordering::Relaxed);
-        if metric_successors % 1_000_000 == 0 {
+        if metric_successors % 100_000 == 0 {
             let now = Instant::now();
             // let metric_start = metric_start.swap(now);
             // let rate_paths_per_second = 1_000_000.0 / since_last;
@@ -686,7 +695,7 @@ impl Rail {
             debug!(
                 "successor {} spot parents {} in {} paths/second total {} seconds",
                 metric_successors.to_formatted_string(&LOCALE),
-                parents.len(),
+                parents_compare.len(),
                 (rate_paths_per_second as u32).to_formatted_string(&LOCALE),
                 since_last,
             );
@@ -698,7 +707,7 @@ impl Rail {
         // self.endpoint.assert_odd_8x8_position();
         // debug!("testing {:?}", self);
 
-        if parents.iter().any(|p| p == self) {
+        if parents_compare.iter().any(|p| p.inner == *self) {
             panic!("crashing found myself!");
         }
 
@@ -708,25 +717,43 @@ impl Rail {
         let mut res = Vec::new();
         if let Some(rail) =
             self.move_forward_step()
-                .into_buildable(surface, working_buffer, search_area, parents)
+                .into_buildable(surface, search_area, parents_compare, end)
         {
-            let cost = calculate_cost_for_point(&rail, start, end, resource_cloud, parents);
-            res.push((rail, cost));
+            let cost = calculate_cost_for_point(
+                &rail,
+                start,
+                &end.endpoint,
+                resource_cloud,
+                parents_compare,
+            );
+            res.push((RailPointCompare::new(rail), cost));
         }
 
         if let Some(rail) =
             self.move_left()
-                .into_buildable(surface, working_buffer, search_area, parents)
+                .into_buildable(surface, search_area, parents_compare, end)
         {
-            let cost = calculate_cost_for_point(&rail, start, end, resource_cloud, parents);
-            res.push((rail, cost));
+            let cost = calculate_cost_for_point(
+                &rail,
+                start,
+                &end.endpoint,
+                resource_cloud,
+                parents_compare,
+            );
+            res.push((RailPointCompare::new(rail), cost));
         }
         if let Some(rail) =
             self.move_right()
-                .into_buildable(surface, working_buffer, search_area, parents)
+                .into_buildable(surface, search_area, parents_compare, end)
         {
-            let cost = calculate_cost_for_point(&rail, start, end, resource_cloud, parents);
-            res.push((rail, cost))
+            let cost = calculate_cost_for_point(
+                &rail,
+                start,
+                &end.endpoint,
+                resource_cloud,
+                parents_compare,
+            );
+            res.push((RailPointCompare::new(rail), cost))
         }
         // debug!(
         //     "for {:?} found {}",
@@ -736,22 +763,41 @@ impl Rail {
         res
     }
 
-    fn into_buildable(
+    pub fn into_buildable(
         self,
         surface: &VSurface,
-        working_buffer: &mut SurfaceDiff,
         search_area: &VArea,
-        parents: &[Rail],
+        parents_compare: &[RailPointCompare],
+        end: &Rail,
     ) -> Option<Self> {
         self.endpoint.assert_odd_8x8_position();
         if !search_area.contains_point(&self.endpoint) {
             return None;
         }
 
+        // if let Some(found_goal) = ends.iter().find(|e| e.endpoint == self.endpoint) {
+        //     if *found_goal != self {
+        //         return None;
+        //     }
+        // }
+        // if end.endpoint == self.endpoint && end == &self {
+        //     return None;
+        // }
+
         // anti-recursion
-        if parents.iter().any(|p| p.endpoint == self.endpoint) {
-            return None;
-        }
+        // if parents_compare
+        //     .iter()
+        //     .filter(|p| p.inner.endpoint == self.endpoint)
+        //     .count()
+        //     > 1
+        // {
+        //     // return None;
+        //     error!("current {:?}", self);
+        //     for parent in parents_compare {
+        //         error!("parent {:?}", parent.inner);
+        //     }
+        //     panic!("shouldn't happen anymore?");
+        // }
         // extra anti-recursion
         // let mut set: HashSet<&Rail> = HashSet::new();
         // set.insert(&self);

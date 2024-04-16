@@ -357,6 +357,22 @@ impl VSurface {
         }
     }
 
+    pub fn draw_square_area(
+        &mut self,
+        area: &VArea,
+        empty_map: Pixel,
+        existing_map: Option<Pixel>,
+    ) {
+        self.draw_square(
+            area.start.x(),
+            area.end_x_exclusive(),
+            area.start.y(),
+            area.end_y_exclusive(),
+            empty_map,
+            existing_map,
+        )
+    }
+
     pub fn draw_square(
         &mut self,
         start_x: i32,

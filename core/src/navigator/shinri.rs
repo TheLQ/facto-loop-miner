@@ -11,24 +11,26 @@ use tracing::trace;
 /// Pathfinder v2, Josuiji Shinri
 ///
 /// Specialized algorithm for "expanding L" or "axis hugging",
-/// without ambiguous expensive Mori astar/BFS/DFS algorithm.
+/// without ambiguous expensive v1 Mori astar/BFS/DFS algorithm.
 ///
 /// Generate network by
 /// * Go straight to the edge of map. Crossed patches are ignored
 /// * Turn and navigate to next closest perpendicular patch
 /// * Continue until unplaceable rail
-/// * Go back, turn and try to go around
+/// * Go back, turn and try to go around, coming back to axis
+/// * Repeat until reaching goal
 /// * Select lowest possible solutions
 ///
 /// ```text
+/// From S > P
 /// ┌───────┐    ┌───────┐    ┌───────┐
 /// │s xxxxx│    │s xxxxx│    │s xxxxx│
 /// │      x│    │     xx│    │  xxx x│
 /// │      x│    │     xx│    │    x x│
-/// │      x│ -> │     xx│ or │    x x│
-/// │      x│    │     xx│    │ xxxx x│
+/// │      x│ -> │     xx│ or │ xxxx x│
 /// │      x│    │     xx│    │ x    x│
-/// │      x│    │     xx│    │ xxxx x│
+/// │      x│    │     xx│    │ xxxx P│
+/// │      P│    │     PP│    │    P P│
 /// └───────┘    └───────┘    └───────┘
 /// ```
 ///
@@ -93,12 +95,14 @@ where
     }
 }
 
+#[derive(PartialEq)]
 enum GoAroundMachine {
-    FirstLeg(u32),
-    Across(u32),
-    LastLeg(u32),
+    FirstLeg,
+    Across,
+    LastLeg,
 }
 
+/// Go perpendicular to axis, across, then back
 fn navigate_around<FS>(
     surface: &VSurface,
     path: &mut Vec<RailPointCompare>,
@@ -111,10 +115,14 @@ fn navigate_around<FS>(
     let mut new_path = Vec::new();
     let mut pop_existing = false;
 
+    let mut first_leg_steps = 0;
+    let mut across_steps = 0;
+    let mut last_leg_steps = 0;
+
     'machine: loop {
-        let mut state_stack = vec![GoAroundMachine::FirstLeg(0)];
+        let mut state_stack = vec![GoAroundMachine::FirstLeg];
         match state_stack.last().unwrap() {
-            GoAroundMachine::FirstLeg(steps) => {
+            GoAroundMachine::FirstLeg => {
                 if pop_existing {
                     path.pop().unwrap();
                     pop_existing = false;
@@ -138,8 +146,8 @@ fn navigate_around<FS>(
                     }
                 };
 
-                let steps = steps + 1;
-                for step in 0..steps {
+                first_leg_steps += 1;
+                for step in 0..first_leg_steps {
                     let leg_straight = added_rail
                         .last()
                         .unwrap()
@@ -174,35 +182,103 @@ fn navigate_around<FS>(
                 }
 
                 new_path.push(added_rail);
-                replace_end_of_slice(&mut state_stack, GoAroundMachine::FirstLeg(steps));
             }
-            GoAroundMachine::Across(steps) => {
+            GoAroundMachine::Across => {
                 let previous_leg_turn = new_path.last().unwrap().last().unwrap();
 
-                let mut added_rail = Vec::new();
+                let mut added_rail: Vec<Rail> = Vec::new();
 
-                let steps = steps + 1;
-                let mut next_rail = previous_leg_turn;
-                for step in 0..steps {
-                    let leg_straight = next_rail.move_forward_step().into_buildable(
-                        surface,
-                        search_area,
-                        path,
-                        end,
-                    );
+                across_steps += 1;
+                for step in 0..across_steps {
+                    let leg_straight = added_rail
+                        .last()
+                        .unwrap()
+                        .move_forward_step()
+                        .into_buildable(surface, search_area, path, end);
                     match leg_straight {
                         Some(leg_straight) => {
                             added_rail.push(leg_straight);
-                            next_rail = &leg_straight;
                         }
                         None => {
                             // can't go across, need first leg to go up one more
+                            if state_stack.ends_with(&[GoAroundMachine::Across]) {
+                                state_stack.pop();
+                            }
                             continue 'machine;
                         }
                     }
                 }
+
+                if !state_stack.ends_with(&[GoAroundMachine::Across]) {
+                    state_stack.push(GoAroundMachine::Across);
+                }
+
+                let leg_turn_last = added_rail.last().unwrap().move_right().into_buildable(
+                    surface,
+                    search_area,
+                    path,
+                    end,
+                );
+                match leg_turn_last {
+                    Some(next) => {
+                        added_rail.push(next);
+                    }
+                    None => {
+                        // can't go across and turn, need to go across one more
+                        continue 'machine;
+                    }
+                }
+
+                new_path.push(added_rail);
             }
-            GoAroundMachine::LastLeg(steps) => {}
+            GoAroundMachine::LastLeg => {
+                let previous_leg_turn = new_path.last().unwrap().last().unwrap();
+
+                let mut added_rail: Vec<Rail> = Vec::new();
+
+                last_leg_steps += 1;
+                for step in 0..last_leg_steps {
+                    let leg_straight = added_rail
+                        .last()
+                        .unwrap()
+                        .move_forward_step()
+                        .into_buildable(surface, search_area, path, end);
+                    match leg_straight {
+                        Some(leg_straight) => {
+                            added_rail.push(leg_straight);
+                        }
+                        None => {
+                            // can't go across, need first leg to go up one more
+                            if state_stack.ends_with(&[GoAroundMachine::LastLeg]) {
+                                state_stack.pop();
+                            }
+                            continue 'machine;
+                        }
+                    }
+                }
+
+                if !state_stack.ends_with(&[GoAroundMachine::LastLeg]) {
+                    state_stack.push(GoAroundMachine::LastLeg);
+                }
+
+                let leg_turn_last = added_rail.last().unwrap().move_left().into_buildable(
+                    surface,
+                    search_area,
+                    path,
+                    end,
+                );
+                match leg_turn_last {
+                    Some(next) => {
+                        added_rail.push(next);
+                    }
+                    None => {
+                        // can't go across and turn, need to go across one more
+                        continue 'machine;
+                    }
+                }
+
+                new_path.push(added_rail);
+            }
         }
     }
 }

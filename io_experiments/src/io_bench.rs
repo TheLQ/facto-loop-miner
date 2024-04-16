@@ -140,7 +140,7 @@ fn bench_read_io_uring(bencher: &mut test::Bencher) {
 
 const EXPECTED_SUM: usize = 224321692961;
 
-fn checksum_vec_usize(output: Vec<usize>) -> usize {
+pub fn checksum_vec_usize(output: &[usize]) -> usize {
     let total: usize = output.iter().sum();
     println!("total {}", total);
 
@@ -155,7 +155,7 @@ fn checksum_vec_usize(output: Vec<usize>) -> usize {
     total
 }
 
-pub fn checksum_vec_u8(output: Vec<u8>) -> usize {
+pub fn checksum_vec_u8(output: &[u8]) -> usize {
     let total: usize = output.iter().map(|v| *v as usize).sum();
     println!("total {}", total);
     // assert_eq!(total, EXPECTED_SUM * USIZE_BYTES);
