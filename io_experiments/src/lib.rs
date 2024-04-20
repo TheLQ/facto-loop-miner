@@ -20,15 +20,13 @@ mod io_uring_common;
 // mod io_uring_file;
 mod io_uring_file_copying;
 
-use crate::err::VIoError;
-use crate::io::{read_entire_file_mmap_copy, read_entire_file_usize_mmap_custom};
-use crate::io_bench::{checksum_vec_u8, checksum_vec_usize};
+use crate::io::read_entire_file_usize_mmap_custom;
+use crate::io_bench::checksum_vec_usize;
 use crate::io_uring::io_uring_main;
 pub use io::{
     get_mebibytes_of_slice_usize, read_entire_file, read_entire_file_varray_mmap_lib,
     write_entire_file,
 };
-use memmap2::MmapOptions;
 use num_format::{Locale, ToFormattedString};
 use std::path::{Path, PathBuf};
 use std::thread::sleep;

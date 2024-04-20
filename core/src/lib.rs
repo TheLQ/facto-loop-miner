@@ -41,7 +41,6 @@ extern crate core;
 
 use crate::admiral::executor::client::AdmiralClient;
 use crate::admiral::executor::entrypoint::admiral_entrypoint;
-use crate::admiral::lua_command::scanner::facscan_mega_export_entities_compressed;
 use crate::navigator::mori::{draw_rail, Rail, RailDirection};
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
@@ -51,7 +50,7 @@ use kiddo::float;
 use num_format::Locale;
 use num_traits::PrimInt;
 use std::path::Path;
-use tracing::{info, Level};
+use tracing::Level;
 
 mod admiral;
 mod gamedata;

@@ -1,4 +1,3 @@
-use crate::admiral::generators::rail90::{rail_degrees_east, rail_degrees_north};
 use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
 use crate::navigator::mori::RailDirection;

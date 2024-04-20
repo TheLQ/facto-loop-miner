@@ -1,7 +1,5 @@
 use crate::admiral::err::AdmiralResult;
 use crate::admiral::executor::client::AdmiralClient;
-use crate::admiral::generators::assembler_farm::AssemblerFarmGenerator;
-use opencv::core::Point2f;
 use tracing::error;
 
 pub fn admiral() {

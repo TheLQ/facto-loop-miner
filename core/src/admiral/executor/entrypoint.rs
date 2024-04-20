@@ -13,7 +13,7 @@ use crate::admiral::lua_command::lua_batch::LuaBatchCommand;
 use crate::admiral::lua_command::raw_lua::RawLuaCommand;
 use crate::admiral::lua_command::scanner::BaseScanner;
 use crate::admiral::lua_command::LuaCommand;
-use crate::navigator::mori::{draw_rail, Rail, RailDirection, RailMode};
+use crate::navigator::mori::{Rail, RailDirection};
 use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
 use crate::surfacev::bit_grid::BitGrid;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
