@@ -266,23 +266,17 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
                 base_start.clone(),
                 threaded_end.clone(),
                 &search_area,
-            );
+            )
+            .map(|path| (path, threaded_end));
             if found_path.is_some() {
                 break;
             }
         }
 
         let patch_center = patch_start.area.point_center();
-        surface.draw_square(
-            patch_center.x() - 20,
-            patch_center.x() + 20,
-            patch_center.y() - 20,
-            patch_center.y() + 20,
-            Pixel::CrudeOil,
-            None,
-        );
+        surface.draw_square_around_point(&patch_center, 20, Pixel::CrudeOil, None);
 
-        if let Some(path) = found_path {
+        if let Some((path, end)) = found_path {
             let last_path = path.last().unwrap().clone();
             write_rail(surface, &path)?;
             surface.add_rail(path);
@@ -298,8 +292,10 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
                 &last_path.endpoint,
                 &patch_start.area.point_center(),
             );
+            surface.draw_square_around_point(&end.endpoint, 5, Pixel::CrudeOil, None);
+
             // if made_paths > 4 {
-            //     surface.draw_debug_square(&last_path.endpoint);
+            // surface.draw_debug_square(&last_path.endpoint);
             //     surface.draw_debug_square(&patch_start.area.point_center());
             //
             //     error!("last {:?}", last_path.endpoint);
@@ -320,14 +316,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             if fail_counter >= 1 {
                 // debug_patch(surface, &patch_start);
 
-                surface.draw_square(
-                    base_start.endpoint.x() - 10,
-                    base_start.endpoint.x() + 10,
-                    base_start.endpoint.y() - 10,
-                    base_start.endpoint.y() + 10,
-                    Pixel::CrudeOil,
-                    None,
-                );
+                surface.draw_square_around_point(&base_start.endpoint, 10, Pixel::CrudeOil, None);
 
                 write_rail(surface, &patch_rail_ends).unwrap();
                 error!("over fail");

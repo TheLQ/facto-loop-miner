@@ -373,6 +373,23 @@ impl VSurface {
         )
     }
 
+    pub fn draw_square_around_point(
+        &mut self,
+        point: &VPoint,
+        padding: i32,
+        empty_map: Pixel,
+        existing_map: Option<Pixel>,
+    ) {
+        self.draw_square(
+            point.x() - padding,
+            point.x() + padding,
+            point.y() - padding,
+            point.y() + padding,
+            empty_map,
+            existing_map,
+        )
+    }
+
     pub fn draw_square(
         &mut self,
         start_x: i32,
