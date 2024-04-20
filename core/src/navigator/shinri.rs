@@ -1,4 +1,4 @@
-use crate::navigator::mori::{Rail, RailDirection, TurnType};
+use crate::navigator::mori::{Rail, RailDirection, RailMode, TurnType};
 use crate::navigator::rail_point_compare::RailPointCompare;
 use crate::surface::surface::Surface;
 use crate::surfacev::varea::VArea;
@@ -9,9 +9,9 @@ use itertools::Itertools;
 use opencv::core::add;
 use std::path::Path;
 use strum::Display;
-use tracing::{info, trace};
+use tracing::{error, info, trace};
 
-/// Pathfinder v2, Josuiji Shinri
+/// Pathfinder v2, Josuiji Shinri - Shinkansen
 ///
 /// Specialized algorithm for "expanding L" or "axis hugging",
 /// without ambiguous expensive v1 Mori astar/BFS/DFS algorithm.
@@ -46,13 +46,34 @@ pub fn shinri_start(
     let mut path = vec![RailPointCompare::new(start)];
 
     let test_x_success = |p: &RailPointCompare| p.inner.endpoint.x() >= end.endpoint.x();
-    let test_x_success = |p: &RailPointCompare| p.inner.endpoint.x() >= end.endpoint.x();
+    let test_y_success = |p: &RailPointCompare| p.inner.endpoint.y() >= end.endpoint.y();
 
-    navigate_axis_until(surface, &mut path, &test_x_success, search_area, &end);
+    let nav_result = navigate_axis_until(surface, &mut path, &test_x_success, search_area, &end);
+    match nav_result {
+        NavigateAxisResult::Done => {}
+        NavigateAxisResult::Crashed => {
+            error!("EARLY!");
+            return Some(path.into_iter().map(|c| c.inner).collect());
+        }
+    }
+
+    let the_turn = path.last().unwrap().clone().inner.move_left();
+    let Some(the_turn) = the_turn.into_buildable(surface, search_area, &path, &end) else {
+        panic!("todo")
+    };
+    path.push(RailPointCompare::new(the_turn));
+    info!("the turn >>>>>>>>>");
+
+    navigate_axis_until(surface, &mut path, &test_y_success, search_area, &end);
 
     // if test_x_success(&path.last().unwrap()) {}
 
     Some(path.into_iter().map(|c| c.inner).collect())
+}
+
+enum NavigateAxisResult {
+    Done,
+    Crashed,
 }
 
 fn navigate_axis_until<FS>(
@@ -61,23 +82,29 @@ fn navigate_axis_until<FS>(
     test_navigate_success: &FS,
     search_area: &VArea,
     end: &Rail,
-) where
+) -> NavigateAxisResult
+where
     FS: Fn(&RailPointCompare) -> bool,
 {
     loop {
         trace!("starting axis");
 
-        navigate_straight_until(surface, path, test_navigate_success, search_area, end);
+        go_straight_until(surface, path, test_navigate_success, search_area, end);
         if test_navigate_success(path.last().unwrap()) {
             trace!("navigated axis!");
             break;
         }
 
         let pre_around_length = path.len();
-        navigate_around(surface, path, test_navigate_success, search_area, &end);
+        let go_around_result =
+            navigate_around(surface, path, test_navigate_success, search_area, &end);
+        match go_around_result {
+            GoAroundResult::Done => {}
+            GoAroundResult::CrashedAtTurn => return NavigateAxisResult::Crashed,
+        }
 
         if test_navigate_success(path.last().unwrap()) {
-            panic!("no don't want this!");
+            error!("no don't want this!");
             break;
         }
     }
@@ -86,6 +113,8 @@ fn navigate_axis_until<FS>(
     //     StraightResult::NeedGoAround =>
     //
     // }
+
+    NavigateAxisResult::Done
 }
 
 struct ShinriLeg {
@@ -103,18 +132,18 @@ struct ShinriKansen {
     legs: Vec<ShinriLeg>,
 }
 
-enum StraightResult {
+enum GoStraightResult {
     NeedGoAround,
     NavigateSuccess,
 }
 
-fn navigate_straight_until<FS>(
+fn go_straight_until<FS>(
     surface: &VSurface,
     path: &mut Vec<RailPointCompare>,
     test_navigate_success: &FS,
     search_area: &VArea,
     end: &Rail,
-) -> StraightResult
+) -> GoStraightResult
 where
     FS: Fn(&RailPointCompare) -> bool,
 {
@@ -127,7 +156,7 @@ where
                 .into_buildable(surface, search_area, path, end)
         else {
             trace!("Hit issue at {:?}", edge.inner);
-            return StraightResult::NeedGoAround;
+            return GoStraightResult::NeedGoAround;
         };
 
         let next_compare = RailPointCompare::new(next);
@@ -137,7 +166,7 @@ where
         path.push(next_compare);
 
         if should_stop {
-            return StraightResult::NavigateSuccess;
+            return GoStraightResult::NavigateSuccess;
         }
     }
 }
@@ -197,6 +226,11 @@ impl GoAroundState {
     }
 }
 
+enum GoAroundResult {
+    Done,
+    CrashedAtTurn,
+}
+
 /// Go perpendicular to axis, across, then back
 fn navigate_around<FS>(
     surface: &VSurface,
@@ -204,7 +238,8 @@ fn navigate_around<FS>(
     test_navigate_success: FS,
     search_area: &VArea,
     end: &Rail,
-) where
+) -> GoAroundResult
+where
     FS: Fn(&RailPointCompare) -> bool,
 {
     let mut pop_existing = false;
@@ -233,7 +268,16 @@ fn navigate_around<FS>(
                     pop_existing
                 );
                 if pop_existing {
-                    path.pop().unwrap();
+                    let last = path.pop().unwrap();
+                    if last.inner.mode != RailMode::Straight {
+                        return GoAroundResult::CrashedAtTurn;
+                    }
+                    // assert_eq!(
+                    //     last.inner.mode,
+                    //     RailMode::Straight,
+                    //     "woah! {:?}",
+                    //     last.inner
+                    // );
                     pop_existing = false;
                 }
                 let axis_rail = &path.last().unwrap().inner;
@@ -428,6 +472,8 @@ fn navigate_around<FS>(
             path.push(RailPointCompare::new(leg_path));
         }
     }
+
+    GoAroundResult::Done
 }
 
 fn replace_end_of_slice<T>(slice: &mut [T], new_value: T) {

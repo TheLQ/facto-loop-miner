@@ -32,6 +32,8 @@ use tracing::{debug, error, warn};
 
 /// Pathfinder v1, Mori Calliope
 ///
+/// astar powered pathfinding.
+///
 /// Makes a dual rail + spacing, +6 straight or 90 degree turning, path of rail from start to end.
 /// Without collisions into any point on the Surface.
 pub fn mori_start(
