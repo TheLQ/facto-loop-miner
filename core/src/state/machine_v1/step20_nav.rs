@@ -55,7 +55,7 @@ impl Step for Step20 {
 }
 
 const MAX_PATCHES: usize = 200;
-const PATH_LIMIT: Option<u8> = Some(15);
+const PATH_LIMIT: Option<u8> = Some(8);
 // const PATH_LIMIT: Option<u8> = None;
 
 enum SpeculationTypes {
@@ -171,6 +171,11 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             continue;
         }
 
+        if patch_start.area.start.y() < 0 {
+            warn!("tmp skip below 0 patch");
+            continue;
+        }
+
         if let Some(limit) = PATH_LIMIT {
             if limit == made_paths {
                 debug!("path limit");
@@ -267,10 +272,20 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
                 threaded_end.clone(),
                 &search_area,
             )
+            .map(|v| {
+                if v.is_empty() {
+                    warn!("empty path!");
+                    None
+                } else {
+                    Some(v)
+                }
+            })
+            .flatten()
             .map(|path| (path, threaded_end));
             if found_path.is_some() {
                 break;
             }
+            break;
         }
 
         let patch_center = patch_start.area.point_center();
@@ -285,13 +300,8 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             destinations_iter.next();
             made_paths += 1;
 
-            // surface.draw_debug_square(&path[0].endpoint);
             params.metrics.borrow_mut().increment_slow("path-success");
 
-            let blocking_area = VArea::from_arbitrary_points_pair(
-                &last_path.endpoint,
-                &patch_start.area.point_center(),
-            );
             surface.draw_square_around_point(&end.endpoint, 5, Pixel::CrudeOil, None);
 
             // if made_paths > 4 {
@@ -324,10 +334,10 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             }
         }
 
-        if 1 + 1 == 2 {
-            info!("TOO BREAK");
-            break;
-        }
+        // if 1 + 1 == 2 {
+        //     info!("TOO BREAK");
+        //     break;
+        // }
 
         // if nearest_count >= 2 {
         //     info!("BREAK");
@@ -356,7 +366,7 @@ const CENTRAL_BASE_TILES_BY_RAIL_STEP: i32 =
 
 fn main_base_destinations_positive_side() -> Vec<VPoint> {
     let mut res = Vec::new();
-    for nearest_count in 1..PATH_LIMIT.unwrap() as i32 {
+    for nearest_count in 1..(PATH_LIMIT.unwrap() * 2) as i32 {
         res.push(
             VPoint::new(
                 CENTRAL_BASE_TILES_BY_RAIL_STEP,
@@ -369,7 +379,7 @@ fn main_base_destinations_positive_side() -> Vec<VPoint> {
 
 fn main_base_destinations_negative_side() -> Vec<VPoint> {
     let mut res = Vec::new();
-    for nearest_count in 1..PATH_LIMIT.unwrap() as i32 {
+    for nearest_count in 1..(PATH_LIMIT.unwrap() * 2) as i32 {
         res.push(
             VPoint::new(
                 CENTRAL_BASE_TILES_BY_RAIL_STEP,
