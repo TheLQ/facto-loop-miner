@@ -122,7 +122,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     }
     .into_iter()
     .cloned()
-    .skip(1)
+    .skip(10)
     .collect();
 
     // Wrap patches in a no touching zone, so rail doesn't drive between start and the patch
