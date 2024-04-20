@@ -1,6 +1,7 @@
 use crate::navigator::mori::{
     draw_rail, mori_start, write_rail, Rail, RailDirection, RAIL_STEP_SIZE, RAIL_STEP_SIZE_I32,
 };
+use crate::navigator::shinri::shinri_start;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::state::machine_v1::step10_base::{CENTRAL_BASE_TILES, REMOVE_RESOURCE_BASE_TILES};
@@ -121,6 +122,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     }
     .into_iter()
     .cloned()
+    .skip(1)
     .collect();
 
     // Wrap patches in a no touching zone, so rail doesn't drive between start and the patch
@@ -253,7 +255,13 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
 
         let mut found_path = None;
         for threaded_end in &patch_rail_ends {
-            found_path = mori_start(
+            // found_path = mori_start(
+            //     surface,
+            //     base_start.clone(),
+            //     threaded_end.clone(),
+            //     &search_area,
+            // );
+            found_path = shinri_start(
                 surface,
                 base_start.clone(),
                 threaded_end.clone(),
@@ -263,6 +271,16 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
                 break;
             }
         }
+
+        let patch_center = patch_start.area.point_center();
+        surface.draw_square(
+            patch_center.x() - 20,
+            patch_center.x() + 20,
+            patch_center.y() - 20,
+            patch_center.y() + 20,
+            Pixel::CrudeOil,
+            None,
+        );
 
         if let Some(path) = found_path {
             let last_path = path.last().unwrap().clone();
@@ -301,15 +319,6 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             fail_counter += 1;
             if fail_counter >= 1 {
                 // debug_patch(surface, &patch_start);
-                let patch_center = patch_start.area.point_center();
-                surface.draw_square(
-                    patch_center.x() - 20,
-                    patch_center.x() + 20,
-                    patch_center.y() - 20,
-                    patch_center.y() + 20,
-                    Pixel::CrudeOil,
-                    None,
-                );
 
                 surface.draw_square(
                     base_start.endpoint.x() - 10,
@@ -326,10 +335,10 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             }
         }
 
-        // if 1 + 1 == 2 {
-        //     info!("TOO BREAK");
-        //     break;
-        // }
+        if 1 + 1 == 2 {
+            info!("TOO BREAK");
+            break;
+        }
 
         // if nearest_count >= 2 {
         //     info!("BREAK");

@@ -1,12 +1,14 @@
-use crate::navigator::mori::{Rail, RailDirection};
+use crate::navigator::mori::{Rail, RailDirection, TurnType};
 use crate::navigator::rail_point_compare::RailPointCompare;
 use crate::surface::surface::Surface;
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crossbeam::queue::SegQueue;
+use itertools::Itertools;
 use opencv::core::add;
-use tracing::trace;
+use strum::Display;
+use tracing::{info, trace};
 
 /// Pathfinder v2, Josuiji Shinri
 ///
@@ -34,10 +36,23 @@ use tracing::trace;
 /// └───────┘    └───────┘    └───────┘
 /// ```
 ///
-pub fn shinri_start(surface: &Surface, start: Rail, end: Rail) -> Option<Vec<Rail>> {
+pub fn shinri_start(
+    surface: &VSurface,
+    start: Rail,
+    end: Rail,
+    search_area: &VArea,
+) -> Option<Vec<Rail>> {
     let mut path = vec![RailPointCompare::new(start)];
 
-    None
+    let test_x_success = |p: &RailPointCompare| p.inner.endpoint.x() >= end.endpoint.x();
+    let test_x_success = |p: &RailPointCompare| p.inner.endpoint.x() >= end.endpoint.x();
+
+    navigate_axis_until(surface, &mut path, &test_x_success, search_area, &end);
+    navigate_around(surface, &mut path, &test_x_success, search_area, &end);
+
+    // if test_x_success(&path.last().unwrap()) {}
+
+    Some(path.into_iter().map(|c| c.inner).collect())
 }
 
 fn navigate_axis_until<FS>(
@@ -55,6 +70,21 @@ fn navigate_axis_until<FS>(
     //     StraightResult::NeedGoAround =>
     //
     // }
+}
+
+struct ShinriLeg {
+    steps: u32,
+    turn: TurnType,
+}
+
+impl ShinriLeg {
+    fn try_advance() {}
+}
+
+enum TryAdvanceResult {}
+
+struct ShinriKansen {
+    legs: Vec<ShinriLeg>,
 }
 
 enum StraightResult {
@@ -87,6 +117,7 @@ where
         let next_compare = RailPointCompare::new(next);
         let should_stop = test_navigate_success(&next_compare);
 
+        trace!("advancing {:?}", next_compare.inner);
         path.push(next_compare);
 
         if should_stop {
@@ -95,7 +126,7 @@ where
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Display)]
 enum GoAroundMachine {
     FirstLeg,
     Across,
@@ -119,10 +150,19 @@ fn navigate_around<FS>(
     let mut across_steps = 0;
     let mut last_leg_steps = 0;
 
+    let mut state_stack = vec![GoAroundMachine::FirstLeg];
     'machine: loop {
-        let mut state_stack = vec![GoAroundMachine::FirstLeg];
+        trace!(
+            "State Stack {}",
+            state_stack.iter().map(|v| format!("{}", v)).join(",")
+        );
         match state_stack.last().unwrap() {
             GoAroundMachine::FirstLeg => {
+                trace!(
+                    "[FirstLeg] making straight {} pop_existing {}",
+                    first_leg_steps + 1,
+                    pop_existing
+                );
                 if pop_existing {
                     path.pop().unwrap();
                     pop_existing = false;
@@ -141,6 +181,7 @@ fn navigate_around<FS>(
                     }
                     None => {
                         // can't even turn, go back
+                        trace!("[FirstLeg] [FirstTurn] failed, move GoAround back");
                         pop_existing = true;
                         continue 'machine;
                     }
@@ -159,6 +200,7 @@ fn navigate_around<FS>(
                         }
                         None => {
                             // can't turn and go up, go back
+                            trace!("[FirstLeg] [Straight{}] failed, move GoAround back", step);
                             pop_existing = true;
                             continue 'machine;
                         }
@@ -177,13 +219,20 @@ fn navigate_around<FS>(
                     }
                     None => {
                         // can't turn and go up and turn again, go forward one more
+                        trace!("[FirstLeg] [SecondTurn] failed, more straight");
                         continue 'machine;
                     }
                 }
 
                 new_path.push(added_rail);
+                state_stack.push(GoAroundMachine::Across);
+                // trace!(
+                //     "[FirstLeg] End for {}",
+                //     state_stack.iter().map(|v| format!("{}", v)).join(",")
+                // );
             }
             GoAroundMachine::Across => {
+                trace!("[SecondLeg] making straight {}", across_steps + 1);
                 let previous_leg_turn = new_path.last().unwrap().last().unwrap();
 
                 let mut added_rail: Vec<Rail> = Vec::new();
@@ -192,6 +241,7 @@ fn navigate_around<FS>(
                 for step in 0..across_steps {
                     let leg_straight = added_rail
                         .last()
+                        .or_else(|| new_path.last().unwrap().last())
                         .unwrap()
                         .move_forward_step()
                         .into_buildable(surface, search_area, path, end);
@@ -201,9 +251,11 @@ fn navigate_around<FS>(
                         }
                         None => {
                             // can't go across, need first leg to go up one more
-                            if state_stack.ends_with(&[GoAroundMachine::Across]) {
+                            let pop_accross = state_stack.ends_with(&[GoAroundMachine::Across]);
+                            if pop_accross {
                                 state_stack.pop();
                             }
+                            trace!("[SecondLeg] [Straight{}] failed, move GoAround back", step);
                             continue 'machine;
                         }
                     }
@@ -225,13 +277,16 @@ fn navigate_around<FS>(
                     }
                     None => {
                         // can't go across and turn, need to go across one more
+                        trace!("[SecondLeg] [Turn] failed, more across");
                         continue 'machine;
                     }
                 }
 
                 new_path.push(added_rail);
+                state_stack.push(GoAroundMachine::LastLeg);
             }
             GoAroundMachine::LastLeg => {
+                trace!("[LastLeg] making straight {}", last_leg_steps + 1);
                 let previous_leg_turn = new_path.last().unwrap().last().unwrap();
 
                 let mut added_rail: Vec<Rail> = Vec::new();
@@ -240,6 +295,7 @@ fn navigate_around<FS>(
                 for step in 0..last_leg_steps {
                     let leg_straight = added_rail
                         .last()
+                        .or_else(|| new_path.last().unwrap().last())
                         .unwrap()
                         .move_forward_step()
                         .into_buildable(surface, search_area, path, end);
@@ -249,9 +305,11 @@ fn navigate_around<FS>(
                         }
                         None => {
                             // can't go across, need first leg to go up one more
-                            if state_stack.ends_with(&[GoAroundMachine::LastLeg]) {
+                            let pop_accross = state_stack.ends_with(&[GoAroundMachine::LastLeg]);
+                            if pop_accross {
                                 state_stack.pop();
                             }
+                            trace!("[ThirdLeg] [Straight{}] failed, move GoAround back", step);
                             continue 'machine;
                         }
                     }
@@ -273,12 +331,24 @@ fn navigate_around<FS>(
                     }
                     None => {
                         // can't go across and turn, need to go across one more
+                        trace!("[ThirdLeg] [Turn] failed, more third leg");
                         continue 'machine;
                     }
                 }
 
                 new_path.push(added_rail);
+                info!(
+                    "end of stack first {} second {} third {}",
+                    first_leg_steps, across_steps, last_leg_steps
+                );
+                break;
             }
+        }
+    }
+
+    for leg_paths in new_path {
+        for leg_path in leg_paths {
+            path.push(RailPointCompare::new(leg_path));
         }
     }
 }

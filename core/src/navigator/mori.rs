@@ -22,7 +22,6 @@ use itertools::Itertools;
 use num_format::Locale::pa;
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
-use rustc_hash::{FxHashSet, FxHasher};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
