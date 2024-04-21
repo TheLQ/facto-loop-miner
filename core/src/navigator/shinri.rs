@@ -7,6 +7,7 @@ use crate::surfacev::vsurface::VSurface;
 use crossbeam::queue::SegQueue;
 use itertools::Itertools;
 use opencv::core::add;
+use std::cmp::max;
 use std::path::Path;
 use strum::Display;
 use tracing::{error, info, trace};
@@ -38,6 +39,45 @@ use tracing::{error, info, trace};
 /// ```
 ///
 pub fn shinri_start(
+    surface: &VSurface,
+    start: Rail,
+    end: Rail,
+    search_area: &VArea,
+) -> Option<Vec<Rail>> {
+    info!("----- Shinri start {:?} to {:?}", start, end);
+
+    let test_x_success = |p: &Rail| p.endpoint.x() >= end.endpoint.x();
+    let test_y_success = |p: &Rail| p.endpoint.y() >= end.endpoint.y();
+
+    let mut state_stack = vec![ShinriKansen {
+        kind: ShinriKansenKind::GoStraight,
+        path: Vec::new(),
+        steps: None,
+    }];
+
+    loop {
+        let value = state_stack
+            .last_mut()
+            .unwrap()
+            .navigate(surface, search_area, &start);
+        if test_x_success(state_stack.last().unwrap().path.last().unwrap()) {
+            break;
+        } else {
+            let mut next = ShinriKansen {
+                kind: ShinriKansenKind::GoAroundAway,
+                steps: None,
+                path: Vec::new(),
+            };
+            let res = next.navigate(surface, search_area, &start);
+            state_stack.push(next);
+            break;
+        }
+    }
+
+    Some(state_stack.into_iter().map(|v| v.path).flatten().collect())
+}
+
+pub fn shinri_start_2(
     surface: &VSurface,
     start: Rail,
     end: Rail,
@@ -115,26 +155,6 @@ where
     // }
 
     Ok(())
-}
-
-struct ShinriLeg {
-    steps: u32,
-    turn: TurnType,
-}
-
-impl ShinriLeg {
-    fn try_advance() {}
-}
-
-enum TryAdvanceResult {}
-
-struct ShinriKansen {
-    legs: Vec<ShinriLeg>,
-}
-
-enum GoStraightResult {
-    NeedGoAround,
-    NavigateSuccess,
 }
 
 fn go_straight_until<FS>(
@@ -478,4 +498,167 @@ where
 fn replace_end_of_slice<T>(slice: &mut [T], new_value: T) {
     assert!(!slice.is_empty(), "slice is empty");
     slice[slice.len() - 1] = new_value;
+}
+
+struct ShinriLeg {
+    steps: u32,
+    turn: TurnType,
+}
+
+impl ShinriLeg {
+    fn try_advance() {}
+}
+
+enum TryAdvanceResult {}
+
+// struct ShinriKansen {
+//     legs: Vec<ShinriLeg>,
+// }
+
+enum GoStraightResult {
+    NeedGoAround,
+    NavigateSuccess,
+}
+
+enum NavigateResult {
+    Done,
+    DecrementPrevious,
+}
+
+struct ShinriKansen {
+    path: Vec<Rail>,
+    steps: Option<u32>,
+    kind: ShinriKansenKind,
+}
+
+enum ShinriKansenKind {
+    GoStraight,
+    GoAroundAway,
+    GoAroundStraight,
+    GoAroundBack,
+}
+
+impl ShinriKansen {
+    #[must_use]
+    pub fn navigate(
+        &mut self,
+        surface: &VSurface,
+        search_area: &VArea,
+        begin: &Rail,
+    ) -> NavigateResult {
+        self.path.clear();
+        match self.kind {
+            ShinriKansenKind::GoStraight | ShinriKansenKind::GoAroundStraight => {
+                let move_result = inner_move_forward_loop(
+                    surface,
+                    search_area,
+                    Some(begin),
+                    self.steps,
+                    &mut self.path,
+                );
+                match move_result {
+                    InnerMoveForwardResult::Success(steps) => {
+                        self.steps = Some(steps);
+                        return NavigateResult::Done;
+                    }
+                    InnerMoveForwardResult::NotEnoughSteps => panic!("????"),
+                    InnerMoveForwardResult::NoSteps => panic!("????"),
+                };
+            }
+            ShinriKansenKind::GoAroundAway => {
+                inner_move_around(surface, search_area, begin, self, TurnType::Turn90)
+            }
+            ShinriKansenKind::GoAroundBack => {
+                inner_move_around(surface, search_area, begin, self, TurnType::Turn270)
+            }
+        }
+    }
+}
+
+enum InnerMoveForwardResult {
+    NoSteps,
+    NotEnoughSteps,
+    Success(u32),
+}
+
+#[must_use]
+fn inner_move_forward_loop(
+    surface: &VSurface,
+    search_area: &VArea,
+    begin: Option<&Rail>,
+    to_steps: Option<u32>,
+    result: &mut Vec<Rail>,
+) -> InnerMoveForwardResult {
+    let mut last_step = 0;
+    for step in 0..to_steps.unwrap_or(u32::MAX) {
+        let leg_straight = result
+            .last()
+            .unwrap_or_else(|| begin.unwrap())
+            .move_forward_step()
+            .into_buildable_simple(surface, search_area);
+        match leg_straight {
+            Some(leg_straight) => {
+                result.push(leg_straight);
+            }
+            None => {
+                trace!("[Straight] max {} failed", step);
+                break;
+            }
+        }
+        last_step = step;
+    }
+
+    if let Some(max_steps) = to_steps {
+        if max_steps != last_step {
+            return InnerMoveForwardResult::NotEnoughSteps;
+        }
+    }
+
+    if result.is_empty() {
+        InnerMoveForwardResult::NoSteps
+    } else {
+        InnerMoveForwardResult::Success(last_step + 1)
+    }
+}
+
+fn inner_move_around(
+    surface: &VSurface,
+    search_area: &VArea,
+    begin: &Rail,
+    kansen: &mut ShinriKansen,
+    turn_type: TurnType,
+) -> NavigateResult {
+    let next = begin
+        .move_rotating(TurnType::Turn90)
+        .into_buildable_simple(surface, search_area)
+        .map(|next| kansen.path.push(next));
+
+    let next = match next {
+        None => return NavigateResult::DecrementPrevious,
+        Some(first) => {
+            inner_move_forward_loop(surface, search_area, None, kansen.steps, &mut kansen.path)
+        }
+    };
+
+    let next = match next {
+        InnerMoveForwardResult::Success(steps) => {
+            kansen.steps = Some(steps);
+            kansen
+                .path
+                .last()
+                .unwrap()
+                .move_rotating(turn_type.swap())
+                .into_buildable_simple(surface, search_area)
+        }
+        InnerMoveForwardResult::NotEnoughSteps => return NavigateResult::DecrementPrevious,
+        InnerMoveForwardResult::NoSteps => panic!("????"),
+    };
+
+    match next {
+        Some(next) => {
+            kansen.path.push(next);
+            return NavigateResult::Done;
+        }
+        None => return NavigateResult::DecrementPrevious,
+    }
 }

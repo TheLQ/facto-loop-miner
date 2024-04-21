@@ -55,7 +55,7 @@ impl Step for Step20 {
 }
 
 const MAX_PATCHES: usize = 200;
-const PATH_LIMIT: Option<u8> = Some(8);
+const PATH_LIMIT: Option<u8> = Some(1);
 // const PATH_LIMIT: Option<u8> = None;
 
 enum SpeculationTypes {
