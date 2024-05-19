@@ -325,11 +325,11 @@ impl VSurface {
     }
 
     pub fn log_pixel_stats(&self, debug_message: &str) {
-        let mut metrics = FastMetrics::new(format!("log_pixel_stats XY {}", debug_message));
-        for pixel in self.pixels.iter_xy_pixels() {
-            metrics.increment(FastMetric::VSurface_Pixel(*pixel));
-        }
-        metrics.log_final();
+        // let mut metrics = FastMetrics::new(format!("log_pixel_stats XY {}", debug_message));
+        // for pixel in self.pixels.iter_xy_pixels() {
+        //     metrics.increment(FastMetric::VSurface_Pixel(*pixel));
+        // }
+        // metrics.log_final();
 
         let mut metrics = FastMetrics::new(format!("log_pixel_stats Entities {}", debug_message));
         for entity in self.pixels.iter_entities() {

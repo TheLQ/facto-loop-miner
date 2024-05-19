@@ -68,7 +68,11 @@ pub fn shinri_start(
                 steps: None,
                 path: Vec::new(),
             };
-            let res = next.navigate(surface, search_area, &start);
+            let res = next.navigate(
+                surface,
+                search_area,
+                state_stack.last().unwrap().last_rail(),
+            );
             state_stack.push(next);
             break;
         }
@@ -572,6 +576,10 @@ impl ShinriKansen {
                 inner_move_around(surface, search_area, begin, self, TurnType::Turn270)
             }
         }
+    }
+
+    pub fn last_rail(&self) -> &Rail {
+        self.path.last().unwrap()
     }
 }
 

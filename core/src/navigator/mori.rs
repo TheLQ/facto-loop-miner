@@ -8,6 +8,7 @@ use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori_cost::calculate_cost_for_point;
 use crate::navigator::rail_point_compare::RailPointCompare;
 use crate::navigator::resource_cloud::ResourceCloud;
+use crate::navigator::PathingResult;
 use crate::simd_diff::SurfaceDiff;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
@@ -21,7 +22,7 @@ use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
 use num_format::Locale::pa;
 use num_format::ToFormattedString;
-use pathfinding::prelude::astar_mori;
+use pathfinding::prelude::{astar_mori, dfs};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
@@ -41,14 +42,14 @@ pub fn mori_start(
     start: Rail,
     end: Rail,
     search_area: &VArea,
-) -> Option<Vec<Rail>> {
+) -> PathingResult {
     let pathfind_watch = BasicWatch::start();
 
     start.endpoint.assert_odd_8x8_position();
     // for end in ends {
     //     end.endpoint.assert_odd_8x8_position();
     // }
-    end.endpoint.assert_odd_position();
+    end.endpoint.assert_odd_8x8_position();
 
     // TODO: Benchmark this vs Vec (old version),
     // let mut valid_destinations: FxHashSet<Rail> = FxHashSet::new();
@@ -75,7 +76,10 @@ pub fn mori_start(
     // let end_points: Vec<VPoint> = ends.iter().map(|r| r.endpoint).collect();
     // let end = VArea::from_arbitrary_points(&end_points).point_center();
     // let end = end_points[0];
-    debug!("Mori start {:?} end {:?}", start, end);
+    debug!(
+        "Mori start {:?} end {:?} inside {:?}",
+        start, end, search_area
+    );
     // Forked function adds parents and cost params to each successor call. Used for limits
     let start_compare = RailPointCompare::new(start);
     let pathfind = astar_mori(
@@ -96,6 +100,24 @@ pub fn mori_start(
         |_p| 1,
         |p| end == p.inner,
     );
+    // let pathfind = dfs(
+    //     &start_compare,
+    //     |(_rail, parents, _total_cost)| {
+    //         let (rail, parents) = parents.split_last().unwrap();
+    //         rail.inner.successors(
+    //             parents,
+    //             surface,
+    //             &start_compare.inner,
+    //             &end,
+    //             &resource_cloud,
+    //             search_area,
+    //             &metric_successors,
+    //             &metric_start,
+    //         )
+    //     },
+    //     |_p| 1,
+    //     |p| end == p.inner,
+    // );
     // let pathfind = threaded_searcher::<Rail, _, _>(
     //     start.clone(),
     //     |parents| {
@@ -112,18 +134,24 @@ pub fn mori_start(
     //     },
     //     |p| valid_destinations.contains(p),
     // );
-    let mut result = None;
-    if let Some(pathfind) = pathfind {
-        let (path, path_cost) = pathfind;
-        debug!("built path {} long with {}", path.len(), path_cost);
-
-        result = Some(path.into_iter().map(|c| c.inner).collect());
-    } else {
-        warn!(
-            "failed to pathfind from {:?} to {:?}",
-            start_compare.inner, end
-        );
-    }
+    let result = match pathfind {
+        Ok((path, path_cost)) => {
+            debug!("built path {} long with {}", path.len(), path_cost);
+            PathingResult::Route(path.into_iter().map(|c| c.inner).collect())
+        }
+        Err((inner_map, parents)) => {
+            // let entries = inner_map
+            //     .into_iter()
+            //     .map(|v| parents.get_index(v.index).unwrap())
+            //     .collect();
+            let entries = parents.into_iter().map(|(node, _v)| node.inner).collect();
+            warn!(
+                "failed to pathfind from {:?} to {:?}",
+                start_compare.inner, end
+            );
+            PathingResult::FailingDebug(entries)
+        }
+    };
 
     debug!("+++ Mori finished in {}", pathfind_watch,);
 
@@ -254,7 +282,7 @@ impl Rail {
         let mut res = Vec::new();
         match &self.mode {
             RailMode::Straight => {
-                for rail in &self.build_dual_straight_behind_rail(RAIL_STEP_SIZE) {
+                for rail in self.build_dual_straight_behind_rail(RAIL_STEP_SIZE) {
                     res.extend_from_slice(&rail.endpoint.get_entity_area_2x2());
                 }
             }
@@ -672,6 +700,7 @@ impl Rail {
         next
     }
 
+    /// Main next possible rails from here
     fn successors(
         &self,
         parents_compare: &[RailPointCompare],
@@ -686,7 +715,7 @@ impl Rail {
         metric_start: &AtomicCell<Instant>,
     ) -> Vec<(RailPointCompare, u32)> {
         let metric_successors = metric_successors.fetch_add(1, Ordering::Relaxed);
-        if metric_successors % 100_000 == 0 {
+        if metric_successors % 1_000 == 0 {
             let now = Instant::now();
             // let metric_start = metric_start.swap(now);
             // let rate_paths_per_second = 1_000_000.0 / since_last;
@@ -705,7 +734,7 @@ impl Rail {
         // if parents.len() > 800 {
         //     return Vec::new();
         // }
-        // self.endpoint.assert_odd_8x8_position();
+        self.endpoint.assert_odd_8x8_position();
         // debug!("testing {:?}", self);
 
         if parents_compare.iter().any(|p| p.inner == *self) {
@@ -854,7 +883,7 @@ impl Rail {
         // }
     }
 
-    fn is_area_buildable(&self, surface: &VSurface) -> bool {
+    pub fn is_area_buildable(&self, surface: &VSurface) -> bool {
         self.area()
             .into_iter()
             .all(|area_point| is_buildable_point_ref(surface, area_point))
@@ -1047,6 +1076,10 @@ fn is_buildable_point_u32<'p>(surface: &Surface, point: &'p PointU32) -> Option<
 }
 
 pub fn write_rail(surface: &mut VSurface, path: &[Rail]) -> VResult<()> {
+    write_rail_with_pixel(surface, path, Pixel::Rail)
+}
+
+pub fn write_rail_with_pixel(surface: &mut VSurface, path: &[Rail], pixel: Pixel) -> VResult<()> {
     // let special_endpoint_pixels: Vec<VPoint> = path.iter().map(|v| v.endpoint).collect();
 
     let mut total_rail = 0;
@@ -1054,7 +1087,7 @@ pub fn write_rail(surface: &mut VSurface, path: &[Rail]) -> VResult<()> {
         // debug!("writing rail start at {:?}", path_rail.endpoint);
         for path_area_point in path_rail.area() {
             total_rail += 1;
-            surface.set_pixel(path_area_point, Pixel::Rail)?;
+            surface.set_pixel(path_area_point, pixel)?;
             // debug!("writing rail at {:?}", path_area_point);
 
             // TODO: wtf??
@@ -1075,6 +1108,9 @@ pub fn write_rail(surface: &mut VSurface, path: &[Rail]) -> VResult<()> {
             // }
             // surface.set_pixel_point_u32(new_pixel, path_area_point);
         }
+        surface
+            .set_pixel(path_rail.endpoint, Pixel::IronOre)
+            .unwrap();
     }
     debug!("wrote {} rail", total_rail);
     Ok(())

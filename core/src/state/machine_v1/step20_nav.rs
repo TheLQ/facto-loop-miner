@@ -1,7 +1,9 @@
 use crate::navigator::mori::{
-    draw_rail, mori_start, write_rail, Rail, RailDirection, RAIL_STEP_SIZE, RAIL_STEP_SIZE_I32,
+    draw_rail, mori_start, write_rail, write_rail_with_pixel, Rail, RailDirection, RAIL_STEP_SIZE,
+    RAIL_STEP_SIZE_I32,
 };
-use crate::navigator::shinri::shinri_start;
+use crate::navigator::shinri::{shinri_start, shinri_start_2};
+use crate::navigator::PathingResult;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::state::machine_v1::step10_base::{CENTRAL_BASE_TILES, REMOVE_RESOURCE_BASE_TILES};
@@ -16,7 +18,7 @@ use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_EIGHT, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
 use kiddo::{Manhattan, NearestNeighbour};
 use opencv::core::Point;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 pub struct Step20 {}
 
@@ -55,7 +57,7 @@ impl Step for Step20 {
 }
 
 const MAX_PATCHES: usize = 200;
-const PATH_LIMIT: Option<u8> = Some(1);
+const PATH_LIMIT: Option<u8> = Some(5);
 // const PATH_LIMIT: Option<u8> = None;
 
 enum SpeculationTypes {
@@ -129,15 +131,15 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     for patch in &ordered_patches {
         let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(patch);
 
-        let padding = 6;
-        surface.draw_square(
-            patch_top_left.x() + padding,
-            patch_bottom_right.x() - padding,
-            patch_top_left.y() + padding,
-            patch_bottom_right.y() - padding,
-            Pixel::SteelChest,
-            Some(patch.resource),
-        )
+        // let padding = 6;
+        // surface.draw_square(
+        //     patch_top_left.x() + padding,
+        //     patch_bottom_right.x() - padding,
+        //     patch_top_left.y() + padding,
+        //     patch_bottom_right.y() - padding,
+        //     Pixel::SteelChest,
+        //     Some(patch.resource),
+        // )
     }
 
     // for end in &ordered_patches {
@@ -194,6 +196,16 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             );
         }
 
+        // Search area
+        // let search_area = VArea::from_arbitrary_points(
+        //     &VPoint::new(CENTRAL_BASE_TILES, -REMOVE_RESOURCE_BASE_TILES),
+        //     &VPoint::new(surface.get_radius() as i32, REMOVE_RESOURCE_BASE_TILES),
+        // );
+        let search_area = VArea::from_arbitrary_points_pair(
+            &VPoint::new(CENTRAL_BASE_TILES, -surface.get_radius_i32()),
+            &VPoint::new(surface.get_radius_i32(), surface.get_radius_i32()),
+        );
+
         // let Some(destination) = destinations.next() else {
         //     debug!("Out of destinations, stopping");
         //     break;
@@ -222,20 +234,31 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     RailDirection::Right,
         // );
         // .move_forward_step();
-        let mut patch_rail_ends = Vec::new();
-        {
+        let patch_rail_ends = {
+            let mut ends = Vec::new();
             let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(&patch_start);
 
-            patch_rail_ends.push(Rail::new_straight(patch_top_left, RailDirection::Right));
-            patch_rail_ends.push(Rail::new_straight(patch_bottom_right, RailDirection::Left));
+            ends.push(Rail::new_straight(patch_top_left, RailDirection::Right));
+            ends.push(Rail::new_straight(patch_bottom_right, RailDirection::Left));
 
             // opposite corners
             let patch_bottom_left = VPoint::new(patch_top_left.x(), patch_bottom_right.y());
             let patch_top_right = VPoint::new(patch_bottom_right.x(), patch_top_left.y());
 
-            patch_rail_ends.push(Rail::new_straight(patch_bottom_left, RailDirection::Right));
-            patch_rail_ends.push(Rail::new_straight(patch_top_right, RailDirection::Left));
-        }
+            ends.push(Rail::new_straight(patch_bottom_left, RailDirection::Right));
+            ends.push(Rail::new_straight(patch_top_right, RailDirection::Left));
+
+            ends.retain(|v| {
+                if !search_area.contains_point(&v.endpoint) || !v.is_area_buildable(&surface) {
+                    trace!("removing bad point {:?}", v);
+                    false
+                } else {
+                    true
+                }
+            });
+
+            ends
+        };
 
         // let end = start
         //     .move_forward_step()
@@ -244,93 +267,96 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
         //     .move_forward_step();
         let base_start = Rail::new_straight(*destination, RailDirection::Right);
 
-        // Search area
-        // let search_area = VArea::from_arbitrary_points(
-        //     &VPoint::new(CENTRAL_BASE_TILES, -REMOVE_RESOURCE_BASE_TILES),
-        //     &VPoint::new(surface.get_radius() as i32, REMOVE_RESOURCE_BASE_TILES),
-        // );
-        let search_area = VArea::from_arbitrary_points_pair(
-            &VPoint::new(CENTRAL_BASE_TILES, -surface.get_radius_i32()),
-            &VPoint::new(surface.get_radius_i32(), surface.get_radius_i32()),
-        );
         // surface.draw_square_area(&search_area, Pixel::Highlighter, None);
         // if 1 + 1 == 2 {
         //     return Ok(());
         // }
 
-        let mut found_path = None;
+        let mut found_path: Option<(PathingResult, &Rail)> = None;
         for threaded_end in &patch_rail_ends {
-            // found_path = mori_start(
-            //     surface,
-            //     base_start.clone(),
-            //     threaded_end.clone(),
-            //     &search_area,
-            // );
-            found_path = shinri_start(
+            let path_result = mori_start(
                 surface,
                 base_start.clone(),
                 threaded_end.clone(),
                 &search_area,
-            )
-            .map(|v| {
-                if v.is_empty() {
-                    warn!("empty path!");
-                    None
-                } else {
-                    Some(v)
-                }
-            })
-            .flatten()
-            .map(|path| (path, threaded_end));
-            if found_path.is_some() {
+            );
+            // .map(|path| (path, threaded_end));
+
+            found_path = Some((path_result, threaded_end));
+            if let Some((PathingResult::Route(_), _)) = &found_path {
                 break;
             }
-            break;
+
+            // found_path = shinri_start_2(
+            //     surface,
+            //     base_start.clone(),
+            //     threaded_end.clone(),
+            //     &search_area,
+            // )
+            // .map(|v| {
+            //     if v.is_empty() {
+            //         warn!("empty path!");
+            //         None
+            //     } else {
+            //         Some(v)
+            //     }
+            // })
+            // .flatten()
+            // .map(|path| (path, threaded_end));
         }
+        let found_path = found_path.unwrap();
 
         let patch_center = patch_start.area.point_center();
         surface.draw_square_around_point(&patch_center, 20, Pixel::CrudeOil, None);
 
-        if let Some((path, end)) = found_path {
-            let last_path = path.last().unwrap().clone();
-            write_rail(surface, &path)?;
-            surface.add_rail(path);
+        match found_path {
+            (PathingResult::Route(path), end) => {
+                let last_path = path.last().unwrap().clone();
+                write_rail(surface, &path)?;
+                surface.add_rail(path);
 
-            // destination no longer usable
-            destinations_iter.next();
-            made_paths += 1;
+                // destination no longer usable
+                destinations_iter.next();
+                made_paths += 1;
 
-            params.metrics.borrow_mut().increment_slow("path-success");
+                params.metrics.borrow_mut().increment_slow("path-success");
 
-            surface.draw_square_around_point(&end.endpoint, 5, Pixel::CrudeOil, None);
+                // surface.draw_square_around_point(&end.endpoint, 5, Pixel::CrudeOil, None);
 
-            // if made_paths > 4 {
-            // surface.draw_debug_square(&last_path.endpoint);
-            //     surface.draw_debug_square(&patch_start.area.point_center());
-            //
-            //     error!("last {:?}", last_path.endpoint);
-            //     surface
-            //         .set_pixel(last_path.endpoint, Pixel::CopperOre)
-            //         .unwrap();
-            //     error!("patch {:?}", patch_start);
-            //     error!("patch center {:?}", patch_start.area.point_center());
-            //     surface
-            //         .set_pixel(patch_start.area.point_center(), Pixel::CrudeOil)
-            //         .unwrap();
-            //     break;
-            // }
-        } else {
-            params.metrics.borrow_mut().increment_slow("path-failure");
+                // if made_paths > 4 {
+                // surface.draw_debug_square(&last_path.endpoint);
+                //     surface.draw_debug_square(&patch_start.area.point_center());
+                //
+                //     error!("last {:?}", last_path.endpoint);
+                //     surface
+                //         .set_pixel(last_path.endpoint, Pixel::CopperOre)
+                //         .unwrap();
+                //     error!("patch {:?}", patch_start);
+                //     error!("patch center {:?}", patch_start.area.point_center());
+                //     surface
+                //         .set_pixel(patch_start.area.point_center(), Pixel::CrudeOil)
+                //         .unwrap();
+                //     break;
+                // }
+            }
+            (PathingResult::FailingDebug(path), end) => {
+                params.metrics.borrow_mut().increment_slow("path-failure");
 
-            fail_counter += 1;
-            if fail_counter >= 1 {
-                // debug_patch(surface, &patch_start);
+                fail_counter += 1;
+                if fail_counter >= 1 {
+                    write_rail(surface, &path).unwrap();
 
-                surface.draw_square_around_point(&base_start.endpoint, 10, Pixel::CrudeOil, None);
+                    surface.draw_square_around_point(
+                        &base_start.endpoint,
+                        10,
+                        Pixel::CrudeOil,
+                        None,
+                    );
+                    write_rail_with_pixel(surface, &[end.clone()], Pixel::CrudeOil).unwrap();
 
-                write_rail(surface, &patch_rail_ends).unwrap();
-                error!("over fail");
-                break;
+                    error!("over fail");
+                    break;
+                }
             }
         }
 
