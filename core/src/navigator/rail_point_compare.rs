@@ -1,7 +1,7 @@
 use crate::navigator::mori::Rail;
 use std::hash::{Hash, Hasher};
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct RailPointCompare {
     pub inner: Rail,
 }
@@ -12,16 +12,16 @@ impl RailPointCompare {
     }
 }
 
-impl PartialEq<Self> for RailPointCompare {
-    fn eq(&self, other: &Self) -> bool {
-        self.inner.endpoint.eq(&other.inner.endpoint)
-    }
-}
-
-impl Eq for RailPointCompare {}
-
-impl Hash for RailPointCompare {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.inner.endpoint.hash(state)
-    }
-}
+// impl PartialEq<Self> for RailPointCompare {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.inner.endpoint.eq(&other.inner.endpoint)
+//     }
+// }
+//
+// impl Eq for RailPointCompare {}
+//
+// impl Hash for RailPointCompare {
+//     fn hash<H: Hasher>(&self, state: &mut H) {
+//         self.inner.endpoint.hash(state)
+//     }
+// }

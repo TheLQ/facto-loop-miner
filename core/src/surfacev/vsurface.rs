@@ -407,11 +407,7 @@ impl VSurface {
                 }
 
                 let pixel_to_set = if self.get_pixel(&cur) != Pixel::Empty {
-                    if let Some(existing_map) = existing_map {
-                        existing_map
-                    } else {
-                        empty_map
-                    }
+                    existing_map.unwrap_or(empty_map)
                 } else {
                     empty_map
                 };

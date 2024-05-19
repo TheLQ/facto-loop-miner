@@ -45,11 +45,11 @@ pub fn mori_start(
 ) -> PathingResult {
     let pathfind_watch = BasicWatch::start();
 
-    start.endpoint.assert_odd_8x8_position();
+    start.endpoint.assert_odd_16x16_position();
     // for end in ends {
     //     end.endpoint.assert_odd_8x8_position();
     // }
-    end.endpoint.assert_odd_8x8_position();
+    end.endpoint.assert_odd_16x16_position();
 
     // TODO: Benchmark this vs Vec (old version),
     // let mut valid_destinations: FxHashSet<Rail> = FxHashSet::new();
@@ -166,12 +166,6 @@ pub fn mori_start(
 
     result
 }
-
-// #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-// pub struct RailPoint {
-//     pub(crate) x: i32,
-//     pub(crate) y: i32,
-// }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum RailMode {
@@ -715,7 +709,7 @@ impl Rail {
         metric_start: &AtomicCell<Instant>,
     ) -> Vec<(RailPointCompare, u32)> {
         let metric_successors = metric_successors.fetch_add(1, Ordering::Relaxed);
-        if metric_successors % 1_000 == 0 {
+        if metric_successors % 10_000 == 0 {
             let now = Instant::now();
             // let metric_start = metric_start.swap(now);
             // let rate_paths_per_second = 1_000_000.0 / since_last;
@@ -734,7 +728,7 @@ impl Rail {
         // if parents.len() > 800 {
         //     return Vec::new();
         // }
-        self.endpoint.assert_odd_8x8_position();
+        self.endpoint.assert_odd_16x16_position();
         // debug!("testing {:?}", self);
 
         if parents_compare.iter().any(|p| p.inner == *self) {
@@ -794,7 +788,7 @@ impl Rail {
     }
 
     pub fn into_buildable_simple(self, surface: &VSurface, search_area: &VArea) -> Option<Self> {
-        self.endpoint.assert_odd_8x8_position();
+        self.endpoint.assert_odd_16x16_position();
         if !search_area.contains_point(&self.endpoint) {
             return None;
         }
@@ -979,72 +973,6 @@ impl Hash for Rail {
         self.endpoint.hash(state)
     }
 }
-
-// impl RailPoint {
-//     fn round(&self) -> Self {
-//         let mut next = self.clone();
-//         next.x = if next.x % 2 == 0 { next.x + 1 } else { next.x };
-//         next.y = if next.y % 2 == 0 { next.y + 1 } else { next.y };
-//         next
-//     }
-//
-//     fn to_game_points(&self, surface: &Surface) -> Vec<PointU32> {
-//         [
-//             self.clone(),
-//             {
-//                 let mut v = self.clone();
-//                 v.x -= 1;
-//                 v
-//             },
-//             {
-//                 let mut v = self.clone();
-//                 v.y -= 1;
-//                 v
-//             },
-//             {
-//                 let mut v = self.clone();
-//                 v.x -= 1;
-//                 v.y -= 1;
-//                 v
-//             },
-//         ]
-//         .iter()
-//         .filter_map(|v| v.to_point_u32_surface(surface))
-//         .collect()
-//     }
-//
-//     fn is_negative(&self) -> bool {
-//         self.x < 0 || self.y < 0
-//     }
-//
-//     pub fn to_point_u32(&self) -> Option<PointU32> {
-//         if self.is_negative() {
-//             None
-//         } else {
-//             Some(PointU32 {
-//                 x: self.x.try_into().unwrap(),
-//                 y: self.y.try_into().unwrap(),
-//             })
-//         }
-//     }
-//
-//     fn to_point_u32_surface(&self, surface: &Surface) -> Option<PointU32> {
-//         self.to_point_u32().and_then(|p| {
-//             if p.x < surface.width && p.y < surface.height {
-//                 Some(p)
-//             } else {
-//                 None
-//             }
-//         })
-//     }
-//
-//     pub fn from_point_u32(point: PointU32) -> Self {
-//         RailPoint {
-//             x: point.x as i32,
-//             y: point.y as i32,
-//         }
-//     }
-// }
 
 fn is_buildable_point_ref(surface: &VSurface, point: VPoint) -> bool {
     if surface.is_point_out_of_bounds(&point) {

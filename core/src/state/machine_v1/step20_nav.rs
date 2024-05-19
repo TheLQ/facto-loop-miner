@@ -57,7 +57,7 @@ impl Step for Step20 {
 }
 
 const MAX_PATCHES: usize = 200;
-const PATH_LIMIT: Option<u8> = Some(5);
+const PATH_LIMIT: Option<u8> = Some(10);
 // const PATH_LIMIT: Option<u8> = None;
 
 enum SpeculationTypes {
@@ -124,22 +124,22 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     }
     .into_iter()
     .cloned()
-    .skip(10)
+    // .skip(10)
     .collect();
 
     // Wrap patches in a no touching zone, so rail doesn't drive between start and the patch
     for patch in &ordered_patches {
         let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(patch);
 
-        // let padding = 6;
-        // surface.draw_square(
-        //     patch_top_left.x() + padding,
-        //     patch_bottom_right.x() - padding,
-        //     patch_top_left.y() + padding,
-        //     patch_bottom_right.y() - padding,
-        //     Pixel::SteelChest,
-        //     Some(patch.resource),
-        // )
+        let padding = 6;
+        surface.draw_square(
+            patch_top_left.x() + padding,
+            patch_bottom_right.x() - padding,
+            patch_top_left.y() + padding,
+            patch_bottom_right.y() - padding,
+            Pixel::SteelChest,
+            Some(patch.resource),
+        )
     }
 
     // for end in &ordered_patches {
@@ -260,11 +260,6 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
             ends
         };
 
-        // let end = start
-        //     .move_forward_step()
-        //     .move_forward_step()
-        //     .move_forward_step()
-        //     .move_forward_step();
         let base_start = Rail::new_straight(*destination, RailDirection::Right);
 
         // surface.draw_square_area(&search_area, Pixel::Highlighter, None);
@@ -387,8 +382,8 @@ fn main_base_destinations_base_corner() -> Vec<VPoint> {
     res
 }
 
-const CENTRAL_BASE_TILES_BY_RAIL_STEP: i32 =
-    CENTRAL_BASE_TILES + (RAIL_STEP_SIZE_I32 - (CENTRAL_BASE_TILES % RAIL_STEP_SIZE_I32));
+const CENTRAL_BASE_TILES_BY_RAIL_STEP: i32 = CENTRAL_BASE_TILES
+    + ((RAIL_STEP_SIZE_I32 * 2) - (CENTRAL_BASE_TILES % (RAIL_STEP_SIZE_I32 * 2)));
 
 fn main_base_destinations_positive_side() -> Vec<VPoint> {
     let mut res = Vec::new();
@@ -448,7 +443,7 @@ fn patches_by_radial_base_corner(surface: &VSurface, resource: Pixel) -> Vec<&VP
         .collect()
 }
 
-#[allow(clippy::never_loop)]
+// #[allow(clippy::never_loop)]
 fn patches_by_cross_sign_expanding<'a>(
     surface: &'a VSurface,
     resources: &[Pixel],
@@ -552,13 +547,13 @@ fn base_bottom_right_corner() -> VPoint {
 
 fn get_expanded_patch_points(patch: &VPatch) -> (VPoint, VPoint) {
     // main corners
-    let mut patch_top_left = patch.area.start + SHIFT_POINT_ONE;
-    patch_top_left.assert_odd_8x8_position();
+    let mut patch_top_left = patch.area.start.move_round16_down() + SHIFT_POINT_ONE;
+    patch_top_left.assert_odd_16x16_position();
 
-    let mut patch_bottom_right = patch.area.point_bottom_left() + SHIFT_POINT_ONE;
-    patch_bottom_right.assert_odd_8x8_position();
+    let mut patch_bottom_right = patch.area.point_bottom_left().move_round16_up() + SHIFT_POINT_ONE;
+    patch_bottom_right.assert_odd_16x16_position();
 
-    for _ in 0..3 {
+    for _ in 0..2 {
         patch_top_left = patch_top_left - SHIFT_POINT_EIGHT;
         patch_bottom_right = patch_bottom_right + SHIFT_POINT_EIGHT;
     }

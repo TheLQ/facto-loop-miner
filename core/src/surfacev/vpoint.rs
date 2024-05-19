@@ -112,6 +112,23 @@ impl VPoint {
         assert_eq!((self.y - 1) % 8, 0, "y={} is not 8", self.y);
     }
 
+    pub fn assert_odd_16x16_position(&self) {
+        self.assert_odd_position();
+        assert_eq!((self.x - 1) % 16, 0, "x={} is not 16", self.x);
+        assert_eq!((self.y - 1) % 16, 0, "y={} is not 16", self.y);
+    }
+
+    // pub fn is_odd_16x16_position(&self) -> bool {
+    //     return (self.x - 1) % 16 == 0 && (self.y - 1) % 16 == 0;
+    // }
+    // pub fn is_odd_16x16_for_x(&self) -> bool {
+    //     (self.x - 1) % 16 == 0
+    // }
+    //
+    // pub fn is_odd_16x16_for_y(&self) -> bool {
+    //     (self.y - 1) % 16 == 0
+    // }
+
     pub fn move_x(&self, steps: i32) -> Self {
         VPoint {
             x: self.x + steps,
@@ -141,10 +158,25 @@ impl VPoint {
         self.move_round_down(3)
     }
 
+    pub fn move_round16_down(&self) -> Self {
+        self.move_round_down(16)
+    }
+
     fn move_round_down(&self, size: i32) -> Self {
         VPoint {
             x: self.x - (self.x % size),
             y: self.y - (self.y % size),
+        }
+    }
+
+    pub fn move_round16_up(&self) -> Self {
+        self.move_round_up(16)
+    }
+
+    fn move_round_up(&self, size: i32) -> Self {
+        VPoint {
+            x: self.x + (size - (self.x % size)),
+            y: self.y + (size - (self.y % size)),
         }
     }
 
