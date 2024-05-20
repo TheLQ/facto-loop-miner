@@ -1,7 +1,5 @@
 use crate::admiral::generators::rail90::{
-    dual_rail_east, dual_rail_empty_index_to_xy, dual_rail_north, dual_rail_north_empty,
-    dual_rail_south, dual_rail_south_empty, dual_rail_west, dual_rail_west_empty,
-    rail_degrees_east, rail_degrees_north, rail_degrees_west,
+    dual_rail_east, dual_rail_north, dual_rail_south, dual_rail_west,
 };
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::LuaCommand;
@@ -20,16 +18,14 @@ use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
-use num_format::Locale::pa;
 use num_format::ToFormattedString;
-use pathfinding::prelude::{astar_mori, dfs};
+use pathfinding::prelude::astar_mori;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use strum::AsRefStr;
-use tracing::{debug, error, warn};
+use tracing::{debug, warn};
 
 /// Pathfinder v1, Mori Calliope
 ///

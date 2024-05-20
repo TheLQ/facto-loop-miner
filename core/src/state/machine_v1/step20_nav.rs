@@ -1,22 +1,19 @@
 use crate::navigator::mori::{
-    draw_rail, mori_start, write_rail, write_rail_with_pixel, Rail, RailDirection, RAIL_STEP_SIZE,
-    RAIL_STEP_SIZE_I32,
+    mori_start, write_rail, write_rail_with_pixel, Rail, RailDirection, RAIL_STEP_SIZE_I32,
 };
-use crate::navigator::shinri::{shinri_start, shinri_start_2};
+use crate::navigator::path_grouper::{base_bottom_right_corner, get_patches};
 use crate::navigator::PathingResult;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::state::machine_v1::step10_base::{CENTRAL_BASE_TILES, REMOVE_RESOURCE_BASE_TILES};
-use crate::surface::patch::{map_vpatch_to_kdtree, DiskPatch, Patch};
+use crate::surface::patch::{DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
-use crate::surface::sector::SectorSide;
 use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::err::VResult;
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_EIGHT, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
-use kiddo::{Manhattan, NearestNeighbour};
 use opencv::core::Point;
 use tracing::{debug, error, info, trace, warn};
 

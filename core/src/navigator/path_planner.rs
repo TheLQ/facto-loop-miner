@@ -66,7 +66,7 @@ fn find_all_permutations(input: Vec<Vec<PatchPlan>>) -> Vec<Vec<PatchPlan>> {
     let mut result: Vec<Vec<PatchPlan>> = Vec::new();
     for entry in input {
         for permutation in entry.iter().permutations(input_len) {
-            result.push(permutation.iter().cloned().collect());
+            result.push(permutation.into_iter().cloned().collect());
         }
     }
     result

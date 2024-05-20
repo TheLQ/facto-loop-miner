@@ -4,7 +4,6 @@ use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 use std::path::Path;
 
-use itertools::*;
 use num_format::ToFormattedString;
 use opencv::core::Mat;
 use serde::{Deserialize, Serialize};
@@ -19,7 +18,6 @@ use crate::LOCALE;
 use facto_loop_miner_io::varray::{VArray, EMPTY_XY_INDEX};
 
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
-use crate::surfacev::varea::VArea;
 use facto_loop_miner_io::{
     get_mebibytes_of_slice_usize, read_entire_file_varray_mmap_lib, write_entire_file,
 };

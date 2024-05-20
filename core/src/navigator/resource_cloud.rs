@@ -28,8 +28,8 @@ impl ResourceCloud {
     }
 
     pub fn from_surface(surface: &VSurface) -> Self {
-        let mut positions: Vec<[f32; 2]> = Vec::new();
-        let mut pixels = Vec::new();
+        let positions: Vec<[f32; 2]> = Vec::new();
+        let pixels = Vec::new();
 
         // for patch in surface.get_patches_slice() {
         //     for patch_pixel in &patch.pixel_indexes {
