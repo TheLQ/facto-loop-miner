@@ -208,6 +208,12 @@ impl VPoint {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
     }
 
+    /// Opposite of manhattan distance
+    pub fn distance_bird(&self, other: &Self) -> f32 {
+        let squared_euclidean = self.x.abs_diff(other.x).pow(2) + self.y.abs_diff(other.y).pow(2);
+        (squared_euclidean as f32).sqrt()
+    }
+
     pub fn subtract_x(&self, other: &Self) -> i32 {
         self.x - other.x
     }

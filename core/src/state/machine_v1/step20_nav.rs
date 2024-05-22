@@ -53,7 +53,6 @@ impl Step for Step20 {
     }
 }
 
-const MAX_PATCHES: usize = 200;
 const PATH_LIMIT: Option<u8> = Some(10);
 // const PATH_LIMIT: Option<u8> = None;
 
@@ -111,18 +110,11 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     let base_corner = base_bottom_right_corner();
     let mut made_paths: u8 = 0;
 
-    let ordered_patches: Vec<VPatch> = match 2 {
-        1 => patches_by_radial_base_corner(surface, Pixel::IronOre),
-        2 => patches_by_cross_sign_expanding(
-            surface,
-            &[Pixel::IronOre, Pixel::CopperOre, Pixel::Stone, Pixel::Coal],
-        ),
-        _ => panic!("asd"),
-    }
-    .into_iter()
-    .cloned()
-    // .skip(10)
-    .collect();
+    let ordered_patches: Vec<_> = get_patches(surface)
+        .into_iter()
+        .cloned()
+        // .skip(10)
+        .collect();
 
     // Wrap patches in a no touching zone, so rail doesn't drive between start and the patch
     for patch in &ordered_patches {
@@ -408,117 +400,6 @@ fn main_base_destinations_negative_side() -> Vec<VPoint> {
     res
 }
 
-fn ordered_patches_by_base_side(surface: &Surface, side: SectorSide) {}
-
-fn patches_by_radial_base_corner(surface: &VSurface, resource: Pixel) -> Vec<&VPatch> {
-    let patches: Vec<&VPatch> = surface
-        .get_patches_slice()
-        .iter()
-        // remove inner base patches
-        .filter(|p| {
-            !p.area
-                .start
-                .is_within_center_radius(REMOVE_RESOURCE_BASE_TILES as u32)
-        })
-        // temporary left of box only
-        .filter(|p| {
-            (-REMOVE_RESOURCE_BASE_TILES..REMOVE_RESOURCE_BASE_TILES).contains(&p.area.start.y())
-                && p.area.start.x() > REMOVE_RESOURCE_BASE_TILES
-        })
-        .filter(|v| v.resource == resource)
-        .collect();
-    let cloud = map_vpatch_to_kdtree(patches.iter());
-
-    let base_corner = base_bottom_right_corner();
-    let nearest: Vec<NearestNeighbour<f32, usize>> =
-        cloud.nearest_n::<Manhattan>(&base_corner.to_slice_f32(), MAX_PATCHES);
-    debug!("found {} from {}", nearest.len(), cloud.size());
-
-    nearest
-        .iter()
-        .map(|neighbor| patches[neighbor.item])
-        .collect()
-}
-
-// #[allow(clippy::never_loop)]
-fn patches_by_cross_sign_expanding<'a>(
-    surface: &'a VSurface,
-    resources: &[Pixel],
-) -> Vec<&'a VPatch> {
-    let cross_sides = [Rail::new_straight(
-        VPoint::new(REMOVE_RESOURCE_BASE_TILES, 0),
-        RailDirection::Right,
-    )];
-    let mut patches = Vec::new();
-    for cross_side in cross_sides {
-        for perpendicular_scan_area in (1i32..).flat_map(|i| [i, -i]) {
-            if perpendicular_scan_area.unsigned_abs() * RAIL_STEP_SIZE > surface.get_radius() {
-                break;
-            }
-
-            let mut parallel_scan_area = 0;
-            loop {
-                parallel_scan_area += 1;
-
-                // let scan_start = {
-                //     let mut rail = cross_side.clone();
-                //     for _ in 0..(parallel_scan_area - 1) {
-                //         rail = rail.move_forward_step();
-                //     }
-                //     rail
-                // };
-
-                let scan_start = {
-                    let mut rail = cross_side.move_forward_step_num(parallel_scan_area - 1);
-                    // trace!("start moving forward {}", parallel_scan_area - 1);
-                    rail = if perpendicular_scan_area > 0 {
-                        rail.move_force_rotate_clockwise(1)
-                    } else {
-                        rail.move_force_rotate_clockwise(3)
-                    };
-                    rail = rail.move_forward_step_num(perpendicular_scan_area.unsigned_abs() - 1);
-                    // trace!(
-                    //     "start moving side {}",
-                    //     perpendicular_scan_area.unsigned_abs() - 1
-                    // );
-                    rail
-                };
-
-                let scan_end = {
-                    let mut rail = cross_side.move_forward_step_num(parallel_scan_area);
-                    // trace!("end moving forward {}", parallel_scan_area);
-                    rail = if perpendicular_scan_area > 0 {
-                        rail.move_force_rotate_clockwise(1)
-                    } else {
-                        rail.move_force_rotate_clockwise(3)
-                    };
-                    rail = rail.move_forward_step_num(perpendicular_scan_area.unsigned_abs());
-                    // trace!("end moving side {}", perpendicular_scan_area.unsigned_abs());
-                    rail
-                };
-
-                if !scan_end
-                    .endpoint
-                    .is_within_center_radius(surface.get_radius())
-                {
-                    break;
-                }
-
-                let search_area =
-                    VArea::from_arbitrary_points_pair(&scan_start.endpoint, &scan_end.endpoint);
-                for patch in surface.get_patches_slice() {
-                    if resources.contains(&patch.resource)
-                        && search_area.contains_point(&patch.area.start)
-                    {
-                        patches.push(patch);
-                    }
-                }
-            }
-        }
-    }
-    patches
-}
-
 fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {
     let mut current = patch.corner_point_u32();
     while surface.get_pixel_point_u32(&current) != &Pixel::EdgeWall {
@@ -536,10 +417,6 @@ fn right_mid_edge_point(surface: &Surface) -> Point {
         x: surface.width as i32,
         y: (surface.height / 2) as i32,
     }
-}
-
-fn base_bottom_right_corner() -> VPoint {
-    VPoint::new(CENTRAL_BASE_TILES, CENTRAL_BASE_TILES)
 }
 
 fn get_expanded_patch_points(patch: &VPatch) -> (VPoint, VPoint) {

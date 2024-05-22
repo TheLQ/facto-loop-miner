@@ -1,9 +1,7 @@
 use crate::navigator::mori::Rail;
-use crate::surfacev::varea::VArea;
-use crate::surfacev::vpatch::VPatch;
+use crate::navigator::path_grouper::PatchGroup;
 use crate::surfacev::vsurface::VSurface;
 use itertools::Itertools;
-use tracing::info;
 
 /// Solve 2 core problems
 /// - Get an ordered list of patches to navigate to
@@ -15,28 +13,26 @@ use tracing::info;
 /// Total paths = N *
 pub fn get_patches_to_drive(surface: &VSurface) -> Vec<Vec<PatchPlan>> {
     let result = Vec::new();
-    info!("Getting for {} entries", self.entries.len());
+    // info!("Getting for {} entries", self.entries.len());
     result
 }
 
 const DEST_SIZE: usize = 4;
 
-struct PatchPlanWithDestinations {
-    patch_indexes: Vec<usize>,
-    area: VArea,
+struct PatchPlanAnyDestinations {
+    patch_group: PatchGroup,
     destinations: [Rail; DEST_SIZE],
 }
 
 #[derive(Clone)]
 pub struct PatchPlan {
-    patch_indexes: Vec<usize>,
-    area: VArea,
+    patch_group: PatchGroup,
     entry_rail: Rail,
 }
 
 /// Find all combinations of `a[1,2,3,4], b[1,2,3,4], ... = 4^n` sized Vec.
 /// This is huge.
-fn find_all_combinations(plans: &[PatchPlanWithDestinations]) -> Vec<Vec<PatchPlan>> {
+fn find_all_combinations(plans: &[PatchPlanAnyDestinations]) -> Vec<Vec<PatchPlan>> {
     let mut result = Vec::new();
     for plan in plans {
         if result.is_empty() {
@@ -72,7 +68,7 @@ fn find_all_permutations(input: Vec<Vec<PatchPlan>>) -> Vec<Vec<PatchPlan>> {
     result
 }
 
-impl PatchPlanWithDestinations {
+impl PatchPlanAnyDestinations {
     // fn to_patch_outpost(&self, destination_index: usize) -> PatchOutpost {
     //     PatchOutpost {
     //         patch_indexes: self.patch_indexes.clone(),
@@ -83,8 +79,7 @@ impl PatchPlanWithDestinations {
 
     fn to_patch_outposts(&self) -> [PatchPlan; DEST_SIZE] {
         self.destinations.clone().map(|destination| PatchPlan {
-            patch_indexes: self.patch_indexes.clone(),
-            area: self.area.clone(),
+            patch_group: self.patch_group.clone(),
             entry_rail: destination.clone(),
         })
     }

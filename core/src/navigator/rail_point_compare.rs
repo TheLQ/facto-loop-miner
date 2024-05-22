@@ -1,5 +1,5 @@
 use crate::navigator::mori::Rail;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct RailPointCompare {

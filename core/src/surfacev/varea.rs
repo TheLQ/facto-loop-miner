@@ -2,7 +2,7 @@ use crate::surfacev::vpoint::VPoint;
 use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct VArea {
     pub start: VPoint,
     pub width: u32,

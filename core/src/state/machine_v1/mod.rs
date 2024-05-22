@@ -14,6 +14,7 @@ mod step20_nav;
 mod step99_death;
 
 pub use step03_crop::CROP_RADIUS;
+pub use step10_base::CENTRAL_BASE_TILES;
 pub use step10_base::REMOVE_RESOURCE_BASE_TILES;
 
 pub fn new_v1_machine() -> Machine {
