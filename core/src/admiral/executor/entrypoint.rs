@@ -220,19 +220,19 @@ pub fn admiral_entrypoint_turn_viewer(admiral: &mut AdmiralClient) -> AdmiralRes
 
     {
         let command = rail_degrees_south(VPoint::new(0, 0) + SHIFT_POINT_ONE);
-        let command = LuaBatchCommand::new(Vec::from(command));
+        let command = LuaBatchCommand::new(command);
         admiral.execute_checked_command(command.into_boxed())?;
 
         let command = rail_degrees_west(VPoint::new(32, 0) + SHIFT_POINT_ONE);
-        let command = LuaBatchCommand::new(Vec::from(command));
+        let command = LuaBatchCommand::new(command);
         admiral.execute_checked_command(command.into_boxed())?;
 
         let command = rail_degrees_north(VPoint::new(64, 0) + SHIFT_POINT_ONE);
-        let command = LuaBatchCommand::new(Vec::from(command));
+        let command = LuaBatchCommand::new(command);
         admiral.execute_checked_command(command.into_boxed())?;
 
         let command = rail_degrees_east(VPoint::new(96, 0) + SHIFT_POINT_ONE);
-        let command = LuaBatchCommand::new(Vec::from(command));
+        let command = LuaBatchCommand::new(command);
         admiral.execute_checked_command(command.into_boxed())?;
     }
 

@@ -74,13 +74,12 @@ pub fn group_nearby_patches(surface: &VSurface, patches: &[&VPatch]) -> Vec<Patc
                 .iter()
                 .enumerate()
                 // get all of our group ids, then get the actual patch they point to
-                .map(|(search_index, group_id_opt)| {
+                .filter_map(|(search_index, group_id_opt)| {
                     group_id_opt
                         .filter(|search_group_id| *search_group_id == group_id)
                         .map(|_search_group_id| patches[search_index])
                 })
                 // unwrap Some to get our patches
-                .flatten()
                 .collect()
         } else {
             patch_group = vec![patches[source_index]];

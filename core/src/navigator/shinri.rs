@@ -72,7 +72,7 @@ pub fn shinri_start(
         }
     }
 
-    Some(state_stack.into_iter().map(|v| v.path).flatten().collect())
+    Some(state_stack.into_iter().flat_map(|v| v.path).collect())
 }
 
 pub fn shinri_start_2(
@@ -107,13 +107,14 @@ pub fn shinri_start_2(
     path.push(RailPointCompare::new(the_turn));
     info!("the turn >>>>>>>>>");
 
-    navigate_axis_until(surface, &mut path, &test_y_success, search_area, &end);
+    navigate_axis_until(surface, &mut path, &test_y_success, search_area, &end).expect("wtf");
 
     // if test_x_success(&path.last().unwrap()) {}
 
     Some(path.into_iter().map(|c| c.inner).collect())
 }
 
+#[derive(Debug)]
 enum NavigateAxisErr {
     Crashed,
 }
@@ -557,11 +558,11 @@ impl ShinriKansen {
                 match move_result {
                     InnerMoveForwardResult::Success(steps) => {
                         self.steps = Some(steps);
-                        return NavigateResult::Done;
+                        NavigateResult::Done
                     }
                     InnerMoveForwardResult::NotEnoughSteps => panic!("????"),
                     InnerMoveForwardResult::NoSteps => panic!("????"),
-                };
+                }
             }
             ShinriKansenKind::GoAroundAway => {
                 inner_move_around(surface, search_area, begin, self, TurnType::Turn90)
