@@ -1,5 +1,5 @@
 use crate::navigator::mori::Rail;
-use crate::navigator::path_grouper::PatchGroup;
+use crate::navigator::path_grouper::MineBase;
 use crate::surfacev::vsurface::VSurface;
 use itertools::Itertools;
 
@@ -20,13 +20,13 @@ pub fn get_patches_to_drive(surface: &VSurface) -> Vec<Vec<PatchPlan>> {
 const DEST_SIZE: usize = 4;
 
 struct PatchPlanAnyDestinations {
-    patch_group: PatchGroup,
+    patch_group: MineBase,
     destinations: [Rail; DEST_SIZE],
 }
 
 #[derive(Clone)]
 pub struct PatchPlan {
-    patch_group: PatchGroup,
+    patch_group: MineBase,
     entry_rail: Rail,
 }
 

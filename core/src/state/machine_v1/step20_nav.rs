@@ -1,7 +1,7 @@
 use crate::navigator::mori::{
     mori_start, write_rail, write_rail_with_pixel, Rail, RailDirection, RAIL_STEP_SIZE_I32,
 };
-use crate::navigator::path_grouper::{base_bottom_right_corner, get_patches};
+use crate::navigator::path_grouper::{base_bottom_right_corner, get_mine_bases_by_batch};
 use crate::navigator::PathingResult;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
@@ -110,7 +110,7 @@ fn navigate_patches_to_base(surface: &mut VSurface, params: &mut StepParams) -> 
     let base_corner = base_bottom_right_corner();
     let mut made_paths: u8 = 0;
 
-    let ordered_patches: Vec<_> = get_patches(surface)
+    let ordered_patches: Vec<_> = get_mine_bases_by_batch(surface)
         .into_iter()
         .cloned()
         // .skip(10)

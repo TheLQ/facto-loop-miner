@@ -13,25 +13,42 @@ use tracing::debug;
 
 const MAX_PATCHES: usize = 200;
 
-pub fn get_patches(surface: &VSurface) -> Vec<&VPatch> {
-    let ordered_patches = match 2 {
-        1 => patches_by_radial_base_corner(surface, Pixel::IronOre),
-        2 => patches_by_cross_sign_expanding(
-            surface,
-            &[Pixel::IronOre, Pixel::CopperOre, Pixel::Stone, Pixel::Coal],
-        ),
-        _ => panic!("asd"),
-    };
-    ordered_patches
-}
-
 #[derive(Clone)]
-pub struct PatchGroup {
+pub struct MineBase {
     patch_indexes: Vec<usize>,
     area: VArea,
 }
 
-pub fn group_nearby_patches(surface: &VSurface, patches: &[&VPatch]) -> Vec<PatchGroup> {
+pub struct MineBatch {
+    mines: Vec<MineBase>,
+}
+
+pub fn get_mine_bases_by_batch(surface: &VSurface) -> Vec<MineBatch> {
+    let patch_groups = group_nearby_patches(
+        surface,
+        &[Pixel::IronOre, Pixel::CopperOre, Pixel::Stone, Pixel::Coal],
+    );
+
+    // let ordered_patches = match 2 {
+    //     1 => patches_by_radial_base_corner(surface, Pixel::IronOre),
+    //     // 2 => patches_by_cross_sign_expanding(
+    //     //     surface,
+    //     //     &[Pixel::IronOre, Pixel::CopperOre, Pixel::Stone, Pixel::Coal],
+    //     // ),
+    //     _ => panic!("asd"),
+    // };
+    // ordered_patches
+    patches_by_cross_sign_expanding(patch_groups)
+}
+
+/// Second grouping pass (after opencv), now by grouping different resource patches
+pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineBase> {
+    let patches: Vec<&VPatch> = surface
+        .get_patches_slice()
+        .iter()
+        .filter(|patch| resources.contains(&patch.resource))
+        .collect();
+
     let patch_range = 0..patches.len();
     let mut group_ids: Vec<Option<usize>> = patch_range.clone().map(|v| None).collect();
 
@@ -44,7 +61,6 @@ pub fn group_nearby_patches(surface: &VSurface, patches: &[&VPatch]) -> Vec<Patc
             if source_index == other_index || group_ids[other_index].is_some() {
                 continue;
             }
-
             let source_patch = patches[source_index];
             let other_patch = patches[other_index];
 
@@ -79,7 +95,6 @@ pub fn group_nearby_patches(surface: &VSurface, patches: &[&VPatch]) -> Vec<Patc
                         .filter(|search_group_id| *search_group_id == group_id)
                         .map(|_search_group_id| patches[search_index])
                 })
-                // unwrap Some to get our patches
                 .collect()
         } else {
             patch_group = vec![patches[source_index]];
@@ -92,9 +107,8 @@ pub fn group_nearby_patches(surface: &VSurface, patches: &[&VPatch]) -> Vec<Patc
                 surface
                     .get_patches_slice()
                     .iter()
-                    .find_position(|surface_patch| **patch == **surface_patch)
+                    .position(|surface_patch| **patch == *surface_patch)
                     .unwrap()
-                    .0
             })
             .collect();
 
@@ -103,7 +117,7 @@ pub fn group_nearby_patches(surface: &VSurface, patches: &[&VPatch]) -> Vec<Patc
             .flat_map(|patch| [patch.area.point_bottom_left(), patch.area.start])
             .collect();
 
-        result.push(PatchGroup {
+        result.push(MineBase {
             patch_indexes: patch_group_indexes,
             area: VArea::from_arbitrary_points(&patch_group_points),
         })
@@ -113,12 +127,15 @@ pub fn group_nearby_patches(surface: &VSurface, patches: &[&VPatch]) -> Vec<Patc
 }
 
 // #[allow(clippy::never_loop)]
-fn patches_by_cross_sign_expanding<'a>(
-    surface: &'a VSurface,
-    resources: &[Pixel],
-) -> Vec<&'a VPatch> {
+fn patches_by_cross_sign_expanding(mut mines: Vec<MineBase>) -> Vec<MineBatch> {
     const PERPENDICULAR_SCAN_WIDTH: i32 = 10;
 
+    let bounding_area = VArea::from_arbitrary_points(
+        &mines
+            .iter()
+            .flat_map(|v| v.area.get_corner_points())
+            .collect_vec(),
+    );
     let cross_sides = [
         // Rail::new_straight(
         //     VPoint::new(REMOVE_RESOURCE_BASE_TILES, 0),
@@ -129,7 +146,7 @@ fn patches_by_cross_sign_expanding<'a>(
             RailDirection::Right,
         ),
     ];
-    let mut patches = Vec::new();
+    let mut batches = Vec::new();
     for cross_side in cross_sides {
         for perpendicular_scan_area in (1i32..).flat_map(|i| [i, -i]) {
             let perpendicular_scan_area = perpendicular_scan_area * PERPENDICULAR_SCAN_WIDTH;
@@ -178,26 +195,33 @@ fn patches_by_cross_sign_expanding<'a>(
                     rail
                 };
 
-                if !scan_end
-                    .endpoint
-                    .is_within_center_radius(surface.get_radius())
+                if !bounding_area.contains_point(&scan_start.endpoint)
+                    && !bounding_area.contains_point(&scan_end.endpoint)
                 {
                     break;
                 }
+                // if !scan_end
+                //     .endpoint
+                //     .is_within_center_radius(surface.get_radius())
+                // {
+                //     break;
+                // }
 
                 let search_area =
                     VArea::from_arbitrary_points_pair(&scan_start.endpoint, &scan_end.endpoint);
-                for patch in surface.get_patches_slice() {
-                    if resources.contains(&patch.resource)
-                        && search_area.contains_point(&patch.area.start)
-                    {
-                        patches.push(patch);
-                    }
-                }
+
+                let found_mines: Vec<MineBase> = mines
+                    .extract_if(|mine| {
+                        // search_area.contains_point(&mine.area.start)
+                        //     || search_area.contains_point(&mine.area.point_bottom_left())
+                        search_area.contains_point(&mine.area.point_center())
+                    })
+                    .collect();
+                batches.push(MineBatch { mines: found_mines })
             }
         }
     }
-    patches
+    batches
 }
 
 fn patches_by_radial_base_corner(surface: &VSurface, resource: Pixel) -> Vec<&VPatch> {

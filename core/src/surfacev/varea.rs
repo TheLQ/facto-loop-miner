@@ -90,6 +90,10 @@ impl VArea {
         VPoint::new(self.end_x_exclusive(), self.end_y_exclusive())
     }
 
+    pub fn get_corner_points(&self) -> [VPoint; 2] {
+        [self.start, self.point_bottom_left()]
+    }
+
     pub fn normalize_even_8x8(&self) -> Self {
         let x_adjust = self.start.x() % 8;
         let y_adjust = self.start.y() % 8;
