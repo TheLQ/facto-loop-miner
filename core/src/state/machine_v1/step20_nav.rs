@@ -371,35 +371,6 @@ fn main_base_destinations_base_corner() -> Vec<VPoint> {
     res
 }
 
-const CENTRAL_BASE_TILES_BY_RAIL_STEP: i32 = CENTRAL_BASE_TILES
-    + ((RAIL_STEP_SIZE_I32 * 2) - (CENTRAL_BASE_TILES % (RAIL_STEP_SIZE_I32 * 2)));
-
-fn main_base_destinations_positive_side() -> Vec<VPoint> {
-    let mut res = Vec::new();
-    for nearest_count in 1..(PATH_LIMIT.unwrap() * 2) as i32 {
-        res.push(
-            VPoint::new(
-                CENTRAL_BASE_TILES_BY_RAIL_STEP,
-                nearest_count * RAIL_STEP_SIZE_I32 * 2,
-            ) + SHIFT_POINT_ONE,
-        );
-    }
-    res
-}
-
-fn main_base_destinations_negative_side() -> Vec<VPoint> {
-    let mut res = Vec::new();
-    for nearest_count in 1..(PATH_LIMIT.unwrap() * 2) as i32 {
-        res.push(
-            VPoint::new(
-                CENTRAL_BASE_TILES_BY_RAIL_STEP,
-                nearest_count * -(RAIL_STEP_SIZE_I32 * 2),
-            ) + SHIFT_POINT_ONE,
-        );
-    }
-    res
-}
-
 fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {
     let mut current = patch.corner_point_u32();
     while surface.get_pixel_point_u32(&current) != &Pixel::EdgeWall {

@@ -21,6 +21,7 @@ pub struct MineBase {
 
 pub struct MineBaseBatch {
     pub mines: Vec<MineBase>,
+    pub base_direction: RailDirection,
 }
 
 pub fn get_mine_bases_by_batch(surface: &VSurface) -> Vec<MineBaseBatch> {
@@ -217,7 +218,10 @@ fn patches_by_cross_sign_expanding(mut mines: Vec<MineBase>) -> Vec<MineBaseBatc
                         search_area.contains_point(&mine.area.point_center())
                     })
                     .collect();
-                batches.push(MineBaseBatch { mines: found_mines })
+                batches.push(MineBaseBatch {
+                    mines: found_mines,
+                    base_direction: cross_side.direction.clone(),
+                })
             }
         }
     }

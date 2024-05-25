@@ -6,6 +6,7 @@
 #![feature(iterator_try_collect)]
 // #![feature(iterator_try_reduce)]
 // #![feature(slice_flatten)]
+#![feature(extract_if)]
 #![feature(array_chunks)]
 #![feature(error_generic_member_access)]
 #![feature(int_roundings)]
