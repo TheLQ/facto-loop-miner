@@ -19,7 +19,7 @@ pub fn get_possible_routes_for_batch(
     surface: &VSurface,
     mine_batch: MineBaseBatch,
     base_source: &BaseSourceSide,
-) -> MineRouteBatch {
+) -> MineRouteCombinationBatch {
     let mine_choices: Vec<MineChoices> = mine_batch
         .mines
         .into_iter()
@@ -29,15 +29,17 @@ pub fn get_possible_routes_for_batch(
     let mine_combinations = find_all_combinations(mine_choices);
     let mine_combinations = find_all_permutations(mine_combinations);
 
-    let mut routes = Vec::new();
+    let mut route_combinations = Vec::new();
     destinations_to_route(
         mine_combinations,
         base_source,
         mine_batch.base_direction,
-        &mut routes,
+        &mut route_combinations,
     );
 
-    MineRouteBatch { routes }
+    MineRouteCombinationBatch {
+        combinations: route_combinations,
+    }
 }
 
 struct MineChoices {
@@ -56,18 +58,18 @@ struct MineDestinationCombination {
     destinations: Vec<MineDestination>,
 }
 
-pub struct MineRoute {
+pub struct MineRouteEndpoints {
     pub mine: MineBase,
     pub entry_rail: Rail,
     pub base_rail: Rail,
 }
 
 pub struct MineRouteCombination {
-    pub routes: Vec<MineRoute>,
+    pub routes: Vec<MineRouteEndpoints>,
 }
 
-pub struct MineRouteBatch {
-    pub routes: Vec<MineRouteCombination>,
+pub struct MineRouteCombinationBatch {
+    pub combinations: Vec<MineRouteCombination>,
 }
 
 /// Find all combinations of `a[1,2,3,4], b[1,2,3,4], ... = 4^n` sized Vec.
@@ -122,13 +124,13 @@ fn find_all_permutations(
 
 /// Add the base source rail going to the destination, in order of the Vec
 fn destinations_to_route(
-    input_combinations: Vec<MineDestinationCombination>,
+    mine_combinations: Vec<MineDestinationCombination>,
     base_source: &BaseSourceSide,
     base_direction: RailDirection,
-    combinations: &mut Vec<MineRouteCombination>,
+    route_combinations: &mut Vec<MineRouteCombination>,
 ) {
-    for combination in input_combinations {
-        let routes = combination
+    for mine_combination in mine_combinations {
+        let routes = mine_combination
             .destinations
             .into_iter()
             .enumerate()
@@ -140,7 +142,7 @@ fn destinations_to_route(
                 })
             })
             .collect();
-        combinations.push(MineRouteCombination { routes })
+        route_combinations.push(MineRouteCombination { routes })
     }
 }
 
@@ -203,8 +205,8 @@ impl MineChoices {
 }
 
 impl MineDestination {
-    fn into_mine_route(self, base_rail: Rail) -> MineRoute {
-        MineRoute {
+    fn into_mine_route(self, base_rail: Rail) -> MineRouteEndpoints {
+        MineRouteEndpoints {
             mine: self.mine,
             entry_rail: self.entry_rail,
             base_rail,
