@@ -52,7 +52,7 @@ struct MineDestination {
 }
 
 #[derive(Clone)]
-struct MineCombination {
+struct MineDestinationCombination {
     destinations: Vec<MineDestination>,
 }
 
@@ -62,8 +62,12 @@ pub struct MineRoute {
     pub base_rail: Rail,
 }
 
-pub struct MineRouteBatch {
+pub struct MineRouteCombination {
     pub routes: Vec<MineRoute>,
+}
+
+pub struct MineRouteBatch {
+    pub routes: Vec<MineRouteCombination>,
 }
 
 /// Find all combinations of `a[1,2,3,4], b[1,2,3,4], ... = 4^n` sized Vec.
@@ -71,13 +75,13 @@ pub struct MineRouteBatch {
 ///
 /// Start with a list of mines with 4x possible positions.
 /// Create combinations of `[a1, b1, c2, ...]`
-fn find_all_combinations(mines_choices: Vec<MineChoices>) -> Vec<MineCombination> {
+fn find_all_combinations(mines_choices: Vec<MineChoices>) -> Vec<MineDestinationCombination> {
     let mut routes = Vec::new();
     for mine_choices in mines_choices {
         if routes.is_empty() {
             // seed
             for mine_destination in mine_choices.to_mine_destinations() {
-                routes.push(MineCombination {
+                routes.push(MineDestinationCombination {
                     destinations: vec![mine_destination],
                 });
             }
@@ -98,7 +102,9 @@ fn find_all_combinations(mines_choices: Vec<MineChoices>) -> Vec<MineCombination
 }
 
 /// Find all re-ordered permutations of `[a,b,c,...] = n!`
-fn find_all_permutations(input_combinations: Vec<MineCombination>) -> Vec<MineCombination> {
+fn find_all_permutations(
+    input_combinations: Vec<MineDestinationCombination>,
+) -> Vec<MineDestinationCombination> {
     let mut permutated_combinations = Vec::new();
     for combination in input_combinations {
         for permutation in combination
@@ -106,7 +112,7 @@ fn find_all_permutations(input_combinations: Vec<MineCombination>) -> Vec<MineCo
             .iter()
             .permutations(combination.destinations.len())
         {
-            permutated_combinations.push(MineCombination {
+            permutated_combinations.push(MineDestinationCombination {
                 destinations: permutation.into_iter().cloned().collect(),
             });
         }
@@ -116,13 +122,13 @@ fn find_all_permutations(input_combinations: Vec<MineCombination>) -> Vec<MineCo
 
 /// Add the base source rail going to the destination, in order of the Vec
 fn destinations_to_route(
-    input_combinations: Vec<MineCombination>,
+    input_combinations: Vec<MineDestinationCombination>,
     base_source: &BaseSourceSide,
     base_direction: RailDirection,
-    routes: &mut Vec<Vec<MineRoute>>,
+    combinations: &mut Vec<MineRouteCombination>,
 ) {
     for combination in input_combinations {
-        let combination_route = combination
+        let routes = combination
             .destinations
             .into_iter()
             .enumerate()
@@ -134,7 +140,7 @@ fn destinations_to_route(
                 })
             })
             .collect();
-        routes.push(combination_route)
+        combinations.push(MineRouteCombination { routes })
     }
 }
 
