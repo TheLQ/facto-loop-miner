@@ -419,22 +419,6 @@ fn right_mid_edge_point(surface: &Surface) -> Point {
     }
 }
 
-fn get_expanded_patch_points(patch: &VPatch) -> (VPoint, VPoint) {
-    // main corners
-    let mut patch_top_left = patch.area.start.move_round16_down() + SHIFT_POINT_ONE;
-    patch_top_left.assert_odd_16x16_position();
-
-    let mut patch_bottom_right = patch.area.point_bottom_left().move_round16_up() + SHIFT_POINT_ONE;
-    patch_bottom_right.assert_odd_16x16_position();
-
-    for _ in 0..2 {
-        patch_top_left = patch_top_left - SHIFT_POINT_EIGHT;
-        patch_bottom_right = patch_bottom_right + SHIFT_POINT_EIGHT;
-    }
-
-    (patch_top_left, patch_bottom_right)
-}
-
 // fn debug_patch(surface: &mut VSurface, patch_start: &VPatch) {
 //     surface.draw_debug_varea_square(&patch_start.area);
 //     surface

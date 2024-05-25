@@ -16,14 +16,14 @@ const MAX_PATCHES: usize = 200;
 #[derive(Clone)]
 pub struct MineBase {
     patch_indexes: Vec<usize>,
-    area: VArea,
+    pub area: VArea,
 }
 
-pub struct MineBatch {
-    mines: Vec<MineBase>,
+pub struct MineBaseBatch {
+    pub mines: Vec<MineBase>,
 }
 
-pub fn get_mine_bases_by_batch(surface: &VSurface) -> Vec<MineBatch> {
+pub fn get_mine_bases_by_batch(surface: &VSurface) -> Vec<MineBaseBatch> {
     let patch_groups = group_nearby_patches(
         surface,
         &[Pixel::IronOre, Pixel::CopperOre, Pixel::Stone, Pixel::Coal],
@@ -127,7 +127,7 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
 }
 
 // #[allow(clippy::never_loop)]
-fn patches_by_cross_sign_expanding(mut mines: Vec<MineBase>) -> Vec<MineBatch> {
+fn patches_by_cross_sign_expanding(mut mines: Vec<MineBase>) -> Vec<MineBaseBatch> {
     const PERPENDICULAR_SCAN_WIDTH: i32 = 10;
 
     let bounding_area = VArea::from_arbitrary_points(
@@ -217,7 +217,7 @@ fn patches_by_cross_sign_expanding(mut mines: Vec<MineBase>) -> Vec<MineBatch> {
                         search_area.contains_point(&mine.area.point_center())
                     })
                     .collect();
-                batches.push(MineBatch { mines: found_mines })
+                batches.push(MineBaseBatch { mines: found_mines })
             }
         }
     }
