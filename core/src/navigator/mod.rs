@@ -5,6 +5,7 @@ pub mod mori;
 pub mod mori_cost;
 pub mod path_grouper;
 pub mod path_planner;
+mod path_side;
 mod rail_point_compare;
 pub mod resource_cloud;
 pub mod shinri;
