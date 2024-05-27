@@ -1,4 +1,5 @@
 use crate::navigator::mori::{Rail, RailDirection};
+use crate::navigator::path_side::{BaseSource, BaseSourceEighth};
 use crate::state::machine_v1::{CENTRAL_BASE_TILES, REMOVE_RESOURCE_BASE_TILES};
 use crate::surface::patch::map_vpatch_to_kdtree;
 use crate::surface::pixel::Pixel;
@@ -9,6 +10,7 @@ use crate::surfacev::vsurface::VSurface;
 use crate::TILES_PER_CHUNK;
 use itertools::Itertools;
 use kiddo::{Manhattan, NearestNeighbour};
+use std::rc::Rc;
 use tracing::debug;
 
 const MAX_PATCHES: usize = 200;
@@ -21,10 +23,14 @@ pub struct MineBase {
 
 pub struct MineBaseBatch {
     pub mines: Vec<MineBase>,
+    pub base_source_eighth: Rc<BaseSourceEighth>,
     pub base_direction: RailDirection,
 }
 
-pub fn get_mine_bases_by_batch(surface: &VSurface) -> Vec<MineBaseBatch> {
+/// Solve these core problems
+/// - Find the patches we care about
+/// - Create batches that can be optimized as a group, because larger groups are exponentially more difficult to optimize
+pub fn get_mine_bases_by_batch(surface: &VSurface, base_source: &BaseSource) -> Vec<MineBaseBatch> {
     let patch_groups = group_nearby_patches(
         surface,
         &[Pixel::IronOre, Pixel::CopperOre, Pixel::Stone, Pixel::Coal],
@@ -39,7 +45,7 @@ pub fn get_mine_bases_by_batch(surface: &VSurface) -> Vec<MineBaseBatch> {
     //     _ => panic!("asd"),
     // };
     // ordered_patches
-    patches_by_cross_sign_expanding(patch_groups)
+    patches_by_cross_sign_expanding(patch_groups, base_source)
 }
 
 /// Second grouping pass (after opencv), now by grouping different resource patches
@@ -53,6 +59,7 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
     let patch_range = 0..patches.len();
     let mut group_ids: Vec<Option<usize>> = patch_range.clone().map(|v| None).collect();
 
+    // find nearest paths
     // brute force alternative algo to kdtree for fun
     for source_index in patch_range.clone() {
         if group_ids[source_index].is_some() {
@@ -84,7 +91,7 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
         let patch_group;
         if let Some(group_id) = group_ids[source_index] {
             if group_id != source_index {
-                // handled first see
+                // already handled first see
                 continue;
             }
             patch_group = group_ids
@@ -101,7 +108,7 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
             patch_group = vec![patches[source_index]];
         }
 
-        // Externally the index in the VSurface Patches slice is used
+        // Externally we use the index in the VSurface Patches slice
         let patch_group_indexes = patch_group
             .iter()
             .map(|patch| {
@@ -128,7 +135,10 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
 }
 
 // #[allow(clippy::never_loop)]
-fn patches_by_cross_sign_expanding(mut mines: Vec<MineBase>) -> Vec<MineBaseBatch> {
+fn patches_by_cross_sign_expanding(
+    mut mines: Vec<MineBase>,
+    base_source: &BaseSource,
+) -> Vec<MineBaseBatch> {
     const PERPENDICULAR_SCAN_WIDTH: i32 = 10;
 
     let bounding_area = VArea::from_arbitrary_points(
@@ -154,6 +164,13 @@ fn patches_by_cross_sign_expanding(mut mines: Vec<MineBase>) -> Vec<MineBaseBatc
             // if perpendicular_scan_area.unsigned_abs() * RAIL_STEP_SIZE > surface.get_radius() {
             //     break;
             // }
+
+            // TODO: Support multiple sides
+            let base_source_eighth = if perpendicular_scan_area > 0 {
+                base_source.get_positive()
+            } else {
+                base_source.get_negative()
+            };
 
             let mut parallel_scan_area = 0;
             loop {
@@ -221,6 +238,7 @@ fn patches_by_cross_sign_expanding(mut mines: Vec<MineBase>) -> Vec<MineBaseBatc
                 batches.push(MineBaseBatch {
                     mines: found_mines,
                     base_direction: cross_side.direction.clone(),
+                    base_source_eighth: base_source_eighth.clone(),
                 })
             }
         }

@@ -18,7 +18,7 @@ pub fn execute_route_batch(
     surface: &VSurface,
     search_area: &VArea,
     route_batch: MineRouteCombinationBatch,
-) {
+) -> Vec<MinePath> {
     let batch_size = route_batch.combinations.len();
     debug!("Executing {} route combination batch", batch_size);
 
@@ -34,38 +34,36 @@ pub fn execute_route_batch(
     );
 
     // We have many possible routes that have different costs. We want the lowest one
-    let mut best_route = route_results.first().unwrap();
+    let mut best_path = Vec::new();
     let mut best_cost = u32::MAX;
     let mut worst_cost = 0;
     let mut success_count = 0;
-    for route_result in &route_results {
+    for route_result in route_results {
         if let MineRouteCombinationPathResult::Success { paths } = route_result {
             success_count += 1;
-            let mut total_cost = 0;
-            for path in paths {
-                total_cost += path.cost;
-            }
 
+            let total_cost = paths.iter().fold(0, |total, path| total + path.cost);
             if total_cost < best_cost {
                 best_cost = total_cost;
-                best_route = route_result;
+                best_path = paths;
             }
             if total_cost > worst_cost {
                 worst_cost = total_cost;
             }
         }
     }
-    if let MineRouteCombinationPathResult::Failure { .. } = best_route {
+    if !best_path.is_empty() {
+        info!(
+            "Route batch of {} combinations had {} success, cost range {} to {}",
+            batch_size,
+            success_count,
+            worst_cost.to_formatted_string(&LOCALE),
+            best_cost.to_formatted_string(&LOCALE)
+        );
+        best_path
+    } else {
         panic!("Failed for {} combinations", batch_size)
     }
-
-    info!(
-        "Route batch of {} combinations had {} success, cost range {} to {}",
-        batch_size,
-        success_count,
-        worst_cost.to_formatted_string(&LOCALE),
-        best_cost.to_formatted_string(&LOCALE)
-    );
 }
 
 fn execute_route_combination(
@@ -98,7 +96,7 @@ fn execute_route_combination(
     MineRouteCombinationPathResult::Success { paths: found_paths }
 }
 
-struct MinePath {
+pub struct MinePath {
     mine_base: MineBase,
     rail: Vec<Rail>,
     cost: u32,

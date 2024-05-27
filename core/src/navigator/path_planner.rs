@@ -1,10 +1,12 @@
 use crate::navigator::mori::{Rail, RailDirection, RailMode, RAIL_STEP_SIZE_I32};
 use crate::navigator::path_grouper::{MineBase, MineBaseBatch};
+use crate::navigator::path_side::{BaseSource, BaseSourceEighth};
 use crate::state::machine_v1::CENTRAL_BASE_TILES;
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_EIGHT, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
 use itertools::Itertools;
+use std::rc::Rc;
 use tracing::debug;
 
 /// Solve 2 core problems
@@ -18,7 +20,6 @@ use tracing::debug;
 pub fn get_possible_routes_for_batch(
     surface: &VSurface,
     mine_batch: MineBaseBatch,
-    base_source: &BaseSourceSide,
 ) -> MineRouteCombinationBatch {
     let mine_choices: Vec<MineChoices> = mine_batch
         .mines
@@ -30,10 +31,10 @@ pub fn get_possible_routes_for_batch(
     let mine_combinations = find_all_permutations(mine_combinations);
 
     let mut route_combinations = Vec::new();
-    destinations_to_route(
+    build_routes_from_destinations(
         mine_combinations,
-        base_source,
         mine_batch.base_direction,
+        &mine_batch.base_source_eighth,
         &mut route_combinations,
     );
 
@@ -123,10 +124,10 @@ fn find_all_permutations(
 }
 
 /// Add the base source rail going to the destination, in order of the Vec
-fn destinations_to_route(
+fn build_routes_from_destinations(
     mine_combinations: Vec<MineDestinationCombination>,
-    base_source: &BaseSourceSide,
     base_direction: RailDirection,
+    base_source_eighth: &BaseSourceEighth,
     route_combinations: &mut Vec<MineRouteCombination>,
 ) {
     for mine_combination in mine_combinations {
@@ -136,7 +137,7 @@ fn destinations_to_route(
             .enumerate()
             .map(|(index, destination)| {
                 destination.into_mine_route(Rail {
-                    endpoint: base_source.peek_add(index),
+                    endpoint: base_source_eighth.peek_add(index),
                     direction: base_direction.clone(),
                     mode: RailMode::Straight,
                 })
@@ -211,44 +212,5 @@ impl MineDestination {
             entry_rail: self.entry_rail,
             base_rail,
         }
-    }
-}
-
-const CENTRAL_BASE_TILES_BY_RAIL_STEP: i32 = CENTRAL_BASE_TILES
-    + ((RAIL_STEP_SIZE_I32 * 2) - (CENTRAL_BASE_TILES % (RAIL_STEP_SIZE_I32 * 2)));
-
-pub struct BaseSource {
-    positive: BaseSourceSide,
-    negative: BaseSourceSide,
-}
-
-/// Because a struct field of IntoIterator<VPoint> creates Rust type hell
-struct BaseSourceSide {
-    sign: i32,
-    next: i32,
-}
-
-impl BaseSourceSide {
-    pub fn next(&mut self) -> VPoint {
-        let result = self.get_for_pos(self.next);
-        self.next = self.next + 1;
-        result
-    }
-
-    pub fn peek_add(&self, pos_add: usize) -> VPoint {
-        self.get_for_pos(self.next + pos_add as i32)
-    }
-
-    // pub fn peek_add_vec(&self, pos_add: usize) -> Vec<VPoint> {
-    //     let result = Vec::with_capacity(pos_add);
-    //
-    //     result
-    // }
-
-    pub fn get_for_pos(&self, pos: i32) -> VPoint {
-        VPoint::new(
-            CENTRAL_BASE_TILES_BY_RAIL_STEP,
-            self.sign * pos * RAIL_STEP_SIZE_I32 * 2,
-        ) + SHIFT_POINT_ONE
     }
 }

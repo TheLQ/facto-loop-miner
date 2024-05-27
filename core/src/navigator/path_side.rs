@@ -11,6 +11,23 @@ pub struct BaseSource {
     negative: Rc<BaseSourceEighth>,
 }
 
+impl BaseSource {
+    pub fn new() -> Self {
+        Self {
+            positive: Rc::new(BaseSourceEighth::new(1)),
+            negative: Rc::new(BaseSourceEighth::new(-1)),
+        }
+    }
+
+    pub fn get_positive(&self) -> Rc<BaseSourceEighth> {
+        self.positive.clone()
+    }
+
+    pub fn get_negative(&self) -> Rc<BaseSourceEighth> {
+        self.negative.clone()
+    }
+}
+
 /// Because a struct field of IntoIterator<VPoint> creates Rust type hell
 pub struct BaseSourceEighth {
     sign: i32,
@@ -18,6 +35,10 @@ pub struct BaseSourceEighth {
 }
 
 impl BaseSourceEighth {
+    pub fn new(sign: i32) -> Self {
+        Self { sign, next: 0 }
+    }
+
     pub fn next(&mut self) -> VPoint {
         let result = self.get_for_pos(self.next);
         self.next = self.next + 1;
