@@ -1,4 +1,4 @@
-use crate::navigator::mori::{Rail, RailDirection};
+use crate::navigator::mori::{Rail, RailDirection, RailMode};
 use crate::navigator::path_side::{BaseSource, BaseSourceEighth};
 use crate::state::machine_v1::{CENTRAL_BASE_TILES, REMOVE_RESOURCE_BASE_TILES};
 use crate::surface::patch::map_vpatch_to_kdtree;
@@ -139,7 +139,7 @@ fn patches_by_cross_sign_expanding(
     mut mines: Vec<MineBase>,
     base_source: &BaseSource,
 ) -> Vec<MineBaseBatch> {
-    const PERPENDICULAR_SCAN_WIDTH: i32 = 10;
+    const PERPENDICULAR_SCAN_WIDTH: u32 = 10;
 
     let bounding_area = VArea::from_arbitrary_points(
         &mines
@@ -147,7 +147,7 @@ fn patches_by_cross_sign_expanding(
             .flat_map(|v| v.area.get_corner_points())
             .collect_vec(),
     );
-    let cross_sides = [
+    let cross_sides: [Rail; 1] = [
         // Rail::new_straight(
         //     VPoint::new(REMOVE_RESOURCE_BASE_TILES, 0),
         //     RailDirection::Right,
@@ -159,88 +159,74 @@ fn patches_by_cross_sign_expanding(
     ];
     let mut batches = Vec::new();
     for cross_side in cross_sides {
-        for perpendicular_scan_area in (1i32..).flat_map(|i| [i, -i]) {
-            let perpendicular_scan_area = perpendicular_scan_area * PERPENDICULAR_SCAN_WIDTH;
+        for perpendicular_scan_size_base in (1i32..).flat_map(|i| [i, -i]) {
             // if perpendicular_scan_area.unsigned_abs() * RAIL_STEP_SIZE > surface.get_radius() {
             //     break;
             // }
 
             // TODO: Support multiple sides
-            let base_source_eighth = if perpendicular_scan_area > 0 {
+            let base_source_eighth = if perpendicular_scan_size_base > 0 {
                 base_source.get_positive()
             } else {
                 base_source.get_negative()
             };
 
-            let mut parallel_scan_area = 0;
-            loop {
-                parallel_scan_area += 1;
-
-                // let scan_start = {
-                //     let mut rail = cross_side.clone();
-                //     for _ in 0..(parallel_scan_area - 1) {
-                //         rail = rail.move_forward_step();
-                //     }
-                //     rail
-                // };
-
-                let scan_start = {
-                    let mut rail = cross_side.move_forward_step_num(parallel_scan_area - 1);
-                    // trace!("start moving forward {}", parallel_scan_area - 1);
-                    rail = if perpendicular_scan_area > 0 {
-                        rail.move_force_rotate_clockwise(1)
-                    } else {
-                        rail.move_force_rotate_clockwise(3)
-                    };
-                    rail = rail.move_forward_step_num(perpendicular_scan_area.unsigned_abs() - 1);
-                    // trace!(
-                    //     "start moving side {}",
-                    //     perpendicular_scan_area.unsigned_abs() - 1
-                    // );
-                    rail
+            let scan_start = {
+                let mut rail = cross_side.clone();
+                // trace!("start moving forward {}", parallel_scan_area - 1);
+                rail = if perpendicular_scan_size_base > 0 {
+                    rail.move_force_rotate_clockwise(1)
+                } else {
+                    rail.move_force_rotate_clockwise(3)
                 };
+                rail = rail.move_forward_step_num(
+                    (perpendicular_scan_size_base.unsigned_abs() - 1) * PERPENDICULAR_SCAN_WIDTH,
+                );
+                // trace!(
+                //     "start moving side {}",
+                //     perpendicular_scan_area.unsigned_abs() - 1
+                // );
+                rail
+            };
 
-                let scan_end = {
-                    let mut rail = cross_side.move_forward_step_num(parallel_scan_area);
-                    // trace!("end moving forward {}", parallel_scan_area);
-                    rail = if perpendicular_scan_area > 0 {
-                        rail.move_force_rotate_clockwise(1)
-                    } else {
-                        rail.move_force_rotate_clockwise(3)
-                    };
-                    rail = rail.move_forward_step_num(perpendicular_scan_area.unsigned_abs());
-                    // trace!("end moving side {}", perpendicular_scan_area.unsigned_abs());
-                    rail
-                };
-
-                if !bounding_area.contains_point(&scan_start.endpoint)
-                    && !bounding_area.contains_point(&scan_end.endpoint)
-                {
-                    break;
-                }
-                // if !scan_end
-                //     .endpoint
-                //     .is_within_center_radius(surface.get_radius())
-                // {
-                //     break;
-                // }
-
-                let search_area =
-                    VArea::from_arbitrary_points_pair(&scan_start.endpoint, &scan_end.endpoint);
-
-                let found_mines: Vec<MineBase> = mines
-                    .extract_if(|mine| {
-                        // search_area.contains_point(&mine.area.start)
-                        //     || search_area.contains_point(&mine.area.point_bottom_left())
-                        search_area.contains_point(&mine.area.point_center())
-                    })
-                    .collect();
-                batches.push(MineBaseBatch {
-                    mines: found_mines,
-                    base_direction: cross_side.direction.clone(),
-                    base_source_eighth: base_source_eighth.clone(),
-                })
+            if !bounding_area.contains_point(&scan_start.endpoint) {
+                break;
             }
+
+            let scan_end = {
+                let mut rail = scan_start.clone();
+                // We are still perpendicular
+                rail = rail.move_forward_step_num(PERPENDICULAR_SCAN_WIDTH);
+
+                // Go all the way to the edge
+                rail.direction = cross_side.direction.clone();
+                while bounding_area.contains_point(&rail.endpoint) {
+                    rail = rail.move_forward_step();
+                }
+                // Now outside, go back
+                rail.move_force_rotate_clockwise(2);
+                rail = rail.move_forward_step();
+
+                // trace!("end moving side {}", perpendicular_scan_area.unsigned_abs());
+                rail
+            };
+
+            let search_area =
+                VArea::from_arbitrary_points_pair(&scan_start.endpoint, &scan_end.endpoint);
+            let found_mines: Vec<MineBase> = mines
+                .extract_if(|mine| {
+                    // search_area.contains_point(&mine.area.start)
+                    //     || search_area.contains_point(&mine.area.point_bottom_left())
+                    search_area.contains_point(&mine.area.point_center())
+                })
+                // TODO: Support multiple directions
+                .sorted_by_key(|mine| mine.area.start.x())
+                .collect();
+            batches.push(MineBaseBatch {
+                mines: found_mines,
+                base_direction: cross_side.direction.clone(),
+                base_source_eighth: base_source_eighth.clone(),
+            })
         }
     }
     batches

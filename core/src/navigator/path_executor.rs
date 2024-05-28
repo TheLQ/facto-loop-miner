@@ -35,31 +35,32 @@ pub fn execute_route_batch(
 
     // We have many possible routes that have different costs. We want the lowest one
     let mut best_path = Vec::new();
-    let mut best_cost = u32::MAX;
-    let mut worst_cost = 0;
+    let mut lowest_cost = u32::MAX;
+    let mut highest_cost = 0;
     let mut success_count = 0;
     for route_result in route_results {
         if let MineRouteCombinationPathResult::Success { paths } = route_result {
             success_count += 1;
 
             let total_cost = paths.iter().fold(0, |total, path| total + path.cost);
-            if total_cost < best_cost {
-                best_cost = total_cost;
+            if total_cost < lowest_cost {
+                lowest_cost = total_cost;
                 best_path = paths;
             }
-            if total_cost > worst_cost {
-                worst_cost = total_cost;
+            if total_cost > highest_cost {
+                highest_cost = total_cost;
             }
         }
     }
+    info!(
+        "Route batch of {} combinations had {} success, cost range {} to {}",
+        batch_size,
+        success_count,
+        highest_cost.to_formatted_string(&LOCALE),
+        lowest_cost.to_formatted_string(&LOCALE)
+    );
+
     if !best_path.is_empty() {
-        info!(
-            "Route batch of {} combinations had {} success, cost range {} to {}",
-            batch_size,
-            success_count,
-            worst_cost.to_formatted_string(&LOCALE),
-            best_cost.to_formatted_string(&LOCALE)
-        );
         best_path
     } else {
         panic!("Failed for {} combinations", batch_size)
