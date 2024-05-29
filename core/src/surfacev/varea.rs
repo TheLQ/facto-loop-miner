@@ -33,10 +33,30 @@ impl VArea {
     }
 
     pub fn from_arbitrary_points(points: &[VPoint]) -> VArea {
-        let mut x_min = 0;
-        let mut x_max = 0;
-        let mut y_min = 0;
-        let mut y_max = 0;
+        let mut x_min = i32::MAX;
+        let mut x_max = i32::MIN;
+        let mut y_min = i32::MAX;
+        let mut y_max = i32::MIN;
+        for point in points {
+            x_min = x_min.min(point.x());
+            x_max = x_max.max(point.x());
+            y_min = y_min.min(point.y());
+            y_max = y_max.max(point.y());
+        }
+
+        let start = VPoint::new(x_min, y_min);
+        VArea {
+            start,
+            width: (x_max - start.x()).try_into().unwrap(),
+            height: (y_max - start.y()).try_into().unwrap(),
+        }
+    }
+
+    pub fn from_arbitrary_points_iter(points: impl IntoIterator<Item = VPoint>) -> VArea {
+        let mut x_min = i32::MAX;
+        let mut x_max = i32::MIN;
+        let mut y_min = i32::MAX;
+        let mut y_max = i32::MIN;
         for point in points {
             x_min = x_min.min(point.x());
             x_max = x_max.max(point.x());

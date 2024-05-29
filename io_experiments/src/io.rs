@@ -294,7 +294,7 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
     debug!("mmapping...");
     let mut mmap = unsafe {
         MmapOptions::new()
-            .populate()
+            // .populate()
             .map_copy(&file)
             .map_err(VIoError::io_error(path))?
     };
@@ -323,7 +323,7 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
 
     debug!("reviewed {}", path.display());
 
-    Ok(VArray::from_mmap(mmap, xy_array_u64))
+    Ok(VArray::from_mmap(path, mmap, xy_array_u64))
 }
 
 pub fn read_entire_file_mmap_copy(path: &Path) -> VIoResult<Vec<usize>> {
