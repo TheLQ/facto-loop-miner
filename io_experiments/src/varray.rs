@@ -52,3 +52,16 @@ impl VArray {
         self.as_slice().len()
     }
 }
+
+impl Clone for VArray {
+    fn clone(&self) -> Self {
+        match &self.inner {
+            BackingMemory::RegularOldeVec(memory) => VArray {
+                inner: BackingMemory::RegularOldeVec(Vec::clone(memory)),
+            },
+            BackingMemory::Mmap(memmamp, memory) => VArray {
+                inner: BackingMemory::RegularOldeVec(Vec::clone(memory)),
+            },
+        }
+    }
+}

@@ -29,7 +29,7 @@ pub trait VEntityXY {
 /// Collection of entities and xy positions they cover
 ///
 /// For example, ore tiles cover 1 positions. Assembly machines cover 9 positions
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct VEntityMap<E> {
     entities: Vec<E>,
     /// More efficient to store a (radius * 2)^2 length Array as a raw file instead of JSON  

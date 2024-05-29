@@ -28,7 +28,7 @@ pub fn get_possible_routes_for_batch(
         .collect();
 
     let mine_combinations = find_all_combinations(mine_choices);
-    let mine_combinations = find_all_permutations(mine_combinations);
+    // let mine_combinations = find_all_permutations(mine_combinations);
 
     let mut route_combinations = Vec::new();
     build_routes_from_destinations(
@@ -59,6 +59,7 @@ struct MineDestinationCombination {
     destinations: Vec<MineDestination>,
 }
 
+#[derive(Clone)]
 pub struct MineRouteEndpoints {
     pub mine: MineBase,
     pub entry_rail: Rail,

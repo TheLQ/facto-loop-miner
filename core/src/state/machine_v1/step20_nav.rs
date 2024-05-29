@@ -1,10 +1,11 @@
 use crate::navigator::mori::{
-    write_rail, write_rail_with_pixel, Rail, RailDirection, RAIL_STEP_SIZE_I32,
+    mori_start, write_rail, write_rail_with_pixel, Rail, RailDirection, RAIL_STEP_SIZE_I32,
 };
 use crate::navigator::path_executor::execute_route_batch;
 use crate::navigator::path_grouper::{base_bottom_right_corner, get_mine_bases_by_batch};
-use crate::navigator::path_planner::get_possible_routes_for_batch;
+use crate::navigator::path_planner::{get_possible_routes_for_batch, MineRouteEndpoints};
 use crate::navigator::path_side::BaseSource;
+use crate::navigator::PathingResult;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::state::machine_v1::step10_base::CENTRAL_BASE_TILES;
@@ -14,7 +15,7 @@ use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
-use opencv::core::Point;
+use opencv::core::{trace, Point};
 use tracing::{error, info, trace, warn};
 
 pub struct Step20 {}
@@ -41,7 +42,12 @@ impl Step for Step20 {
         // }
         // panic!("found {} iron", counter.to_formatted_string(&LOCALE));
 
-        navigate_patches_to_base2(&mut surface);
+        match 1 {
+            1 => navigate_patches_to_base2(&mut surface),
+            2 => navigate_patches_to_base_single(&mut surface),
+            _ => panic!("adf"),
+        };
+
         // navigate_patches_to_base(&mut surface, &mut params)?;
 
         // for dest in main_base_destinations() {
@@ -72,6 +78,38 @@ fn navigate_patches_to_base_speculation(
     surface
 }
 
+fn navigate_patches_to_base_single(surface: &mut VSurface) {
+    let base_source = BaseSource::new();
+
+    info!("Loading mine bases");
+    let mut mine_batches = get_mine_bases_by_batch(surface, &base_source);
+    info!("Loaded {} batches", mine_batches.len());
+
+    let mine_batch = mine_batches.remove(0);
+    let mut route_combination_batch = get_possible_routes_for_batch(surface, mine_batch);
+
+    let mut combination = route_combination_batch.combinations.remove(0);
+    combination.routes.pop();
+    let route = combination.routes.remove(0);
+
+    let surface_radius = surface.get_radius_i32();
+    let search_area = VArea::from_arbitrary_points_pair(
+        &VPoint::new(CENTRAL_BASE_TILES, -surface_radius),
+        &VPoint::new(surface_radius, surface_radius),
+    );
+    let res = mori_start(surface, route.base_rail, route.entry_rail, &search_area);
+    match res {
+        PathingResult::Route { path, cost } => {
+            info!("success!");
+            write_rail(surface, &path).unwrap();
+        }
+        PathingResult::FailingDebug(path) => {
+            info!("fail!");
+            write_rail(surface, &path).unwrap();
+        }
+    }
+}
+
 fn navigate_patches_to_base2(surface: &mut VSurface) {
     let base_source = BaseSource::new();
 
@@ -80,18 +118,59 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
     info!("Loaded {} batches", mine_batches.len());
 
     for mine_batch in mine_batches {
+        // for mine in &mine_batch.mines {
+        //     trace!("area {:?}", mine.area);
+        //     surface.draw_square_area(&mine.area, Pixel::Highlighter, None);
+        // }
+        // if 1 + 1 == 2 {
+        //     break;
+        // }
+
         info!("Processing batch with {} mines", mine_batch.mines.len());
         let route_combination_batch = get_possible_routes_for_batch(surface, mine_batch);
         info!(
-            "Batch created {} routes",
+            "Batch created {} combinations",
             route_combination_batch.combinations.len()
         );
+
+        // if 1 + 1 == 2 {
+        //     break;
+        // }
+
+        let mut debug_areas = Vec::new();
+        let mut debug_rails = Vec::new();
+        for mine_combination in &route_combination_batch.combinations {
+            for mine_route in &mine_combination.routes {
+                debug_areas.push(mine_route.mine.area.clone());
+                debug_rails.push(mine_route.base_rail.clone());
+                debug_rails.push(mine_route.entry_rail.clone());
+            }
+        }
 
         let search_area = VArea::from_arbitrary_points_pair(
             &VPoint::new(CENTRAL_BASE_TILES, -surface.get_radius_i32()),
             &VPoint::new(surface.get_radius_i32(), surface.get_radius_i32()),
         );
         let res = execute_route_batch(surface, &search_area, route_combination_batch);
+
+        match res {
+            Some(v) => {
+                for path in v {
+                    info!(
+                        "Writing path {:?} rail for base {:?}",
+                        path.rail.len(),
+                        path.mine_base
+                    );
+                    write_rail(surface, &path.rail).unwrap();
+                }
+            }
+            None => {
+                // for area in debug_areas {
+                //     surface.draw_square_area(&area, Pixel::Highlighter, None);
+                // }
+                write_rail(surface, &debug_rails).unwrap();
+            }
+        }
 
         if 1 + 1 == 2 {
             info!("asfsdfv");

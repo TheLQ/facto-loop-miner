@@ -11,11 +11,11 @@ use crate::TILES_PER_CHUNK;
 use itertools::Itertools;
 use kiddo::{Manhattan, NearestNeighbour};
 use std::rc::Rc;
-use tracing::debug;
+use tracing::{debug, trace};
 
 const MAX_PATCHES: usize = 200;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MineBase {
     patch_indexes: Vec<usize>,
     pub area: VArea,
@@ -54,6 +54,12 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
         .get_patches_slice()
         .iter()
         .filter(|patch| resources.contains(&patch.resource))
+        .filter(|patch| {
+            !patch
+                .area
+                .start
+                .is_within_center_radius(REMOVE_RESOURCE_BASE_TILES as u32)
+        })
         .collect();
 
     let patch_range = 0..patches.len();
@@ -88,13 +94,12 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
     let mut result = Vec::new();
 
     for source_index in patch_range {
-        let patch_group;
         if let Some(group_id) = group_ids[source_index] {
             if group_id != source_index {
                 // already handled first see
                 continue;
             }
-            patch_group = group_ids
+            let patch_group: Vec<&VPatch> = group_ids
                 .iter()
                 .enumerate()
                 // get all of our group ids, then get the actual patch they point to
@@ -103,32 +108,33 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
                         .filter(|search_group_id| *search_group_id == group_id)
                         .map(|_search_group_id| patches[search_index])
                 })
-                .collect()
+                .collect();
+            trace!("Merging patch group of {:?}", patch_group);
+
+            // Externally we use the index in the VSurface Patches slice
+            let patch_group_indexes = patch_group
+                .iter()
+                .map(|patch| patch.get_surface_patch_index(surface))
+                .collect();
+
+            let patch_group_points: Vec<VPoint> = patch_group
+                .iter()
+                .flat_map(|patch| [patch.area.point_bottom_left(), patch.area.start])
+                .collect();
+
+            result.push(MineBase {
+                patch_indexes: patch_group_indexes,
+                area: VArea::from_arbitrary_points(&patch_group_points),
+            });
+            panic!("TODO: Broken area");
         } else {
-            patch_group = vec![patches[source_index]];
-        }
-
-        // Externally we use the index in the VSurface Patches slice
-        let patch_group_indexes = patch_group
-            .iter()
-            .map(|patch| {
-                surface
-                    .get_patches_slice()
-                    .iter()
-                    .position(|surface_patch| **patch == *surface_patch)
-                    .unwrap()
+            let patch = patches[source_index];
+            trace!("Single patch group {:?}", patch);
+            result.push(MineBase {
+                patch_indexes: vec![patch.get_surface_patch_index(surface)],
+                area: patch.area.clone(),
             })
-            .collect();
-
-        let patch_group_points: Vec<VPoint> = patch_group
-            .iter()
-            .flat_map(|patch| [patch.area.point_bottom_left(), patch.area.start])
-            .collect();
-
-        result.push(MineBase {
-            patch_indexes: patch_group_indexes,
-            area: VArea::from_arbitrary_points(&patch_group_points),
-        })
+        }
     }
 
     result
@@ -158,7 +164,7 @@ fn patches_by_cross_sign_expanding(
         ),
     ];
     let mut batches = Vec::new();
-    for cross_side in cross_sides {
+    'outer: for cross_side in cross_sides {
         for perpendicular_scan_size_base in (1i32..).flat_map(|i| [i, -i]) {
             // if perpendicular_scan_area.unsigned_abs() * RAIL_STEP_SIZE > surface.get_radius() {
             //     break;
@@ -222,11 +228,17 @@ fn patches_by_cross_sign_expanding(
                 // TODO: Support multiple directions
                 .sorted_by_key(|mine| mine.area.start.x())
                 .collect();
+            for mine in &found_mines {
+                trace!("batch for mine {:?}", mine);
+            }
             batches.push(MineBaseBatch {
                 mines: found_mines,
                 base_direction: cross_side.direction.clone(),
                 base_source_eighth: base_source_eighth.clone(),
-            })
+            });
+            if 1 + 1 == 2 {
+                break 'outer;
+            }
         }
     }
     batches

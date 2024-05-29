@@ -1,14 +1,18 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::VPoint;
+use crate::surfacev::vsurface::VSurface;
+use derivative::Derivative;
 use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Derivative)]
+#[derivative(Debug)]
 pub struct VPatch {
     pub resource: Pixel,
     pub area: VArea,
+    #[derivative(Debug = "ignore")]
     pub pixel_indexes: Vec<VPoint>,
 }
 
@@ -52,5 +56,13 @@ impl VPatch {
         let mut new = self.clone();
         new.area = self.area.normalize_even_8x8();
         new
+    }
+
+    pub fn get_surface_patch_index(&self, surface: &VSurface) -> usize {
+        surface
+            .get_patches_slice()
+            .iter()
+            .position(|surface_patch| *self == *surface_patch)
+            .unwrap()
     }
 }
