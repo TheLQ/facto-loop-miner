@@ -3,7 +3,9 @@ use crate::navigator::mori::{
 };
 use crate::navigator::path_executor::execute_route_batch;
 use crate::navigator::path_grouper::{base_bottom_right_corner, get_mine_bases_by_batch};
-use crate::navigator::path_planner::{get_possible_routes_for_batch, MineRouteEndpoints};
+use crate::navigator::path_planner::{
+    get_possible_routes_for_batch, MineChoices, MineRouteEndpoints,
+};
 use crate::navigator::path_side::BaseSource;
 use crate::navigator::PathingResult;
 use crate::state::err::XMachineResult;
@@ -15,7 +17,10 @@ use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
+use crate::util::duration::BasicWatch;
+use itertools::Itertools;
 use opencv::core::{trace, Point};
+use std::cmp::min;
 use tracing::{error, info, trace, warn};
 
 pub struct Step20 {}
@@ -85,8 +90,15 @@ fn navigate_patches_to_base_single(surface: &mut VSurface) {
     let mut mine_batches = get_mine_bases_by_batch(surface, &base_source);
     info!("Loaded {} batches", mine_batches.len());
 
-    let mine_batch = mine_batches.remove(0);
+    let mine_batch = mine_batches.remove(1);
     let mut route_combination_batch = get_possible_routes_for_batch(surface, mine_batch);
+    if 1 + 1 == 2 {
+        trace!(
+            "combinations ++= {}",
+            route_combination_batch.combinations.len()
+        );
+        return;
+    }
 
     let mut combination = route_combination_batch.combinations.remove(0);
     combination.routes.pop();
@@ -117,7 +129,55 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
     let mine_batches = get_mine_bases_by_batch(surface, &base_source);
     info!("Loaded {} batches", mine_batches.len());
 
+    // Wrap patches in a no touching zone, so rail doesn't drive between start and the patch
+    for mine_batch in &mine_batches {
+        for mine in &mine_batch.mines {
+            // let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(patch);
+
+            // let padding = 6;
+            // surface.draw_square(
+            //     patch_top_left.x() + padding,
+            //     patch_bottom_right.x() - padding,
+            //     patch_top_left.y() + padding,
+            //     patch_bottom_right.y() - padding,
+            //     Pixel::SteelChest,
+            //     Some(patch.resource),
+            // )
+            let mine_choice = MineChoices::from_mine(surface, mine.clone());
+            let choice_area: VArea = VArea::from_arbitrary_points_iter(
+                mine_choice.destinations.iter().map(|v| v.endpoint),
+            );
+
+            warn!(
+                "Destinations for {:?}\n{}",
+                choice_area,
+                mine_choice
+                    .destinations
+                    .iter()
+                    .map(|v| format!("{:?}", v))
+                    .join("\n")
+            );
+            // for destination in &mine_choice.destinations {
+            //     warn!("Destination: {:?}", destination);
+            // }
+
+            let padding = 6;
+            let patch_top_left = &choice_area.start;
+            let patch_bottom_right = choice_area.point_bottom_left();
+            surface.draw_square(
+                patch_top_left.x() + padding,
+                patch_bottom_right.x() - padding,
+                patch_top_left.y() + padding,
+                patch_bottom_right.y() - padding,
+                Pixel::SteelChest,
+                Some(surface.get_patches_slice()[mine.patch_indexes[0]].resource),
+            )
+        }
+    }
+
     for mine_batch in mine_batches {
+        let watch = BasicWatch::start();
+
         // for mine in &mine_batch.mines {
         //     trace!("area {:?}", mine.area);
         //     surface.draw_square_area(&mine.area, Pixel::Highlighter, None);
@@ -152,6 +212,7 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
             &VPoint::new(surface.get_radius_i32(), surface.get_radius_i32()),
         );
         let res = execute_route_batch(surface, &search_area, route_combination_batch);
+        info!("execution took {}", watch);
 
         match res {
             Some(v) => {
@@ -165,17 +226,18 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
                 }
             }
             None => {
-                // for area in debug_areas {
-                //     surface.draw_square_area(&area, Pixel::Highlighter, None);
-                // }
+                for area in debug_areas {
+                    surface.draw_square_area(&area, Pixel::Highlighter, None);
+                }
                 write_rail(surface, &debug_rails).unwrap();
+                break;
             }
         }
 
-        if 1 + 1 == 2 {
-            info!("asfsdfv");
-            break;
-        }
+        // if 1 + 1 == 2 {
+        //     info!("asfsdfv");
+        //     break;
+        // }
     }
 }
 

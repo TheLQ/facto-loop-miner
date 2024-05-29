@@ -17,7 +17,7 @@ const MAX_PATCHES: usize = 200;
 
 #[derive(Clone, Debug)]
 pub struct MineBase {
-    patch_indexes: Vec<usize>,
+    pub patch_indexes: Vec<usize>,
     pub area: VArea,
 }
 
@@ -126,7 +126,7 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
                 patch_indexes: patch_group_indexes,
                 area: VArea::from_arbitrary_points(&patch_group_points),
             });
-            panic!("TODO: Broken area");
+            // panic!("TODO: Broken area");
         } else {
             let patch = patches[source_index];
             trace!("Single patch group {:?}", patch);
@@ -172,9 +172,10 @@ fn patches_by_cross_sign_expanding(
 
             // TODO: Support multiple sides
             let base_source_eighth = if perpendicular_scan_size_base > 0 {
-                base_source.get_positive()
-            } else {
+                // TODO: While going positive we get a... negative position?
                 base_source.get_negative()
+            } else {
+                base_source.get_positive()
             };
 
             let scan_start = {
@@ -236,9 +237,9 @@ fn patches_by_cross_sign_expanding(
                 base_direction: cross_side.direction.clone(),
                 base_source_eighth: base_source_eighth.clone(),
             });
-            if 1 + 1 == 2 {
-                break 'outer;
-            }
+            // if 1 + 1 == 2 {
+            //     break 'outer;
+            // }
         }
     }
     batches

@@ -7,7 +7,7 @@ use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_EIGHT, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
 use itertools::Itertools;
 use std::rc::Rc;
-use tracing::debug;
+use tracing::{debug, trace};
 
 /// Solve 2 core problems
 /// - Get an ordered list of patches to navigate to
@@ -28,7 +28,7 @@ pub fn get_possible_routes_for_batch(
         .collect();
 
     let mine_combinations = find_all_combinations(mine_choices);
-    // let mine_combinations = find_all_permutations(mine_combinations);
+    let mine_combinations = find_all_permutations(mine_combinations);
 
     let mut route_combinations = Vec::new();
     build_routes_from_destinations(
@@ -43,9 +43,9 @@ pub fn get_possible_routes_for_batch(
     }
 }
 
-struct MineChoices {
+pub struct MineChoices {
     mine: MineBase,
-    destinations: Vec<Rail>,
+    pub destinations: Vec<Rail>,
 }
 
 #[derive(Clone)]
@@ -165,7 +165,7 @@ fn get_expanded_patch_points(area: &VArea) -> (VPoint, VPoint) {
 }
 
 impl MineChoices {
-    fn from_mine(surface: &VSurface, mine: MineBase) -> Self {
+    pub fn from_mine(surface: &VSurface, mine: MineBase) -> Self {
         let mut destinations = Vec::new();
         let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(&mine.area);
 
