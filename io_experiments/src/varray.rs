@@ -1,14 +1,23 @@
+use crate::read_entire_file_varray_mmap_lib;
+use libc::mmap;
 use memmap2::MmapMut;
 use std::mem::ManuallyDrop;
+use std::path::{Path, PathBuf};
 
 enum BackingMemory {
-    RegularOldeVec(Vec<usize>),
-    Mmap(MmapMut, ManuallyDrop<Vec<usize>>),
+    RegularOldeVec {
+        vec: Vec<usize>,
+    },
+    Mmap {
+        mmap: MmapMut,
+        vec: ManuallyDrop<Vec<usize>>,
+        path: PathBuf,
+    },
 }
 
 impl Default for BackingMemory {
     fn default() -> Self {
-        BackingMemory::RegularOldeVec(Vec::new())
+        BackingMemory::RegularOldeVec { vec: Vec::new() }
     }
 }
 
@@ -23,27 +32,37 @@ pub struct VArray {
 impl VArray {
     pub fn new_length(size: usize) -> Self {
         VArray {
-            inner: BackingMemory::RegularOldeVec(vec![EMPTY_XY_INDEX; size]),
+            inner: BackingMemory::RegularOldeVec {
+                vec: vec![EMPTY_XY_INDEX; size],
+            },
         }
     }
 
-    pub fn from_mmap(backing_memory_map: MmapMut, xy_to_entity: ManuallyDrop<Vec<usize>>) -> Self {
+    pub fn from_mmap(
+        path: &Path,
+        backing_memory_map: MmapMut,
+        xy_to_entity: ManuallyDrop<Vec<usize>>,
+    ) -> Self {
         VArray {
-            inner: BackingMemory::Mmap(backing_memory_map, xy_to_entity),
+            inner: BackingMemory::Mmap {
+                mmap: backing_memory_map,
+                vec: xy_to_entity,
+                path: path.to_path_buf(),
+            },
         }
     }
 
     pub fn as_slice(&self) -> &[usize] {
         match &self.inner {
-            BackingMemory::RegularOldeVec(vec) => vec.as_slice(),
-            BackingMemory::Mmap(_, vec) => vec.as_slice(),
+            BackingMemory::RegularOldeVec { vec } => vec.as_slice(),
+            BackingMemory::Mmap { vec, .. } => vec.as_slice(),
         }
     }
 
     pub fn as_mut_slice(&mut self) -> &mut [usize] {
-        match self.inner {
-            BackingMemory::RegularOldeVec(ref mut vec) => vec.as_mut_slice(),
-            BackingMemory::Mmap(_, ref mut vec) => vec.as_mut_slice(),
+        match &mut self.inner {
+            BackingMemory::RegularOldeVec { vec } => vec.as_mut_slice(),
+            BackingMemory::Mmap { vec, .. } => vec.as_mut_slice(),
         }
     }
 
@@ -56,12 +75,19 @@ impl VArray {
 impl Clone for VArray {
     fn clone(&self) -> Self {
         match &self.inner {
-            BackingMemory::RegularOldeVec(memory) => VArray {
-                inner: BackingMemory::RegularOldeVec(Vec::clone(memory)),
+            BackingMemory::RegularOldeVec { vec } => VArray {
+                inner: BackingMemory::RegularOldeVec {
+                    vec: Vec::clone(vec),
+                },
             },
-            BackingMemory::Mmap(memmamp, memory) => VArray {
-                inner: BackingMemory::RegularOldeVec(Vec::clone(memory)),
-            },
+            BackingMemory::Mmap { mmap, vec, path } => {
+                VArray {
+                    inner: BackingMemory::RegularOldeVec {
+                        vec: Vec::clone(vec),
+                    },
+                }
+                // read_entire_file_varray_mmap_lib(path).unwrap()
+            }
         }
     }
 }
