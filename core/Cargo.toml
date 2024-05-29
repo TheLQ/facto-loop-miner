@@ -43,3 +43,6 @@ enum-map = "2.7.3"
 facto-loop-miner-io = { path = "../io_experiments" }
 rand = "0.8.5"
 derivative = "2.2.0"
+
+[profile.release]
+lto = "fat"
