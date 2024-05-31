@@ -160,12 +160,12 @@ where
         !not_free
     }
 
-    pub fn is_points_free_iter(&self, points: &[VPoint]) -> bool {
+    pub fn is_points_free_unchecked_iter(&self, points: &[VPoint]) -> bool {
         let xy_lookup = self.xy_to_entity.as_slice();
-        points.iter().all(|v| {
-            !self.is_point_out_of_bounds(v)
-                && xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX
-        })
+        // !self.is_point_out_of_bounds(v)
+        points
+            .iter()
+            .all(|v| xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX)
     }
 
     // pub fn get_points_if_in_range_vec<'a, R>(&self, points: Vec<VPoint>) -> VResult<R>

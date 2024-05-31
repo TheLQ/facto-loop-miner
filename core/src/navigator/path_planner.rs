@@ -213,14 +213,14 @@ impl MineChoices {
         destinations.push(Rail::new_straight(patch_bottom_left, RailDirection::Right));
         destinations.push(Rail::new_straight(patch_top_right, RailDirection::Left));
 
-        destinations.retain(|rail| rail.is_area_buildable(surface));
+        destinations.retain(|rail| rail.is_area_buildable_fast(surface));
         if destinations.len() != 4 {
             debug!("Reduced mine destinations from 4 to {}", destinations.len());
         }
 
         // TODO: OPTIMIZING ATTEMPT - pick closest 2 values
-        destinations.sort_by_key(|point| point.endpoint.x());
-        destinations.truncate(2);
+        destinations.sort_by_key(|rail| rail.endpoint.x());
+        // destinations.truncate(2);
 
         Self { mine, destinations }
     }
