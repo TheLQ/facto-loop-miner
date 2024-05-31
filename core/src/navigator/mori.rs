@@ -34,7 +34,7 @@ use tracing::{debug, warn};
 /// Makes a dual rail + spacing, +6 straight or 90 degree turning, path of rail from start to end.
 /// Without collisions into any point on the Surface.
 pub fn mori_start(
-    surface: &mut VSurface,
+    surface: &VSurface,
     start: Rail,
     end: Rail,
     search_area: &VArea,
@@ -133,7 +133,10 @@ pub fn mori_start(
     let result = match pathfind {
         Ok((path, path_cost)) => {
             debug!("built path {} long with {}", path.len(), path_cost);
-            PathingResult::Route(path.into_iter().map(|c| c.inner).collect())
+            PathingResult::Route {
+                path: path.into_iter().map(|c| c.inner).collect(),
+                cost: path_cost,
+            }
         }
         Err((inner_map, parents)) => {
             // let entries = inner_map
@@ -240,7 +243,7 @@ const RAIL_DIRECTION_CLOCKWISE: [RailDirection; 4] = [
     RailDirection::Left,
 ];
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, Hash, PartialOrd, Serialize, Deserialize)]
 pub struct Rail {
     pub endpoint: VPoint,
     pub direction: RailDirection,
@@ -712,13 +715,13 @@ impl Rail {
             let metric_start = metric_start.load();
             let since_last = (now - metric_start).as_secs().max(1) as f32;
             let rate_paths_per_second = metric_successors as f32 / since_last;
-            debug!(
-                "successor {} spot parents {} in {} paths/second total {} seconds",
-                metric_successors.to_formatted_string(&LOCALE),
-                parents_compare.len(),
-                (rate_paths_per_second as u32).to_formatted_string(&LOCALE),
-                since_last,
-            );
+            // debug!(
+            //     "successor {} spot parents {} in {} paths/second total {} seconds",
+            //     metric_successors.to_formatted_string(&LOCALE),
+            //     parents_compare.len(),
+            //     (rate_paths_per_second as u32).to_formatted_string(&LOCALE),
+            //     since_last,
+            // );
         }
 
         // if parents.len() > 800 {
@@ -964,11 +967,11 @@ impl Rail {
     }
 }
 
-impl Hash for Rail {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.endpoint.hash(state)
-    }
-}
+// impl Hash for Rail {
+//     fn hash<H: Hasher>(&self, state: &mut H) {
+//         self.endpoint.hash(state)
+//     }
+// }
 
 fn is_buildable_point_ref(surface: &VSurface, point: VPoint) -> bool {
     if surface.is_point_out_of_bounds(&point) {

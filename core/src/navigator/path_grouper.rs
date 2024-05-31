@@ -15,7 +15,7 @@ use tracing::{debug, trace};
 
 const MAX_PATCHES: usize = 200;
 
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct MineBase {
     pub patch_indexes: Vec<usize>,
     pub area: VArea,

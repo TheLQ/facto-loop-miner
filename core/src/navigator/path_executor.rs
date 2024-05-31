@@ -14,9 +14,9 @@ use num_format::ToFormattedString;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
-use std::fs::{create_dir, remove_dir, remove_dir_all};
-use std::io;
-use std::path::{Path, PathBuf};
+use std::fs::{create_dir, remove_dir_all};
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tracing::{debug, error, info};
 
 ///
@@ -64,7 +64,12 @@ pub fn execute_route_batch(
             .combinations
             .into_par_iter()
             .map(|route_combination| {
-                execute_route_combination(&execution_surface, search_area, route_combination)
+                execute_route_combination(
+                    &execution_surface,
+                    search_area,
+                    route_combination,
+                    batch_size,
+                )
             })
             .collect()
     });
@@ -132,10 +137,21 @@ fn execute_route_combination(
     surface: &VSurface,
     search_area: &VArea,
     route_combination: MineRouteCombination,
+    batch_size: usize,
 ) -> MineRouteCombinationPathResult {
-    let watch = BasicWatch::start();
+    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+    let my_counter = COUNTER.fetch_add(1, Ordering::Relaxed);
+    if my_counter % 100 == 0 {
+        info!(
+            "Processed {} of {} combinations",
+            my_counter.to_formatted_string(&LOCALE),
+            batch_size.to_formatted_string(&LOCALE)
+        )
+    }
+
+    // let watch = BasicWatch::start();
     let mut working_surface = (*surface).clone();
-    info!("Cloned surface in {}", watch);
+    // info!("Cloned surface in {}", watch);
 
     let mut found_paths = Vec::new();
     for route in route_combination.routes {

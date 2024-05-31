@@ -6,8 +6,9 @@ use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_EIGHT, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
 use itertools::Itertools;
+use simd_json::prelude::ArrayTrait;
 use std::rc::Rc;
-use tracing::{debug, trace};
+use tracing::{debug, info, trace};
 
 /// Solve 2 core problems
 /// - Get an ordered list of patches to navigate to
@@ -26,9 +27,22 @@ pub fn get_possible_routes_for_batch(
         .into_iter()
         .map(|mine| MineChoices::from_mine(surface, mine))
         .collect();
+    let mine_choice_len = mine_choices.len();
+    let mine_choice_destinations_len = mine_choices
+        .iter()
+        .fold(0, |total, v| total + v.destinations.len());
 
     let mine_combinations = find_all_combinations(mine_choices);
+    let total_combinations_base = mine_combinations.len();
     let mine_combinations = find_all_permutations(mine_combinations);
+    let total_combinations_permut = mine_combinations.len();
+    info!(
+        "Expanded {} mines with {} destinations to {} combinations then {} permutated",
+        mine_choice_len,
+        mine_choice_destinations_len,
+        total_combinations_base,
+        total_combinations_permut
+    );
 
     let mut route_combinations = Vec::new();
     build_routes_from_destinations(
@@ -37,6 +51,10 @@ pub fn get_possible_routes_for_batch(
         &mine_batch.base_source_eighth,
         &mut route_combinations,
     );
+    // let before = route_combinations.len();
+    // route_combinations = route_combinations.into_iter().unique().collect();
+    // let after = route_combinations.len();
+    // panic!("reduced from {} to {}", before, after);
 
     MineRouteCombinationBatch {
         combinations: route_combinations,
@@ -48,24 +66,25 @@ pub struct MineChoices {
     pub destinations: Vec<Rail>,
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 struct MineDestination {
     mine: MineBase,
     entry_rail: Rail,
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 struct MineDestinationCombination {
     destinations: Vec<MineDestination>,
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub struct MineRouteEndpoints {
     pub mine: MineBase,
     pub entry_rail: Rail,
     pub base_rail: Rail,
 }
 
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub struct MineRouteCombination {
     pub routes: Vec<MineRouteEndpoints>,
 }
@@ -166,7 +185,7 @@ fn get_expanded_patch_points(area: &VArea) -> (VPoint, VPoint) {
 
 impl MineChoices {
     pub fn from_mine(surface: &VSurface, mine: MineBase) -> Self {
-        let mut destinations = Vec::new();
+        let mut destinations: Vec<Rail> = Vec::new();
         let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(&mine.area);
 
         destinations.push(Rail::new_straight(patch_top_left, RailDirection::Right));
@@ -183,6 +202,10 @@ impl MineChoices {
         if destinations.len() != 4 {
             debug!("Reduced mine destinations from 4 to {}", destinations.len());
         }
+
+        // TODO: OPTIMIZING ATTEMPT - pick closest 2 values
+        destinations.sort_by_key(|point| point.endpoint.x());
+        destinations.truncate(2);
 
         Self { mine, destinations }
     }
