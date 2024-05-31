@@ -285,7 +285,8 @@ impl VSurface {
     }
 
     pub fn is_points_free(&self, points: &[VPoint]) -> bool {
-        self.pixels.is_points_free(points)
+        /*self.pixels.is_points_free(points)*/
+        self.pixels.is_points_free_iter(points)
     }
 
     pub fn crop(&mut self, new_radius: u32) {
