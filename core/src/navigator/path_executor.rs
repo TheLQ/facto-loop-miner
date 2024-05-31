@@ -18,11 +18,11 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tracing::{debug, error, info};
 
-///
+/// Given thousands of possible route combinations, execute in parallel and find the best
 pub fn execute_route_batch(
     surface: &VSurface,
     route_batch: MineRouteCombinationBatch,
-) -> Option<Vec<MinePath>> {
+) -> MineRouteCombinationPathResult {
     let batch_size = route_batch.combinations.len();
 
     info!("Executing {} route combination batch", batch_size);
@@ -77,22 +77,70 @@ pub fn execute_route_batch(
         batch_size, routing_watch
     );
 
-    // We have many possible routes that have different costs. We want the lowest one
-    let mut best_path = Vec::new();
+    // // We have many possible routes that have different costs. We want the lowest one
+    // let mut lowest_cost = u32::MAX;
+    // let mut highest_cost = 0;
+    // let mut success_count = 0;
+    // let mut failure_found_paths_count: HashMap<usize, u32> = HashMap::new();
+    // let best_path = route_results
+    //     .into_iter()
+    //     .reduce(|result, cur| match (&result, &cur) {
+    //         (
+    //             MineRouteCombinationPathResult::Failure { .. },
+    //             MineRouteCombinationPathResult::Failure { found_paths, .. },
+    //         )
+    //         | (
+    //             MineRouteCombinationPathResult::Success { .. },
+    //             MineRouteCombinationPathResult::Failure { found_paths, .. },
+    //         ) => {
+    //             *failure_found_paths_count
+    //                 .entry(found_paths.len())
+    //                 .or_insert(0) += 1;
+    //             // result may be Success
+    //             result
+    //         }
+    //         (
+    //             MineRouteCombinationPathResult::Failure { .. },
+    //             MineRouteCombinationPathResult::Success { paths, .. },
+    //         )
+    //         | (
+    //             MineRouteCombinationPathResult::Success { .. },
+    //             MineRouteCombinationPathResult::Success { paths, .. },
+    //         ) => {
+    //             success_count += 1;
+    //
+    //             let total_cost = paths.iter().fold(0, |total, path| total + path.cost);
+    //             if total_cost > highest_cost {
+    //                 highest_cost = total_cost;
+    //             }
+    //
+    //             if total_cost < lowest_cost {
+    //                 lowest_cost = total_cost;
+    //                 cur
+    //             } else {
+    //                 result
+    //             }
+    //         }
+    //     })
+    //     .unwrap();
+
+    let mut best_path: Option<MineRouteCombinationPathResult> = None;
     let mut lowest_cost = u32::MAX;
     let mut highest_cost = 0;
     let mut success_count = 0;
-
     let mut failure_found_paths_count: HashMap<usize, u32> = HashMap::new();
     for route_result in route_results {
-        match route_result {
-            MineRouteCombinationPathResult::Success { paths } => {
+        match &route_result {
+            MineRouteCombinationPathResult::Success {
+                paths,
+                route_combination,
+            } => {
                 success_count += 1;
 
                 let total_cost = paths.iter().fold(0, |total, path| total + path.cost);
                 if total_cost < lowest_cost {
                     lowest_cost = total_cost;
-                    best_path = paths;
+                    best_path = Some(route_result);
                 }
                 if total_cost > highest_cost {
                     highest_cost = total_cost;
@@ -105,6 +153,9 @@ pub fn execute_route_batch(
                 *failure_found_paths_count
                     .entry(found_paths.len())
                     .or_insert(0) += 1;
+                if best_path.is_none() {
+                    best_path = Some(route_result);
+                }
             }
         }
     }
@@ -123,12 +174,7 @@ pub fn execute_route_batch(
         THREAD_OVERSUBSCRIBE_PERCENT
     );
 
-    if !best_path.is_empty() {
-        Some(best_path)
-    } else {
-        error!("Failed for {} combinations", batch_size);
-        None
-    }
+    best_path.unwrap()
 }
 
 fn execute_route_combination(
@@ -152,18 +198,18 @@ fn execute_route_combination(
     // info!("Cloned surface in {}", watch);
 
     let mut found_paths = Vec::new();
-    for route in route_combination.routes {
+    for mine_endpoint in &route_combination.routes {
         let route_result = mori_start(
             &working_surface,
-            route.base_rail.clone(),
-            route.entry_rail.clone(),
+            mine_endpoint.base_rail.clone(),
+            mine_endpoint.entry_rail.clone(),
             search_area,
         );
         match route_result {
             PathingResult::Route { path, cost } => {
                 write_rail(&mut working_surface, &path).unwrap();
                 found_paths.push(MinePath {
-                    mine_base: route.mine,
+                    mine_base: mine_endpoint.mine.clone(),
                     rail: path,
                     cost,
                 });
@@ -171,12 +217,15 @@ fn execute_route_combination(
             PathingResult::FailingDebug(debug_rail) => {
                 return MineRouteCombinationPathResult::Failure {
                     found_paths,
-                    failing_mine: route,
+                    failing_mine: mine_endpoint.clone(),
                 }
             }
         }
     }
-    MineRouteCombinationPathResult::Success { paths: found_paths }
+    MineRouteCombinationPathResult::Success {
+        paths: found_paths,
+        route_combination,
+    }
 }
 
 pub struct MinePath {
@@ -188,6 +237,7 @@ pub struct MinePath {
 pub enum MineRouteCombinationPathResult {
     Success {
         paths: Vec<MinePath>,
+        route_combination: MineRouteCombination,
     },
     Failure {
         found_paths: Vec<MinePath>,

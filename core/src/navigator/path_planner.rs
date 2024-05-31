@@ -36,8 +36,11 @@ pub fn get_possible_routes_for_batch(
 
     let mine_combinations = find_all_combinations(mine_choices);
     let total_combinations_base = mine_combinations.len();
-    // let mine_combinations = find_all_permutations(mine_combinations);
+    info!("generated {} combinations", total_combinations_base);
+    let mine_combinations = find_all_permutations(mine_combinations);
     let total_combinations_permut = mine_combinations.len();
+    info!("generated {} permutations", total_combinations_permut);
+
     info!(
         "Expanded {} mines with {} destinations to {} combinations then {} permutated",
         mine_choice_len,
@@ -50,7 +53,7 @@ pub fn get_possible_routes_for_batch(
     build_routes_from_destinations(
         mine_combinations,
         mine_batch.base_direction,
-        &mine_batch.base_source_eighth,
+        &mine_batch.base_source_eighth.lock().unwrap(),
         &mut route_combinations,
     );
     // let before = route_combinations.len();
@@ -132,15 +135,23 @@ fn find_all_combinations(mines_choices: Vec<MineChoices>) -> Vec<MineDestination
 fn find_all_permutations(
     input_combinations: Vec<MineDestinationCombination>,
 ) -> Vec<MineDestinationCombination> {
+    let mut seen_lengths = Vec::new();
+
     let mut permutated_combinations = Vec::new();
     for combination in input_combinations {
+        let destinations_len = combination.destinations.len();
+        if !seen_lengths.contains(&destinations_len) {
+            info!("Found lengths {}", destinations_len);
+            seen_lengths.push(destinations_len);
+        }
+
         for permutation in combination
             .destinations
-            .iter()
-            .permutations(combination.destinations.len())
+            .into_iter()
+            .permutations(destinations_len)
         {
             permutated_combinations.push(MineDestinationCombination {
-                destinations: permutation.into_iter().cloned().collect(),
+                destinations: permutation.to_vec(),
             });
         }
     }

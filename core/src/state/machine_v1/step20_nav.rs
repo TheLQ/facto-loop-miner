@@ -1,5 +1,5 @@
-use crate::navigator::mori::{mori_start, write_rail};
-use crate::navigator::path_executor::execute_route_batch;
+use crate::navigator::mori::{mori_start, write_rail, write_rail_with_pixel};
+use crate::navigator::path_executor::{execute_route_batch, MineRouteCombinationPathResult};
 use crate::navigator::path_grouper::{base_bottom_right_corner, get_mine_bases_by_batch};
 use crate::navigator::path_planner::{get_possible_routes_for_batch, MineChoices};
 use crate::navigator::path_side::BaseSource;
@@ -13,8 +13,9 @@ use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
-use itertools::Itertools;
 use opencv::core::Point;
+use std::borrow::BorrowMut;
+use std::sync::Mutex;
 use tracing::{info, warn};
 
 pub struct Step20 {}
@@ -156,18 +157,15 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
             let choice_area: VArea =
                 VArea::from_arbitrary_points(mine_choice.destinations.iter().map(|v| v.endpoint));
 
-            warn!(
-                "Destinations for {:?}\n{}",
-                choice_area,
-                mine_choice
-                    .destinations
-                    .iter()
-                    .map(|v| format!("{:?}", v))
-                    .join("\n")
-            );
-            // for destination in &mine_choice.destinations {
-            //     warn!("Destination: {:?}", destination);
-            // }
+            // warn!(
+            //     "Destinations for {:?}\n{}",
+            //     choice_area,
+            //     mine_choice
+            //         .destinations
+            //         .iter()
+            //         .map(|v| format!("{:?}", v))
+            //         .join("\n")
+            // );
 
             let padding = 6;
             let patch_top_left = &choice_area.start;
@@ -194,6 +192,7 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
         //     break;
         // }
 
+        let mut batch_side = mine_batch.base_source_eighth.clone();
         info!("Processing batch with {} mines", mine_batch.mines.len());
         let route_combination_batch = get_possible_routes_for_batch(surface, mine_batch);
         info!(
@@ -220,8 +219,11 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
         info!("execution took {}", watch);
 
         match res {
-            Some(v) => {
-                for path in v {
+            MineRouteCombinationPathResult::Success {
+                paths,
+                route_combination,
+            } => {
+                for path in paths {
                     info!(
                         "Writing path {:?} rail for base {:?}",
                         path.rail.len(),
@@ -229,12 +231,26 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
                     );
                     write_rail(surface, &path.rail).unwrap();
                 }
+
+                let mut side = Mutex::lock(&batch_side).unwrap();
+                let side_before = side.pos();
+                for _ in 0..route_combination.routes.len() {
+                    // let weak_count = Rc::weak_count(&batch_side);
+                    // let strong_count = Rc::strong_count(&batch_side);
+                    // info!("weak count {} strong {}", weak_count, strong_count);
+                    // Rc::get_mut(&mut batch_side).unwrap().next();
+                    side.next();
+                    // batch_side.get_mut().unwrap().next();
+                }
+                info!("upgraded side from {} to {:?}", side_before, side);
             }
-            None => {
+            MineRouteCombinationPathResult::Failure { .. } => {
+                let side = Mutex::lock(&batch_side).unwrap();
+                info!("side is {:?}", side);
                 for area in debug_areas {
                     surface.draw_square_area(&area, Pixel::Highlighter, None);
                 }
-                write_rail(surface, &debug_rails).unwrap();
+                write_rail_with_pixel(surface, &debug_rails, Pixel::Highlighter).unwrap();
                 // surface.draw_square_area(
                 //     &planned_area_clone,
                 //     Pixel::Highlighter,

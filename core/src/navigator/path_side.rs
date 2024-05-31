@@ -2,33 +2,35 @@ use crate::navigator::mori::RAIL_STEP_SIZE_I32;
 use crate::state::machine_v1::CENTRAL_BASE_TILES;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
 use std::rc::Rc;
+use std::sync::Mutex;
 
 const CENTRAL_BASE_TILES_BY_RAIL_STEP: i32 = CENTRAL_BASE_TILES
     + ((RAIL_STEP_SIZE_I32 * 2) - (CENTRAL_BASE_TILES % (RAIL_STEP_SIZE_I32 * 2)));
 
 pub struct BaseSource {
-    positive: Rc<BaseSourceEighth>,
-    negative: Rc<BaseSourceEighth>,
+    positive: Rc<Mutex<BaseSourceEighth>>,
+    negative: Rc<Mutex<BaseSourceEighth>>,
 }
 
 impl BaseSource {
     pub fn new() -> Self {
         Self {
-            positive: Rc::new(BaseSourceEighth::new(1)),
-            negative: Rc::new(BaseSourceEighth::new(-1)),
+            positive: Rc::new(Mutex::new(BaseSourceEighth::new(1))),
+            negative: Rc::new(Mutex::new(BaseSourceEighth::new(-1))),
         }
     }
 
-    pub fn get_positive(&self) -> Rc<BaseSourceEighth> {
+    pub fn get_positive(&self) -> Rc<Mutex<BaseSourceEighth>> {
         self.positive.clone()
     }
 
-    pub fn get_negative(&self) -> Rc<BaseSourceEighth> {
+    pub fn get_negative(&self) -> Rc<Mutex<BaseSourceEighth>> {
         self.negative.clone()
     }
 }
 
 /// Because a struct field of IntoIterator<VPoint> creates Rust type hell
+#[derive(PartialEq, Debug)]
 pub struct BaseSourceEighth {
     sign: i32,
     next: i32,
@@ -36,7 +38,8 @@ pub struct BaseSourceEighth {
 
 impl BaseSourceEighth {
     pub fn new(sign: i32) -> Self {
-        Self { sign, next: 0 }
+        // Must start at 1 due to conflict at 0!
+        Self { sign, next: 1 }
     }
 
     pub fn next(&mut self) -> VPoint {
@@ -47,6 +50,10 @@ impl BaseSourceEighth {
 
     pub fn peek_add(&self, pos_add: usize) -> VPoint {
         self.get_for_pos(self.next + pos_add as i32)
+    }
+
+    pub fn pos(&self) -> i32 {
+        self.next
     }
 
     // pub fn peek_add_vec(&self, pos_add: usize) -> Vec<VPoint> {

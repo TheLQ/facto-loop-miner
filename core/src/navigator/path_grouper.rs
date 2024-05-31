@@ -11,6 +11,7 @@ use crate::TILES_PER_CHUNK;
 use itertools::Itertools;
 use kiddo::{Manhattan, NearestNeighbour};
 use std::rc::Rc;
+use std::sync::Mutex;
 use tracing::{debug, trace};
 
 const MAX_PATCHES: usize = 200;
@@ -23,7 +24,7 @@ pub struct MineBase {
 
 pub struct MineBaseBatch {
     pub mines: Vec<MineBase>,
-    pub base_source_eighth: Rc<BaseSourceEighth>,
+    pub base_source_eighth: Rc<Mutex<BaseSourceEighth>>,
     pub base_direction: RailDirection,
     pub batch_search_area: VArea,
 }
@@ -146,7 +147,7 @@ fn patches_by_cross_sign_expanding(
     mut mines: Vec<MineBase>,
     base_source: &BaseSource,
 ) -> Vec<MineBaseBatch> {
-    const PERPENDICULAR_SCAN_WIDTH: u32 = 15;
+    const PERPENDICULAR_SCAN_WIDTH: u32 = 10;
 
     let bounding_area =
         VArea::from_arbitrary_points(mines.iter().flat_map(|v| v.area.get_corner_points()));
@@ -238,7 +239,7 @@ fn patches_by_cross_sign_expanding(
                 scan_start.endpoint.move_y(delta_y),
                 scan_end.endpoint.move_y(-delta_y),
                 scan_end.endpoint.move_y(delta_y),
-                base_source_eighth.peek_add(0),
+                base_source_eighth.lock().unwrap().peek_add(0),
             ]);
 
             batches.push(MineBaseBatch {
