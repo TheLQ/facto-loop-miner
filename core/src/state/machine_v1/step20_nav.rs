@@ -228,6 +228,17 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
             "Batch created {} combinations",
             route_combination_batch.combinations.len()
         );
+        // TODO???
+        // 2024-05-31T06:40:36.603091Z  INFO facto_loop_miner::state::machine_v1::step20_nav: Processing batch with 3 mines
+        // 2024-05-31T06:40:36.603108Z  INFO facto_loop_miner::navigator::path_planner: Expanded 3 mines with 0 destinations to...
+        // 2024-05-31T06:40:36.603111Z  INFO facto_loop_miner::navigator::path_planner: generated 0 combinations
+        // 2024-05-31T06:40:36.603113Z  INFO facto_loop_miner::navigator::path_planner: generated 0 permutations
+        // 2024-05-31T06:40:36.603115Z  INFO facto_loop_miner::navigator::path_planner: Expanded 3 mines with 0 destinations to 0 combinations then 0 permutated
+        // 2024-05-31T06:40:36.603116Z  INFO facto_loop_miner::state::machine_v1::step20_nav: Batch created 0 combinations
+        if route_combination_batch.combinations.is_empty() {
+            error!("empty combinations!");
+            continue;
+        }
 
         // if 1 + 1 == 2 {
         //     break;

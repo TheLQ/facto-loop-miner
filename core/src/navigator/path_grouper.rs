@@ -67,10 +67,19 @@ pub fn get_mine_bases_by_batch(
     // ordered_patches
 
     let mine_batches = patches_by_cross_sign_expanding(patch_groups, base_source);
+    // let mut result = Vec::new();
+    // {
+    //     let mut iter = mine_batches.into_iter();
+    //     while let Some(v) = iter.next() {
+    //
+    //     }
+    // }
+    // let mine_batches = result;
+
     let mut result = Vec::new();
     for (index, mine_batch) in mine_batches.into_iter().enumerate() {
         // When expanded, 6! = 720. 9! = 362,880 which is too gigantic
-        const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
+        const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 4;
         const RESPLIT_LAST_COUNT_LESS_THAN_THRESHOLD: usize = 3;
 
         let mine_batch_len = mine_batch.mines.len();

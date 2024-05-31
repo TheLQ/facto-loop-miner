@@ -115,7 +115,7 @@ fn find_all_combinations(mines_choices: Vec<MineChoices>) -> Vec<MineDestination
                     destinations: vec![mine_destination],
                 });
             }
-        } else {
+        } else if !mine_choices.destinations.is_empty() {
             // every existing route is cloned 4x for the new destinations
             let mut new_routes = Vec::new();
             for route_existing in routes {
