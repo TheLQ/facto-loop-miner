@@ -1,6 +1,7 @@
 use crate::surfacev::vpoint::VPoint;
 use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
+use std::borrow::Borrow;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct VArea {
@@ -33,35 +34,24 @@ impl VArea {
     }
 
     pub fn from_arbitrary_points(points: &[VPoint]) -> VArea {
-        let mut x_min = i32::MAX;
-        let mut x_max = i32::MIN;
-        let mut y_min = i32::MAX;
-        let mut y_max = i32::MIN;
-        for point in points {
-            x_min = x_min.min(point.x());
-            x_max = x_max.max(point.x());
-            y_min = y_min.min(point.y());
-            y_max = y_max.max(point.y());
-        }
-
-        let start = VPoint::new(x_min, y_min);
-        VArea {
-            start,
-            width: (x_max - start.x()).try_into().unwrap(),
-            height: (y_max - start.y()).try_into().unwrap(),
-        }
+        Self::from_arbitrary_points_iter(points)
     }
 
-    pub fn from_arbitrary_points_iter(points: impl IntoIterator<Item = VPoint>) -> VArea {
+    pub fn from_arbitrary_points_iter<I>(points: I) -> VArea
+    where
+        I: IntoIterator,
+        I::Item: Borrow<VPoint>,
+    {
         let mut x_min = i32::MAX;
         let mut x_max = i32::MIN;
         let mut y_min = i32::MAX;
         let mut y_max = i32::MIN;
         for point in points {
-            x_min = x_min.min(point.x());
-            x_max = x_max.max(point.x());
-            y_min = y_min.min(point.y());
-            y_max = y_max.max(point.y());
+            let borrowed_point = point.borrow();
+            x_min = x_min.min(borrowed_point.x());
+            x_max = x_max.max(borrowed_point.x());
+            y_min = y_min.min(borrowed_point.y());
+            y_max = y_max.max(borrowed_point.y());
         }
 
         let start = VPoint::new(x_min, y_min);
