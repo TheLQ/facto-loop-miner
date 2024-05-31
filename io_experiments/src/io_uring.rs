@@ -229,7 +229,7 @@ impl IoUring {
         unsafe { io_uring_cqe_seen(&mut self.ring, cqe_ptr) };
     }
 
-    #[cfg(nope)]
+    #[cfg(feature = "lol")]
     pub fn wait_cqes_broken(&mut self) -> Vec<io_uring_cqe> {
         let mut cqes: Vec<io_uring_cqe> = Vec::with_capacity(QUEUE_DEPTH as usize);
         unsafe {

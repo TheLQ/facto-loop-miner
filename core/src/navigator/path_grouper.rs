@@ -1,4 +1,4 @@
-use crate::navigator::mori::{Rail, RailDirection, RailMode};
+use crate::navigator::mori::{Rail, RailDirection};
 use crate::navigator::path_side::{BaseSource, BaseSourceEighth};
 use crate::state::machine_v1::{CENTRAL_BASE_TILES, REMOVE_RESOURCE_BASE_TILES};
 use crate::surface::patch::map_vpatch_to_kdtree;
@@ -148,12 +148,8 @@ fn patches_by_cross_sign_expanding(
 ) -> Vec<MineBaseBatch> {
     const PERPENDICULAR_SCAN_WIDTH: u32 = 15;
 
-    let bounding_area = VArea::from_arbitrary_points(
-        &mines
-            .iter()
-            .flat_map(|v| v.area.get_corner_points())
-            .collect_vec(),
-    );
+    let bounding_area =
+        VArea::from_arbitrary_points(mines.iter().flat_map(|v| v.area.get_corner_points()));
     let cross_sides: [Rail; 1] = [
         // Rail::new_straight(
         //     VPoint::new(REMOVE_RESOURCE_BASE_TILES, 0),
@@ -165,7 +161,7 @@ fn patches_by_cross_sign_expanding(
         ),
     ];
     let mut batches = Vec::new();
-    'outer: for cross_side in cross_sides {
+    for cross_side in cross_sides {
         for perpendicular_scan_size_base in (1i32..).flat_map(|i| [i, -i]) {
             // if perpendicular_scan_area.unsigned_abs() * RAIL_STEP_SIZE > surface.get_radius() {
             //     break;

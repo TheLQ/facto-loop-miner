@@ -16,3 +16,12 @@ pub enum PathingResult {
     Route { path: Vec<Rail>, cost: u32 },
     FailingDebug(Vec<Rail>),
 }
+
+impl PathingResult {
+    pub fn is_route(&self) -> bool {
+        match &self {
+            PathingResult::Route { .. } => true,
+            PathingResult::FailingDebug(..) => false,
+        }
+    }
+}

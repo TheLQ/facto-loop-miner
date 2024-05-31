@@ -1,27 +1,21 @@
-use crate::navigator::mori::{
-    mori_start, write_rail, write_rail_with_pixel, Rail, RailDirection, RAIL_STEP_SIZE_I32,
-};
+use crate::navigator::mori::{mori_start, write_rail};
 use crate::navigator::path_executor::execute_route_batch;
 use crate::navigator::path_grouper::{base_bottom_right_corner, get_mine_bases_by_batch};
-use crate::navigator::path_planner::{
-    get_possible_routes_for_batch, MineChoices, MineRouteEndpoints,
-};
+use crate::navigator::path_planner::{get_possible_routes_for_batch, MineChoices};
 use crate::navigator::path_side::BaseSource;
 use crate::navigator::PathingResult;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
-use crate::state::machine_v1::step10_base::CENTRAL_BASE_TILES;
 use crate::surface::patch::{DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::varea::VArea;
-use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
-use crate::surfacev::vsurface::{VPixel, VSurface};
+use crate::surfacev::vpoint::VPoint;
+use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use itertools::Itertools;
-use opencv::core::{trace, Point};
-use std::cmp::min;
-use tracing::{error, info, trace, warn};
+use opencv::core::Point;
+use tracing::{info, warn};
 
 pub struct Step20 {}
 
@@ -36,7 +30,7 @@ impl Step for Step20 {
         "step20-nav"
     }
 
-    fn transformer(&self, mut params: StepParams) -> XMachineResult<()> {
+    fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let mut surface = VSurface::load_from_last_step(&params)?;
 
         // let mut counter: usize = 0;
@@ -111,7 +105,7 @@ fn navigate_patches_to_base_single(surface: &mut VSurface) {
     //     return;
     // }
 
-    let mut combination = route_combination_batch.combinations.remove(1);
+    let combination = route_combination_batch.combinations.remove(1);
     for route in combination.routes {
         let res = mori_start(
             surface,

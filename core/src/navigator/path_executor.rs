@@ -4,7 +4,6 @@ use crate::navigator::path_planner::{
     MineRouteCombination, MineRouteCombinationBatch, MineRouteEndpoints,
 };
 use crate::navigator::PathingResult;
-use crate::surface::surface::Surface;
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;

@@ -27,7 +27,7 @@ pub fn read_entire_file(path: &Path, preallocate_vec: bool) -> VIoResult<Vec<u8>
     Ok(xy_array_u8_raw)
 }
 
-#[cfg(lol)]
+#[cfg(feature = "lol")]
 pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VIoResult<Vec<usize>> {
     let mut file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
@@ -202,7 +202,7 @@ pub fn drop_mmap_vec(mut mmap_vec: ManuallyDrop<Vec<usize>>) {
     }
 }
 
-#[cfg(lol)]
+#[cfg(feature = "lol")]
 pub fn read_entire_file_usize_memmap_u8(path: &Path) -> VIoResult<Vec<usize>> {
     let file = File::open(path).map_err(VIoError::io_error(path))?;
 
@@ -245,7 +245,7 @@ pub fn read_entire_file_usize_memmap_u8(path: &Path) -> VIoResult<Vec<usize>> {
     Ok(vec)
 }
 
-#[cfg(lol)]
+#[cfg(feature = "lol")]
 pub unsafe fn read_entire_file_usize_aligned_vec_golfed(path: &Path) -> VIoResult<Vec<usize>> {
     let mut file = File::open(path).map_err(VIoError::io_error(path))?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
