@@ -43,6 +43,12 @@ pub fn execute_route_batch(
     let execution_surface = VSurface::load(&path).unwrap();
 
     // debug: Get all the original patches
+    // ???
+
+    // reset counters
+    TOTAL_COUNTER.store(0, Ordering::Relaxed);
+    SUCCESS_COUNTER.store(0, Ordering::Relaxed);
+    FAIL_COUNTER.store(0, Ordering::Relaxed);
 
     let routing_watch = BasicWatch::start();
     let default_threads = rayon::current_num_threads();
@@ -177,19 +183,28 @@ pub fn execute_route_batch(
     best_path.unwrap()
 }
 
+static TOTAL_COUNTER: AtomicUsize = AtomicUsize::new(0);
+static SUCCESS_COUNTER: AtomicUsize = AtomicUsize::new(0);
+static FAIL_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
 fn execute_route_combination(
     surface: &VSurface,
     search_area: &VArea,
     route_combination: MineRouteCombination,
     batch_size: usize,
 ) -> MineRouteCombinationPathResult {
-    static COUNTER: AtomicUsize = AtomicUsize::new(0);
-    let my_counter = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
     if my_counter % 100 == 0 {
         info!(
-            "Processed {} of {} combinations",
+            "Processed {} of {} combinations, success {} fail {}",
             my_counter.to_formatted_string(&LOCALE),
-            batch_size.to_formatted_string(&LOCALE)
+            batch_size.to_formatted_string(&LOCALE),
+            SUCCESS_COUNTER
+                .load(Ordering::Relaxed)
+                .to_formatted_string(&LOCALE),
+            FAIL_COUNTER
+                .load(Ordering::Relaxed)
+                .to_formatted_string(&LOCALE),
         )
     }
 
@@ -215,13 +230,15 @@ fn execute_route_combination(
                 });
             }
             PathingResult::FailingDebug(debug_rail) => {
+                FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
                 return MineRouteCombinationPathResult::Failure {
                     found_paths,
                     failing_mine: mine_endpoint.clone(),
-                }
+                };
             }
         }
     }
+    SUCCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
     MineRouteCombinationPathResult::Success {
         paths: found_paths,
         route_combination,

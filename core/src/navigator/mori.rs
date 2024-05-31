@@ -142,10 +142,10 @@ pub fn mori_start(
             //     .map(|v| parents.get_index(v.index).unwrap())
             //     .collect();
             let entries = parents.into_iter().map(|(node, _v)| node.inner).collect();
-            warn!(
-                "failed to pathfind from {:?} to {:?}",
-                start_compare.inner, end
-            );
+            // warn!(
+            //     "failed to pathfind from {:?} to {:?}",
+            //     start_compare.inner, end
+            // );
             PathingResult::FailingDebug(entries)
         }
     };
