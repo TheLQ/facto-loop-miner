@@ -79,7 +79,7 @@ pub fn get_mine_bases_by_batch(
     let mut result = Vec::new();
     for (index, mine_batch) in mine_batches.into_iter().enumerate() {
         // When expanded, 6! = 720. 9! = 362,880 which is too gigantic
-        const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 4;
+        const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
         const RESPLIT_LAST_COUNT_LESS_THAN_THRESHOLD: usize = 3;
 
         let mine_batch_len = mine_batch.mines.len();
@@ -209,7 +209,7 @@ fn patches_by_cross_sign_expanding(
     mut mines: Vec<MineBase>,
     base_source: &BaseSource,
 ) -> Vec<MineBaseBatch> {
-    const PERPENDICULAR_SCAN_WIDTH: u32 = 10;
+    const PERPENDICULAR_SCAN_WIDTH: u32 = 20;
 
     let bounding_area =
         VArea::from_arbitrary_points(mines.iter().flat_map(|v| v.area.get_corner_points()));
@@ -306,11 +306,12 @@ fn patches_by_cross_sign_expanding(
                 scan_start.endpoint.move_y(delta_y),
                 scan_end.endpoint.move_y(-delta_y),
                 scan_end.endpoint.move_y(delta_y),
-                VPoint::new(
-                    base_source_eighth.lock().unwrap().peek_add(0).x(),
-                    scan_start.endpoint.y(),
-                ),
+                base_source_eighth.lock().unwrap().peek_add(0),
             ]);
+            // VPoint::new(
+            //     base_source_eighth.lock().unwrap().peek_add(0).x(),
+            //     scan_start.endpoint.y(),
+            // ),
 
             batches.push(MineBaseBatch {
                 mines: found_mines,
