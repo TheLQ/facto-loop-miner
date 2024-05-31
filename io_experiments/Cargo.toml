@@ -15,5 +15,8 @@ uring-sys2 = { path = "../../uring-sys" }
 tracing = "0.1.37"
 tracing-subscriber = "0.3.17"
 
+[features]
+lol = []
+
 [profile.release]
 lto = "fat"
