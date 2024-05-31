@@ -1,5 +1,6 @@
 use crate::navigator::mori::{
-    mori_start, write_rail, write_rail_with_pixel, RAIL_STEP_SIZE, RAIL_STEP_SIZE_I32,
+    draw_rail, mori_start, write_rail, write_rail_with_pixel, Rail, RAIL_STEP_SIZE,
+    RAIL_STEP_SIZE_I32,
 };
 use crate::navigator::path_executor::{execute_route_batch, MineRouteCombinationPathResult};
 use crate::navigator::path_grouper::{
@@ -49,6 +50,7 @@ impl Step for Step20 {
         match 1 {
             1 => navigate_patches_to_base2(&mut surface),
             2 => navigate_patches_to_base_single(&mut surface),
+            3 => navigate_patches_to_base_dump_rails(&mut surface),
             _ => panic!("adf"),
         };
 
@@ -138,6 +140,28 @@ fn navigate_patches_to_base_single(surface: &mut VSurface) {
     // combination.routes.pop();
 }
 
+fn navigate_patches_to_base_dump_rails(surface: &mut VSurface) {
+    let base_source = BaseSource::new();
+
+    info!("Loading mine bases");
+    let mut mine_batches = get_mine_bases_by_batch(surface, &base_source)
+        .into_success()
+        .unwrap();
+    info!("Loaded {} batches", mine_batches.len());
+
+    let mut rails: Vec<Rail> = Vec::new();
+    for mine_batch in mine_batches {
+        let route_combination_batch = get_possible_routes_for_batch(surface, mine_batch);
+        for combination in route_combination_batch.combinations {
+            for route in combination.routes {
+                rails.push(route.base_rail);
+                rails.push(route.entry_rail);
+            }
+        }
+    }
+    write_rail(surface, &rails).unwrap();
+}
+
 fn navigate_patches_to_base2(surface: &mut VSurface) {
     let base_source = BaseSource::new();
 
@@ -209,6 +233,7 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
     // if 1 + 1 == 2 {
     //     return;
     // }
+    let mut failing_count = 0;
 
     for mine_batch in mine_batches {
         let watch = BasicWatch::start();
@@ -286,17 +311,22 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
             }
             MineRouteCombinationPathResult::Failure { .. } => {
                 let side = Mutex::lock(&batch_side).unwrap();
-                info!("side is {:?}", side);
-                for area in debug_areas {
-                    surface.draw_square_area(&area, Pixel::Highlighter, None);
+                // error!("side is {:?}", side);
+                failing_count += 1;
+                error!("Failed to find {}", failing_count);
+                if failing_count == 10 {
+                    error!("too many fails");
+                    for area in debug_areas {
+                        surface.draw_square_area(&area, Pixel::Highlighter, None);
+                    }
+                    write_rail_with_pixel(surface, &debug_rails, Pixel::Highlighter).unwrap();
+                    break;
                 }
-                write_rail_with_pixel(surface, &debug_rails, Pixel::Highlighter).unwrap();
                 // surface.draw_square_area(
                 //     &planned_area_clone,
                 //     Pixel::Highlighter,
                 //     Some(Pixel::IronOre),
                 // );
-                break;
             }
         }
 
