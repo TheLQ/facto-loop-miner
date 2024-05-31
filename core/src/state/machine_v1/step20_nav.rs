@@ -1,6 +1,10 @@
-use crate::navigator::mori::{mori_start, write_rail, write_rail_with_pixel};
+use crate::navigator::mori::{
+    mori_start, write_rail, write_rail_with_pixel, RAIL_STEP_SIZE, RAIL_STEP_SIZE_I32,
+};
 use crate::navigator::path_executor::{execute_route_batch, MineRouteCombinationPathResult};
-use crate::navigator::path_grouper::{base_bottom_right_corner, get_mine_bases_by_batch};
+use crate::navigator::path_grouper::{
+    base_bottom_right_corner, get_mine_bases_by_batch, MineBaseBatchResult,
+};
 use crate::navigator::path_planner::{get_possible_routes_for_batch, MineChoices};
 use crate::navigator::path_side::BaseSource;
 use crate::navigator::PathingResult;
@@ -16,7 +20,7 @@ use crate::util::duration::BasicWatch;
 use opencv::core::Point;
 use std::borrow::BorrowMut;
 use std::sync::Mutex;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 pub struct Step20 {}
 
@@ -82,7 +86,9 @@ fn navigate_patches_to_base_single(surface: &mut VSurface) {
     let base_source = BaseSource::new();
 
     info!("Loading mine bases");
-    let mut mine_batches = get_mine_bases_by_batch(surface, &base_source);
+    let mut mine_batches = get_mine_bases_by_batch(surface, &base_source)
+        .into_success()
+        .unwrap();
     info!("Loaded {} batches", mine_batches.len());
 
     let mine_batch = mine_batches.remove(1);
@@ -137,6 +143,19 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
 
     info!("Loading mine bases");
     let mine_batches = get_mine_bases_by_batch(surface, &base_source);
+    let mine_batches = match mine_batches {
+        MineBaseBatchResult::Success { batches } => batches,
+        MineBaseBatchResult::EmptyBatch { batch } => {
+            error!("empty batch in area???");
+            surface.draw_square_area(
+                &batch.batch_search_area,
+                Pixel::Highlighter,
+                Some(Pixel::IronOre),
+            );
+            return;
+        }
+    };
+
     info!("Loaded {} batches", mine_batches.len());
 
     // Wrap patches in a no touching zone, so rail doesn't drive between start and the patch
@@ -153,9 +172,16 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
             //     Pixel::SteelChest,
             //     Some(patch.resource),
             // )
-            let mine_choice = MineChoices::from_mine(surface, mine.clone());
-            let choice_area: VArea =
-                VArea::from_arbitrary_points(mine_choice.destinations.iter().map(|v| v.endpoint));
+            // let mine_choice = MineChoices::from_mine(surface, mine.clone());
+            // let choice_area: VArea =
+            //     VArea::from_arbitrary_points(mine_choice.destinations.iter().map(|v| v.endpoint));
+
+            // get patches
+            let choice_area = VArea::from_arbitrary_points(
+                mine.get_vpatches(surface)
+                    .into_iter()
+                    .flat_map(|patch| patch.area.get_corner_points()),
+            );
 
             // warn!(
             //     "Destinations for {:?}\n{}",
@@ -167,19 +193,22 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
             //         .join("\n")
             // );
 
-            let padding = 6;
+            let padding = RAIL_STEP_SIZE_I32 * 2 * 2;
             let patch_top_left = &choice_area.start;
             let patch_bottom_right = choice_area.point_bottom_left();
             surface.draw_square(
-                patch_top_left.x() + padding,
-                patch_bottom_right.x() - padding,
-                patch_top_left.y() + padding,
-                patch_bottom_right.y() - padding,
+                patch_top_left.x() - padding,
+                patch_bottom_right.x() + padding,
+                patch_top_left.y() - padding,
+                patch_bottom_right.y() + padding,
                 Pixel::SteelChest,
                 Some(surface.get_patches_slice()[mine.patch_indexes[0]].resource),
             )
         }
     }
+    // if 1 + 1 == 2 {
+    //     return;
+    // }
 
     for mine_batch in mine_batches {
         let watch = BasicWatch::start();

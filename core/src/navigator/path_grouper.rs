@@ -10,9 +10,10 @@ use crate::surfacev::vsurface::VSurface;
 use crate::TILES_PER_CHUNK;
 use itertools::Itertools;
 use kiddo::{Manhattan, NearestNeighbour};
+use simd_json::prelude::ArrayTrait;
 use std::rc::Rc;
 use std::sync::Mutex;
-use tracing::{debug, trace};
+use tracing::{debug, error, trace};
 
 const MAX_PATCHES: usize = 200;
 
@@ -29,10 +30,27 @@ pub struct MineBaseBatch {
     pub batch_search_area: VArea,
 }
 
+pub enum MineBaseBatchResult {
+    Success { batches: Vec<MineBaseBatch> },
+    EmptyBatch { batch: MineBaseBatch },
+}
+
+impl MineBaseBatchResult {
+    pub fn into_success(self) -> Option<Vec<MineBaseBatch>> {
+        match self {
+            MineBaseBatchResult::Success { batches } => Some(batches),
+            MineBaseBatchResult::EmptyBatch { .. } => None,
+        }
+    }
+}
+
 /// Solve these core problems
 /// - Find the patches we care about
 /// - Create batches that can be optimized as a group, because larger groups are exponentially more difficult to optimize
-pub fn get_mine_bases_by_batch(surface: &VSurface, base_source: &BaseSource) -> Vec<MineBaseBatch> {
+pub fn get_mine_bases_by_batch(
+    surface: &VSurface,
+    base_source: &BaseSource,
+) -> MineBaseBatchResult {
     let patch_groups = group_nearby_patches(
         surface,
         &[Pixel::IronOre, Pixel::CopperOre, Pixel::Stone, Pixel::Coal],
@@ -47,7 +65,42 @@ pub fn get_mine_bases_by_batch(surface: &VSurface, base_source: &BaseSource) -> 
     //     _ => panic!("asd"),
     // };
     // ordered_patches
-    patches_by_cross_sign_expanding(patch_groups, base_source)
+
+    let mine_batches = patches_by_cross_sign_expanding(patch_groups, base_source);
+    let mut result = Vec::new();
+    for (index, mine_batch) in mine_batches.into_iter().enumerate() {
+        // When expanded, 6! = 720. 9! = 362,880 which is too gigantic
+        const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
+        const RESPLIT_LAST_COUNT_LESS_THAN_THRESHOLD: usize = 3;
+
+        let mine_batch_len = mine_batch.mines.len();
+        if mine_batch_len > MAXIMUM_MINE_COUNT_PER_BATCH {
+            for chunk in mine_batch
+                .mines
+                .into_iter()
+                .chunks(MAXIMUM_MINE_COUNT_PER_BATCH)
+                .into_iter()
+            {
+                result.push(MineBaseBatch {
+                    mines: chunk.into_iter().collect(),
+                    base_source_eighth: mine_batch.base_source_eighth.clone(),
+                    batch_search_area: mine_batch.batch_search_area.clone(),
+                    base_direction: mine_batch.base_direction.clone(),
+                })
+            }
+            // // avoid last chunk with eg 1 mine that
+            // let (_, last_chunk) = result.split_last_chunk_mut::<2>().unwrap();
+            // if last_chunk[1].mines.len() < RESPLIT_LAST_COUNT_LESS_THAN_THRESHOLD {
+            //
+            // }
+        } else if mine_batch_len == 0 {
+            error!("bad batch at {}", index);
+            return MineBaseBatchResult::EmptyBatch { batch: mine_batch };
+        } else {
+            result.push(mine_batch);
+        }
+    }
+    MineBaseBatchResult::Success { batches: result }
 }
 
 /// Second grouping pass (after opencv), now by grouping different resource patches
@@ -203,6 +256,11 @@ fn patches_by_cross_sign_expanding(
                 // We are still perpendicular
                 rail = rail.move_forward_step_num(PERPENDICULAR_SCAN_WIDTH);
 
+                if !bounding_area.contains_point(&rail.endpoint) {
+                    // went too far
+                    break;
+                }
+
                 // Go all the way to the edge
                 rail.direction = cross_side.direction.clone();
                 while bounding_area.contains_point(&rail.endpoint) {
@@ -239,7 +297,10 @@ fn patches_by_cross_sign_expanding(
                 scan_start.endpoint.move_y(delta_y),
                 scan_end.endpoint.move_y(-delta_y),
                 scan_end.endpoint.move_y(delta_y),
-                base_source_eighth.lock().unwrap().peek_add(0),
+                VPoint::new(
+                    base_source_eighth.lock().unwrap().peek_add(0).x(),
+                    scan_start.endpoint.y(),
+                ),
             ]);
 
             batches.push(MineBaseBatch {
@@ -288,4 +349,13 @@ fn patches_by_radial_base_corner(surface: &VSurface, resource: Pixel) -> Vec<&VP
 
 pub fn base_bottom_right_corner() -> VPoint {
     VPoint::new(CENTRAL_BASE_TILES, CENTRAL_BASE_TILES)
+}
+
+impl MineBase {
+    pub fn get_vpatches<'a>(&self, surface: &'a VSurface) -> Vec<&'a VPatch> {
+        self.patch_indexes
+            .iter()
+            .map(|patch_index| &surface.get_patches_slice()[*patch_index])
+            .collect()
+    }
 }

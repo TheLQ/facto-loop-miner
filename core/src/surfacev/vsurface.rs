@@ -411,10 +411,12 @@ impl VSurface {
                     continue;
                 }
 
-                let pixel_to_set = if self.get_pixel(&cur) != Pixel::Empty {
-                    existing_map.unwrap_or(empty_map)
-                } else {
+                let existing_pixel = self.get_pixel(&cur);
+                let pixel_to_set = if existing_pixel == Pixel::Empty || existing_pixel == empty_map
+                {
                     empty_map
+                } else {
+                    existing_map.unwrap_or(empty_map)
                 };
                 self.set_pixel(cur, pixel_to_set).unwrap();
             }
