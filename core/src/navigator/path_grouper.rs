@@ -25,6 +25,7 @@ pub struct MineBaseBatch {
     pub mines: Vec<MineBase>,
     pub base_source_eighth: Rc<BaseSourceEighth>,
     pub base_direction: RailDirection,
+    pub batch_search_area: VArea,
 }
 
 /// Solve these core problems
@@ -145,7 +146,7 @@ fn patches_by_cross_sign_expanding(
     mut mines: Vec<MineBase>,
     base_source: &BaseSource,
 ) -> Vec<MineBaseBatch> {
-    const PERPENDICULAR_SCAN_WIDTH: u32 = 10;
+    const PERPENDICULAR_SCAN_WIDTH: u32 = 15;
 
     let bounding_area = VArea::from_arbitrary_points(
         &mines
@@ -232,10 +233,23 @@ fn patches_by_cross_sign_expanding(
             for mine in &found_mines {
                 trace!("batch for mine {:?}", mine);
             }
+
+            // TODO: multiple sides
+            let delta_y_base = scan_start.endpoint.y().abs_diff(scan_end.endpoint.y()) as i32;
+            let delta_y = delta_y_base * 3;
+            let batch_search_area = VArea::from_arbitrary_points([
+                scan_start.endpoint.move_y(-delta_y),
+                scan_start.endpoint.move_y(delta_y),
+                scan_end.endpoint.move_y(-delta_y),
+                scan_end.endpoint.move_y(delta_y),
+                base_source_eighth.peek_add(0),
+            ]);
+
             batches.push(MineBaseBatch {
                 mines: found_mines,
                 base_direction: cross_side.direction.clone(),
                 base_source_eighth: base_source_eighth.clone(),
+                batch_search_area,
             });
             // if 1 + 1 == 2 {
             //     break 'outer;

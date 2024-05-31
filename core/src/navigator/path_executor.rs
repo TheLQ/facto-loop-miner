@@ -22,7 +22,6 @@ use tracing::{debug, error, info};
 ///
 pub fn execute_route_batch(
     surface: &VSurface,
-    search_area: &VArea,
     route_batch: MineRouteCombinationBatch,
 ) -> Option<Vec<MinePath>> {
     let batch_size = route_batch.combinations.len();
@@ -66,7 +65,7 @@ pub fn execute_route_batch(
             .map(|route_combination| {
                 execute_route_combination(
                     &execution_surface,
-                    search_area,
+                    &route_batch.planned_search_area,
                     route_combination,
                     batch_size,
                 )

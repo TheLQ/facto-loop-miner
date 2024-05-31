@@ -16,7 +16,7 @@ use crate::surface::pixel::Pixel;
 use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::vsurface::{VPixel, VSurface};
 use crate::util::duration::BasicWatch;
 use itertools::Itertools;
 use opencv::core::{trace, Point};
@@ -91,35 +91,50 @@ fn navigate_patches_to_base_single(surface: &mut VSurface) {
     info!("Loaded {} batches", mine_batches.len());
 
     let mine_batch = mine_batches.remove(1);
-    let mut route_combination_batch = get_possible_routes_for_batch(surface, mine_batch);
     if 1 + 1 == 2 {
-        trace!(
-            "combinations ++= {}",
-            route_combination_batch.combinations.len()
-        );
+        surface.draw_square_area(&mine_batch.batch_search_area, Pixel::EdgeWall, None);
         return;
     }
 
-    let mut combination = route_combination_batch.combinations.remove(0);
-    combination.routes.pop();
-    let route = combination.routes.remove(0);
-
-    let surface_radius = surface.get_radius_i32();
-    let search_area = VArea::from_arbitrary_points_pair(
-        &VPoint::new(CENTRAL_BASE_TILES, -surface_radius),
-        &VPoint::new(surface_radius, surface_radius),
+    // info!("removed {:?}", mine_batch);
+    info!("removed 1");
+    let mut route_combination_batch = get_possible_routes_for_batch(surface, mine_batch);
+    info!(
+        "possible batches {}",
+        route_combination_batch.combinations.len()
     );
-    let res = mori_start(surface, route.base_rail, route.entry_rail, &search_area);
-    match res {
-        PathingResult::Route { path, cost } => {
-            info!("success!");
-            write_rail(surface, &path).unwrap();
+    // if 1 + 1 == 2 {
+    //     trace!(
+    //         "combinations ++= {}",
+    //         route_combination_batch.combinations.len()
+    //     );
+    //     return;
+    // }
+
+    let mut combination = route_combination_batch.combinations.remove(1);
+    for route in combination.routes {
+        let res = mori_start(
+            surface,
+            route.base_rail,
+            route.entry_rail,
+            &route_combination_batch.planned_search_area,
+        );
+        if res.is_route() {
+            info!("next!");
+            continue;
         }
-        PathingResult::FailingDebug(path) => {
-            info!("fail!");
-            write_rail(surface, &path).unwrap();
+        match res {
+            PathingResult::Route { path, cost } => {
+                info!("success!");
+                write_rail(surface, &path).unwrap();
+            }
+            PathingResult::FailingDebug(path) => {
+                info!("fail!");
+                write_rail(surface, &path).unwrap();
+            }
         }
     }
+    // combination.routes.pop();
 }
 
 fn navigate_patches_to_base2(surface: &mut VSurface) {
@@ -206,11 +221,8 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
             }
         }
 
-        let search_area = VArea::from_arbitrary_points_pair(
-            &VPoint::new(CENTRAL_BASE_TILES, -surface.get_radius_i32()),
-            &VPoint::new(surface.get_radius_i32(), surface.get_radius_i32()),
-        );
-        let res = execute_route_batch(surface, &search_area, route_combination_batch);
+        let planned_area_clone = route_combination_batch.planned_search_area.clone();
+        let res = execute_route_batch(surface, route_combination_batch);
         info!("execution took {}", watch);
 
         match res {
@@ -229,6 +241,11 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
                     surface.draw_square_area(&area, Pixel::Highlighter, None);
                 }
                 write_rail(surface, &debug_rails).unwrap();
+                // surface.draw_square_area(
+                //     &planned_area_clone,
+                //     Pixel::Highlighter,
+                //     Some(Pixel::IronOre),
+                // );
                 break;
             }
         }

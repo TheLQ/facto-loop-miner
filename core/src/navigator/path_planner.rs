@@ -31,10 +31,14 @@ pub fn get_possible_routes_for_batch(
     let mine_choice_destinations_len = mine_choices
         .iter()
         .fold(0, |total, v| total + v.destinations.len());
+    info!(
+        "Expanded {} mines with {} destinations to...",
+        mine_choice_len, mine_choice_destinations_len,
+    );
 
     let mine_combinations = find_all_combinations(mine_choices);
     let total_combinations_base = mine_combinations.len();
-    let mine_combinations = find_all_permutations(mine_combinations);
+    // let mine_combinations = find_all_permutations(mine_combinations);
     let total_combinations_permut = mine_combinations.len();
     info!(
         "Expanded {} mines with {} destinations to {} combinations then {} permutated",
@@ -58,6 +62,7 @@ pub fn get_possible_routes_for_batch(
 
     MineRouteCombinationBatch {
         combinations: route_combinations,
+        planned_search_area: mine_batch.batch_search_area,
     }
 }
 
@@ -91,6 +96,7 @@ pub struct MineRouteCombination {
 
 pub struct MineRouteCombinationBatch {
     pub combinations: Vec<MineRouteCombination>,
+    pub planned_search_area: VArea,
 }
 
 /// Find all combinations of `a[1,2,3,4], b[1,2,3,4], ... = 4^n` sized Vec.
