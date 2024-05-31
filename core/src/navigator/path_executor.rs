@@ -4,6 +4,7 @@ use crate::navigator::path_planner::{
     MineRouteCombination, MineRouteCombinationBatch, MineRouteEndpoints,
 };
 use crate::navigator::PathingResult;
+use crate::surface::surface::Surface;
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
@@ -13,6 +14,9 @@ use num_format::ToFormattedString;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
+use std::fs::{create_dir, remove_dir, remove_dir_all};
+use std::io;
+use std::path::{Path, PathBuf};
 use tracing::{debug, error, info};
 
 ///
@@ -22,16 +26,49 @@ pub fn execute_route_batch(
     route_batch: MineRouteCombinationBatch,
 ) -> Option<Vec<MinePath>> {
     let batch_size = route_batch.combinations.len();
-    debug!("Executing {} route combination batch", batch_size);
+
+    info!("Executing {} route combination batch", batch_size);
+
+    // The backing entity_array files can be re-mmap'd very quickly via clone
+    // HOWEVER disk and memory must be the same / is_dirty=false / memory is unmodified
+    // Caller will write our output result to the surface, then we repeat this safe/load
+    let path: PathBuf = PathBuf::from("work/temp_scan");
+    // ignore
+    if let Err(err) = create_dir(&path) {
+        debug!("recreating temp dir {}", path.display());
+        remove_dir_all(&path).unwrap();
+        create_dir(&path).unwrap();
+    } else {
+        debug!("created temp dir {}", path.display());
+    }
+    surface.save(&path).unwrap();
+    let execution_surface = VSurface::load(&path).unwrap();
 
     // debug: Get all the original patches
 
     let routing_watch = BasicWatch::start();
-    let route_results: Vec<MineRouteCombinationPathResult> = route_batch
-        .combinations
-        .into_par_iter()
-        .map(|route_combination| execute_route_combination(surface, search_area, route_combination))
-        .collect();
+    let default_threads = rayon::current_num_threads();
+    const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 1.5;
+    let num_threads = (default_threads as f32 * THREAD_OVERSUBSCRIBE_PERCENT) as usize;
+    info!(
+        "default threads are {} upgraded to {}",
+        default_threads, num_threads
+    );
+    let wrapping_pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build()
+        .unwrap();
+
+    let route_results: Vec<MineRouteCombinationPathResult> = wrapping_pool.install(|| {
+        route_batch
+            .combinations
+            .into_par_iter()
+            .map(|route_combination| {
+                execute_route_combination(&execution_surface, search_area, route_combination)
+            })
+            .collect()
+    });
+
     debug!(
         "Executed {} route combinations in {}",
         batch_size, routing_watch
@@ -74,12 +111,13 @@ pub fn execute_route_batch(
         .map(|(k, v)| format!("{}:{}", k, v))
         .join("|");
     info!(
-        "Route batch of {} combinations had {} success, cost range {} to {}, failure {}",
+        "Route batch of {} combinations had {} success, cost range {} to {}, failure {}, thread oversubscribe {}",
         batch_size,
         success_count,
         highest_cost.to_formatted_string(&LOCALE),
         lowest_cost.to_formatted_string(&LOCALE),
-        failure_found_paths_count_debug
+        failure_found_paths_count_debug,
+        THREAD_OVERSUBSCRIBE_PERCENT
     );
 
     if !best_path.is_empty() {
@@ -95,7 +133,9 @@ fn execute_route_combination(
     search_area: &VArea,
     route_combination: MineRouteCombination,
 ) -> MineRouteCombinationPathResult {
+    let watch = BasicWatch::start();
     let mut working_surface = (*surface).clone();
+    info!("Cloned surface in {}", watch);
 
     let mut found_paths = Vec::new();
     for route in route_combination.routes {

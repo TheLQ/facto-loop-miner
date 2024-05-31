@@ -336,6 +336,10 @@ where
     //     })
     // }
 
+    // pub fn cache_buffers_for_cloning(&mut self) {
+    //     self.xy_to_entity.cache_buffers_for_cloning();
+    // }
+
     pub fn iter_entities(&self) -> impl Iterator<Item = &E> {
         // self.xy_to_entity
         //     .as_slice()

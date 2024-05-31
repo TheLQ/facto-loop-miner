@@ -226,6 +226,11 @@ impl VSurface {
 
         Ok(())
     }
+
+    // pub fn cache_buffers_for_cloning(&mut self) {
+    //     self.pixels.cache_buffers_for_cloning();
+    //     self.entities.cache_buffers_for_cloning();
+    // }
     //</editor-fold>
 
     pub fn to_pixel_cv_image(&self, filter: Option<Pixel>) -> Mat {
