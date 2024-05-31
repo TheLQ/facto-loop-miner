@@ -33,11 +33,7 @@ impl VArea {
         }
     }
 
-    pub fn from_arbitrary_points(points: &[VPoint]) -> VArea {
-        Self::from_arbitrary_points_iter(points)
-    }
-
-    pub fn from_arbitrary_points_iter<I>(points: I) -> VArea
+    pub fn from_arbitrary_points<I>(points: I) -> VArea
     where
         I: IntoIterator,
         I::Item: Borrow<VPoint>,

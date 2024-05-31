@@ -144,9 +144,8 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
             //     Some(patch.resource),
             // )
             let mine_choice = MineChoices::from_mine(surface, mine.clone());
-            let choice_area: VArea = VArea::from_arbitrary_points_iter(
-                mine_choice.destinations.iter().map(|v| v.endpoint),
-            );
+            let choice_area: VArea =
+                VArea::from_arbitrary_points(mine_choice.destinations.iter().map(|v| v.endpoint));
 
             warn!(
                 "Destinations for {:?}\n{}",
