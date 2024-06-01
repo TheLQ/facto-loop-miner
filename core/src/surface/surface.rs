@@ -20,6 +20,7 @@ use std::path::{Path, PathBuf};
 pub type PointU32 = Point_<u32>;
 
 #[derive(Serialize, Deserialize)]
+#[deprecated]
 pub struct Surface {
     pub width: u32,
     pub height: u32,

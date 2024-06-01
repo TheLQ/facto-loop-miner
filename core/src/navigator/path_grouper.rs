@@ -45,7 +45,7 @@ impl MineBaseBatchResult {
     }
 }
 
-pub const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 4;
+pub const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
 pub const RESPLIT_LAST_COUNT_LESS_THAN_THRESHOLD: usize = 3;
 pub const PERPENDICULAR_SCAN_WIDTH: u32 = 20;
 

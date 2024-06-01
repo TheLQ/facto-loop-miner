@@ -198,7 +198,7 @@ fn get_expanded_patch_points(area: &VArea) -> (VPoint, VPoint) {
     (patch_top_left, patch_bottom_right)
 }
 
-pub const MINE_CHOICE_TRUNCATE_DESTINATIONS: usize = 4;
+pub const MINE_CHOICE_TRUNCATE_DESTINATIONS: usize = 2;
 
 impl MineChoices {
     pub fn from_mine(surface: &VSurface, mine: MineBase) -> Self {
