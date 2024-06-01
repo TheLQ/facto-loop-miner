@@ -27,7 +27,7 @@ use tracing::{debug, warn};
 
 /// Pathfinder v1, Mori Calliope
 ///
-/// astar powered pathfinding.
+/// astar powered pathfinding. Core primitives
 ///
 /// Makes a dual rail + spacing, +6 straight or 90 degree turning, path of rail from start to end.
 /// Without collisions into any point on the Surface.
@@ -269,19 +269,34 @@ impl Rail {
     }
 
     /// XY positions underneath this section of rail
-    fn area(&self) -> Vec<VPoint> {
+    fn area(&self, surface: &VSurface) -> (Vec<VPoint>, bool) {
         let mut res = Vec::new();
+        let mut dirty = false;
         match &self.mode {
             RailMode::Straight => {
                 for rail in self.build_dual_straight_behind_rail(RAIL_STEP_SIZE) {
-                    res.extend_from_slice(&rail.endpoint.get_entity_area_2x2());
+                    for point in rail.endpoint.get_entity_area_2x2() {
+                        // TODO: WTF???
+                        if !surface.is_point_out_of_bounds(&point) {
+                            res.push(point);
+                        } else {
+                            dirty = true;
+                        }
+                    }
                 }
             }
             RailMode::Turn(turn_type) => {
                 // ↓↓↓↓↓↓↓↓↓ OK-ish FIX
                 let leg = self.clone();
                 for rail in leg.build_dual_straight_behind_rail(RAIL_STEP_SIZE) {
-                    res.extend_from_slice(&rail.endpoint.get_entity_area_2x2());
+                    for point in rail.endpoint.get_entity_area_2x2() {
+                        // TODO: WTF???
+                        if !surface.is_point_out_of_bounds(&point) {
+                            res.push(point);
+                        } else {
+                            dirty = true;
+                        }
+                    }
                 }
 
                 let leg = self
@@ -289,7 +304,14 @@ impl Rail {
                     .move_forward_step()
                     .move_force_rotate_clockwise(turn_type.rotations());
                 for rail in leg.build_dual_straight_behind_rail(RAIL_STEP_SIZE) {
-                    res.extend_from_slice(&rail.endpoint.get_entity_area_2x2());
+                    for point in rail.endpoint.get_entity_area_2x2() {
+                        // TODO: WTF???
+                        if !surface.is_point_out_of_bounds(&point) {
+                            res.push(point);
+                        } else {
+                            dirty = true;
+                        }
+                    }
                 }
                 // ↑↑↑↑↑↑↑↑↑ OK-ish FIX
 
@@ -456,8 +478,7 @@ impl Rail {
         //         before, after, self
         //     );
         // }
-
-        res
+        (res, dirty)
     }
 
     pub fn to_factorio_entities(&self, result: &mut Vec<Box<dyn LuaCommand>>) {
@@ -698,42 +719,36 @@ impl Rail {
         surface: &VSurface,
         start: &Rail,
         end: &Rail,
-        // ends: &[Rail],
         resource_cloud: &ResourceCloud,
-        // working_buffer: &mut SurfaceDiff,
         search_area: &VArea,
         metric_successors: &AtomicU64,
         metric_start: &AtomicCell<Instant>,
     ) -> Vec<(RailPointCompare, u32)> {
-        let metric_successors = metric_successors.fetch_add(1, Ordering::Relaxed);
-        if metric_successors % 10_000 == 0 {
-            let now = Instant::now();
-            // let metric_start = metric_start.swap(now);
-            // let rate_paths_per_second = 1_000_000.0 / since_last;
-            let metric_start = metric_start.load();
-            let since_last = (now - metric_start).as_secs().max(1) as f32;
-            let rate_paths_per_second = metric_successors as f32 / since_last;
-            // debug!(
-            //     "successor {} spot parents {} in {} paths/second total {} seconds",
-            //     metric_successors.to_formatted_string(&LOCALE),
-            //     parents_compare.len(),
-            //     (rate_paths_per_second as u32).to_formatted_string(&LOCALE),
-            //     since_last,
-            // );
-        }
+        // let metric_successors = metric_successors.fetch_add(1, Ordering::Relaxed);
+        // if metric_successors % 10_000 == 0 {
+        //     let now = Instant::now();
+        //     // let metric_start = metric_start.swap(now);
+        //     // let rate_paths_per_second = 1_000_000.0 / since_last;
+        //     let metric_start = metric_start.load();
+        //     let since_last = (now - metric_start).as_secs().max(1) as f32;
+        //     let rate_paths_per_second = metric_successors as f32 / since_last;
+        //     // debug!(
+        //     //     "successor {} spot parents {} in {} paths/second total {} seconds",
+        //     //     metric_successors.to_formatted_string(&LOCALE),
+        //     //     parents_compare.len(),
+        //     //     (rate_paths_per_second as u32).to_formatted_string(&LOCALE),
+        //     //     since_last,
+        //     // );
+        // }
 
         // if parents.len() > 800 {
         //     return Vec::new();
         // }
         self.endpoint.assert_odd_16x16_position();
-        // debug!("testing {:?}", self);
 
-        if parents_compare.iter().any(|p| p.inner == *self) {
-            panic!("crashing found myself!");
-        }
-
-        let mut working_buffer_owned = SurfaceDiff::TODO_new();
-        let working_buffer = &mut working_buffer_owned;
+        // if parents_compare.iter().any(|p| p.inner == *self) {
+        //     panic!("crashing found myself!");
+        // }
 
         let mut res = Vec::new();
         if let Some(rail) =
@@ -790,25 +805,30 @@ impl Rail {
             return None;
         }
 
-        match 5 {
-            // 1 => self.into_buildable_sequential(surface),
-            // 2 => self.into_buildable_parallel(surface),
-            // 3 => self.into_buildable_avx(surface, working_buffer),
-            4 => {
-                if self.is_area_buildable(surface) {
-                    Some(self)
-                } else {
-                    None
-                }
-            }
-            5 => {
-                if self.is_area_buildable_fast(surface) {
-                    Some(self)
-                } else {
-                    None
-                }
-            }
-            _ => panic!("0"),
+        // match 5 {
+        //     // 1 => self.into_buildable_sequential(surface),
+        //     // 2 => self.into_buildable_parallel(surface),
+        //     // 3 => self.into_buildable_avx(surface, working_buffer),
+        //     4 => {
+        //         if self.is_area_buildable(surface) {
+        //             Some(self)
+        //         } else {
+        //             None
+        //         }
+        //     }
+        //     5 => {
+        //         if self.is_area_buildable_fast(surface) {
+        //             Some(self)
+        //         } else {
+        //             None
+        //         }
+        //     }
+        //     _ => panic!("0"),
+        // }
+        if self.is_area_buildable_fast(surface) {
+            Some(self)
+        } else {
+            None
         }
     }
 
@@ -874,14 +894,18 @@ impl Rail {
         // }
     }
 
-    pub fn is_area_buildable(&self, surface: &VSurface) -> bool {
-        self.area()
-            .into_iter()
-            .all(|area_point| is_buildable_point_ref(surface, area_point))
-    }
+    // pub fn is_area_buildable(&self, surface: &VSurface) -> bool {
+    //     self.area(surface)
+    //         .into_iter()
+    //         .all(|area_point| is_buildable_point_ref(surface, area_point))
+    // }
 
-    fn is_area_buildable_fast(&self, surface: &VSurface) -> bool {
-        surface.is_points_free(&self.area())
+    pub fn is_area_buildable_fast(&self, surface: &VSurface) -> bool {
+        let (area, dirty) = self.area(surface);
+        if dirty {
+            return false;
+        }
+        surface.is_points_free_unchecked(&area)
     }
 
     // fn into_buildable_sequential(self, surface: &VSurface) -> Option<Self> {
@@ -1010,7 +1034,11 @@ pub fn write_rail_with_pixel(surface: &mut VSurface, path: &[Rail], pixel: Pixel
     let mut total_rail = 0;
     for path_rail in path {
         // debug!("writing rail start at {:?}", path_rail.endpoint);
-        for path_area_point in path_rail.area() {
+        let (area, dirty) = path_rail.area(surface);
+        if dirty {
+            panic!("dirty area for {:?}", path_rail);
+        }
+        for path_area_point in area {
             total_rail += 1;
             surface.set_pixel(path_area_point, pixel)?;
             // debug!("writing rail at {:?}", path_area_point);
@@ -1049,7 +1077,11 @@ fn get_current_unix_time_millis() -> u128 {
 }
 
 pub fn draw_rail(surface: &mut VSurface, rail: &Rail) {
-    for point in rail.area() {
+    let (area, dirty) = rail.area(surface);
+    if dirty {
+        panic!("dirty area for {:?}", rail);
+    }
+    for point in area {
         surface.set_pixel(point, Pixel::Rail).unwrap();
     }
     surface
