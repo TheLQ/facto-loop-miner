@@ -92,7 +92,7 @@ fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralR
 fn insert_rail_from_surface(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
     let mut entities = Vec::new();
 
-    for rail in surface.get_rail() {
+    for rail in surface.get_rail_TODO() {
         // info!("writing {:?}", rail);
 
         rail.to_factorio_entities(&mut entities);

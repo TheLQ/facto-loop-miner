@@ -198,6 +198,8 @@ fn get_expanded_patch_points(area: &VArea) -> (VPoint, VPoint) {
     (patch_top_left, patch_bottom_right)
 }
 
+pub const MINE_CHOICE_TRUNCATE_DESTINATIONS: usize = 4;
+
 impl MineChoices {
     pub fn from_mine(surface: &VSurface, mine: MineBase) -> Self {
         let mut destinations: Vec<Rail> = Vec::new();
@@ -220,7 +222,7 @@ impl MineChoices {
 
         // TODO: OPTIMIZING ATTEMPT - pick closest 2 values
         destinations.sort_by_key(|rail| rail.endpoint.x());
-        // destinations.truncate(2);
+        destinations.truncate(MINE_CHOICE_TRUNCATE_DESTINATIONS);
 
         Self { mine, destinations }
     }

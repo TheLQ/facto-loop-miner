@@ -12,6 +12,7 @@ use itertools::Itertools;
 use num_format::ToFormattedString;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{create_dir, remove_dir_all};
 use std::path::PathBuf;
@@ -30,8 +31,9 @@ pub fn execute_route_batch(
     // The backing entity_array files can be re-mmap'd very quickly via clone
     // HOWEVER disk and memory must be the same / is_dirty=false / memory is unmodified
     // Caller will write our output result to the surface, then we repeat this safe/load
-    let path: PathBuf = PathBuf::from("work/temp_scan");
-    // ignore
+    // export DIR=/mnt/huge1g/surface_work; mkdir $DIR; chown vu-desk-1000:vg-desk-1000 $DIR
+    // let path = PathBuf::from("/mnt/huge1g/surface_work");
+    let path = PathBuf::from("work/temp_scan");
     if let Err(err) = create_dir(&path) {
         debug!("recreating temp dir {}", path.display());
         remove_dir_all(&path).unwrap();
@@ -245,6 +247,7 @@ fn execute_route_combination(
     }
 }
 
+#[derive(Serialize, Deserialize, Clone)]
 pub struct MinePath {
     pub mine_base: MineBase,
     pub rail: Vec<Rail>,

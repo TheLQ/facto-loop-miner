@@ -10,6 +10,7 @@ use crate::surfacev::vsurface::VSurface;
 use crate::TILES_PER_CHUNK;
 use itertools::Itertools;
 use kiddo::{Manhattan, NearestNeighbour};
+use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
 use std::rc::Rc;
 use std::sync::Mutex;
@@ -17,7 +18,7 @@ use tracing::{debug, error, trace};
 
 const MAX_PATCHES: usize = 200;
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Hash, Clone, Debug)]
 pub struct MineBase {
     pub patch_indexes: Vec<usize>,
     pub area: VArea,
@@ -43,6 +44,10 @@ impl MineBaseBatchResult {
         }
     }
 }
+
+pub const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 4;
+pub const RESPLIT_LAST_COUNT_LESS_THAN_THRESHOLD: usize = 3;
+pub const PERPENDICULAR_SCAN_WIDTH: u32 = 20;
 
 /// Solve these core problems
 /// - Find the patches we care about
@@ -79,8 +84,6 @@ pub fn get_mine_bases_by_batch(
     let mut result = Vec::new();
     for (index, mine_batch) in mine_batches.into_iter().enumerate() {
         // When expanded, 6! = 720. 9! = 362,880 which is too gigantic
-        const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
-        const RESPLIT_LAST_COUNT_LESS_THAN_THRESHOLD: usize = 3;
 
         let mine_batch_len = mine_batch.mines.len();
         if mine_batch_len > MAXIMUM_MINE_COUNT_PER_BATCH {
@@ -209,8 +212,6 @@ fn patches_by_cross_sign_expanding(
     mut mines: Vec<MineBase>,
     base_source: &BaseSource,
 ) -> Vec<MineBaseBatch> {
-    const PERPENDICULAR_SCAN_WIDTH: u32 = 20;
-
     let bounding_area =
         VArea::from_arbitrary_points(mines.iter().flat_map(|v| v.area.get_corner_points()));
     let cross_sides: [Rail; 1] = [

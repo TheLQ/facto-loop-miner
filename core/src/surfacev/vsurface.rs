@@ -1,5 +1,14 @@
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::navigator::mori::Rail;
+use crate::navigator::mori_cost::{
+    AXIS_COST_UNIT, DIRECTION_COST_UNIT, MORI_COST_MODE, MULTI_TURN_COST_UNIT, STRAIGHT_COST_UNIT,
+    TURN_COST_UNIT,
+};
+use crate::navigator::path_executor::MinePath;
+use crate::navigator::path_grouper::{
+    MAXIMUM_MINE_COUNT_PER_BATCH, PERPENDICULAR_SCAN_WIDTH, RESPLIT_LAST_COUNT_LESS_THAN_THRESHOLD,
+};
+use crate::navigator::path_planner::MINE_CHOICE_TRUNCATE_DESTINATIONS;
 use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
@@ -11,6 +20,7 @@ use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vpoint::VPoint;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
+use facto_loop_miner_io::err::VIoError;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
@@ -36,7 +46,7 @@ pub struct VSurface {
     entities: VEntityMap<VEntity>,
     patches: Vec<VPatch>,
     #[serde(default)]
-    place_rail: Vec<Rail>,
+    rail_paths: Vec<MinePath>,
 }
 
 impl VSurface {
@@ -47,7 +57,7 @@ impl VSurface {
             pixels: VEntityMap::new(radius),
             entities: VEntityMap::new(radius),
             patches: Vec::new(),
-            place_rail: Vec::new(),
+            rail_paths: Vec::new(),
         }
     }
 
@@ -166,6 +176,7 @@ impl VSurface {
         self.save_state(out_dir)?;
         self.save_pixel_img_colorized(out_dir)?;
         self.save_entity_buffers(out_dir)?;
+        Self::save_tuning_parameters(out_dir)?;
         info!("+++ Saved in {} to {}", total_save_watch, out_dir.display());
         Ok(())
     }
@@ -223,6 +234,51 @@ impl VSurface {
 
         let entity_path = path_entity_xy_indexes(out_dir);
         self.entities.save_xy_file(&entity_path)?;
+
+        Ok(())
+    }
+
+    /// Created after loosing so much run data
+    fn save_tuning_parameters(out_dir: &Path) -> VResult<()> {
+        let params = [
+            // navigator grouper
+            [
+                "MAXIMUM_MINE_COUNT_PER_BATCH",
+                &MAXIMUM_MINE_COUNT_PER_BATCH.to_string(),
+            ],
+            [
+                "RESPLIT_LAST_COUNT_LESS_THAN_THRESHOLD",
+                &RESPLIT_LAST_COUNT_LESS_THAN_THRESHOLD.to_string(),
+            ],
+            [
+                "PERPENDICULAR_SCAN_WIDTH",
+                &PERPENDICULAR_SCAN_WIDTH.to_string(),
+            ],
+            // navigator planner
+            [
+                "MINE_CHOICE_TRUNCATE_DESTINATIONS",
+                &MINE_CHOICE_TRUNCATE_DESTINATIONS.to_string(),
+            ],
+            // mori cost - base units
+            ["STRAIGHT_COST_UNIT", &STRAIGHT_COST_UNIT.to_string()],
+            ["TURN_COST_UNIT", &TURN_COST_UNIT.to_string()],
+            ["MULTI_TURN_COST_UNIT", &MULTI_TURN_COST_UNIT.to_string()],
+            // mori cost - end landing bias
+            ["DIRECTION_COST_UNIT", &DIRECTION_COST_UNIT.to_string()],
+            ["AXIS_COST_UNIT", &AXIS_COST_UNIT.to_string()],
+            // mori cost
+            ["MORI_COST_MODE", MORI_COST_MODE.into()],
+        ];
+
+        let mut output = "".to_string();
+        for [key, value] in params {
+            output.push_str(key);
+            output.push_str(": ");
+            output.push_str(value);
+            output.push('\n');
+        }
+        let tuning_path = out_dir.join("tuning-params.txt");
+        std::fs::write(&tuning_path, &output).map_err(VIoError::io_error(&tuning_path))?;
 
         Ok(())
     }
@@ -424,12 +480,12 @@ impl VSurface {
         }
     }
 
-    pub fn add_rail(&mut self, mut rails: Vec<Rail>) {
-        self.place_rail.append(&mut rails)
+    pub fn add_rail_path_drain(&mut self, mut rails: Vec<MinePath>) {
+        self.rail_paths.append(&mut rails)
     }
 
-    pub fn get_rail(&self) -> &[Rail] {
-        &self.place_rail
+    pub fn get_rail_TODO(&self) -> impl Iterator<Item = &Rail> {
+        self.rail_paths.iter().flat_map(|v| &v.rail)
     }
 
     pub fn dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {

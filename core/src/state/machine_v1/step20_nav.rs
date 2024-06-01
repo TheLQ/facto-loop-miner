@@ -288,7 +288,7 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
                 paths,
                 route_combination,
             } => {
-                for path in paths {
+                for path in &paths {
                     info!(
                         "Writing path {:?} rail for base {:?}",
                         path.rail.len(),
@@ -308,6 +308,8 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
                     // batch_side.get_mut().unwrap().next();
                 }
                 info!("upgraded side from {} to {:?}", side_before, side);
+
+                surface.add_rail_path_drain(paths);
             }
             MineRouteCombinationPathResult::Failure { .. } => {
                 let side = Mutex::lock(&batch_side).unwrap();

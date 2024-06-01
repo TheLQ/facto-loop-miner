@@ -2,9 +2,26 @@ use crate::navigator::mori::{Rail, RailMode, RAIL_STEP_SIZE};
 use crate::navigator::rail_point_compare::RailPointCompare;
 use crate::navigator::resource_cloud::ResourceCloud;
 use crate::surfacev::vpoint::VPoint;
+use strum::{AsRefStr, IntoStaticStr};
 
-const ANTI_WRONG_BIAS_EFFECT: f32 = 10f32;
-const RESOURCE_BIAS_EFFECT: f32 = 20f32;
+// const ANTI_WRONG_BIAS_EFFECT: f32 = 10f32;
+// const RESOURCE_BIAS_EFFECT: f32 = 20f32;
+
+pub const STRAIGHT_COST_UNIT: f32 = 1.0;
+pub const TURN_COST_UNIT: f32 = 4.0;
+// const MULTI_TURN_LOOKBACK: usize = 10;
+pub const MULTI_TURN_COST_UNIT: f32 = 48.0;
+
+pub const DIRECTION_COST_UNIT: f32 = 10.0;
+pub const AXIS_COST_UNIT: f32 = 1.0;
+
+#[derive(IntoStaticStr)]
+pub enum MoriCostMode {
+    Dummy,
+    DistanceManhattanOnly,
+    Complete,
+}
+pub const MORI_COST_MODE: MoriCostMode = MoriCostMode::Complete;
 
 pub enum RailAction {
     TurnLeft,
@@ -19,15 +36,14 @@ pub fn calculate_cost_for_point(
     resource_cloud: &ResourceCloud,
     parents_compare: &[RailPointCompare],
 ) -> u32 {
-    // base distance
-    let base_distance = match 1 {
-        1 => distance_basic_manhattan(next, end),
-        2 => distance_with_less_parent_turns(parents_compare, next, end),
-        _ => panic!("Asd"),
+    let base_distance = || -> f32 { distance_basic_manhattan(next, end) };
+
+    let result = match MORI_COST_MODE {
+        MoriCostMode::Dummy => 5.0,
+        MoriCostMode::DistanceManhattanOnly => base_distance(),
+        MoriCostMode::Complete => into_end_landing_bias(next, start, end, base_distance()),
     };
-    let end_landing_bias = into_end_landing_bias(next, start, end, base_distance);
-    end_landing_bias as u32
-    // base_distance as u32
+    result as u32
 
     // // block it closer to base
     // let anti_wrong = if distance < 400.0 {
@@ -64,11 +80,6 @@ fn distance_with_less_parent_turns(
     next: &Rail,
     end: &VPoint,
 ) -> f32 {
-    const STRAIGHT_COST_UNIT: f32 = 1.0;
-    const TURN_COST_UNIT: f32 = 4.0;
-    // const MULTI_TURN_LOOKBACK: usize = 10;
-    const MULTI_TURN_COST_UNIT: f32 = 48.0;
-
     // turning is costly
     let mut total_cost = distance_basic_manhattan(next, end) / RAIL_STEP_SIZE as f32;
 
@@ -102,8 +113,8 @@ fn distance_with_less_parent_turns(
 
 fn into_end_landing_bias(next: &Rail, start: &Rail, end: &VPoint, base_distance: f32) -> f32 {
     // const BIAS_DISTANCE_START: f32 = 30.0;
-    const DIRECTION_COST_UNIT: f32 = 10.0;
-    const AXIS_COST_UNIT: f32 = 1.0;
+    // const DIRECTION_COST_UNIT: f32 = 5.0;
+    // const AXIS_COST_UNIT: f32 = 5.0;
 
     let mut total_cost = base_distance;
 
