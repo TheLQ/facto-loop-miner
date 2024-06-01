@@ -220,7 +220,7 @@ impl MineChoices {
 
         // TODO: OPTIMIZING ATTEMPT - pick closest 2 values
         destinations.sort_by_key(|rail| rail.endpoint.x());
-        destinations.truncate(2);
+        // destinations.truncate(2);
 
         Self { mine, destinations }
     }

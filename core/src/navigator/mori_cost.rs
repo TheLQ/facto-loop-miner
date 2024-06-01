@@ -20,7 +20,7 @@ pub fn calculate_cost_for_point(
     parents_compare: &[RailPointCompare],
 ) -> u32 {
     // base distance
-    let base_distance = match 2 {
+    let base_distance = match 1 {
         1 => distance_basic_manhattan(next, end),
         2 => distance_with_less_parent_turns(parents_compare, next, end),
         _ => panic!("Asd"),
@@ -28,7 +28,6 @@ pub fn calculate_cost_for_point(
     let end_landing_bias = into_end_landing_bias(next, start, end, base_distance);
     end_landing_bias as u32
     // base_distance as u32
-    // 5
 
     // // block it closer to base
     // let anti_wrong = if distance < 400.0 {
@@ -105,8 +104,6 @@ fn into_end_landing_bias(next: &Rail, start: &Rail, end: &VPoint, base_distance:
     // const BIAS_DISTANCE_START: f32 = 30.0;
     const DIRECTION_COST_UNIT: f32 = 10.0;
     const AXIS_COST_UNIT: f32 = 1.0;
-    // const DIRECTION_COST_UNIT: f32 = 5.0;
-    // const AXIS_COST_UNIT: f32 = 5.0;
 
     let mut total_cost = base_distance;
 
