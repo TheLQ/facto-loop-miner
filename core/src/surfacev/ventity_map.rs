@@ -450,6 +450,16 @@ where
         }
     }
 
+    pub fn get_entity_by_point_mut(&mut self, point: &VPoint) -> Option<&mut E> {
+        let index = self.xy_to_index(point.x(), point.y());
+        let entity_id = self.xy_to_entity.as_slice()[index];
+        if entity_id == EMPTY_XY_INDEX {
+            None
+        } else {
+            Some(self.get_entity_by_index_mut(entity_id))
+        }
+    }
+
     //</editor-fold>
 
     // pub fn draw_debug_square(

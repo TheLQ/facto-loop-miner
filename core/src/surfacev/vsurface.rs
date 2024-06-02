@@ -34,7 +34,7 @@ use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::thread::JoinHandle;
-use tracing::{debug, info, trace};
+use tracing::{debug, info, trace, warn};
 
 /// A map of background pixels (eg resources, water) and the large entities on top
 ///
@@ -313,11 +313,42 @@ impl VSurface {
     }
 
     pub fn set_pixel(&mut self, start: VPoint, pixel: Pixel) -> VResult<()> {
-        self.pixels.add(VPixel {
-            starts: [start].to_vec(),
-            pixel,
-        })?;
+        if pixel == Pixel::Empty {
+            match self.pixels.get_entity_by_point(&start) {
+                Some(existing) => {
+                    if existing.starts.len() != 1 {
+                        warn!("wrong size {:?}", start);
+                    } else {
+                        self.pixels.remove_positions(&[start]);
+                    }
+                }
+                None => {
+                    // want empty and already empty, probably not expected
+                    warn!("already empty at {:?}", start);
+                }
+            }
+        } else {
+            match self.pixels.get_entity_by_point_mut(&start) {
+                Some(existing) => {
+                    if existing.starts.len() != 1 {
+                        warn!("wrong size {:?}", start);
+                    } else {
+                        existing.set_pixel(pixel);
+                    }
+                }
+                None => {
+                    self.pixels.add(VPixel {
+                        starts: [start].to_vec(),
+                        pixel,
+                    })?;
+                }
+            }
+        }
         Ok(())
+    }
+
+    pub fn validate_state(&self) {
+        for pixel in self.pixels.iter_entities() {}
     }
 
     pub fn add_patches(&mut self, patches: &[VPatch]) {
@@ -484,7 +515,7 @@ impl VSurface {
         self.rail_paths.append(&mut rails)
     }
 
-    pub fn get_rail_TODO(&self) -> impl Iterator<Item = &Rail> {
+    pub fn get_rail_TODO(&self) -> impl IntoIterator<Item = &Rail> {
         self.rail_paths.iter().flat_map(|v| &v.rail)
     }
 
@@ -593,6 +624,10 @@ impl VEntityXY for VPixel {
 impl VPixel {
     pub fn pixel(&self) -> &Pixel {
         &self.pixel
+    }
+
+    pub fn set_pixel(&mut self, pixel: Pixel) {
+        self.pixel = pixel;
     }
 }
 

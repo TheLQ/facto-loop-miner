@@ -269,7 +269,7 @@ impl Rail {
     }
 
     /// XY positions underneath this section of rail
-    fn area(&self, surface: &VSurface) -> (Vec<VPoint>, bool) {
+    pub fn area(&self, surface: &VSurface) -> (Vec<VPoint>, bool) {
         let mut res = Vec::new();
         let mut dirty = false;
         match &self.mode {
