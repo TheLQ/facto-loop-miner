@@ -19,19 +19,21 @@ use crate::surfacev::bit_grid::BitGrid;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
 use opencv::core::Point2f;
+use regex::Regex;
 use simd_json::{to_owned_value, OwnedValue, StaticNode};
 use std::path::Path;
-use tracing::info;
+use tracing::{debug, info};
 
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 2 {
+    match 6 {
         1 => admiral_entrypoint_draw_rail_8(&mut admiral),
         2 => admiral_entrypoint_prod(&mut admiral),
         3 => admiral_entrypoint_turn_area_extractor(&mut admiral),
         4 => admiral_entrypoint_turn_viewer(&mut admiral),
         5 => admiral_quick_test(&mut admiral),
+        6 => validate_patches(&mut admiral),
         _ => panic!("asdf"),
     }
     .map_err(pretty_panic_admiral)
@@ -58,7 +60,9 @@ fn admiral_entrypoint_prod(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     //     return Ok(());
     // }
 
-    let surface = VSurface::load(Path::new("work/out0/step20-nav"))?;
+    // let step = "step20-nav";
+    let step = "step21-demark";
+    let surface = VSurface::load(&Path::new("work/out0").join(step))?;
     let radius = surface.get_radius();
 
     scan_area(admiral, radius)?;
@@ -67,6 +71,54 @@ fn admiral_entrypoint_prod(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     insert_rail_from_surface(admiral, &surface)?;
 
     chart_pulse(admiral, radius)?;
+
+    Ok(())
+}
+
+fn validate_patches(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    let step = "step21-demark";
+    let surface = VSurface::load(&Path::new("work/out0").join(step))?;
+
+    let raw_lua_base = r#"
+    bad = 0
+    good = 0
+    local function test_pos(x,y,name,track)
+        local actual = game.surfaces[1].find_entity(name, {x+0.5,y+0.5})
+        if actual == nil then
+            bad = bad + 1
+            local names = {}
+            for _,v in ipairs(game.surfaces[1].find_entities({ {x,y}, {x+1,y+1} })) do
+                table.insert(names, v.name)
+            end
+            local actual = game.table_to_json(names)
+            rcon.print("pos " .. x .. "," .. y .. " expected " .. name .. " actual " .. actual)
+        else
+            good = good + 1
+        end
+    end
+
+    "#
+    .replace("\n", " ");
+    let mut command = Regex::new("\\s+")
+        .unwrap()
+        .replace_all(&raw_lua_base, " ")
+        .to_string();
+    for patch in surface.get_patches_slice() {
+        for pixel in &patch.pixel_indexes {
+            command.push_str(&format!(
+                "test_pos({},{},\"{}\") ",
+                pixel.x(),
+                pixel.y(),
+                patch.resource.to_facto_string().unwrap()
+            ));
+        }
+    }
+    command.push_str(r#"rcon.print("good " .. good .. " bad " .. bad)"#);
+
+    debug!("{}", &command[0..2000]);
+    let command = RawLuaCommand::new(command);
+    let res = admiral._execute_statement(command).unwrap();
+    info!("{}", res.body);
 
     Ok(())
 }
@@ -94,9 +146,9 @@ fn insert_rail_from_surface(admiral: &mut AdmiralClient, surface: &VSurface) -> 
 
     for rail in surface.get_rail_TODO() {
         // info!("writing {:?}", rail);
-
         rail.to_factorio_entities(&mut entities);
     }
+    info!("going to insert {} rail entities", entities.len());
 
     let entities_length = entities.len();
     admiral.execute_checked_commands_in_wrapper_function(entities)?;

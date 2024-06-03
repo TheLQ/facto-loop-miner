@@ -89,6 +89,23 @@ impl Pixel {
         }
     }
 
+    pub fn to_facto_string(&self) -> VResult<&str> {
+        match self {
+            Pixel::IronOre => Ok("iron-ore"),
+            Pixel::CopperOre => Ok("copper-ore"),
+            Pixel::Stone => Ok("stone"),
+            Pixel::Coal => Ok("coal"),
+            Pixel::UraniumOre => Ok("uranium-ore"),
+            Pixel::Water => Ok("water"),
+            Pixel::CrudeOil => Ok("crude-oil"),
+            Pixel::SteelChest => Ok("steel-chest"),
+            _ => Err(VError::UnknownName {
+                name: self.as_ref().to_string(),
+                backtrace: Backtrace::force_capture(),
+            }),
+        }
+    }
+
     /// Because OpenCV is BGR not RGB...
     /// Because OpenCV uses (boost?) Vector not rust Vec
     pub fn color_cv(&self) -> Vec3b {
