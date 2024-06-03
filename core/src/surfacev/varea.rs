@@ -33,11 +33,7 @@ impl VArea {
         }
     }
 
-    pub fn from_arbitrary_points<I>(points: I) -> VArea
-    where
-        I: IntoIterator,
-        I::Item: Borrow<VPoint>,
-    {
+    pub fn from_arbitrary_points(points: impl IntoIterator<Item = impl Borrow<VPoint>>) -> VArea {
         let mut x_min = i32::MAX;
         let mut x_max = i32::MIN;
         let mut y_min = i32::MAX;

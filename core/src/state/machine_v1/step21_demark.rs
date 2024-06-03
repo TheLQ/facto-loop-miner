@@ -33,11 +33,7 @@ impl Step for Step21 {
 }
 
 fn strip_rail_endpoints(surface: &mut VSurface) {
-    let mut rail_endpoints: Vec<VPoint> = surface
-        .get_rail_TODO()
-        .into_iter()
-        .map(|v| v.endpoint)
-        .collect();
+    let mut rail_endpoints: Vec<VPoint> = surface.get_rail_TODO().map(|v| v.endpoint).collect();
     let rail_endpoints_copy = rail_endpoints.clone();
     let raw_size = rail_endpoints.len();
     rail_endpoints.sort();
@@ -63,7 +59,6 @@ fn strip_rail_endpoints(surface: &mut VSurface) {
 fn strip_rail_area(surface: &mut VSurface) {
     let mut rail_area_points: Vec<VPoint> = surface
         .get_rail_TODO()
-        .into_iter()
         .flat_map(|v| v.area(surface).0)
         .collect();
     let raw_size = rail_area_points.len();

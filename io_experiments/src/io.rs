@@ -360,7 +360,7 @@ pub fn get_file_size_u8_and_u64(file: &File, path: &Path) -> VIoResult<(usize, u
 
 pub fn map_u8_to_usize_iter(
     input_bytes: impl IntoIterator<Item = u8>,
-) -> impl IntoIterator<Item = usize> {
+) -> impl Iterator<Item = usize> {
     input_bytes
         .into_iter()
         .array_chunks()
@@ -369,7 +369,7 @@ pub fn map_u8_to_usize_iter(
 
 pub fn map_u8_to_usize_iter_ref<'a>(
     input_bytes: impl IntoIterator<Item = &'a u8> + 'a,
-) -> impl IntoIterator<Item = usize> + 'a {
+) -> impl Iterator<Item = usize> + 'a {
     input_bytes
         .into_iter()
         .array_chunks()
@@ -379,7 +379,7 @@ pub fn map_u8_to_usize_iter_ref<'a>(
 
 pub fn map_usize_to_u8_iter(
     input_bytes: impl IntoIterator<Item = usize>,
-) -> impl IntoIterator<Item = u8> {
+) -> impl Iterator<Item = u8> {
     input_bytes.into_iter().flat_map(usize::to_ne_bytes)
 }
 

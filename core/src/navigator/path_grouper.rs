@@ -184,14 +184,15 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
                 .map(|patch| patch.get_surface_patch_index(surface))
                 .collect();
 
-            let patch_group_points: Vec<VPoint> = patch_group
-                .iter()
-                .flat_map(|patch| [patch.area.point_bottom_left(), patch.area.start])
-                .collect();
+            let area = VArea::from_arbitrary_points(
+                patch_group
+                    .iter()
+                    .flat_map(|patch| [patch.area.point_bottom_left(), patch.area.start]),
+            );
 
             result.push(MineBase {
                 patch_indexes: patch_group_indexes,
-                area: VArea::from_arbitrary_points(&patch_group_points),
+                area,
             });
             // panic!("TODO: Broken area");
         } else {

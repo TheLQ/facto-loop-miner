@@ -50,9 +50,7 @@ fn bench_included_map_slice(bencher: &mut test::Bencher) {
 fn bench_included_map_iter(bencher: &mut test::Bencher) {
     bencher.iter(|| {
         println!("start");
-        let output: Vec<usize> = map_u8_to_usize_iter_ref(BENCH_RAW_XY_BUFFER.iter())
-            .into_iter()
-            .collect();
+        let output: Vec<usize> = map_u8_to_usize_iter_ref(BENCH_RAW_XY_BUFFER.iter()).collect();
         checksum_vec_usize(&output)
     })
 }
@@ -112,7 +110,7 @@ fn bench_read_mmap_custom(bencher: &mut test::Bencher) {
 fn bench_read_iter(bencher: &mut test::Bencher) {
     bencher.iter(|| {
         let data = read_entire_file(&input_path(), true).unwrap();
-        let output: Vec<usize> = map_u8_to_usize_iter(data).into_iter().collect();
+        let output: Vec<usize> = map_u8_to_usize_iter(data).collect();
         checksum_vec_usize(&output)
     });
 }

@@ -138,7 +138,7 @@ impl Pixel {
         )
     }
 
-    pub fn iter_resource() -> impl IntoIterator<Item = Self> {
+    pub fn iter_resource() -> impl Iterator<Item = Self> {
         Self::iter().filter(Pixel::is_resource)
     }
 }

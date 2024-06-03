@@ -4,7 +4,7 @@ use crate::navigator::mori_cost::{
     AXIS_COST_UNIT, DIRECTION_COST_UNIT, MORI_COST_MODE, MULTI_TURN_COST_UNIT, STRAIGHT_COST_UNIT,
     TURN_COST_UNIT,
 };
-use crate::navigator::path_executor::MinePath;
+use crate::navigator::path_executor::{MinePath, MINE_FRONT_RAIL_STEPS};
 use crate::navigator::path_grouper::{
     MAXIMUM_MINE_COUNT_PER_BATCH, PERPENDICULAR_SCAN_WIDTH, RESPLIT_LAST_COUNT_LESS_THAN_THRESHOLD,
 };
@@ -268,6 +268,7 @@ impl VSurface {
             ["AXIS_COST_UNIT", &AXIS_COST_UNIT.to_string()],
             // mori cost
             ["MORI_COST_MODE", MORI_COST_MODE.into()],
+            ["MINE_FRONT_RAIL_STEPS", &MINE_FRONT_RAIL_STEPS.to_string()],
         ];
 
         let mut output = "".to_string();
@@ -515,7 +516,7 @@ impl VSurface {
         self.rail_paths.append(&mut rails)
     }
 
-    pub fn get_rail_TODO(&self) -> impl IntoIterator<Item = &Rail> {
+    pub fn get_rail_TODO(&self) -> impl Iterator<Item = &Rail> {
         self.rail_paths.iter().flat_map(|v| &v.rail)
     }
 
