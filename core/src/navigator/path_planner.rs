@@ -185,7 +185,7 @@ fn build_routes_from_destinations(
     }
 }
 
-pub const MINE_CHOICE_TRUNCATE_DESTINATIONS: usize = 4;
+pub const MINE_CHOICE_TRUNCATE_DESTINATIONS: usize = 2;
 
 impl MineChoices {
     fn empty(mine: MineBase) -> Self {
