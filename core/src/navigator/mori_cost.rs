@@ -36,12 +36,15 @@ pub fn calculate_cost_for_point(
     resource_cloud: &ResourceCloud,
     parents_compare: &[RailPointCompare],
 ) -> u32 {
-    let base_distance = || -> f32 { distance_basic_manhattan(next, end) };
-
     let result = match MORI_COST_MODE {
         MoriCostMode::Dummy => 5.0,
-        MoriCostMode::DistanceManhattanOnly => base_distance(),
-        MoriCostMode::Complete => into_end_landing_bias(next, start, end, base_distance()),
+        MoriCostMode::DistanceManhattanOnly => distance_basic_manhattan(next, end),
+        MoriCostMode::Complete => into_end_landing_bias(
+            next,
+            start,
+            end,
+            distance_with_less_parent_turns(parents_compare, next, end),
+        ),
     };
     result as u32
 
