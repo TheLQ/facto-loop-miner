@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
 use std::rc::Rc;
 use std::sync::Mutex;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, info, trace};
 
 const MAX_PATCHES: usize = 200;
 
@@ -128,54 +128,36 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
                 .is_within_center_radius(REMOVE_RESOURCE_BASE_TILES as u32)
         })
         .collect();
-
     let patch_range = 0..patches.len();
-    let mut group_ids: Vec<Option<usize>> = patch_range.clone().map(|v| None).collect();
 
-    // find nearest paths
-    // brute force alternative algo to kdtree for fun
-    for source_index in patch_range.clone() {
-        if group_ids[source_index].is_some() {
+    // group patches by neary
+    let mut groups: Vec<Vec<&VPatch>> = Vec::new();
+    for patch in &patches {
+        let processed_patches = groups.iter().flatten().cloned().collect_vec();
+        if processed_patches.contains(patch) {
+            // already in a group
             continue;
         }
-        for other_index in patch_range.clone() {
-            if source_index == other_index || group_ids[other_index].is_some() {
-                continue;
-            }
-            let source_patch = patches[source_index];
-            let other_patch = patches[other_index];
+        let remaining_patches = patches
+            .iter()
+            .filter(|p| !processed_patches.contains(p))
+            .cloned()
+            .collect_vec();
 
-            if source_patch
-                .area
-                .point_center()
-                .distance_bird(&other_patch.area.point_center())
-                < TILES_PER_CHUNK as f32 / 2.0
-            {
-                group_ids[source_index] = Some(source_index);
-                group_ids[other_index] = Some(source_index);
-            }
+        let mut new_group = Vec::new();
+        new_group.push(*patch);
+        recursive_near_patches(patch, &remaining_patches, &mut new_group);
+        if new_group.len() != 1 {
+            info!("group of {}", new_group.len());
         }
+        groups.push(new_group);
     }
 
     // combine like ids
     let mut result = Vec::new();
 
-    for source_index in patch_range {
-        if let Some(group_id) = group_ids[source_index] {
-            if group_id != source_index {
-                // already handled first see
-                continue;
-            }
-            let patch_group: Vec<&VPatch> = group_ids
-                .iter()
-                .enumerate()
-                // get all of our group ids, then get the actual patch they point to
-                .filter_map(|(search_index, group_id_opt)| {
-                    group_id_opt
-                        .filter(|search_group_id| *search_group_id == group_id)
-                        .map(|_search_group_id| patches[search_index])
-                })
-                .collect();
+    for patch_group in groups {
+        if patch_group.len() != 1 {
             trace!("Merging patch group of {:?}", patch_group);
 
             // Externally we use the index in the VSurface Patches slice
@@ -185,9 +167,7 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
                 .collect();
 
             let area = VArea::from_arbitrary_points(
-                patch_group
-                    .iter()
-                    .flat_map(|patch| [patch.area.point_bottom_left(), patch.area.start]),
+                patch_group.iter().flat_map(|patch| &patch.pixel_indexes),
             );
 
             result.push(MineBase {
@@ -196,7 +176,7 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
             });
             // panic!("TODO: Broken area");
         } else {
-            let patch = patches[source_index];
+            let patch = patch_group[0];
             trace!("Single patch group {:?}", patch);
             result.push(MineBase {
                 patch_indexes: vec![patch.get_surface_patch_index(surface)],
@@ -206,6 +186,27 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
     }
 
     result
+}
+
+fn recursive_near_patches<'a>(
+    needle: &VPatch,
+    patches: &[&'a VPatch],
+    total: &mut Vec<&'a VPatch>,
+) {
+    for other in patches {
+        if *other == needle || total.contains(other) {
+            continue;
+        }
+        if needle
+            .area
+            .point_center()
+            .distance_bird(&other.area.point_center())
+            < TILES_PER_CHUNK as f32 * 4.0
+        {
+            total.push(*other);
+            recursive_near_patches(other, patches, total);
+        }
+    }
 }
 
 // #[allow(clippy::never_loop)]

@@ -276,7 +276,6 @@ impl Rail {
             RailMode::Straight => {
                 for rail in self.build_dual_straight_behind_rail(RAIL_STEP_SIZE) {
                     for point in rail.endpoint.get_entity_area_2x2() {
-                        // TODO: WTF???
                         if !surface.is_point_out_of_bounds(&point) {
                             res.push(point);
                         } else {
@@ -290,7 +289,6 @@ impl Rail {
                 let leg = self.clone();
                 for rail in leg.build_dual_straight_behind_rail(RAIL_STEP_SIZE) {
                     for point in rail.endpoint.get_entity_area_2x2() {
-                        // TODO: WTF???
                         if !surface.is_point_out_of_bounds(&point) {
                             res.push(point);
                         } else {
@@ -305,7 +303,6 @@ impl Rail {
                     .move_force_rotate_clockwise(turn_type.rotations());
                 for rail in leg.build_dual_straight_behind_rail(RAIL_STEP_SIZE) {
                     for point in rail.endpoint.get_entity_area_2x2() {
-                        // TODO: WTF???
                         if !surface.is_point_out_of_bounds(&point) {
                             res.push(point);
                         } else {
@@ -1036,7 +1033,7 @@ pub fn write_rail_with_pixel(surface: &mut VSurface, path: &[Rail], pixel: Pixel
         // debug!("writing rail start at {:?}", path_rail.endpoint);
         let (area, dirty) = path_rail.area(surface);
         if dirty {
-            panic!("dirty area for {:?}", path_rail);
+            // panic!("dirty area for {:?}", path_rail);
         }
         for path_area_point in area {
             total_rail += 1;
