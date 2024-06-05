@@ -153,9 +153,16 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
         groups.push(new_group);
     }
 
-    // combine like ids
-    let mut result = Vec::new();
+    // {
+    //     let mut dedupe_check = groups.iter().flatten().cloned().collect_vec();
+    //     let old = dedupe_check.len();
+    //     dedupe_check.sort();
+    //     dedupe_check.dedup();
+    //     assert_eq!(old, dedupe_check.len(), "dedupe found stuff!");
+    // }
 
+    // Merge groups
+    let mut result = Vec::new();
     for patch_group in groups {
         if patch_group.len() != 1 {
             trace!("Merging patch group of {:?}", patch_group);
@@ -184,7 +191,6 @@ pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<Mine
             })
         }
     }
-
     result
 }
 

@@ -4,9 +4,11 @@ use crate::navigator::mori::{
 };
 use crate::navigator::path_executor::{execute_route_batch, MineRouteCombinationPathResult};
 use crate::navigator::path_grouper::{
-    base_bottom_right_corner, get_mine_bases_by_batch, MineBaseBatchResult,
+    base_bottom_right_corner, get_mine_bases_by_batch, MineBaseBatch, MineBaseBatchResult,
 };
-use crate::navigator::path_planner::{get_possible_routes_for_batch, MineChoices};
+use crate::navigator::path_planner::{
+    expanded_mine_no_touching_zone, get_possible_routes_for_batch, MineChoices,
+};
 use crate::navigator::path_side::BaseSource;
 use crate::navigator::PathingResult;
 use crate::state::err::XMachineResult;
@@ -18,6 +20,8 @@ use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
+use crate::LOCALE;
+use num_format::ToFormattedString;
 use opencv::core::Point;
 use std::borrow::BorrowMut;
 use std::sync::Mutex;
@@ -137,16 +141,22 @@ fn navigate_patches_to_base_dump_rails(surface: &mut VSurface) {
     draw_no_touching_zone(surface, &mine_batches);
 
     let mut rails: Vec<Rail> = Vec::new();
+    let mut combinations = 0;
     for mine_batch in mine_batches {
         let route_combination_batch = get_possible_routes_for_batch(surface, mine_batch);
         for combination in route_combination_batch.combinations {
             for route in combination.routes {
                 rails.push(route.base_rail);
                 rails.push(route.entry_rail);
+                combinations += 1;
             }
         }
     }
     write_rail(surface, &rails).unwrap();
+    info!(
+        "Would have tested {} combinations",
+        combinations.to_formatted_string(&LOCALE)
+    )
 }
 
 fn navigate_patches_to_base2(surface: &mut VSurface) {
@@ -176,7 +186,7 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
     // }
     let mut failing_count = 0;
 
-    for mine_batch in mine_batches {
+    for (batch_index, mine_batch) in mine_batches.into_iter().skip(0).enumerate() {
         let watch = BasicWatch::start();
 
         // for mine in &mine_batch.mines {
@@ -273,10 +283,10 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
             }
         }
 
-        if 1 + 1 == 2 {
-            info!("asfsdfv");
-            break;
-        }
+        // if batch_index == 2 {
+        //     info!("asfsdfv");
+        //     break;
+        // }
     }
 }
 

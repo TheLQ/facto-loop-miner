@@ -92,7 +92,7 @@ impl Machine {
                     state.borrow_mut().update_modified(&step_out_dir);
                 }
 
-                debug!("Step Completed in {}", step_watch,);
+                info!("Step Completed in {}", step_watch,);
             } else {
                 info!("{} - No Changes Found", header_prefix)
             }
