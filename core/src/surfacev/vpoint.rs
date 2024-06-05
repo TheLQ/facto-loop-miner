@@ -2,7 +2,7 @@ use crate::surfacev::err::{VError, VResult};
 use opencv::core::{Point, Point2f};
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
-use std::ops::{Add, Sub};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 /// Core XY Point. i32 for simpler math
 #[derive(
@@ -32,6 +32,14 @@ impl VPoint {
     pub fn zero() -> Self {
         VPoint { x: 0, y: 0 }
     }
+
+    pub fn from_cv_point(point: Point) -> Self {
+        VPoint {
+            x: point.x,
+            y: point.y,
+        }
+    }
+
     pub fn from_value(value: i32) -> Self {
         VPoint { x: value, y: value }
     }
@@ -174,9 +182,19 @@ impl VPoint {
     }
 
     fn move_round_up(&self, size: i32) -> Self {
+        let x_rem = self.x % size;
+        let y_rem = self.y % size;
         VPoint {
-            x: self.x + (size - (self.x % size)),
-            y: self.y + (size - (self.y % size)),
+            x: if x_rem != 0 {
+                self.x + (size - x_rem)
+            } else {
+                self.x
+            },
+            y: if y_rem != 0 {
+                self.y + (size - y_rem)
+            } else {
+                self.y
+            },
         }
     }
 
@@ -236,6 +254,13 @@ impl Add for VPoint {
     }
 }
 
+impl AddAssign for VPoint {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
+}
+
 impl Sub for VPoint {
     type Output = VPoint;
     fn sub(self, rhs: VPoint) -> Self::Output {
@@ -243,6 +268,13 @@ impl Sub for VPoint {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
         }
+    }
+}
+
+impl SubAssign for VPoint {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
     }
 }
 

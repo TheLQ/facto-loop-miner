@@ -7,3 +7,5 @@ mod ventity_map;
 pub mod vpatch;
 pub mod vpoint;
 pub mod vsurface;
+
+pub use ventity_map::VEntityXY;

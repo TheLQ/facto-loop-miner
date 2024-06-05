@@ -69,21 +69,6 @@ impl Step for Step20 {
 const PATH_LIMIT: Option<u8> = Some(10);
 // const PATH_LIMIT: Option<u8> = None;
 
-enum SpeculationTypes {
-    CurrentEnd,
-    CurrentEndAdd(u8),     // 1 and 2 after
-    NearestPatchToEnd(u8), // "somehow", keep the last
-}
-
-/// Vastly improve performance utilizing free CPU cores to try other paths.
-fn navigate_patches_to_base_speculation(
-    surface: Surface,
-    disk_patches: DiskPatch,
-    params: &mut StepParams,
-) -> Surface {
-    surface
-}
-
 fn navigate_patches_to_base_single(surface: &mut VSurface) {
     let base_source = BaseSource::new();
 
@@ -149,6 +134,8 @@ fn navigate_patches_to_base_dump_rails(surface: &mut VSurface) {
         .unwrap();
     info!("Loaded {} batches", mine_batches.len());
 
+    draw_no_touching_zone(surface, &mine_batches);
+
     let mut rails: Vec<Rail> = Vec::new();
     for mine_batch in mine_batches {
         let route_combination_batch = get_possible_routes_for_batch(surface, mine_batch);
@@ -182,54 +169,8 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
 
     info!("Loaded {} batches", mine_batches.len());
 
-    // Wrap patches in a no touching zone, so rail doesn't drive between start and the patch
-    for mine_batch in &mine_batches {
-        for mine in &mine_batch.mines {
-            // let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(patch);
+    draw_no_touching_zone(surface, &mine_batches);
 
-            // let padding = 6;
-            // surface.draw_square(
-            //     patch_top_left.x() + padding,
-            //     patch_bottom_right.x() - padding,
-            //     patch_top_left.y() + padding,
-            //     patch_bottom_right.y() - padding,
-            //     Pixel::SteelChest,
-            //     Some(patch.resource),
-            // )
-            // let mine_choice = MineChoices::from_mine(surface, mine.clone());
-            // let choice_area: VArea =
-            //     VArea::from_arbitrary_points(mine_choice.destinations.iter().map(|v| v.endpoint));
-
-            // get patches
-            let choice_area = VArea::from_arbitrary_points(
-                mine.get_vpatches(surface)
-                    .into_iter()
-                    .flat_map(|patch| patch.area.get_corner_points()),
-            );
-
-            // warn!(
-            //     "Destinations for {:?}\n{}",
-            //     choice_area,
-            //     mine_choice
-            //         .destinations
-            //         .iter()
-            //         .map(|v| format!("{:?}", v))
-            //         .join("\n")
-            // );
-
-            let padding = RAIL_STEP_SIZE_I32 * 2 * 2;
-            let patch_top_left = &choice_area.start;
-            let patch_bottom_right = choice_area.point_bottom_left();
-            surface.draw_square(
-                patch_top_left.x() - padding,
-                patch_bottom_right.x() + padding,
-                patch_top_left.y() - padding,
-                patch_bottom_right.y() + padding,
-                Pixel::SteelChest,
-                Some(surface.get_patches_slice()[mine.patch_indexes[0]].resource),
-            )
-        }
-    }
     // if 1 + 1 == 2 {
     //     return;
     // }
@@ -332,10 +273,67 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
             }
         }
 
-        // if 1 + 1 == 2 {
-        //     info!("asfsdfv");
-        //     break;
-        // }
+        if 1 + 1 == 2 {
+            info!("asfsdfv");
+            break;
+        }
+    }
+}
+
+fn draw_no_touching_zone<'a>(
+    surface: &mut VSurface,
+    mine_batches: impl IntoIterator<Item = &'a MineBaseBatch>,
+) {
+    // Wrap patches in a no touching zone, so rail doesn't drive between start and the patch
+    for mine_batch in mine_batches {
+        for mine in &mine_batch.mines {
+            // let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(patch);
+
+            // let padding = 6;
+            // surface.draw_square(
+            //     patch_top_left.x() + padding,
+            //     patch_bottom_right.x() - padding,
+            //     patch_top_left.y() + padding,
+            //     patch_bottom_right.y() - padding,
+            //     Pixel::SteelChest,
+            //     Some(patch.resource),
+            // )
+            // let mine_choice = MineChoices::from_mine(surface, mine.clone());
+            // let choice_area: VArea =
+            //     VArea::from_arbitrary_points(mine_choice.destinations.iter().map(|v| v.endpoint));
+
+            // get patches
+            // let choice_area = VArea::from_arbitrary_points(
+            //     mine.get_vpatches(surface)
+            //         .into_iter()
+            //         .flat_map(|patch| &patch.pixel_indexes),
+            // );
+
+            // warn!(
+            //     "Destinations for {:?}\n{}",
+            //     choice_area,
+            //     mine_choice
+            //         .destinations
+            //         .iter()
+            //         .map(|v| format!("{:?}", v))
+            //         .join("\n")
+            // );
+
+            let mine_area = expanded_mine_no_touching_zone(mine);
+            let patch_top_left = &mine_area.start;
+            let patch_bottom_right = mine_area.point_bottom_left();
+            surface.draw_square_area(
+                &mine_area,
+                Pixel::SteelChest,
+                Some(surface.get_patches_slice()[mine.patch_indexes[0]].resource),
+            );
+            // surface
+            //     .set_pixel(choice_area.start, Pixel::Highlighter)
+            //     .unwrap();
+            // surface
+            //     .set_pixel(choice_area.point_center(), Pixel::EdgeWall)
+            //     .unwrap();
+        }
     }
 }
 

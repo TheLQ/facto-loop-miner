@@ -1,10 +1,13 @@
-use crate::navigator::mori::{Rail, RailDirection, RailMode};
+use crate::navigator::mori::{Rail, RailDirection, RailMode, RAIL_STEP_SIZE_I32};
+use crate::navigator::path_executor::extend_rail_end;
 use crate::navigator::path_grouper::{MineBase, MineBaseBatch};
 use crate::navigator::path_side::BaseSourceEighth;
+use crate::surface::pixel::Pixel;
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_EIGHT, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
 use itertools::Itertools;
+use num_format::Locale::to;
 use simd_json::prelude::ArrayTrait;
 use tracing::{debug, info};
 
@@ -182,45 +185,94 @@ fn build_routes_from_destinations(
     }
 }
 
-fn get_expanded_patch_points(area: &VArea) -> (VPoint, VPoint) {
-    // main corners
-    let mut patch_top_left = area.start.move_round16_down() + SHIFT_POINT_ONE;
-    patch_top_left.assert_odd_16x16_position();
-
-    let mut patch_bottom_right = area.point_bottom_left().move_round16_up() + SHIFT_POINT_ONE;
-    patch_bottom_right.assert_odd_16x16_position();
-
-    for _ in 0..2 {
-        patch_top_left = patch_top_left - SHIFT_POINT_EIGHT;
-        patch_bottom_right = patch_bottom_right + SHIFT_POINT_EIGHT;
-    }
-
-    (patch_top_left, patch_bottom_right)
-}
-
-pub const MINE_CHOICE_TRUNCATE_DESTINATIONS: usize = 2;
+pub const MINE_CHOICE_TRUNCATE_DESTINATIONS: usize = 4;
 
 impl MineChoices {
+    fn empty(mine: MineBase) -> Self {
+        MineChoices {
+            mine,
+            destinations: Vec::new(),
+        }
+    }
+
     pub fn from_mine(surface: &VSurface, mine: MineBase) -> Self {
         let mut destinations: Vec<Rail> = Vec::new();
-        let (patch_top_left, patch_bottom_right) = get_expanded_patch_points(&mine.area);
 
-        destinations.push(Rail::new_straight(patch_top_left, RailDirection::Right));
-        destinations.push(Rail::new_straight(patch_bottom_right, RailDirection::Left));
+        let mine_area = expanded_mine_no_touching_zone(&mine);
+        let top_center = {
+            let mut centered_point =
+                VPoint::new(mine_area.point_center().x(), mine_area.start.y()).move_round16_down();
+            // Go back up width of rail + inner-rail space
+            let test_point = centered_point.move_y(4);
+            if surface.is_point_out_of_bounds(&test_point) {
+                return MineChoices::empty(mine);
+            }
+            if surface.get_pixel(test_point) != Pixel::Empty {
+                centered_point = centered_point.move_y(-16);
+            }
 
-        // opposite corners
-        let patch_bottom_left = VPoint::new(patch_top_left.x(), patch_bottom_right.y());
-        let patch_top_right = VPoint::new(patch_bottom_right.x(), patch_top_left.y());
+            centered_point += SHIFT_POINT_ONE;
+            centered_point.assert_odd_16x16_position();
+            centered_point
+        };
+        let bottom_center = {
+            let mut centered_point = VPoint::new(
+                top_center.x() - /*Remove 1 odd shift*/1,
+                mine_area.point_bottom_left().y(),
+            )
+            .move_round16_up();
 
-        destinations.push(Rail::new_straight(patch_bottom_left, RailDirection::Right));
-        destinations.push(Rail::new_straight(patch_top_right, RailDirection::Left));
+            // Go back up width of rail + inner-rail space
+            let test_point = centered_point.move_y(-4);
+            if surface.is_point_out_of_bounds(&test_point) {
+                return MineChoices::empty(mine);
+            }
+            if surface.get_pixel(test_point) != Pixel::Empty {
+                centered_point = centered_point.move_y(16);
+            }
+            centered_point += SHIFT_POINT_ONE;
+            centered_point.assert_odd_16x16_position();
+            centered_point
+        };
 
-        destinations.retain(|rail| rail.is_area_buildable_fast(surface));
+        // top
+        destinations.push(rail_move_forward_2x_then_180(
+            top_center,
+            RailDirection::Right,
+        ));
+        destinations.push(rail_move_forward_2x_then_180(
+            top_center,
+            RailDirection::Left,
+        ));
+
+        // bottom
+        destinations.push(rail_move_forward_2x_then_180(
+            bottom_center,
+            RailDirection::Right,
+        ));
+        destinations.push(rail_move_forward_2x_then_180(
+            bottom_center,
+            RailDirection::Left,
+        ));
+
+        // pure out of bounds
+        destinations.retain(|rail| !rail.area(surface).1);
+
+        // destinations.retain(|rail| rail.is_area_buildable_fast(surface));
+
+        let dummy_search_area = VArea::from_arbitrary_points_pair(
+            VPoint::new(-surface.get_radius_i32(), -surface.get_radius_i32()),
+            VPoint::new(surface.get_radius_i32(), surface.get_radius_i32()),
+        );
+        destinations.retain(|rail| extend_rail_end(surface, &dummy_search_area, rail).is_some());
+
         if destinations.len() != 4 {
-            debug!("Reduced mine destinations from 4 to {}", destinations.len());
+            info!("Reduced mine destinations from 4 to {}", destinations.len());
         }
 
-        // TODO: OPTIMIZING ATTEMPT - pick closest 2 values
+        // TODO: OPTIMIZING ATTEMPT - pick closest 2 values.
+        // TODO: Left rail only. Want closest side to source.
+        // destinations.sort_by_key(|rail| (rail.endpoint.y(), rail.endpoint.x()));
         destinations.sort_by_key(|rail| rail.endpoint.x());
         destinations.truncate(MINE_CHOICE_TRUNCATE_DESTINATIONS);
 
@@ -244,6 +296,25 @@ impl MineChoices {
             })
             .collect()
     }
+}
+
+fn rail_move_forward_2x_then_180(start_point: VPoint, start_direction: RailDirection) -> Rail {
+    Rail::new_straight(start_point, start_direction)
+        .move_forward_step()
+        .move_forward_step()
+        .move_force_rotate_clockwise(2)
+}
+
+pub const MINE_RAIL_BUFFER_PIXELS: i32 = RAIL_STEP_SIZE_I32 * 2 * 2;
+
+pub fn expanded_mine_no_touching_zone(mine: &MineBase) -> VArea {
+    let area = &mine.area;
+    VArea::from_arbitrary_points_pair(
+        area.start
+            .move_xy(-MINE_RAIL_BUFFER_PIXELS, -MINE_RAIL_BUFFER_PIXELS),
+        area.point_bottom_left()
+            .move_xy(MINE_RAIL_BUFFER_PIXELS, MINE_RAIL_BUFFER_PIXELS),
+    )
 }
 
 impl MineDestination {

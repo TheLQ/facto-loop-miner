@@ -3,7 +3,7 @@ use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct VArea {
     pub start: VPoint,
     pub width: u32,

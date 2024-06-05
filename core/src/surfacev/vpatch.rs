@@ -7,7 +7,7 @@ use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Derivative)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Derivative, Eq, PartialOrd, Ord)]
 #[derivative(Debug)]
 pub struct VPatch {
     pub resource: Pixel,
