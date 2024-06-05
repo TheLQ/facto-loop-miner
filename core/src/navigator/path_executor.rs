@@ -19,6 +19,8 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tracing::{debug, error, info};
 
+pub const MINE_FRONT_RAIL_STEPS: usize = 6;
+
 /// Given thousands of possible route combinations, execute in parallel and find the best
 pub fn execute_route_batch(
     surface: &VSurface,
@@ -216,6 +218,19 @@ fn execute_route_combination(
 
     let mut found_paths = Vec::new();
     for mine_endpoint in &route_combination.routes {
+        let extended_entry_rails =
+            match extend_rail_end(&working_surface, search_area, &mine_endpoint.entry_rail) {
+                Some(v) => v,
+                None => {
+                    // This was valid during first pass but now another Rail is on-top of it
+                    FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
+                    return MineRouteCombinationPathResult::Failure {
+                        found_paths,
+                        failing_mine: mine_endpoint.clone(),
+                    };
+                }
+            };
+
         let route_result = mori_start(
             &working_surface,
             mine_endpoint.base_rail.clone(),
@@ -223,7 +238,9 @@ fn execute_route_combination(
             search_area,
         );
         match route_result {
-            PathingResult::Route { path, cost } => {
+            PathingResult::Route { mut path, cost } => {
+                path.extend(extended_entry_rails);
+
                 write_rail(&mut working_surface, &path).unwrap();
                 found_paths.push(MinePath {
                     mine_base: mine_endpoint.mine.clone(),
@@ -245,6 +262,26 @@ fn execute_route_combination(
         paths: found_paths,
         route_combination,
     }
+}
+
+//
+pub fn extend_rail_end(
+    surface: &VSurface,
+    search_area: &VArea,
+    mine_rail: &Rail,
+) -> Option<Vec<Rail>> {
+    let mut rails: Vec<Rail> = Vec::new();
+    let mut last_rail = &mine_rail
+        .clone()
+        .into_buildable_simple(surface, search_area)?;
+    for i in 0..MINE_FRONT_RAIL_STEPS {
+        let rail = last_rail
+            .move_forward_step()
+            .into_buildable_simple(surface, search_area)?;
+        rails.push(rail);
+        last_rail = rails.last().unwrap();
+    }
+    Some(rails)
 }
 
 #[derive(Serialize, Deserialize, Clone)]
