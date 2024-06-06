@@ -137,7 +137,7 @@ fn into_end_landing_bias(next: &Rail, start: &Rail, end: &VPoint, base_distance:
     // total_cost += direction_bias;
 
     let axis_distance = start
-        .distance_between_perpendicular_axis(next)
+        .distance_between_perpendicular_axis(&next.endpoint)
         .unsigned_abs() as f32
         * AXIS_COST_UNIT;
     // let axis_distance = (axis_distance - 3).max(1) as f32;

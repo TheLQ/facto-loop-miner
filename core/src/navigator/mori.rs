@@ -978,10 +978,10 @@ impl Rail {
         }
     }
 
-    pub fn distance_between_perpendicular_axis(&self, other: &Rail) -> i32 {
+    pub fn distance_between_perpendicular_axis(&self, other: &VPoint) -> i32 {
         match self.direction {
-            RailDirection::Left | RailDirection::Right => self.endpoint.subtract_y(&other.endpoint),
-            RailDirection::Up | RailDirection::Down => self.endpoint.subtract_x(&other.endpoint),
+            RailDirection::Left | RailDirection::Right => self.endpoint.subtract_y(other),
+            RailDirection::Up | RailDirection::Down => self.endpoint.subtract_x(other),
         }
     }
 }
