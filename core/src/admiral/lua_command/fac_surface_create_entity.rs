@@ -170,6 +170,22 @@ impl FacSurfaceCreateEntity {
     pub fn new_radar(position: Point2f) -> Self {
         Self::new("radar", position)
     }
+
+    pub fn new_drill(position: Point2f, direction: RailDirection) -> Self {
+        Self::new_params(
+            "electric-mining-drill",
+            position,
+            vec![CreateParam::Direction(direction)],
+        )
+    }
+
+    pub fn new_chest_red(position: Point2f) -> Self {
+        Self::new("logistic-chest-passive-provider", position)
+    }
+
+    pub fn new_electric_pole_medium(position: Point2f) -> Self {
+        Self::new("medium-electric-pole", position)
+    }
 }
 
 #[derive(Debug)]

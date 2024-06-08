@@ -13,11 +13,14 @@ use crate::admiral::lua_command::lua_batch::LuaBatchCommand;
 use crate::admiral::lua_command::raw_lua::RawLuaCommand;
 use crate::admiral::lua_command::scanner::BaseScanner;
 use crate::admiral::lua_command::LuaCommand;
+use crate::admiral::mine_builder::admiral_mines;
 use crate::navigator::mori::{Rail, RailDirection};
 use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
+use crate::surface::pixel::Pixel;
 use crate::surfacev::bit_grid::BitGrid;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
+use itertools::Itertools;
 use opencv::core::Point2f;
 use regex::Regex;
 use simd_json::{to_owned_value, OwnedValue, StaticNode};
@@ -27,13 +30,14 @@ use tracing::{debug, info};
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 6 {
+    match 7 {
         1 => admiral_entrypoint_draw_rail_8(&mut admiral),
         2 => admiral_entrypoint_prod(&mut admiral),
         3 => admiral_entrypoint_turn_area_extractor(&mut admiral),
         4 => admiral_entrypoint_turn_viewer(&mut admiral),
         5 => admiral_quick_test(&mut admiral),
         6 => validate_patches(&mut admiral),
+        7 => admiral_mines(&mut admiral),
         _ => panic!("asdf"),
     }
     .map_err(pretty_panic_admiral)
@@ -162,7 +166,7 @@ fn insert_rail_from_surface(admiral: &mut AdmiralClient, surface: &VSurface) -> 
     Ok(())
 }
 
-fn chart_pulse(admiral: &mut AdmiralClient, radius: u32) -> AdmiralResult<()> {
+pub fn chart_pulse(admiral: &mut AdmiralClient, radius: u32) -> AdmiralResult<()> {
     let command = ChartPulse::new_radius(radius);
     admiral.execute_checked_command(command.into_boxed())?;
 

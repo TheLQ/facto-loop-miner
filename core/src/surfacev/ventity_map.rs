@@ -334,26 +334,7 @@ where
         self.xy_to_entity = other.xy_to_entity;
     }
 
-    // pub fn iter_xy_entities_or_default<'a>(&'a self, default: &'a E) -> impl Iterator<Item = &E> {
-    //     self.xy_to_entity.iter().map(move |index| {
-    //         if *index == EMPTY_XY_INDEX {
-    //             default
-    //         } else {
-    //             &self.entities[*index]
-    //         }
-    //     })
-    // }
-
-    // pub fn cache_buffers_for_cloning(&mut self) {
-    //     self.xy_to_entity.cache_buffers_for_cloning();
-    // }
-
     pub fn iter_entities(&self) -> impl Iterator<Item = &E> {
-        // self.xy_to_entity
-        //     .as_slice()
-        //     .iter()
-        //     .filter(|index| **index != EMPTY_XY_INDEX)
-        //     .map(|index| &self.entities[*index])
         self.entities.iter()
     }
 
@@ -460,43 +441,22 @@ where
         }
     }
 
-    //</editor-fold>
+    pub fn iter_xy_entities_and_points(&self) -> impl Iterator<Item = (VPoint, Option<&E>)> {
+        self.xy_to_entity
+            .as_slice()
+            .iter()
+            .enumerate()
+            .map(|(index, entity_id)| {
+                let point = self.index_to_xy(index);
+                if *entity_id == EMPTY_XY_INDEX {
+                    (point, None)
+                } else {
+                    (point, Some(self.get_entity_by_index(*entity_id)))
+                }
+            })
+    }
 
-    // pub fn draw_debug_square(
-    //     &mut self,
-    //     point: &VPoint,
-    //     center_entity: E,
-    //     background_entity: E,
-    // ) -> (usize, Vec<VPoint>) {
-    //     assert!(self.is_point_out_of_bounds(point), "out of bounds");
-    //
-    //     let size = 10;
-    //
-    //     let background_entity_index = self.entities.len();
-    //     self.entities.push(background_entity);
-    //     let center_entity_index = self.entities.len();
-    //     self.entities.push(center_entity);
-    //
-    //     let mut background_entity_positions = Vec::new();
-    //
-    //     for x in (point.x() - 10)..(point.x() + 10) {
-    //         for y in (point.y() - 10)..(point.y() + 10) {
-    //             if self.is_xy_out_of_bounds(x, y) {
-    //                 continue;
-    //             }
-    //             let index = self.xy_to_index_unchecked(x, y);
-    //             let cur_point = VPoint::new(x, y);
-    //             if point == &cur_point {
-    //                 self.xy_to_entity.as_mut_slice()[index] = background_entity_index;
-    //                 background_entity_positions.push(cur_point)
-    //             } else {
-    //                 self.xy_to_entity.as_mut_slice()[index] = center_entity_index;
-    //             }
-    //         }
-    //     }
-    //
-    //     (background_entity_index, background_entity_positions)
-    // }
+    //</editor-fold>
 }
 
 impl<E> Display for VEntityMap<E> {

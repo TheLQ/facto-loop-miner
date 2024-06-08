@@ -314,6 +314,19 @@ impl VSurface {
         }
     }
 
+    pub fn get_pixels_all(&self) -> impl Iterator<Item = (VPoint, Pixel)> + '_ {
+        self.pixels
+            .iter_xy_entities_and_points()
+            .map(|(point, maybe_vpixel)| {
+                (
+                    point,
+                    maybe_vpixel
+                        .map(|vpixel| vpixel.pixel)
+                        .unwrap_or(Pixel::Empty),
+                )
+            })
+    }
+
     pub fn set_pixel(&mut self, start: VPoint, pixel: Pixel) -> VResult<()> {
         if pixel == Pixel::Empty {
             match self.pixels.get_entity_by_point(&start) {
@@ -356,10 +369,6 @@ impl VSurface {
     pub fn get_patches_slice(&self) -> &[VPatch] {
         &self.patches
     }
-
-    // pub fn get_xy_and_indexes_in_area(&self, area: &VArea) -> Vec<(VPoint, usize, Pixel)> {
-    //     self.pixels.get_xy_and_indexes_in_area(area)
-    // }
 
     pub fn is_xy_out_of_bounds(&self, x: i32, y: i32) -> bool {
         self.pixels.is_xy_out_of_bounds(x, y)
@@ -496,6 +505,10 @@ impl VSurface {
 
     pub fn get_rail_TODO(&self) -> impl Iterator<Item = &Rail> {
         self.rail_paths.iter().flat_map(|v| &v.rail)
+    }
+
+    pub fn get_mines(&self) -> impl Iterator<Item = &VArea> {
+        self.rail_paths.iter().map(|v| &v.mine_base.area)
     }
 
     pub fn dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {
