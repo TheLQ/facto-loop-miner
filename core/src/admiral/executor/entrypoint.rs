@@ -30,7 +30,7 @@ use tracing::{debug, info};
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 7 {
+    match 2 {
         1 => admiral_entrypoint_draw_rail_8(&mut admiral),
         2 => admiral_entrypoint_prod(&mut admiral),
         3 => admiral_entrypoint_turn_area_extractor(&mut admiral),
@@ -138,7 +138,12 @@ fn scan_area(admiral: &mut AdmiralClient, radius: u32) -> AdmiralResult<()> {
 fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralResult<()> {
     let command = FacDestroy::new_filtered(
         radius,
-        vec!["straight-rail", "curved-rail", "steel-chest", "small-lamp"],
+        vec![
+            // "straight-rail",
+            // "curved-rail",
+            "medium-electric-pole",
+            // "steel-chest", "small-lamp"
+        ],
     );
     admiral.execute_checked_command(command.into_boxed())?;
 
@@ -151,6 +156,7 @@ fn insert_rail_from_surface(admiral: &mut AdmiralClient, surface: &VSurface) -> 
     for rail in surface.get_rail_TODO() {
         // info!("writing {:?}", rail);
         rail.to_factorio_entities(&mut entities);
+        rail.to_tracking_factorio_entities(&mut entities);
     }
     info!("going to insert {} rail entities", entities.len());
 

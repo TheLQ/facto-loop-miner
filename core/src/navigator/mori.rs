@@ -564,6 +564,34 @@ impl Rail {
         }
     }
 
+    pub fn to_tracking_factorio_entities(&self, result: &mut Vec<Box<dyn LuaCommand>>) {
+        self.endpoint.assert_odd_position();
+        match &self.mode {
+            RailMode::Straight => {
+                let pole_pos = self
+                    .move_force_rotate_clockwise(2)
+                    .move_forward_single_num(1);
+                result.push(
+                    FacSurfaceCreateEntity::new_electric_pole_medium(
+                        pole_pos.endpoint.to_f32_with_offset(0.5),
+                    )
+                    .into_boxed(),
+                );
+
+                let pole_pos = pole_pos.move_forward_single_num(4);
+                result.push(
+                    FacSurfaceCreateEntity::new_electric_pole_medium(
+                        pole_pos.endpoint.to_f32_with_offset(0.5),
+                    )
+                    .into_boxed(),
+                )
+            }
+            RailMode::Turn(_) => {
+                // todo
+            }
+        }
+    }
+
     pub fn build_dual_straight_behind_rail(&self, length: u32) -> Vec<Rail> {
         let mut result = Vec::with_capacity(length as usize * 2);
 
