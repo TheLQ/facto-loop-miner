@@ -507,8 +507,8 @@ impl VSurface {
         self.rail_paths.iter().flat_map(|v| &v.rail)
     }
 
-    pub fn get_mines(&self) -> impl Iterator<Item = &VArea> {
-        self.rail_paths.iter().map(|v| &v.mine_base.area)
+    pub fn get_mines(&self) -> &[MinePath] {
+        &self.rail_paths
     }
 
     pub fn dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {
