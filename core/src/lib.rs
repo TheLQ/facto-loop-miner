@@ -66,7 +66,7 @@ pub const TILES_PER_CHUNK: usize = 32;
 pub fn inner_main() {
     let tracing_format = tracing_subscriber::fmt::format().compact();
 
-    log_init();
+    log_init(None);
 
     tracing::debug!("hello");
     // let mut data = String::new();
@@ -84,7 +84,7 @@ pub fn inner_main() {
 
 pub fn rcon_inner_main() {
     let tracing_format = tracing_subscriber::fmt::format().compact();
-    log_init();
+    log_init(Some(Level::TRACE));
 
     let mut admiral = AdmiralClient::new().unwrap();
     admiral.auth().unwrap();
@@ -94,7 +94,7 @@ pub fn rcon_inner_main() {
 
 pub fn inner_surface_tester() {
     let tracing_format = tracing_subscriber::fmt::format().compact();
-    log_init();
+    log_init(None);
 
     let mut surface = VSurface::load(Path::new("./work/out0/step20-nav")).unwrap();
 
@@ -125,10 +125,13 @@ where
     (value - (value % bucket_size)) / bucket_size
 }
 
-pub fn log_init() {
+pub fn log_init(force_level: Option<Level>) {
     tracing_subscriber::fmt()
-        .with_max_level(Level::TRACE)
-        // .with_max_level(Level::INFO)
+        .with_max_level(if let Some(level) = force_level {
+            level
+        } else {
+            Level::INFO
+        })
         .compact()
         .init();
 }
