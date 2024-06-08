@@ -13,7 +13,7 @@ pub const TURN_COST_UNIT: f32 = 4.0;
 pub const MULTI_TURN_COST_UNIT: f32 = 48.0;
 
 pub const DIRECTION_COST_UNIT: f32 = 10.0;
-pub const AXIS_COST_UNIT: f32 = 1.0;
+pub const AXIS_COST_UNIT: f32 = 5.0;
 
 #[derive(IntoStaticStr)]
 pub enum MoriCostMode {
