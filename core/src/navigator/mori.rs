@@ -570,64 +570,31 @@ impl Rail {
 
     pub fn to_electric_factorio_entities(&self, result: &mut Vec<Box<dyn LuaCommand>>) {
         self.endpoint.assert_odd_position();
-        match &self.mode {
-            RailMode::Straight => {
-                let pole_pos = self
-                    .move_force_rotate_clockwise(2)
-                    .move_forward_single_num(1);
-                result.push(
-                    FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint)
-                        .into_boxed(),
-                );
+        let pole_pos = self
+            .move_force_rotate_clockwise(2)
+            .move_forward_single_num(1);
+        result
+            .push(FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint).into_boxed());
 
-                let pole_pos = pole_pos.move_forward_single_num(4);
-                result.push(
-                    FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint)
-                        .into_boxed(),
-                );
-            }
-            RailMode::Turn(turn_type) => {
-                // +1 to max distance between poles
-                let pole_pos = self
-                    .move_force_rotate_clockwise(2)
-                    .move_forward_micro_num(3);
-                result.push(
-                    FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint)
-                        .into_boxed(),
-                );
-
-                // slightly down
-                let pole_pos = pole_pos
-                    .move_forward_micro_num(8)
-                    .move_force_rotate_clockwise(turn_type.swap().rotations())
-                    .move_forward_micro_num(3);
-                result.push(
-                    FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint)
-                        .into_boxed(),
-                );
-
-                let pole_pos = pole_pos
-                    .move_forward_micro_num(6)
-                    // turn other way
-                    .move_force_rotate_clockwise(turn_type.rotations())
-                    .move_forward_micro_num(5);
-                result.push(
-                    FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint)
-                        .into_boxed(),
-                );
-            }
-        }
+        let pole_pos = pole_pos.move_forward_single_num(4);
+        result
+            .push(FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint).into_boxed());
 
         if let RailMode::Turn(turn_type) = &self.mode {
+            // slightly down
+            let pole_pos = pole_pos
+                .move_forward_micro_num(6)
+                .move_force_rotate_clockwise(turn_type.swap().rotations())
+                .move_forward_micro_num(6);
+            result.push(
+                FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint).into_boxed(),
+            );
 
-            // // sadly still need more
-            // let pole_pos = pole_pos.move_forward_single_num(2);
-            // result.push(
-            //     FacSurfaceCreateEntity::new_electric_pole_medium(
-            //         pole_pos.endpoint.to_f32_with_offset(0.5),
-            //     )
-            //     .into_boxed(),
-            // );
+            // sadly still need more
+            let pole_pos = pole_pos.move_forward_single_num(2);
+            result.push(
+                FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint).into_boxed(),
+            );
         }
     }
 
