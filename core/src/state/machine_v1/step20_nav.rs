@@ -267,7 +267,7 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
                 // error!("side is {:?}", side);
                 failing_count += 1;
                 error!("Failed to find {}", failing_count);
-                if failing_count == 10 {
+                if failing_count == 20 {
                     error!("too many fails");
                     for area in debug_areas {
                         surface.draw_square_area(&area, Pixel::Highlighter, None);
@@ -283,7 +283,7 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
             }
         }
 
-        // if batch_index == 2 {
+        // if batch_index == 0 {
         //     info!("asfsdfv");
         //     break;
         // }

@@ -432,24 +432,24 @@ impl VSurface {
         metrics.log_final();
     }
 
-    pub fn draw_debug_varea_square(&mut self, area: &VArea) {
-        let border = 10;
-        for x in (area.start.x() - border)..(area.end_x_exclusive() + border) {
-            for y in (area.start.y() - border)..(area.end_y_exclusive() + border) {
-                let cur = VPoint::new(x, y);
-                if self.pixels.is_point_out_of_bounds(&cur) {
-                    continue;
-                }
-                if !area.contains_point(&cur) {
-                    if self.get_pixel(&cur) != Pixel::Empty {
-                        self.set_pixel(cur, Pixel::EdgeWall).unwrap();
-                    } else {
-                        self.set_pixel(cur, Pixel::Highlighter).unwrap();
-                    }
-                }
-            }
-        }
-    }
+    // pub fn draw_debug_varea_square(&mut self, area: &VArea) {
+    //     let border = 10;
+    //     for x in (area.start.x() - border)..(area.end_x_exclusive() + border) {
+    //         for y in (area.start.y() - border)..(area.end_y_exclusive() + border) {
+    //             let cur = VPoint::new(x, y);
+    //             if self.pixels.is_point_out_of_bounds(&cur) {
+    //                 continue;
+    //             }
+    //             if !area.contains_point(&cur) {
+    //                 if self.get_pixel(&cur) != Pixel::Empty {
+    //                     self.set_pixel(cur, Pixel::EdgeWall).unwrap();
+    //                 } else {
+    //                     self.set_pixel(cur, Pixel::Highlighter).unwrap();
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     pub fn draw_square_area(
         &mut self,

@@ -87,53 +87,6 @@ pub fn execute_route_batch(
         batch_size, routing_watch
     );
 
-    // // We have many possible routes that have different costs. We want the lowest one
-    // let mut lowest_cost = u32::MAX;
-    // let mut highest_cost = 0;
-    // let mut success_count = 0;
-    // let mut failure_found_paths_count: HashMap<usize, u32> = HashMap::new();
-    // let best_path = route_results
-    //     .into_iter()
-    //     .reduce(|result, cur| match (&result, &cur) {
-    //         (
-    //             MineRouteCombinationPathResult::Failure { .. },
-    //             MineRouteCombinationPathResult::Failure { found_paths, .. },
-    //         )
-    //         | (
-    //             MineRouteCombinationPathResult::Success { .. },
-    //             MineRouteCombinationPathResult::Failure { found_paths, .. },
-    //         ) => {
-    //             *failure_found_paths_count
-    //                 .entry(found_paths.len())
-    //                 .or_insert(0) += 1;
-    //             // result may be Success
-    //             result
-    //         }
-    //         (
-    //             MineRouteCombinationPathResult::Failure { .. },
-    //             MineRouteCombinationPathResult::Success { paths, .. },
-    //         )
-    //         | (
-    //             MineRouteCombinationPathResult::Success { .. },
-    //             MineRouteCombinationPathResult::Success { paths, .. },
-    //         ) => {
-    //             success_count += 1;
-    //
-    //             let total_cost = paths.iter().fold(0, |total, path| total + path.cost);
-    //             if total_cost > highest_cost {
-    //                 highest_cost = total_cost;
-    //             }
-    //
-    //             if total_cost < lowest_cost {
-    //                 lowest_cost = total_cost;
-    //                 cur
-    //             } else {
-    //                 result
-    //             }
-    //         }
-    //     })
-    //     .unwrap();
-
     let mut best_path: Option<MineRouteCombinationPathResult> = None;
     let mut lowest_cost = u32::MAX;
     let mut highest_cost = 0;

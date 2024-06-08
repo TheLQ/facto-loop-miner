@@ -2,6 +2,7 @@ use crate::navigator::mori::Rail;
 use std::hash::Hash;
 
 #[derive(Clone, Eq, PartialEq, Hash)]
+#[repr(transparent)]
 pub struct RailPointCompare {
     pub inner: Rail,
 }
