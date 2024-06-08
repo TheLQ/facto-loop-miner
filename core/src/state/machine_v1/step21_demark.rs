@@ -5,7 +5,8 @@ use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
-use tracing::{error, warn};
+use itertools::Itertools;
+use tracing::{error, info, warn};
 
 pub struct Step21 {}
 
@@ -25,6 +26,8 @@ impl Step for Step21 {
 
         strip_rail_endpoints(&mut surface);
         strip_rail_area(&mut surface);
+        strip_all_steel_chest(&mut surface);
+        reapply_patch_pixels(&mut surface);
 
         surface.save(&params.step_out_dir)?;
 
@@ -74,6 +77,31 @@ fn strip_rail_area(surface: &mut VSurface) {
         );
     }
     strip_points(surface, rail_area_points, Pixel::Rail)
+}
+
+fn strip_all_steel_chest(surface: &mut VSurface) {
+    let chests = surface
+        .get_pixels_all()
+        .filter(|(_, pixel)| *pixel == Pixel::SteelChest)
+        .map(|(point, _)| point)
+        .collect_vec();
+    for point in chests {
+        surface.set_pixel(point, Pixel::Empty).unwrap();
+    }
+}
+
+fn reapply_patch_pixels(surface: &mut VSurface) {
+    for patch in surface.get_patches_slice() {
+        let mut count = 0;
+        for point in &patch.pixel_indexes {
+            if surface.get_pixel(point) != patch.resource {
+                count += 1;
+            }
+        }
+        if count != 0 {
+            info!("changed {} for {:?}", count, patch.resource)
+        }
+    }
 }
 
 fn strip_points(surface: &mut VSurface, points: Vec<VPoint>, existing_expected_pixel: Pixel) {
