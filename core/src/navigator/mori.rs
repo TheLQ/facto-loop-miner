@@ -984,6 +984,20 @@ impl Rail {
             RailDirection::Up | RailDirection::Down => self.endpoint.subtract_x(other),
         }
     }
+
+    pub fn distance_between_perpendicular_axis_arbitrary(&self, lhs: &VPoint, rhs: &VPoint) -> i32 {
+        match self.direction {
+            RailDirection::Left | RailDirection::Right => lhs.subtract_y(rhs),
+            RailDirection::Up | RailDirection::Down => lhs.subtract_x(rhs),
+        }
+    }
+
+    pub fn distance_between_perpendicular_axis_arbitrary_zero(&self, end: &VPoint) -> i32 {
+        match self.direction {
+            RailDirection::Left | RailDirection::Right => end.y(),
+            RailDirection::Up | RailDirection::Down => end.x(),
+        }
+    }
 }
 
 // impl Hash for Rail {
