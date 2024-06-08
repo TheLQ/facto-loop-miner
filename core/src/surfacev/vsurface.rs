@@ -306,8 +306,8 @@ impl VSurface {
         self.entities.diameter()
     }
 
-    pub fn get_pixel(&self, point: &VPoint) -> Pixel {
-        match self.pixels.get_entity_by_point(point) {
+    pub fn get_pixel(&self, point: impl Borrow<VPoint>) -> Pixel {
+        match self.pixels.get_entity_by_point(point.borrow()) {
             Some(e) => e.pixel,
             None => Pixel::Empty,
         }
@@ -346,10 +346,6 @@ impl VSurface {
             }
         }
         Ok(())
-    }
-
-    pub fn validate_state(&self) {
-        for pixel in self.pixels.iter_entities() {}
     }
 
     pub fn add_patches(&mut self, patches: &[VPatch]) {
@@ -512,8 +508,8 @@ impl VSurface {
         }
     }
 
-    pub fn add_rail_path_drain(&mut self, mut rails: Vec<MinePath>) {
-        self.rail_paths.append(&mut rails)
+    pub fn add_rail_path_drain(&mut self, rails: Vec<MinePath>) {
+        self.rail_paths.extend(rails)
     }
 
     pub fn get_rail_TODO(&self) -> impl Iterator<Item = &Rail> {
@@ -524,12 +520,11 @@ impl VSurface {
         self.pixels.iter_xy_pixels()
     }
 
-    #[cfg(test)]
-    pub fn test_global_area(&self) -> VArea {
+    pub fn dummy_area_entire_surface(&self) -> VArea {
         let radius = self.get_radius_i32();
         VArea::from_arbitrary_points_pair(
-            &VPoint::new(-radius, -radius),
-            &VPoint::new(radius, radius),
+            VPoint::new(-radius, -radius),
+            VPoint::new(radius, radius),
         )
     }
 

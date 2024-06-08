@@ -262,10 +262,7 @@ impl MineChoices {
 
         // destinations.retain(|rail| rail.is_area_buildable_fast(surface));
 
-        let dummy_search_area = VArea::from_arbitrary_points_pair(
-            VPoint::new(-surface.get_radius_i32(), -surface.get_radius_i32()),
-            VPoint::new(surface.get_radius_i32(), surface.get_radius_i32()),
-        );
+        let dummy_search_area = surface.dummy_area_entire_surface();
         destinations.retain(|rail| extend_rail_end(surface, &dummy_search_area, rail).is_some());
 
         if destinations.len() != 4 {
