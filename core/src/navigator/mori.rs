@@ -9,7 +9,7 @@ use crate::navigator::resource_cloud::ResourceCloud;
 use crate::navigator::PathingResult;
 use crate::simd_diff::SurfaceDiff;
 use crate::surface::pixel::Pixel;
-use crate::surface::surface::{PointU32, Surface};
+use crate::surface::surface::PointU32;
 use crate::surfacev::err::VResult;
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::VPoint;
@@ -20,10 +20,10 @@ use itertools::Itertools;
 use pathfinding::prelude::astar_mori;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::AtomicU64;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use strum::AsRefStr;
-use tracing::{debug, warn};
+use tracing::debug;
 
 /// Pathfinder v1, Mori Calliope
 ///
@@ -1022,19 +1022,6 @@ fn is_buildable_point_ref(surface: &VSurface, point: VPoint) -> bool {
     }
 }
 
-fn is_buildable_point_u32<'p>(surface: &Surface, point: &'p PointU32) -> Option<&'p PointU32> {
-    if !surface.xy_in_range_point_u32(point) {
-        return None;
-    }
-    match surface.get_pixel_point_u32(point) {
-        Pixel::Empty => Some(point),
-        _existing => {
-            // debug!("blocked at {:?} by {:?}", &position, existing);
-            None
-        }
-    }
-}
-
 pub fn write_rail(surface: &mut VSurface, path: &[Rail]) -> VResult<()> {
     write_rail_with_pixel(surface, path, Pixel::Rail)
 }
@@ -1140,13 +1127,6 @@ fn format_dump(binary_surface: &[Vec<String>]) -> String {
 
 #[cfg(test)]
 mod test {
-    use crate::log_init;
-    use crate::navigator::mori::{mori_start, Rail, RailDirection};
-    use crate::surface::pixel::Pixel;
-    use crate::surfacev::vpoint::VPoint;
-    use crate::surfacev::vsurface::VSurface;
-    use itertools::Itertools;
-
     // #[test]
     // fn rail_area_up_down_test() {
     //     const TEST_RADIUS: usize = 10;

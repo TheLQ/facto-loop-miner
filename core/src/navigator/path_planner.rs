@@ -2,14 +2,12 @@ use crate::navigator::mori::{Rail, RailDirection, RailMode, RAIL_STEP_SIZE_I32};
 use crate::navigator::path_executor::extend_rail_end;
 use crate::navigator::path_grouper::{MineBase, MineBaseBatch};
 use crate::navigator::path_side::BaseSourceEighth;
-use crate::surface::pixel::Pixel;
 use crate::surfacev::varea::VArea;
-use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_EIGHT, SHIFT_POINT_ONE};
+use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
 use itertools::Itertools;
-use num_format::Locale::to;
 use simd_json::prelude::ArrayTrait;
-use tracing::{debug, info};
+use tracing::info;
 
 /// Solve 2 core problems
 /// - Get an ordered list of patches to navigate to

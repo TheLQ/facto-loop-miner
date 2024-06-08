@@ -133,7 +133,7 @@ fn navigate_patches_to_base_dump_rails(surface: &mut VSurface) {
     let base_source = BaseSource::new();
 
     info!("Loading mine bases");
-    let mut mine_batches = get_mine_bases_by_batch(surface, &base_source)
+    let mine_batches = get_mine_bases_by_batch(surface, &base_source)
         .into_success()
         .unwrap();
     info!("Loaded {} batches", mine_batches.len());

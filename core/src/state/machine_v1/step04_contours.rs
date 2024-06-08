@@ -1,8 +1,3 @@
-use std::cmp::Ordering;
-use std::collections::HashSet;
-use std::fmt::Display;
-use std::path::Path;
-
 use itertools::Itertools;
 use kiddo::{Manhattan, NearestNeighbour};
 use opencv::core::{Point, Rect, Vector};
@@ -11,7 +6,11 @@ use opencv::imgproc::{
     bounding_rect, find_contours, rectangle, CHAIN_APPROX_SIMPLE, LINE_8, RETR_EXTERNAL,
 };
 use opencv::prelude::*;
-use tracing::{debug, info, trace};
+use std::cmp::Ordering;
+use std::collections::HashSet;
+use std::fmt::Display;
+use std::path::Path;
+use tracing::{debug, info, trace, warn};
 
 use crate::opencv::combine_rects_into_big_rect;
 use crate::state::err::XMachineResult;
@@ -179,7 +178,7 @@ fn detect_patch_rectangles(base: &Mat) -> Vec<Rect> {
     // );
 
     let rects: Vec<Rect> = contours
-        .iter()
+        .into_iter()
         .map(|contour| bounding_rect(&contour).unwrap())
         .collect();
 

@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use std::fs::{create_dir, remove_dir_all};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 pub const MINE_FRONT_RAIL_STEPS: usize = 6;
 

@@ -1,10 +1,11 @@
 use crate::surface::patch::Patch;
 use crate::surface::pixel::Pixel;
-use crate::surface::surface::{PointU32, Surface};
+use crate::surface::surface::PointU32;
+use crate::surfacev::vsurface::VSurface;
 use opencv::core::Point;
 
 pub struct Navigator<'a> {
-    pub surface: &'a Surface,
+    pub surface: &'a VSurface,
     pub end: PointU32,
     pub current: PointU32,
 }
@@ -76,24 +77,5 @@ impl NavDirection {
             NavDirection::Left(step_size),
             NavDirection::Right(step_size),
         ]
-    }
-}
-
-#[allow(dead_code)]
-fn route_patch(surface: &mut Surface, patch: &Patch) {
-    let mut offset = 0;
-    loop {
-        let pos = Point::new(patch.x + offset, patch.y);
-        let existing = surface.get_pixel_point_i32(pos);
-        match existing {
-            &Pixel::Empty | &Pixel::Highlighter => {
-                surface.set_pixel_point_i32(Pixel::Rail, pos);
-            }
-            existing => {
-                tracing::debug!("stopping at {} offset {}", existing.as_ref(), offset);
-                break;
-            }
-        }
-        offset -= 1;
     }
 }

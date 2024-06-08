@@ -1,5 +1,4 @@
 use crate::surface::pixel::Pixel;
-use crate::surface::surface::Surface;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use opencv::core::{Mat, Point, Rect, Vector};
@@ -70,11 +69,11 @@ fn load_cv_from_buffer(buffer: &[u8], rows: usize, columns: usize) -> Mat {
     Mat::from_slice_rows_cols(buffer, rows, columns).unwrap()
 }
 
-fn load_raw_image_from_slice(surface_meta: &Surface, raw: &[u8]) -> Mat {
+fn load_raw_image_from_slice(surface_meta: &VSurface, raw: &[u8]) -> Mat {
     load_cv_from_buffer(
         raw,
-        surface_meta.height as usize,
-        surface_meta.width as usize,
+        surface_meta.get_diameter() as usize,
+        surface_meta.get_diameter() as usize,
     )
 }
 
