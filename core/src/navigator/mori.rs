@@ -232,6 +232,10 @@ impl RailDirection {
             RailDirection::Right => "east",
         }
     }
+
+    pub fn is_up_down(&self) -> bool {
+        *self == RailDirection::Up || *self == RailDirection::Down
+    }
 }
 
 const RAIL_DIRECTION_CLOCKWISE: [RailDirection; 4] = [
@@ -564,7 +568,7 @@ impl Rail {
         }
     }
 
-    pub fn to_tracking_factorio_entities(&self, result: &mut Vec<Box<dyn LuaCommand>>) {
+    pub fn to_electric_factorio_entities(&self, result: &mut Vec<Box<dyn LuaCommand>>) {
         self.endpoint.assert_odd_position();
         match &self.mode {
             RailMode::Straight => {
@@ -572,23 +576,87 @@ impl Rail {
                     .move_force_rotate_clockwise(2)
                     .move_forward_single_num(1);
                 result.push(
-                    FacSurfaceCreateEntity::new_electric_pole_medium(
-                        pole_pos.endpoint.to_f32_with_offset(0.5),
-                    )
-                    .into_boxed(),
+                    FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint)
+                        .into_boxed(),
                 );
 
                 let pole_pos = pole_pos.move_forward_single_num(4);
                 result.push(
-                    FacSurfaceCreateEntity::new_electric_pole_medium(
-                        pole_pos.endpoint.to_f32_with_offset(0.5),
+                    FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint)
+                        .into_boxed(),
+                );
+            }
+            RailMode::Turn(turn_type) => {
+                // +1 to max distance between poles
+                let pole_pos = self
+                    .move_force_rotate_clockwise(2)
+                    .move_forward_micro_num(3);
+                result.push(
+                    FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint)
+                        .into_boxed(),
+                );
+
+                // slightly down
+                let pole_pos = pole_pos
+                    .move_forward_micro_num(8)
+                    .move_force_rotate_clockwise(turn_type.swap().rotations())
+                    .move_forward_micro_num(3);
+                result.push(
+                    FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint)
+                        .into_boxed(),
+                );
+
+                let pole_pos = pole_pos
+                    .move_forward_micro_num(6)
+                    // turn other way
+                    .move_force_rotate_clockwise(turn_type.rotations())
+                    .move_forward_micro_num(5);
+                result.push(
+                    FacSurfaceCreateEntity::new_electric_pole_medium(pole_pos.endpoint)
+                        .into_boxed(),
+                );
+            }
+        }
+
+        if let RailMode::Turn(turn_type) = &self.mode {
+
+            // // sadly still need more
+            // let pole_pos = pole_pos.move_forward_single_num(2);
+            // result.push(
+            //     FacSurfaceCreateEntity::new_electric_pole_medium(
+            //         pole_pos.endpoint.to_f32_with_offset(0.5),
+            //     )
+            //     .into_boxed(),
+            // );
+        }
+    }
+
+    pub fn to_signal_factorio_entities(&self, result: &mut Vec<Box<dyn LuaCommand>>) {
+        self.endpoint.assert_odd_position();
+        match &self.mode {
+            RailMode::Straight | RailMode::Turn(_) => {
+                result.push(
+                    FacSurfaceCreateEntity::new_rail_signal(
+                        self.endpoint.to_f32_with_offset(0.5),
+                        self.direction.clone(),
+                    )
+                    .into_boxed(),
+                );
+
+                let mut adjacent_signal = self
+                    .move_force_rotate_clockwise(1)
+                    .move_forward_micro_num(1)
+                    .move_force_rotate_clockwise(1);
+                result.push(
+                    FacSurfaceCreateEntity::new_rail_signal(
+                        adjacent_signal.endpoint.to_f32_with_offset(0.5),
+                        adjacent_signal.direction,
                     )
                     .into_boxed(),
                 )
-            }
-            RailMode::Turn(_) => {
-                // todo
-            }
+            } // RailMode::Turn(_) => {
+              //     // todo
+              // }
         }
     }
 
@@ -700,6 +768,16 @@ impl Rail {
         // rail is 2x2
         const RAIL_ENTITY_SIZE: i32 = 2;
         let steps = steps * RAIL_ENTITY_SIZE;
+        self.move_force_forward_micro_num_mut(steps)
+    }
+
+    pub fn move_forward_micro_num(&self, steps: u32) -> Self {
+        let mut next = self.clone();
+        next.move_force_forward_micro_num_mut(steps as i32);
+        next
+    }
+
+    fn move_force_forward_micro_num_mut(&mut self, steps: i32) {
         self.endpoint = match self.direction {
             RailDirection::Up => self.endpoint.move_y(steps),
             RailDirection::Down => self.endpoint.move_y(-steps),

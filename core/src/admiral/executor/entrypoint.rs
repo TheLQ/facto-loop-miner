@@ -142,6 +142,7 @@ fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralR
             // "straight-rail",
             // "curved-rail",
             "medium-electric-pole",
+            "rail-signal",
             // "steel-chest", "small-lamp"
         ],
     );
@@ -155,8 +156,9 @@ fn insert_rail_from_surface(admiral: &mut AdmiralClient, surface: &VSurface) -> 
 
     for rail in surface.get_rail_TODO() {
         // info!("writing {:?}", rail);
-        rail.to_factorio_entities(&mut entities);
-        rail.to_tracking_factorio_entities(&mut entities);
+        // rail.to_factorio_entities(&mut entities);
+        rail.to_electric_factorio_entities(&mut entities);
+        rail.to_signal_factorio_entities(&mut entities);
     }
     info!("going to insert {} rail entities", entities.len());
 

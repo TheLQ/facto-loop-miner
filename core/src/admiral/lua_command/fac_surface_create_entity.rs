@@ -1,5 +1,6 @@
 use crate::admiral::lua_command::{LuaCommand, DEFAULT_FORCE_VAR};
 use crate::navigator::mori::RailDirection;
+use crate::surfacev::vpoint::VPoint;
 use itertools::Itertools;
 use opencv::core::Point2f;
 use strum::AsRefStr;
@@ -183,8 +184,8 @@ impl FacSurfaceCreateEntity {
         Self::new("logistic-chest-passive-provider", position)
     }
 
-    pub fn new_electric_pole_medium(position: Point2f) -> Self {
-        Self::new("medium-electric-pole", position)
+    pub fn new_electric_pole_medium(position: VPoint) -> Self {
+        Self::new("medium-electric-pole", position.to_f32_with_offset(0.5))
     }
 }
 
