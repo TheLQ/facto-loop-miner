@@ -203,16 +203,17 @@ impl MineChoices {
             let mut centered_point =
                 VPoint::new(mine_area.point_center().x(), mine_area.start.y()).move_round16_down();
             // Go back up width of rail + inner-rail space
-            let test_point = centered_point.move_y(4);
-            if surface.is_point_out_of_bounds(&test_point) {
-                return MineChoices::empty(mine);
-            }
-            if surface.get_pixel(test_point) != Pixel::Empty {
-                centered_point = centered_point.move_y(-16);
-            }
 
             centered_point += SHIFT_POINT_ONE;
             centered_point.assert_odd_16x16_position();
+            if surface.is_point_out_of_bounds(&centered_point) {
+                return MineChoices::empty(mine);
+            }
+            let test_rail = Rail::new_straight(centered_point, RailDirection::Left);
+            if !test_rail.is_area_buildable_fast(surface) {
+                centered_point = centered_point.move_y(-16);
+            }
+
             centered_point
         };
         let bottom_center = {
@@ -223,15 +224,16 @@ impl MineChoices {
             .move_round16_up();
 
             // Go back up width of rail + inner-rail space
-            let test_point = centered_point.move_y(-4);
-            if surface.is_point_out_of_bounds(&test_point) {
-                return MineChoices::empty(mine);
-            }
-            if surface.get_pixel(test_point) != Pixel::Empty {
-                centered_point = centered_point.move_y(16);
-            }
+
             centered_point += SHIFT_POINT_ONE;
             centered_point.assert_odd_16x16_position();
+            if surface.is_point_out_of_bounds(&centered_point) {
+                return MineChoices::empty(mine);
+            }
+            let test_rail = Rail::new_straight(centered_point, RailDirection::Left);
+            if !test_rail.is_area_buildable_fast(surface) {
+                centered_point = centered_point.move_y(16);
+            }
             centered_point
         };
 
