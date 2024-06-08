@@ -197,7 +197,7 @@ fn navigate_patches_to_base2(surface: &mut VSurface) {
         //     break;
         // }
 
-        let mut batch_side = mine_batch.base_source_eighth.clone();
+        let batch_side = mine_batch.base_source_eighth.clone();
         info!("Processing batch with {} mines", mine_batch.mines.len());
         let route_combination_batch = get_possible_routes_for_batch(surface, mine_batch);
         info!(
@@ -633,50 +633,4 @@ fn draw_no_touching_zone<'a>(
 //     info!("Total found patches {}", ordered_patches_len);
 //
 //     Ok(())
-// }
-
-fn main_base_destinations_base_corner() -> Vec<VPoint> {
-    let mut res = Vec::new();
-
-    let base_corner = base_bottom_right_corner().move_x(10);
-    for nearest_count in 0..PATH_LIMIT.unwrap() as i32 * 2 {
-        let end = base_corner.move_y(nearest_count * -20);
-        res.push(end);
-    }
-
-    res
-}
-
-fn find_end_simple(surface: &Surface, patch: &Patch) -> PointU32 {
-    let mut current = patch.corner_point_u32();
-    while surface.get_pixel_point_u32(&current) != &Pixel::EdgeWall {
-        current.x -= 1
-    }
-    //back away
-    current.x += 15;
-
-    current
-}
-
-#[allow(unused)]
-fn right_mid_edge_point(surface: &Surface) -> Point {
-    Point {
-        x: surface.width as i32,
-        y: (surface.height / 2) as i32,
-    }
-}
-
-// fn debug_patch(surface: &mut VSurface, patch_start: &VPatch) {
-//     surface.draw_debug_varea_square(&patch_start.area);
-//     surface
-//         .set_pixel(patch_start.area.start, Pixel::CrudeOil)
-//         .unwrap();
-//     surface
-//         .set_pixel(patch_start.area.point_bottom_left(), Pixel::CrudeOil)
-//         .unwrap();
-// }
-
-// #[allow(unused)]
-// fn base_resource_bottom_right_corner(surface: &Surface) -> Point {
-//     Point { x: 5300, y: 5300 }
 // }

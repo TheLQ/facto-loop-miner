@@ -293,7 +293,7 @@ fn patches_by_cross_sign_expanding(
             };
 
             let search_area =
-                VArea::from_arbitrary_points_pair(&scan_start.endpoint, &scan_end.endpoint);
+                VArea::from_arbitrary_points_pair(scan_start.endpoint, scan_end.endpoint);
             let found_mines: Vec<MineBase> = mines
                 .extract_if(|mine| {
                     // search_area.contains_point(&mine.area.start)

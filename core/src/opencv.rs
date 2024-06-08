@@ -72,8 +72,8 @@ fn load_cv_from_buffer(buffer: &[u8], rows: usize, columns: usize) -> Mat {
 fn load_raw_image_from_slice(surface_meta: &VSurface, raw: &[u8]) -> Mat {
     load_cv_from_buffer(
         raw,
-        surface_meta.get_diameter() as usize,
-        surface_meta.get_diameter() as usize,
+        surface_meta.get_diameter(),
+        surface_meta.get_diameter(),
     )
 }
 

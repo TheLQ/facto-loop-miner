@@ -19,7 +19,10 @@ impl VArea {
         }
     }
 
-    pub fn from_arbitrary_points_pair(a: &VPoint, b: &VPoint) -> VArea {
+    pub fn from_arbitrary_points_pair(a: impl Borrow<VPoint>, b: impl Borrow<VPoint>) -> VArea {
+        let a = a.borrow();
+        let b = b.borrow();
+
         let x_min = a.x().min(b.x());
         let x_max = a.x().max(b.x());
         let y_min = a.y().min(b.y());

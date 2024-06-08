@@ -51,7 +51,6 @@ mod admiral;
 mod gamedata;
 pub mod navigator;
 mod opencv;
-pub mod self_bin;
 pub mod simd;
 pub mod simd_diff;
 pub mod state;
@@ -78,7 +77,6 @@ pub fn inner_main() {
     match 1 {
         1 => new_v1_machine().start(root_dir),
         3 => generate_lookup_image(),
-        4 => self_bin::get_patch::get_patch_main(),
         5 => admiral::client::admiral(),
         _ => panic!("wtf"),
     }

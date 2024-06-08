@@ -78,7 +78,7 @@ fn strip_rail_area(surface: &mut VSurface) {
 
 fn strip_points(surface: &mut VSurface, points: Vec<VPoint>, existing_expected_pixel: Pixel) {
     for point in points {
-        let existing_point = surface.get_pixel(&point);
+        let existing_point = surface.get_pixel(point);
         if existing_point != existing_expected_pixel {
             warn!(
                 "what is this? expected {:?} got {:?} at {:?}",

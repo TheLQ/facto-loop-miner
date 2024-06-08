@@ -478,7 +478,7 @@ impl VSurface {
                     continue;
                 }
 
-                let existing_pixel = self.get_pixel(&cur);
+                let existing_pixel = self.get_pixel(cur);
                 let pixel_to_set = if existing_pixel == Pixel::Empty || existing_pixel == empty_map
                 {
                     empty_map

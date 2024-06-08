@@ -13,6 +13,7 @@ pub struct BaseSource {
 }
 
 impl BaseSource {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             positive: Rc::new(Mutex::new(BaseSourceEighth::new(1))),
@@ -44,7 +45,7 @@ impl BaseSourceEighth {
 
     pub fn next(&mut self) -> VPoint {
         let result = self.get_for_pos(self.next);
-        self.next = self.next + 1;
+        self.next += 1;
         result
     }
 

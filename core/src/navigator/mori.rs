@@ -710,6 +710,7 @@ impl Rail {
     }
 
     /// Main next possible rails from here
+    #[allow(clippy::too_many_arguments)]
     fn successors(
         &self,
         parents_compare: &[RailPointCompare],
@@ -1010,7 +1011,7 @@ fn is_buildable_point_ref(surface: &VSurface, point: VPoint) -> bool {
     if surface.is_point_out_of_bounds(&point) {
         return false;
     }
-    match surface.get_pixel(&point) {
+    match surface.get_pixel(point) {
         Pixel::Empty => {
             // debug!("empty at {:?}", &point);
             true

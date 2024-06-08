@@ -660,8 +660,8 @@ fn inner_move_around(
     match next {
         Some(next) => {
             kansen.path.push(next);
-            return NavigateResult::Done;
+            NavigateResult::Done
         }
-        None => return NavigateResult::DecrementPrevious,
+        None => NavigateResult::DecrementPrevious,
     }
 }
