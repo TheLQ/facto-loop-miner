@@ -1,7 +1,10 @@
 use crate::admiral::generators::rail90::{
     dual_rail_east, dual_rail_north, dual_rail_south, dual_rail_west, rail_degrees_east,
+    rail_degrees_north,
 };
-use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
+use crate::admiral::lua_command::fac_surface_create_entity::{
+    FacSurfaceCreateEntity, FactoDirection,
+};
 use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori_cost::calculate_cost_for_point;
 use crate::navigator::rail_point_compare::RailPointCompare;
@@ -578,14 +581,90 @@ impl Rail {
     }
 
     pub fn to_turn_around_factorio_entities(&self, result: &mut Vec<Box<dyn LuaCommand>>) {
-        self.to_facto_entities_line(result, 1, 11);
-
-        let base = self.move_forward_single_num(12);
         match &self.direction {
             RailDirection::Up => {}
             RailDirection::Down => {}
             RailDirection::Left => {}
-            RailDirection::Right => result.extend(rail_degrees_east(base.endpoint)),
+            RailDirection::Right => {
+                let straight_lead = self
+                    .move_force_rotate_clockwise(3)
+                    .move_forward_single_num(2)
+                    .move_force_rotate_clockwise(1);
+                straight_lead.to_facto_entities_line(result, 1, 11);
+
+                let base = self.move_forward_single_num(11);
+
+                // first 90 turn up
+                result.extend(rail_degrees_east(
+                    base.move_force_rotate_clockwise(1)
+                        .move_forward_single_num(3)
+                        .endpoint,
+                ));
+
+                // second 90 turn back
+                result.extend(rail_degrees_north(
+                    base.move_force_rotate_clockwise(1)
+                        .move_forward_single_num(9)
+                        .endpoint,
+                ));
+
+                // third 45 turn back down
+                result.push(
+                    FacSurfaceCreateEntity::new_rail_curved_facto(
+                        base.endpoint.move_xy(-5, -17).to_f32(),
+                        FactoDirection::West,
+                    )
+                    .into_boxed(),
+                );
+
+                // straight 45 down
+                Self::make_45_straight(
+                    result,
+                    base.endpoint.move_xy(-8, -14),
+                    [FactoDirection::NorthWest, FactoDirection::SouthEast],
+                    6,
+                );
+
+                // ending 45 curve to normal straight
+                let straight_lead = self
+                    .move_force_rotate_clockwise(1)
+                    .move_forward_single_num(1)
+                    .move_force_rotate_clockwise(3);
+                result.push(
+                    FacSurfaceCreateEntity::new_rail_curved_facto(
+                        straight_lead.endpoint.move_xy(-1, 1).to_f32(),
+                        FactoDirection::East,
+                    )
+                    .into_boxed(),
+                );
+            }
+        }
+    }
+
+    fn make_45_straight(
+        result: &mut Vec<Box<dyn LuaCommand>>,
+        start: VPoint,
+        directions: [FactoDirection; 2],
+        sections: usize,
+    ) {
+        let mut cur_point = start;
+        for _ in 0..sections {
+            result.push(
+                FacSurfaceCreateEntity::new_rail_straight_facto(
+                    cur_point.to_f32(),
+                    directions[0].clone(),
+                )
+                .into_boxed(),
+            );
+            cur_point = cur_point.move_x(-2);
+            result.push(
+                FacSurfaceCreateEntity::new_rail_straight_facto(
+                    cur_point.to_f32(),
+                    directions[1].clone(),
+                )
+                .into_boxed(),
+            );
+            cur_point = cur_point.move_y(2);
         }
     }
 
