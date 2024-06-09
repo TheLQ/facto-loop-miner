@@ -6,7 +6,7 @@ use opencv::core::Point2f;
 use strum::AsRefStr;
 
 const DEBUG_PRE_COLLISION: bool = false;
-const DEBUG_POSITION_EXPECTED: bool = false;
+const DEBUG_POSITION_EXPECTED: bool = true;
 
 #[derive(Debug)]
 pub struct FacSurfaceCreateEntity {
@@ -81,9 +81,13 @@ impl LuaCommand for FacSurfaceCreateEntity {
         lua.extend_from_slice(&self.commands);
 
         if DEBUG_POSITION_EXPECTED {
-            lua.push(format!(r#"if admiral_create.position.x ~= {x} or admiral_create.position.y ~= {y} then
-            rcon.print("[Admiral] Inserted {name} at {x}x{y} but was placed at " .. admiral_create.position.x .. "x" .. admiral_create.position.y)
-            end"#).trim().replace('\n', ""))
+            lua.push(format!(
+                r#"if admiral_create == nil then
+                    rcon.print("[Admiral] Inserted {name} at {x}x{y} but was nil")
+                elseif admiral_create.position.x ~= {x} or admiral_create.position.y ~= {y} then
+                    rcon.print("[Admiral] Inserted {name} at {x}x{y} but was placed at " .. admiral_create.position.x .. "x" .. admiral_create.position.y)
+                end"#
+            ).trim().replace('\n', ""));
         }
 
         lua.join(" ")
