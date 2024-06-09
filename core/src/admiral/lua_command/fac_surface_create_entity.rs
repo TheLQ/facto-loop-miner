@@ -220,7 +220,7 @@ impl CreateParam {
     }
 }
 
-#[derive(Debug, AsRefStr)]
+#[derive(Debug, AsRefStr, Clone)]
 pub enum FactoDirection {
     North,
     NorthEast,

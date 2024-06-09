@@ -16,6 +16,9 @@ impl FacDestroy {
     }
 
     pub fn new_filtered(radius: u32, entity_names: Vec<&'static str>) -> Self {
+        if entity_names.is_empty() {
+            panic!("empty entities, not destroying everything")
+        }
         Self {
             radius,
             entity_names,
