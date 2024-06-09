@@ -602,28 +602,36 @@ impl Rail {
         self.endpoint.assert_odd_position();
         match &self.mode {
             RailMode::Straight | RailMode::Turn(_) => {
+                // because of our endpoints? need to flip
+                let base_direction = match self.direction {
+                    RailDirection::Up | RailDirection::Down => self.direction.spinner(2),
+                    _ => self.direction.clone(),
+                };
+                let base_endpoint = match self.direction {
+                    RailDirection::Up => self.endpoint.move_x(-1),
+                    _ => self.endpoint,
+                };
+
                 result.push(
                     FacSurfaceCreateEntity::new_rail_signal(
-                        self.endpoint.to_f32_with_offset(0.5),
-                        self.direction.clone(),
+                        base_endpoint.to_f32_with_offset(0.5),
+                        base_direction.clone(),
                     )
                     .into_boxed(),
                 );
 
-                let mut adjacent_signal = self
+                let adjacent_signal = Rail::new_straight(base_endpoint, self.direction.clone())
                     .move_force_rotate_clockwise(1)
                     .move_forward_micro_num(1)
                     .move_force_rotate_clockwise(1);
                 result.push(
                     FacSurfaceCreateEntity::new_rail_signal(
                         adjacent_signal.endpoint.to_f32_with_offset(0.5),
-                        adjacent_signal.direction,
+                        base_direction.spinner(2), // base_direction.spinner(2),
                     )
                     .into_boxed(),
                 )
-            } // RailMode::Turn(_) => {
-              //     // todo
-              // }
+            }
         }
     }
 
