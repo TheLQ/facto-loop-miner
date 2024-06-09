@@ -1,5 +1,5 @@
 use crate::admiral::generators::rail90::{
-    dual_rail_east, dual_rail_north, dual_rail_south, dual_rail_west,
+    dual_rail_east, dual_rail_north, dual_rail_south, dual_rail_west, rail_degrees_east,
 };
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::LuaCommand;
@@ -574,6 +574,18 @@ impl Rail {
                     }
                 };
             }
+        }
+    }
+
+    pub fn to_turn_around_factorio_entities(&self, result: &mut Vec<Box<dyn LuaCommand>>) {
+        self.to_facto_entities_line(result, 1, 11);
+
+        let base = self.move_forward_single_num(12);
+        match &self.direction {
+            RailDirection::Up => {}
+            RailDirection::Down => {}
+            RailDirection::Left => {}
+            RailDirection::Right => result.extend(rail_degrees_east(base.endpoint)),
         }
     }
 

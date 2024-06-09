@@ -42,28 +42,9 @@ pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     }
     .map_err(pretty_panic_admiral)
     .unwrap();
-
-    // validate we have space for us
-
-    // for command in facscan_hyper_scan() {
-    //     let res = admiral._execute_statement(command).unwrap();
-    //     info!("return: {}", res.body);
-    // }
-    // for command in facscan_mega_export_entities_compressed() {
-    //     let res = admiral._execute_statement(command).unwrap();
-    //     info!("return: {}", res.body);
-    // }
-    // let res = admiral
-    //     ._execute_statement(FacLog::new("done".to_string()))
-    //     .unwrap();
-    // info!("return: {}", res.body);
 }
 
 fn admiral_entrypoint_prod(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    // if 1 + 1 == 2 {
-    //     return Ok(());
-    // }
-
     // let step = "step20-nav";
     let step = "step21-demark";
     let surface = VSurface::load(&Path::new("work/out0").join(step))?;
@@ -72,7 +53,10 @@ fn admiral_entrypoint_prod(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     scan_area(admiral, radius)?;
     destroy_placed_entities(admiral, radius)?;
 
-    insert_rail_from_surface(admiral, &surface)?;
+    // insert_rail(admiral, &surface)?;
+    // insert_electric(admiral, &surface)?;
+    // insert_signals(admiral, &surface)?;
+    insert_turn_around_mine(admiral, &surface)?;
 
     chart_pulse(admiral, radius)?;
 
@@ -142,7 +126,7 @@ fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralR
             // "straight-rail",
             // "curved-rail",
             // "medium-electric-pole",
-            "rail-signal",
+            // "rail-signal",
             // "steel-chest", "small-lamp"
         ],
     );
@@ -151,7 +135,39 @@ fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralR
     Ok(())
 }
 
-fn insert_rail_from_surface(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
+fn insert_rail(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
+    let mut entities = Vec::new();
+    for mine in surface.get_mines() {
+        for rail in &mine.rail {
+            rail.to_factorio_entities(&mut entities);
+        }
+    }
+    info!("going to insert {} rail entities", entities.len());
+
+    let entities_length = entities.len();
+    admiral.execute_checked_commands_in_wrapper_function(entities)?;
+    info!("Inserted {} rail", entities_length);
+
+    Ok(())
+}
+
+fn insert_turn_around_mine(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
+    let mut entities = Vec::new();
+    for mine in surface.get_mines() {
+        mine.rail
+            .last()
+            .unwrap()
+            .to_turn_around_factorio_entities(&mut entities);
+    }
+    info!("going to insert {} rail entities", entities.len());
+
+    let entities_length = entities.len();
+    admiral.execute_checked_commands_in_wrapper_function(entities)?;
+    info!("Inserted {} rail", entities_length);
+    Ok(())
+}
+
+fn insert_signals(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
     let mut entities = Vec::new();
     for mine in surface.get_mines() {
         let mut counter = 0;
@@ -171,11 +187,22 @@ fn insert_rail_from_surface(admiral: &mut AdmiralClient, surface: &VSurface) -> 
     admiral.execute_checked_commands_in_wrapper_function(entities)?;
     info!("Inserted {} rail", entities_length);
 
-    // let command = FacSurfaceCreateEntity::new_rail_straight(
-    //     rail.endpoint.to_f32_with_offset(1.0),
-    //     rail.direction.clone(),
-    // );
-    // admiral.execute_checked_command(command.into_boxed())?;
+    Ok(())
+}
+
+fn insert_electric(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
+    let mut entities = Vec::new();
+    for mine in surface.get_mines() {
+        for rail in &mine.rail {
+            rail.to_electric_factorio_entities(&mut entities);
+        }
+    }
+    info!("going to insert {} electric poles", entities.len());
+
+    let entities_length = entities.len();
+    admiral.execute_checked_commands_in_wrapper_function(entities)?;
+    info!("Inserted {} electric poles", entities_length);
+
     Ok(())
 }
 
