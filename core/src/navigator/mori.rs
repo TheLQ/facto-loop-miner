@@ -170,6 +170,15 @@ pub enum RailMode {
     Turn(TurnType),
 }
 
+impl RailMode {
+    pub fn is_turn(&self) -> bool {
+        match *self {
+            RailMode::Turn(_) => true,
+            RailMode::Straight => false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum TurnType {
     Turn90,
@@ -609,6 +618,7 @@ impl Rail {
                 };
                 let base_endpoint = match self.direction {
                     RailDirection::Up => self.endpoint.move_x(-1),
+                    RailDirection::Left => self.endpoint.move_y(-1),
                     _ => self.endpoint,
                 };
 

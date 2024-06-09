@@ -14,7 +14,7 @@ use crate::admiral::lua_command::raw_lua::RawLuaCommand;
 use crate::admiral::lua_command::scanner::BaseScanner;
 use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::mine_builder::admiral_mines;
-use crate::navigator::mori::{Rail, RailDirection};
+use crate::navigator::mori::{Rail, RailDirection, RailMode};
 use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::bit_grid::BitGrid;
@@ -141,7 +141,7 @@ fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralR
         vec![
             // "straight-rail",
             // "curved-rail",
-            "medium-electric-pole",
+            // "medium-electric-pole",
             "rail-signal",
             // "steel-chest", "small-lamp"
         ],
@@ -153,12 +153,17 @@ fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralR
 
 fn insert_rail_from_surface(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
     let mut entities = Vec::new();
-
-    for rail in surface.get_rail_TODO() {
-        // info!("writing {:?}", rail);
-        // rail.to_factorio_entities(&mut entities);
-        rail.to_electric_factorio_entities(&mut entities);
-        rail.to_signal_factorio_entities(&mut entities);
+    for mine in surface.get_mines() {
+        let mut counter = 0;
+        for rail in &mine.rail {
+            // spacing: no need to densely pack every 8x game rails in straight lines
+            if rail.mode.is_turn() || counter % 2 == 0 {
+                rail.to_signal_factorio_entities(&mut entities);
+            }
+            if !rail.mode.is_turn() {
+                counter += 1;
+            }
+        }
     }
     info!("going to insert {} rail entities", entities.len());
 
