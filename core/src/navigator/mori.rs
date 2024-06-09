@@ -580,7 +580,11 @@ impl Rail {
         }
     }
 
-    pub fn to_turn_around_factorio_entities(&self, result: &mut Vec<Box<dyn LuaCommand>>) {
+    pub fn to_turn_around_factorio_entities(
+        &self,
+        result: &mut Vec<Box<dyn LuaCommand>>,
+        dock_length: u32,
+    ) {
         match &self.direction {
             RailDirection::Up => {}
             RailDirection::Down => {}
@@ -593,6 +597,10 @@ impl Rail {
                 straight_lead.to_facto_entities_line(result, 1, 14);
 
                 let base = self.move_forward_single_num(14);
+
+                // first dock part
+                straight_lead.to_facto_entities_line(result, 14, 14 + dock_length);
+                let base = base.move_forward_single_num(dock_length);
 
                 // first 90 turn up
                 result.extend(rail_degrees_east(
@@ -608,10 +616,18 @@ impl Rail {
                         .endpoint,
                 ));
 
+                // top dock part
+                let dock_top_start = base
+                    .move_force_rotate_clockwise(1)
+                    .move_forward_single_num(9)
+                    .move_force_rotate_clockwise(1);
+                dock_top_start.to_facto_entities_line(result, 1, 1 + dock_length);
+
                 // third 45 turn back down
+                let dock_top_end = dock_top_start.move_forward_single_num(dock_length);
                 result.push(
                     FacSurfaceCreateEntity::new_rail_curved_facto(
-                        base.endpoint.move_xy(-5, -17).to_f32(),
+                        dock_top_end.endpoint.move_xy(-5, 1).to_f32(),
                         FactoDirection::West,
                     )
                     .into_boxed(),
@@ -620,7 +636,7 @@ impl Rail {
                 // straight 45 down
                 Self::make_45_straight(
                     result,
-                    base.endpoint.move_xy(-8, -14),
+                    dock_top_end.endpoint.move_xy(-8, 4),
                     [FactoDirection::NorthWest, FactoDirection::SouthEast],
                     6,
                 );

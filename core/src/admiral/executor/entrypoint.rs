@@ -18,6 +18,7 @@ use crate::navigator::mori::{Rail, RailDirection, RailMode};
 use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::bit_grid::BitGrid;
+use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
 use itertools::Itertools;
@@ -30,7 +31,7 @@ use tracing::{debug, info};
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 2 {
+    match 5 {
         1 => admiral_entrypoint_draw_rail_8(&mut admiral),
         2 => admiral_entrypoint_prod(&mut admiral),
         3 => admiral_entrypoint_turn_area_extractor(&mut admiral),
@@ -53,9 +54,9 @@ fn admiral_entrypoint_prod(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     scan_area(admiral, radius)?;
     destroy_placed_entities(admiral, radius)?;
 
-    // insert_rail(admiral, &surface)?;
-    // insert_electric(admiral, &surface)?;
-    // insert_signals(admiral, &surface)?;
+    insert_rail(admiral, &surface)?;
+    insert_electric(admiral, &surface)?;
+    insert_signals(admiral, &surface)?;
     insert_turn_around_mine(admiral, &surface)?;
 
     chart_pulse(admiral, radius)?;
@@ -123,8 +124,8 @@ fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralR
     let command = FacDestroy::new_filtered(
         radius,
         vec![
-            // "straight-rail",
-            // "curved-rail",
+            "straight-rail",
+            "curved-rail",
             // "medium-electric-pole",
             // "rail-signal",
             // "steel-chest", "small-lamp"
@@ -157,7 +158,10 @@ fn insert_turn_around_mine(admiral: &mut AdmiralClient, surface: &VSurface) -> A
         mine.rail
             .last()
             .unwrap()
-            .to_turn_around_factorio_entities(&mut entities);
+            .move_force_rotate_clockwise(1)
+            .move_forward_single_num(1)
+            .move_force_rotate_clockwise(3)
+            .to_turn_around_factorio_entities(&mut entities, todo!());
     }
     info!("going to insert {} rail entities", entities.len());
 
@@ -522,18 +526,37 @@ fn insert_minified_kit(
 fn admiral_quick_test(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     const WORK_RADIUS: u32 = 10;
 
-    scan_area(admiral, WORK_RADIUS)?;
-    destroy_placed_entities(admiral, WORK_RADIUS)?;
+    // scan_area(admiral, WORK_RADIUS)?;
+    // destroy_placed_entities(admiral, WORK_RADIUS)?;
 
-    let mut rail_to_place = Vec::new();
+    let mut entities = Vec::new();
 
-    let rail = Rail::new_straight(VPoint::new(5, 5), RailDirection::Left);
-    rail.to_factorio_entities(&mut rail_to_place);
+    entities.push(
+        FacDestroy::new_filtered_area(
+            VArea::from_arbitrary_points_pair(VPoint::new(2150, -1350), VPoint::new(2250, -1300)),
+            vec!["straight-rail", "curved-rail"],
+        )
+        .into_boxed(),
+    );
 
-    let rail = rail.move_left();
-    rail.to_factorio_entities(&mut rail_to_place);
+    let rail = Rail::new_straight(
+        VPoint::new(2143, -1345).move_round16_up() + SHIFT_POINT_ONE,
+        RailDirection::Right,
+    );
+    // rail.to_factorio_entities(&mut entities);
 
-    admiral.execute_checked_command(LuaBatchCommand::new(rail_to_place).into_boxed())?;
+    let rail = rail.move_forward_step();
+    rail.to_factorio_entities(&mut entities);
+
+    rail.move_force_rotate_clockwise(1)
+        .move_forward_single_num(1)
+        .move_force_rotate_clockwise(3)
+        .to_turn_around_factorio_entities(&mut entities, 16);
+
+    // let rail = rail.move_left();
+    // rail.to_factorio_entities(&mut rail_to_place);
+
+    admiral.execute_checked_command(LuaBatchCommand::new(entities).into_boxed())?;
 
     Ok(())
 }
