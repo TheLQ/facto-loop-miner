@@ -590,9 +590,9 @@ impl Rail {
                     .move_force_rotate_clockwise(3)
                     .move_forward_single_num(2)
                     .move_force_rotate_clockwise(1);
-                straight_lead.to_facto_entities_line(result, 1, 11);
+                straight_lead.to_facto_entities_line(result, 1, 14);
 
-                let base = self.move_forward_single_num(11);
+                let base = self.move_forward_single_num(14);
 
                 // first 90 turn up
                 result.extend(rail_degrees_east(
@@ -627,6 +627,7 @@ impl Rail {
 
                 // ending 45 curve to normal straight
                 let straight_lead = self
+                    .move_forward_single_num(3)
                     .move_force_rotate_clockwise(1)
                     .move_forward_single_num(1)
                     .move_force_rotate_clockwise(3);
