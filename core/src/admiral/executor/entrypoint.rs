@@ -533,7 +533,7 @@ fn admiral_quick_test(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
     entities.push(
         FacDestroy::new_filtered_area(
-            VArea::from_arbitrary_points_pair(VPoint::new(2150, -1350), VPoint::new(2250, -1300)),
+            VArea::from_arbitrary_points_pair(VPoint::new(2140, -1350), VPoint::new(2250, -1300)),
             vec!["straight-rail", "curved-rail"],
         )
         .into_boxed(),

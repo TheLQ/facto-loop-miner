@@ -600,24 +600,26 @@ impl Rail {
 
                 // first dock part
                 straight_lead.to_facto_entities_line(result, 14, 14 + dock_length);
-                let base = base.move_forward_single_num(dock_length);
+                let turn_base = base.move_forward_single_num(dock_length);
 
                 // first 90 turn up
                 result.extend(rail_degrees_east(
-                    base.move_force_rotate_clockwise(1)
+                    turn_base
+                        .move_force_rotate_clockwise(1)
                         .move_forward_single_num(3)
                         .endpoint,
                 ));
 
                 // second 90 turn back
                 result.extend(rail_degrees_north(
-                    base.move_force_rotate_clockwise(1)
+                    turn_base
+                        .move_force_rotate_clockwise(1)
                         .move_forward_single_num(9)
                         .endpoint,
                 ));
 
                 // top dock part
-                let dock_top_start = base
+                let dock_top_start = turn_base
                     .move_force_rotate_clockwise(1)
                     .move_forward_single_num(9)
                     .move_force_rotate_clockwise(1);
@@ -627,7 +629,12 @@ impl Rail {
                 let dock_top_end = dock_top_start.move_forward_single_num(dock_length);
                 result.push(
                     FacSurfaceCreateEntity::new_rail_curved_facto(
-                        dock_top_end.endpoint.move_xy(-5, 1).to_f32(),
+                        dock_top_end
+                            .move_forward_micro_num(5)
+                            .move_force_rotate_clockwise(1)
+                            .move_forward_micro_num(1)
+                            .endpoint
+                            .to_f32(),
                         FactoDirection::West,
                     )
                     .into_boxed(),
@@ -636,20 +643,24 @@ impl Rail {
                 // straight 45 down
                 Self::make_45_straight(
                     result,
-                    dock_top_end.endpoint.move_xy(-8, 4),
+                    dock_top_end
+                        .move_forward_micro_num(8)
+                        .move_force_rotate_clockwise(1)
+                        .move_forward_micro_num(4)
+                        .endpoint,
                     [FactoDirection::NorthWest, FactoDirection::SouthEast],
                     6,
                 );
 
                 // ending 45 curve to normal straight
-                let straight_lead = self
-                    .move_forward_single_num(3)
+                let straight_lead = straight_lead
+                    .move_forward_micro_num(5)
                     .move_force_rotate_clockwise(1)
-                    .move_forward_single_num(1)
+                    .move_forward_micro_num(5)
                     .move_force_rotate_clockwise(3);
                 result.push(
                     FacSurfaceCreateEntity::new_rail_curved_facto(
-                        straight_lead.endpoint.move_xy(-1, 1).to_f32(),
+                        straight_lead.endpoint.to_f32(),
                         FactoDirection::East,
                     )
                     .into_boxed(),
