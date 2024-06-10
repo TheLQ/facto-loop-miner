@@ -594,17 +594,13 @@ impl Rail {
     ) {
         info!("Creating {:?} {:?}", self.direction, dock_face_direction);
         let straight_lead = match (&self.direction, &dock_face_direction) {
-            (RailDirection::Right, DockFaceDirection::Down) => self
+            (RailDirection::Right, DockFaceDirection::Down)
+            | (RailDirection::Left, DockFaceDirection::Down) => self
                 .move_force_rotate_clockwise(3)
                 .move_forward_single_num(2)
                 .move_force_rotate_clockwise(1),
-            (RailDirection::Right, DockFaceDirection::Up) => self.clone(),
-            // .move_force_rotate_clockwise(1)
-            // .move_forward_single_num(2)
-            // .move_force_rotate_clockwise(3),
-            (direction, dock_direction) => {
-                todo!("{:?} {:?}", direction, dock_direction)
-            }
+            (RailDirection::Right, DockFaceDirection::Up)
+            | (RailDirection::Left, DockFaceDirection::Up) => self.clone(),
             (_, _) => {
                 panic!("unsupported")
             }
@@ -616,16 +612,13 @@ impl Rail {
 
         // first dock part
         straight_lead.to_facto_entities_line(result, 14, 14 + dock_length);
-        let turn_base = base
-            .move_forward_single_num(dock_length)
-            .move_force_rotate_clockwise(1)
-            .move_forward_single_num(2)
-            .move_force_rotate_clockwise(3);
-
-        // top dock part
-        let dock_top_turn_type = match (&self.direction, &dock_face_direction) {
-            (RailDirection::Right, DockFaceDirection::Down) => 1,
-            (RailDirection::Right, DockFaceDirection::Up) => 3,
+        let turn_base = base.move_forward_single_num(dock_length);
+        let turn_base = match (&self.direction, &dock_face_direction) {
+            (RailDirection::Right, _) => turn_base
+                .move_force_rotate_clockwise(1)
+                .move_forward_single_num(2)
+                .move_force_rotate_clockwise(3),
+            (RailDirection::Left, _) => turn_base,
             (_, _) => {
                 panic!("unsupported")
             }
@@ -788,7 +781,7 @@ impl Rail {
 
                 let dock_top_start = turn_base
                     .move_force_rotate_clockwise(1)
-                    .move_forward_single_num(9)
+                    .move_forward_single_num(11)
                     .move_force_rotate_clockwise(1);
                 dock_top_start.to_facto_entities_line(result, 1, 1 + dock_length);
 
@@ -802,8 +795,8 @@ impl Rail {
                         .move_force_rotate_clockwise(1)
                         .move_forward_micro_num(4)
                         .move_force_rotate_clockwise(3),
-                    [FactoDirection::NorthWest, FactoDirection::SouthEast],
-                    todo!(),
+                    [FactoDirection::SouthEast, FactoDirection::NorthWest],
+                    TurnType::Turn90,
                     6,
                 );
 
@@ -816,7 +809,7 @@ impl Rail {
                             .move_forward_micro_num(1)
                             .endpoint
                             .to_f32(),
-                        FactoDirection::West,
+                        FactoDirection::East,
                     )
                     .into_boxed(),
                 );
@@ -830,13 +823,79 @@ impl Rail {
                 result.push(
                     FacSurfaceCreateEntity::new_rail_curved_facto(
                         straight_lead.endpoint.to_f32(),
-                        FactoDirection::East,
+                        FactoDirection::West,
                     )
                     .into_boxed(),
                 );
             }
             (RailDirection::Left, DockFaceDirection::Up) => {
-                todo!("")
+                // first 90 turn up
+                result.extend(rail_degrees_south(
+                    turn_base
+                        .move_forward_single_num(5)
+                        .move_force_rotate_clockwise(3)
+                        .move_forward_single_num(5)
+                        .endpoint,
+                ));
+
+                // second 90 turn back
+                result.extend(rail_degrees_west(
+                    turn_base
+                        .move_forward_single_num(5)
+                        .move_force_rotate_clockwise(3)
+                        .move_forward_single_num(11)
+                        .endpoint,
+                ));
+
+                // dock top
+                let dock_top_start = turn_base
+                    .move_force_rotate_clockwise(3)
+                    .move_forward_single_num(11)
+                    .move_force_rotate_clockwise(3);
+                dock_top_start.to_facto_entities_line(result, 1, 1 + dock_length);
+
+                let dock_top_end = dock_top_start.move_forward_single_num(dock_length);
+
+                // straight 45 down
+                Self::make_45_up(
+                    result,
+                    dock_top_end
+                        .move_forward_micro_num(8)
+                        .move_force_rotate_clockwise(3)
+                        .move_forward_micro_num(4)
+                        .move_force_rotate_clockwise(1),
+                    [FactoDirection::NorthEast, FactoDirection::SouthWest],
+                    TurnType::Turn270,
+                    6,
+                );
+
+                // third 45 turn back down
+                result.push(
+                    FacSurfaceCreateEntity::new_rail_curved_facto(
+                        dock_top_end
+                            .move_forward_micro_num(5)
+                            .move_force_rotate_clockwise(3)
+                            .move_forward_micro_num(1)
+                            .endpoint
+                            .to_f32(),
+                        FactoDirection::SouthEast,
+                    )
+                    .into_boxed(),
+                );
+
+                // ending 45 curve to normal straight
+                let straight_lead = straight_lead
+                    .move_forward_micro_num(5)
+                    .move_force_rotate_clockwise(3)
+                    .move_forward_micro_num(5)
+                    .move_force_rotate_clockwise(1);
+                result.push(
+                    FacSurfaceCreateEntity::new_rail_curved_facto(
+                        straight_lead.endpoint.to_f32(),
+                        FactoDirection::NorthWest,
+                    )
+                    .into_boxed(),
+                );
             }
         }
     }
