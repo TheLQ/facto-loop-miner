@@ -511,6 +511,10 @@ impl VSurface {
         &self.rail_paths
     }
 
+    pub fn get_mines_mut(&mut self) -> &mut [MinePath] {
+        &mut self.rail_paths
+    }
+
     pub fn dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {
         self.pixels.iter_xy_pixels()
     }

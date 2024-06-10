@@ -1,5 +1,8 @@
 use crate::admiral::lua_command::LuaCommand;
+use crate::LOCALE;
 use itertools::Itertools;
+use num_format::ToFormattedString;
+use tracing::trace;
 
 #[derive(Debug)]
 pub struct LuaBatchCommand {
@@ -8,6 +11,10 @@ pub struct LuaBatchCommand {
 
 impl LuaBatchCommand {
     pub fn new(commands: Vec<Box<dyn LuaCommand>>) -> Self {
+        trace!(
+            "execute batch of {}",
+            commands.len().to_formatted_string(&LOCALE)
+        );
         Self { commands }
     }
 }

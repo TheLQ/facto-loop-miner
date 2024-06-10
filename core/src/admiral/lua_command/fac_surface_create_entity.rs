@@ -5,8 +5,8 @@ use itertools::Itertools;
 use opencv::core::Point2f;
 use strum::AsRefStr;
 
-const DEBUG_PRE_COLLISION: bool = false;
-const DEBUG_POSITION_EXPECTED: bool = true;
+pub const DEBUG_PRE_COLLISION: bool = false;
+pub const DEBUG_POSITION_EXPECTED: bool = false;
 
 #[derive(Debug)]
 pub struct FacSurfaceCreateEntity {

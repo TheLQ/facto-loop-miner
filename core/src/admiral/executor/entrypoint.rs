@@ -14,24 +14,27 @@ use crate::admiral::lua_command::raw_lua::RawLuaCommand;
 use crate::admiral::lua_command::scanner::BaseScanner;
 use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::mine_builder::admiral_mines;
-use crate::navigator::mori::{DockFaceDirection, Rail, RailDirection, RailMode};
+use crate::navigator::mori::{DockFaceDirection, Rail, RailDirection, RailMode, RAIL_STEP_SIZE};
+use crate::navigator::path_executor::MINE_FRONT_RAIL_STEPS;
 use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::bit_grid::BitGrid;
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
 use crate::surfacev::vsurface::VSurface;
+use crate::LOCALE;
 use itertools::Itertools;
+use num_format::ToFormattedString;
 use opencv::core::Point2f;
 use regex::Regex;
 use simd_json::{to_owned_value, OwnedValue, StaticNode};
 use std::path::Path;
-use tracing::{debug, info};
+use tracing::{debug, info, trace};
 
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 5 {
+    match 2 {
         1 => admiral_entrypoint_draw_rail_8(&mut admiral),
         2 => admiral_entrypoint_prod(&mut admiral),
         3 => admiral_entrypoint_turn_area_extractor(&mut admiral),
@@ -39,6 +42,7 @@ pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
         5 => admiral_quick_test(&mut admiral),
         6 => validate_patches(&mut admiral),
         7 => admiral_mines(&mut admiral),
+        8 => max_command_size_finder(&mut admiral),
         _ => panic!("asdf"),
     }
     .map_err(pretty_panic_admiral)
@@ -48,12 +52,26 @@ pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
 fn admiral_entrypoint_prod(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     // let step = "step20-nav";
     let step = "step21-demark";
-    let surface = VSurface::load(&Path::new("work/out0").join(step))?;
+    let mut surface = VSurface::load(&Path::new("work/out0").join(step))?;
     let radius = surface.get_radius();
+
+    // let patches = surface
+    //     .get_mines()
+    //     .iter()
+    //     // .flat_map(|v| &v.mine_base.patch_indexes)
+    //     .collect_vec()
+    //     .len();
+    // info!("found {} patches", patches);
+    // if 1 + 1 == 2 {
+    //     return Ok(());
+    // }
 
     scan_area(admiral, radius)?;
     destroy_placed_entities(admiral, radius)?;
 
+    for mine in surface.get_mines_mut() {
+        mine.rail.truncate(mine.rail.len() - 5);
+    }
     insert_rail(admiral, &surface)?;
     insert_electric(admiral, &surface)?;
     insert_signals(admiral, &surface)?;
@@ -126,8 +144,8 @@ fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralR
         vec![
             "straight-rail",
             "curved-rail",
-            // "medium-electric-pole",
-            // "rail-signal",
+            "medium-electric-pole",
+            "rail-signal",
             // "steel-chest", "small-lamp"
         ],
     );
@@ -155,13 +173,23 @@ fn insert_rail(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult
 fn insert_turn_around_mine(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
     let mut entities = Vec::new();
     for mine in surface.get_mines() {
-        mine.rail
-            .last()
-            .unwrap()
+        let last_rail = mine.rail.last().unwrap();
+        let dock_direction = if last_rail.endpoint.y() > mine.mine_base.area.point_center().y() {
+            DockFaceDirection::Down
+        } else {
+            DockFaceDirection::Up
+        };
+
+        last_rail
             .move_force_rotate_clockwise(1)
             .move_forward_single_num(1)
             .move_force_rotate_clockwise(3)
-            .to_turn_around_factorio_entities(&mut entities, todo!(), todo!());
+            // todo
+            .to_turn_around_factorio_entities(
+                &mut entities,
+                dock_direction,
+                MINE_FRONT_RAIL_STEPS as u32 * RAIL_STEP_SIZE,
+            );
     }
     info!("going to insert {} rail entities", entities.len());
 
@@ -519,6 +547,29 @@ fn insert_minified_kit(
     }
 
     admiral.execute_checked_command(LuaBatchCommand::new(commands).into_boxed())?;
+
+    Ok(())
+}
+
+fn max_command_size_finder(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    for i in (10_000..).step_by(10000) {
+        let mut commands = Vec::new();
+        for _ in 0..i {
+            commands.push(
+                FacSurfaceCreateEntity::new_rail_straight(
+                    VPoint::zero().to_f32(),
+                    RailDirection::Left,
+                )
+                .into_boxed(),
+            );
+        }
+        let res = admiral.execute_checked_command(LuaBatchCommand::new(commands).into_boxed())?;
+        trace!(
+            "counter {} made command size {}",
+            i,
+            res.lua_text.len().to_formatted_string(&LOCALE)
+        );
+    }
 
     Ok(())
 }
