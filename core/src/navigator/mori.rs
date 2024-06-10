@@ -592,54 +592,44 @@ impl Rail {
         dock_face_direction: DockFaceDirection,
         dock_length: u32,
     ) {
-        let straight_lead = self
-            .move_force_rotate_clockwise(3)
-            .move_forward_single_num(2)
-            .move_force_rotate_clockwise(1);
-        straight_lead.to_facto_entities_line(result, 1, 14);
         info!("Creating {:?} {:?}", self.direction, dock_face_direction);
+        let straight_lead = match (&self.direction, &dock_face_direction) {
+            (RailDirection::Right, DockFaceDirection::Down) => self
+                .move_force_rotate_clockwise(3)
+                .move_forward_single_num(2)
+                .move_force_rotate_clockwise(1),
+            (RailDirection::Right, DockFaceDirection::Up) => self.clone(),
+            // .move_force_rotate_clockwise(1)
+            // .move_forward_single_num(2)
+            // .move_force_rotate_clockwise(3),
+            (direction, dock_direction) => {
+                todo!("{:?} {:?}", direction, dock_direction)
+            }
+            (_, _) => {
+                panic!("unsupported")
+            }
+        };
 
-        // let base = match (&self.direction, &dock_face_direction) {
-        //     (RailDirection::Up, _) | (RailDirection::Down, _) => {
-        //         panic!("unsupported")
-        //     }
-        //     (RailDirection::Left, DockFaceDirection::Up)
-        //     | (RailDirection::Left, DockFaceDirection::Down) => {
-        //         straight_lead.move_forward_single_num(14)
-        //     }
-        //     (RailDirection::Right, DockFaceDirection::Up) => {
-        //         straight_lead.move_forward_single_num(14)
-        //     }
-        //     (direction, dock_direction) => {
-        //         todo!("{:?} {:?}", direction, dock_direction)
-        //     }
-        // };
+        straight_lead.to_facto_entities_line(result, 1, 14);
+
         let base = straight_lead.move_forward_single_num(14);
 
         // first dock part
         straight_lead.to_facto_entities_line(result, 14, 14 + dock_length);
-        let turn_base = base.move_forward_single_num(dock_length);
+        let turn_base = base
+            .move_forward_single_num(dock_length)
+            .move_force_rotate_clockwise(1)
+            .move_forward_single_num(2)
+            .move_force_rotate_clockwise(3);
 
         // top dock part
-        let dock_top_start = turn_base
-            .move_force_rotate_clockwise(1)
-            .move_forward_single_num(9)
-            .move_force_rotate_clockwise(1);
-        dock_top_start.to_facto_entities_line(result, 1, 1 + dock_length);
-
-        let dock_top_end = dock_top_start.move_forward_single_num(dock_length);
-
-        // straight 45 down
-        Self::make_45_straight(
-            result,
-            dock_top_end
-                .move_forward_micro_num(8)
-                .move_force_rotate_clockwise(1)
-                .move_forward_micro_num(4)
-                .move_force_rotate_clockwise(3),
-            [FactoDirection::NorthWest, FactoDirection::SouthEast],
-            6,
-        );
+        let dock_top_turn_type = match (&self.direction, &dock_face_direction) {
+            (RailDirection::Right, DockFaceDirection::Down) => 1,
+            (RailDirection::Right, DockFaceDirection::Up) => 3,
+            (_, _) => {
+                panic!("unsupported")
+            }
+        };
 
         match (&self.direction, &dock_face_direction) {
             (RailDirection::Up, _) | (RailDirection::Down, _) => {
@@ -661,6 +651,27 @@ impl Rail {
                         .move_forward_single_num(9)
                         .endpoint,
                 ));
+
+                // dock top
+                let dock_top_start = turn_base
+                    .move_force_rotate_clockwise(1)
+                    .move_forward_single_num(9)
+                    .move_force_rotate_clockwise(1);
+                dock_top_start.to_facto_entities_line(result, 1, 1 + dock_length);
+                let dock_top_end = dock_top_start.move_forward_single_num(dock_length);
+
+                // straight 45 down
+                Self::make_45_up(
+                    result,
+                    dock_top_end
+                        .move_forward_micro_num(8)
+                        .move_force_rotate_clockwise(1)
+                        .move_forward_micro_num(4)
+                        .move_force_rotate_clockwise(3),
+                    [FactoDirection::NorthWest, FactoDirection::SouthEast],
+                    TurnType::Turn90,
+                    6,
+                );
 
                 // third 45 turn back down
                 result.push(
@@ -694,29 +705,51 @@ impl Rail {
                 // first 90 turn up
                 result.extend(rail_degrees_east(
                     turn_base
-                        .move_force_rotate_clockwise(1)
-                        .move_forward_single_num(3)
+                        .move_force_rotate_clockwise(3)
+                        .move_forward_single_num(8)
                         .endpoint,
                 ));
 
                 // second 90 turn back
                 result.extend(rail_degrees_north(
                     turn_base
-                        .move_force_rotate_clockwise(1)
-                        .move_forward_single_num(9)
+                        .move_force_rotate_clockwise(3)
+                        .move_forward_single_num(2)
                         .endpoint,
                 ));
+
+                // dock top
+                let dock_top_start = turn_base
+                    .move_force_rotate_clockwise(3)
+                    .move_forward_single_num(13)
+                    .move_force_rotate_clockwise(3);
+                dock_top_start.to_facto_entities_line(result, 1, 1 + dock_length);
+
+                let dock_top_end = dock_top_start.move_forward_single_num(dock_length);
+
+                // straight 45 down
+                Self::make_45_up(
+                    result,
+                    dock_top_end
+                        .move_forward_micro_num(8)
+                        .move_force_rotate_clockwise(3)
+                        .move_forward_micro_num(4)
+                        .move_force_rotate_clockwise(1),
+                    [FactoDirection::SouthWest, FactoDirection::NorthEast],
+                    TurnType::Turn270,
+                    6,
+                );
 
                 // third 45 turn back down
                 result.push(
                     FacSurfaceCreateEntity::new_rail_curved_facto(
                         dock_top_end
                             .move_forward_micro_num(5)
-                            .move_force_rotate_clockwise(1)
+                            .move_force_rotate_clockwise(3)
                             .move_forward_micro_num(1)
                             .endpoint
                             .to_f32(),
-                        FactoDirection::West,
+                        FactoDirection::NorthWest,
                     )
                     .into_boxed(),
                 );
@@ -724,13 +757,13 @@ impl Rail {
                 // ending 45 curve to normal straight
                 let straight_lead = straight_lead
                     .move_forward_micro_num(5)
-                    .move_force_rotate_clockwise(1)
+                    .move_force_rotate_clockwise(3)
                     .move_forward_micro_num(5)
-                    .move_force_rotate_clockwise(3);
+                    .move_force_rotate_clockwise(1);
                 result.push(
                     FacSurfaceCreateEntity::new_rail_curved_facto(
                         straight_lead.endpoint.to_f32(),
-                        FactoDirection::East,
+                        FactoDirection::SouthEast,
                     )
                     .into_boxed(),
                 );
@@ -752,6 +785,27 @@ impl Rail {
                         .move_forward_single_num(6)
                         .endpoint,
                 ));
+
+                let dock_top_start = turn_base
+                    .move_force_rotate_clockwise(1)
+                    .move_forward_single_num(9)
+                    .move_force_rotate_clockwise(1);
+                dock_top_start.to_facto_entities_line(result, 1, 1 + dock_length);
+
+                let dock_top_end = dock_top_start.move_forward_single_num(dock_length);
+
+                // straight 45 down
+                Self::make_45_up(
+                    result,
+                    dock_top_end
+                        .move_forward_micro_num(8)
+                        .move_force_rotate_clockwise(1)
+                        .move_forward_micro_num(4)
+                        .move_force_rotate_clockwise(3),
+                    [FactoDirection::NorthWest, FactoDirection::SouthEast],
+                    todo!(),
+                    6,
+                );
 
                 // third 45 turn back down
                 result.push(
@@ -787,10 +841,11 @@ impl Rail {
         }
     }
 
-    fn make_45_straight(
+    fn make_45_up(
         result: &mut Vec<Box<dyn LuaCommand>>,
         start: Rail,
         directions: [FactoDirection; 2],
+        turn_type: TurnType,
         sections: usize,
     ) {
         let mut cur_point = start;
@@ -811,9 +866,9 @@ impl Rail {
                 .into_boxed(),
             );
             cur_point = cur_point
-                .move_force_rotate_clockwise(1)
+                .move_force_rotate_clockwise(turn_type.rotations())
                 .move_forward_micro_num(2)
-                .move_force_rotate_clockwise(3);
+                .move_force_rotate_clockwise(turn_type.swap().rotations());
         }
     }
 

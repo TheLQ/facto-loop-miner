@@ -533,7 +533,7 @@ fn admiral_quick_test(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
     entities.push(
         FacDestroy::new_filtered_area(
-            VArea::from_arbitrary_points_pair(VPoint::new(2140, -1350), VPoint::new(2300, -1300)),
+            VArea::from_arbitrary_points_pair(VPoint::new(2140, -1400), VPoint::new(2300, -1300)),
             vec!["straight-rail", "curved-rail"],
         )
         .into_boxed(),
@@ -555,8 +555,8 @@ fn admiral_quick_test(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     rail.move_force_rotate_clockwise(1)
         .move_forward_single_num(1)
         .move_force_rotate_clockwise(3)
-        // .to_turn_around_factorio_entities(&mut entities, DockFaceDirection::Up, 16);
-        .to_turn_around_factorio_entities(&mut entities, DockFaceDirection::Down, 16);
+        .to_turn_around_factorio_entities(&mut entities, DockFaceDirection::Up, 16);
+    // .to_turn_around_factorio_entities(&mut entities, DockFaceDirection::Down, 16);
 
     // let rail = rail.move_left();
     // rail.to_factorio_entities(&mut rail_to_place);
