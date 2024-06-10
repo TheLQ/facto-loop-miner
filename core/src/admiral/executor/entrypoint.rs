@@ -14,7 +14,7 @@ use crate::admiral::lua_command::raw_lua::RawLuaCommand;
 use crate::admiral::lua_command::scanner::BaseScanner;
 use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::mine_builder::admiral_mines;
-use crate::navigator::mori::{Rail, RailDirection, RailMode};
+use crate::navigator::mori::{DockFaceDirection, Rail, RailDirection, RailMode};
 use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::bit_grid::BitGrid;
@@ -161,7 +161,7 @@ fn insert_turn_around_mine(admiral: &mut AdmiralClient, surface: &VSurface) -> A
             .move_force_rotate_clockwise(1)
             .move_forward_single_num(1)
             .move_force_rotate_clockwise(3)
-            .to_turn_around_factorio_entities(&mut entities, todo!());
+            .to_turn_around_factorio_entities(&mut entities, todo!(), todo!());
     }
     info!("going to insert {} rail entities", entities.len());
 
@@ -533,12 +533,16 @@ fn admiral_quick_test(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
     entities.push(
         FacDestroy::new_filtered_area(
-            VArea::from_arbitrary_points_pair(VPoint::new(2140, -1350), VPoint::new(2250, -1300)),
+            VArea::from_arbitrary_points_pair(VPoint::new(2140, -1350), VPoint::new(2300, -1300)),
             vec!["straight-rail", "curved-rail"],
         )
         .into_boxed(),
     );
 
+    // let rail = Rail::new_straight(
+    //     VPoint::new(2250, -1345).move_round16_up() + SHIFT_POINT_ONE,
+    //     RailDirection::Left,
+    // );
     let rail = Rail::new_straight(
         VPoint::new(2143, -1345).move_round16_up() + SHIFT_POINT_ONE,
         RailDirection::Right,
@@ -551,7 +555,8 @@ fn admiral_quick_test(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     rail.move_force_rotate_clockwise(1)
         .move_forward_single_num(1)
         .move_force_rotate_clockwise(3)
-        .to_turn_around_factorio_entities(&mut entities, 16);
+        // .to_turn_around_factorio_entities(&mut entities, DockFaceDirection::Up, 16);
+        .to_turn_around_factorio_entities(&mut entities, DockFaceDirection::Down, 16);
 
     // let rail = rail.move_left();
     // rail.to_factorio_entities(&mut rail_to_place);
