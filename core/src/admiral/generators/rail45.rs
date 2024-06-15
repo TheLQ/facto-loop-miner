@@ -92,7 +92,7 @@ pub fn rail_45_up(
     result: &mut Vec<Box<dyn LuaCommand>>,
     start_point: VPoint,
     angle_sections: usize,
-) {
+) -> Rail {
     let start = Rail::new_straight(start_point, RailDirection::Left);
 
     // third 45 turn back down
@@ -135,4 +135,6 @@ pub fn rail_45_up(
         )
         .into_boxed(),
     );
+
+    end_of_45
 }

@@ -1,6 +1,7 @@
 use crate::admiral::err::{pretty_panic_admiral, AdmiralResult};
 use crate::admiral::executor::client::AdmiralClient;
 use crate::admiral::executor::LuaCompiler;
+use crate::admiral::generators::rail45::{rail_45_down, rail_45_up};
 use crate::admiral::generators::rail90::{
     dual_rail_east, dual_rail_east_empty, dual_rail_north, dual_rail_north_empty, dual_rail_south,
     dual_rail_south_empty, dual_rail_west, dual_rail_west_empty, rail_degrees_east,
@@ -73,9 +74,10 @@ fn admiral_entrypoint_prod(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         mine.rail.truncate(mine.rail.len() - 5);
     }
     insert_rail(admiral, &surface)?;
-    insert_electric(admiral, &surface)?;
-    insert_signals(admiral, &surface)?;
-    insert_turn_around_mine(admiral, &surface)?;
+    // insert_electric(admiral, &surface)?;
+    // insert_signals(admiral, &surface)?;
+    // insert_turn_around_mine(admiral, &surface)?;
+    insert_turn_around_base(admiral, &surface)?;
 
     chart_pulse(admiral, radius)?;
 
@@ -144,8 +146,8 @@ fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralR
         vec![
             "straight-rail",
             "curved-rail",
-            "medium-electric-pole",
-            "rail-signal",
+            // "medium-electric-pole",
+            // "rail-signal",
             // "steel-chest", "small-lamp"
         ],
     );
@@ -191,6 +193,66 @@ fn insert_turn_around_mine(admiral: &mut AdmiralClient, surface: &VSurface) -> A
                 MINE_FRONT_RAIL_STEPS as u32 * RAIL_STEP_SIZE,
             );
     }
+    info!("going to insert {} rail entities", entities.len());
+
+    let entities_length = entities.len();
+    admiral.execute_checked_commands_in_wrapper_function(entities)?;
+    info!("Inserted {} rail", entities_length);
+    Ok(())
+}
+
+fn insert_turn_around_base(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
+    let mut base_turn_arounds = Vec::new();
+
+    let mut entities = Vec::new();
+    let base_rails = surface
+        .get_mines()
+        .iter()
+        .map(|v| &v.rail[0])
+        .sorted_by_key(|v| v.endpoint.y())
+        .enumerate();
+
+    for (mine_index, base_rail) in base_rails {
+        let base_rail = base_rail
+            .move_force_rotate_clockwise(2)
+            .move_forward_single_num(7);
+        if mine_index % 2 == 0 {
+            let base_rail = base_rail
+                .move_force_rotate_clockwise(1)
+                .move_forward_single_num(1)
+                .move_force_rotate_clockwise(3);
+            base_rail.to_turn_around_factorio_entities(
+                &mut entities,
+                DockFaceDirection::Up,
+                MINE_FRONT_RAIL_STEPS as u32 * RAIL_STEP_SIZE,
+            );
+            base_turn_arounds.push(base_rail);
+        } else {
+            let top = rail_45_up(&mut entities, base_rail.endpoint.move_y(-4), 2);
+            let bottom = rail_45_up(&mut entities, base_rail.endpoint, 2);
+
+            let mut squeeze_rail = top.move_forward_single_num(3);
+
+            // +1 to go past the curve
+            for _ in 0..(MINE_FRONT_RAIL_STEPS + 1) {
+                squeeze_rail = squeeze_rail.move_forward_step();
+                squeeze_rail.to_factorio_entities(&mut entities);
+            }
+
+            //
+            squeeze_rail = squeeze_rail
+                .move_force_rotate_clockwise(1)
+                .move_forward_single_num(1)
+                .move_force_rotate_clockwise(3);
+            squeeze_rail.to_turn_around_factorio_entities(
+                &mut entities,
+                DockFaceDirection::Up,
+                MINE_FRONT_RAIL_STEPS as u32 * RAIL_STEP_SIZE,
+            );
+            base_turn_arounds.push(squeeze_rail);
+        }
+    }
+
     info!("going to insert {} rail entities", entities.len());
 
     let entities_length = entities.len();
