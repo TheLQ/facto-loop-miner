@@ -73,11 +73,11 @@ fn admiral_entrypoint_prod(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     for mine in surface.get_mines_mut() {
         mine.rail.truncate(mine.rail.len() - 5);
     }
-    insert_rail(admiral, &surface)?;
+    // insert_rail(admiral, &surface)?;
     // insert_electric(admiral, &surface)?;
     // insert_signals(admiral, &surface)?;
     // insert_turn_around_mine(admiral, &surface)?;
-    insert_turn_around_base(admiral, &surface)?;
+    let base_turn_arounds = insert_turn_around_base(admiral, &surface)?;
 
     chart_pulse(admiral, radius)?;
 
@@ -144,8 +144,10 @@ fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralR
     let command = FacDestroy::new_filtered(
         radius,
         vec![
-            "straight-rail",
-            "curved-rail",
+            // "straight-rail",
+            // "curved-rail",
+            "roboport",
+            "large-electric-pole",
             // "medium-electric-pole",
             // "rail-signal",
             // "steel-chest", "small-lamp"
@@ -201,8 +203,19 @@ fn insert_turn_around_mine(admiral: &mut AdmiralClient, surface: &VSurface) -> A
     Ok(())
 }
 
-fn insert_turn_around_base(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
-    let mut base_turn_arounds = Vec::new();
+struct TurnArounds {
+    positive_columns: [Vec<Rail>; 2],
+    negative_columns: [Vec<Rail>; 2],
+}
+
+fn insert_turn_around_base(
+    admiral: &mut AdmiralClient,
+    surface: &VSurface,
+) -> AdmiralResult<TurnArounds> {
+    let mut base_turn_arounds = TurnArounds {
+        negative_columns: [Vec::new(), Vec::new()],
+        positive_columns: [Vec::new(), Vec::new()],
+    };
 
     let mut entities = Vec::new();
     let base_rails = surface
@@ -216,6 +229,8 @@ fn insert_turn_around_base(admiral: &mut AdmiralClient, surface: &VSurface) -> A
         let base_rail = base_rail
             .move_force_rotate_clockwise(2)
             .move_forward_single_num(7);
+        let column;
+        let turn_around_to_insert;
         if mine_index % 2 == 0 {
             let base_rail = base_rail
                 .move_force_rotate_clockwise(1)
@@ -226,7 +241,8 @@ fn insert_turn_around_base(admiral: &mut AdmiralClient, surface: &VSurface) -> A
                 DockFaceDirection::Up,
                 MINE_FRONT_RAIL_STEPS as u32 * RAIL_STEP_SIZE,
             );
-            base_turn_arounds.push(base_rail);
+            column = 0;
+            turn_around_to_insert = base_rail;
         } else {
             let top = rail_45_up(&mut entities, base_rail.endpoint.move_y(-4), 2);
             let bottom = rail_45_up(&mut entities, base_rail.endpoint, 2);
@@ -249,16 +265,24 @@ fn insert_turn_around_base(admiral: &mut AdmiralClient, surface: &VSurface) -> A
                 DockFaceDirection::Up,
                 MINE_FRONT_RAIL_STEPS as u32 * RAIL_STEP_SIZE,
             );
-            base_turn_arounds.push(squeeze_rail);
+            column = 1;
+            turn_around_to_insert = squeeze_rail;
+        }
+        if turn_around_to_insert.endpoint.y() > 0 {
+            base_turn_arounds.positive_columns[column].push(turn_around_to_insert);
+        } else {
+            base_turn_arounds.negative_columns[column].push(turn_around_to_insert);
         }
     }
 
     info!("going to insert {} rail entities", entities.len());
 
     let entities_length = entities.len();
-    admiral.execute_checked_commands_in_wrapper_function(entities)?;
+    if 1 + 1 == 3 {
+        admiral.execute_checked_commands_in_wrapper_function(entities)?;
+    }
     info!("Inserted {} rail", entities_length);
-    Ok(())
+    Ok(base_turn_arounds)
 }
 
 fn insert_signals(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
