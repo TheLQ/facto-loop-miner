@@ -1,3 +1,4 @@
+use crate::admiral::generators::rail45::rail_45;
 use crate::admiral::generators::rail90::{
     dual_rail_east, dual_rail_north, dual_rail_south, dual_rail_west, rail_degrees_east,
     rail_degrees_north, rail_degrees_south, rail_degrees_west,
@@ -654,7 +655,7 @@ impl Rail {
                 let dock_top_end = dock_top_start.move_forward_single_num(dock_length);
 
                 // straight 45 down
-                Self::make_45_up(
+                rail_45(
                     result,
                     dock_top_end
                         .move_forward_micro_num(8)
@@ -721,7 +722,7 @@ impl Rail {
                 let dock_top_end = dock_top_start.move_forward_single_num(dock_length);
 
                 // straight 45 down
-                Self::make_45_up(
+                rail_45(
                     result,
                     dock_top_end
                         .move_forward_micro_num(8)
@@ -788,7 +789,7 @@ impl Rail {
                 let dock_top_end = dock_top_start.move_forward_single_num(dock_length);
 
                 // straight 45 down
-                Self::make_45_up(
+                rail_45(
                     result,
                     dock_top_end
                         .move_forward_micro_num(8)
@@ -857,7 +858,7 @@ impl Rail {
                 let dock_top_end = dock_top_start.move_forward_single_num(dock_length);
 
                 // straight 45 down
-                Self::make_45_up(
+                rail_45(
                     result,
                     dock_top_end
                         .move_forward_micro_num(8)
@@ -897,37 +898,6 @@ impl Rail {
                     .into_boxed(),
                 );
             }
-        }
-    }
-
-    fn make_45_up(
-        result: &mut Vec<Box<dyn LuaCommand>>,
-        start: Rail,
-        directions: [FactoDirection; 2],
-        turn_type: TurnType,
-        sections: usize,
-    ) {
-        let mut cur_point = start;
-        for _ in 0..sections {
-            result.push(
-                FacSurfaceCreateEntity::new_rail_straight_facto(
-                    cur_point.endpoint.to_f32(),
-                    directions[0].clone(),
-                )
-                .into_boxed(),
-            );
-            cur_point = cur_point.move_forward_micro_num(2);
-            result.push(
-                FacSurfaceCreateEntity::new_rail_straight_facto(
-                    cur_point.endpoint.to_f32(),
-                    directions[1].clone(),
-                )
-                .into_boxed(),
-            );
-            cur_point = cur_point
-                .move_force_rotate_clockwise(turn_type.rotations())
-                .move_forward_micro_num(2)
-                .move_force_rotate_clockwise(turn_type.swap().rotations());
         }
     }
 

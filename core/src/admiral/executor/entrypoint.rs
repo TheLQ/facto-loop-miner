@@ -603,11 +603,14 @@ fn admiral_quick_test(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     let rail = rail.move_forward_step();
     // rail.to_factorio_entities(&mut entities);
 
-    rail.move_force_rotate_clockwise(1)
-        .move_forward_single_num(1)
-        .move_force_rotate_clockwise(3)
-        // .to_turn_around_factorio_entities(&mut entities, DockFaceDirection::Up, 16);
-        .to_turn_around_factorio_entities(&mut entities, DockFaceDirection::Up, 16);
+    rail_45_down(&mut entities, rail.clone().endpoint, 7);
+    rail_45_up(&mut entities, rail.endpoint, 7);
+
+    // rail.move_force_rotate_clockwise(1)
+    //     .move_forward_single_num(1)
+    //     .move_force_rotate_clockwise(3)
+    //     // .to_turn_around_factorio_entities(&mut entities, DockFaceDirection::Up, 16);
+    //     .to_turn_around_factorio_entities(&mut entities, DockFaceDirection::Up, 16);
 
     // let rail = rail.move_left();
     // rail.to_factorio_entities(&mut rail_to_place);
