@@ -68,15 +68,15 @@ impl VArea {
 
     pub fn contains_point(&self, target: &VPoint) -> bool {
         target.x() >= self.start.x()
-            && target.x() < self.end_x_exclusive()
+            && target.x() <= self.end_x_exclusive()
             && target.y() >= self.start.y()
-            && target.y() < self.end_y_exclusive()
+            && target.y() <= self.end_y_exclusive()
     }
 
     pub fn get_points(&self) -> Vec<VPoint> {
         let mut points = Vec::new();
-        for point_x in self.start.x()..self.end_x_exclusive() {
-            for point_y in self.start.y()..self.end_y_exclusive() {
+        for point_x in self.start.x()..=self.end_x_exclusive() {
+            for point_y in self.start.y()..=self.end_y_exclusive() {
                 points.push(VPoint::new(point_x, point_y));
             }
         }

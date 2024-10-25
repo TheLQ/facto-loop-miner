@@ -20,6 +20,7 @@ use crate::surface::patch::map_patch_corners_to_kdtree;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpatch::VPatch;
+use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::PixelKdTree;
 
@@ -66,7 +67,62 @@ impl Step for Step04 {
                 "Resource {:?} patches {} max_width {} max_height {}",
                 pixel, total, max_width, max_height
             );
+
+            // // validate
+            // let surface_points: Vec<VPoint> = surface
+            //     .get_pixels_all()
+            //     .filter_map(|v| {
+            //         if v.pixel() == &pixel {
+            //             Some(v.get_xy()[0])
+            //         } else {
+            //             None
+            //         }
+            //     })
+            //     .collect();
+            // let patch_points = surface
+            //     .get_patches_slice()
+            //     .iter()
+            //     .filter(|v| v.resource == pixel)
+            //     .flat_map(|v| &v.pixel_indexes)
+            //     .cloned()
+            //     .collect_vec();
+            // let mut area_points = surface
+            //     .get_patches_slice()
+            //     .iter()
+            //     .filter(|v| v.resource == pixel)
+            //     .flat_map(|v| v.area.get_points())
+            //     .collect_vec();
+            // area_points.sort();
+            //
+            // let mut bad = 0;
+            // for surface_point in &surface_points {
+            //     if !patch_points.contains(surface_point) {
+            //         bad += 1;
+            //     }
+            // }
+            // info!(
+            //     "pixel_indexes pixel {:?} bad {} total {}",
+            //     pixel,
+            //     bad,
+            //     surface_points.len()
+            // );
+            //
+            // let mut bad = 0;
+            // for patch_point in &patch_points {
+            //     if !area_points.contains(patch_point) {
+            //         bad += 1;
+            //     }
+            // }
+            // info!(
+            //     "area pixel {:?} bad {} total {}",
+            //     pixel,
+            //     bad,
+            //     surface_points.len()
+            // );
         }
+        // if 1 + 1 == 2 {
+        //     exit(1);
+        // }
         surface.save(&params.step_out_dir)?;
 
         Ok(())
@@ -120,29 +176,38 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: Pixel) -> Vec<VP
     patch_rects
         .into_iter()
         .map(|patch_rect| {
-            let centered_patch_rect = Rect {
-                x: patch_rect.x - surface_meta.get_radius_i32(),
-                y: patch_rect.y - surface_meta.get_radius_i32(),
-                width: patch_rect.width,
-                height: patch_rect.height,
+            // arbitrary padding??
+            let search_width: u32 = patch_rect.width.try_into().unwrap();
+            let search_height: u32 = patch_rect.height.try_into().unwrap();
+            let search_area = VArea {
+                start: VPoint::new(
+                    patch_rect.x - surface_meta.get_radius_i32() - 5,
+                    patch_rect.y - surface_meta.get_radius_i32() - 5,
+                ),
+                width: search_width + 10,
+                height: search_height + 10,
             };
-            assert!(
-                !surface_meta.is_xy_out_of_bounds(centered_patch_rect.x, centered_patch_rect.y),
-                "too big {:?} from {:?} is {}",
-                centered_patch_rect,
-                patch_rect,
-                surface_meta.is_xy_out_of_bounds(centered_patch_rect.x, centered_patch_rect.y)
-            );
-            let centered_patch = VArea::from_rect(&centered_patch_rect);
-            let mut points = Vec::new();
-            for point in centered_patch.get_points() {
-                if surface_meta.get_pixel(&point) == pixel {
-                    points.push(point);
-                }
-            }
+            // assert!(
+            //     !surface_meta.is_xy_out_of_bounds(centered_patch_rect.x, centered_patch_rect.y),
+            //     "too big {:?} from {:?} is {}",
+            //     centered_patch_rect,
+            //     patch_rect,
+            //     surface_meta.is_xy_out_of_bounds(centered_patch_rect.x, centered_patch_rect.y)
+            // );
+            let points: Vec<VPoint> = search_area
+                .get_points()
+                .into_iter()
+                .filter(|point| {
+                    !surface_meta.is_point_out_of_bounds(point)
+                        && surface_meta.get_pixel(point) == pixel
+                })
+                .collect();
             assert_ne!(points.len(), 0);
 
-            VPatch::new(centered_patch, pixel, points).normalize_patch_even_8x8()
+            // recreate bounding area
+            let patch_area = VArea::from_arbitrary_points(&points);
+
+            VPatch::new(patch_area, pixel, points).normalize_patch_even_8x8()
         })
         .collect()
 }

@@ -1,4 +1,5 @@
 use crate::admiral::lua_command::LuaCommand;
+use crate::surfacev::vpoint::VPoint;
 
 pub mod assembler_farm;
 pub mod assembler_robo_farm;
@@ -28,6 +29,12 @@ pub struct XyGridPosition {
     y: i32,
     ix: u32,
     iy: u32,
+}
+
+impl XyGridPosition {
+    pub fn to_vpoint(&self) -> VPoint {
+        VPoint::new(self.x, self.y)
+    }
 }
 
 pub fn xy_grid(

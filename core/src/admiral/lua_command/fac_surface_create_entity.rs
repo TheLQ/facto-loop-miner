@@ -191,6 +191,14 @@ impl FacSurfaceCreateEntity {
     pub fn new_electric_pole_medium(position: VPoint) -> Self {
         Self::new("medium-electric-pole", position.to_f32_with_offset(0.5))
     }
+
+    pub fn new_substation(position: VPoint) -> Self {
+        Self::new("substation", position.to_f32_with_offset(1.0))
+    }
+
+    pub fn new_roboport(position: VPoint) -> Self {
+        Self::new("roboport", position.to_f32_with_offset(1.5))
+    }
 }
 
 #[derive(Debug)]

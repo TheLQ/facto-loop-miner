@@ -3,6 +3,9 @@ use crate::admiral::generators::beacon_farm::{BeaconFarmGenerator, BEACON_SIZE};
 use crate::admiral::generators::xy_grid;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
+use crate::surfacev::varea::VArea;
+use crate::surfacev::vpoint::VPoint;
+use num_format::Locale::he;
 use opencv::core::Point2f;
 use tracing::{debug, trace};
 
@@ -85,15 +88,27 @@ impl LuaCommandBatch for AssemblerRoboFarmGenerator {
     }
 }
 
-fn make_robo_square(
+pub fn make_robo_square(
     start_x: i32,
     start_y: i32,
     width: u32,
     height: u32,
     lua_commands: &mut Vec<Box<dyn LuaCommand>>,
-) {
+) -> VPoint {
+    make_robo_square_sub(start_x, start_y, width, height, 5, lua_commands)
+}
+
+pub fn make_robo_square_sub(
+    start_x: i32,
+    start_y: i32,
+    width: u32,
+    height: u32,
+    robo_height: u32,
+    lua_commands: &mut Vec<Box<dyn LuaCommand>>,
+) -> VPoint {
+    let mut scanned_area = Vec::new();
     for block_pos in xy_grid(start_x, start_y, width, height, ROBOPORT_BLOCK_SIZE) {
-        for pos in xy_grid(block_pos.x, block_pos.y, 5, 5, ROBOPORT_SIZE) {
+        for pos in xy_grid(block_pos.x, block_pos.y, 5, robo_height, ROBOPORT_SIZE) {
             // debug!(
             //     "step_width {} step_height {} needle {}",
             //     pos.ix % ROBO_POLE_STEP,
@@ -146,7 +161,11 @@ fn make_robo_square(
                     )
                     .into_boxed(),
                 );
+                scanned_area.push(pos);
             }
         }
     }
+
+    VArea::from_arbitrary_points(scanned_area.into_iter().map(|v| v.to_vpoint()))
+        .point_bottom_left()
 }

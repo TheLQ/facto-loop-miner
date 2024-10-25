@@ -1,6 +1,7 @@
 use crate::admiral::err::{pretty_panic_admiral, AdmiralResult};
 use crate::admiral::executor::client::AdmiralClient;
 use crate::admiral::executor::LuaCompiler;
+use crate::admiral::generators::assembler_robo_farm::{make_robo_square, make_robo_square_sub};
 use crate::admiral::generators::rail45::{rail_45_down, rail_45_up};
 use crate::admiral::generators::rail90::{
     dual_rail_east, dual_rail_east_empty, dual_rail_north, dual_rail_north_empty, dual_rail_south,
@@ -15,7 +16,9 @@ use crate::admiral::lua_command::raw_lua::RawLuaCommand;
 use crate::admiral::lua_command::scanner::BaseScanner;
 use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::mine_builder::admiral_mines;
-use crate::navigator::mori::{DockFaceDirection, Rail, RailDirection, RailMode, RAIL_STEP_SIZE};
+use crate::navigator::mori::{
+    DockFaceDirection, Rail, RailDirection, RailMode, RAIL_STEP_SIZE, RAIL_STEP_SIZE_I32,
+};
 use crate::navigator::path_executor::MINE_FRONT_RAIL_STEPS;
 use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
 use crate::surface::pixel::Pixel;
@@ -30,12 +33,12 @@ use opencv::core::Point2f;
 use regex::Regex;
 use simd_json::{to_owned_value, OwnedValue, StaticNode};
 use std::path::Path;
-use tracing::{debug, info, trace};
+use tracing::{debug, error, info, trace};
 
 pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
     info!("admiral entrypoint");
 
-    match 2 {
+    match 9 {
         1 => admiral_entrypoint_draw_rail_8(&mut admiral),
         2 => admiral_entrypoint_prod(&mut admiral),
         3 => admiral_entrypoint_turn_area_extractor(&mut admiral),
@@ -44,6 +47,7 @@ pub fn admiral_entrypoint(mut admiral: AdmiralClient) {
         6 => validate_patches(&mut admiral),
         7 => admiral_mines(&mut admiral),
         8 => max_command_size_finder(&mut admiral),
+        9 => stats(&mut admiral),
         _ => panic!("asdf"),
     }
     .map_err(pretty_panic_admiral)
@@ -67,7 +71,7 @@ fn admiral_entrypoint_prod(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     //     return Ok(());
     // }
 
-    scan_area(admiral, radius)?;
+    scan_area(admiral, 1000)?;
     destroy_placed_entities(admiral, radius)?;
 
     for mine in surface.get_mines_mut() {
@@ -78,6 +82,7 @@ fn admiral_entrypoint_prod(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     // insert_signals(admiral, &surface)?;
     // insert_turn_around_mine(admiral, &surface)?;
     let base_turn_arounds = insert_turn_around_base(admiral, &surface)?;
+    insert_base_robo(admiral, &surface, base_turn_arounds)?;
 
     chart_pulse(admiral, radius)?;
 
@@ -147,10 +152,11 @@ fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralR
             // "straight-rail",
             // "curved-rail",
             "roboport",
-            "large-electric-pole",
-            // "medium-electric-pole",
+            "substation",
+            "big-electric-pole",
+            "small-lamp",
             // "rail-signal",
-            // "steel-chest", "small-lamp"
+            // "steel-chest",
         ],
     );
     admiral.execute_checked_command(command.into_boxed())?;
@@ -212,7 +218,7 @@ fn insert_turn_around_base(
     admiral: &mut AdmiralClient,
     surface: &VSurface,
 ) -> AdmiralResult<TurnArounds> {
-    let mut base_turn_arounds = TurnArounds {
+    let mut turn_arounds = TurnArounds {
         negative_columns: [Vec::new(), Vec::new()],
         positive_columns: [Vec::new(), Vec::new()],
     };
@@ -269,10 +275,18 @@ fn insert_turn_around_base(
             turn_around_to_insert = squeeze_rail;
         }
         if turn_around_to_insert.endpoint.y() > 0 {
-            base_turn_arounds.positive_columns[column].push(turn_around_to_insert);
+            turn_arounds.positive_columns[column].push(turn_around_to_insert);
         } else {
-            base_turn_arounds.negative_columns[column].push(turn_around_to_insert);
+            turn_arounds.negative_columns[column].push(turn_around_to_insert);
         }
+    }
+
+    for column in &mut turn_arounds.positive_columns {
+        column.sort_by_key(|v| v.endpoint.y());
+    }
+
+    for column in &mut turn_arounds.negative_columns {
+        column.sort_by_key(|v| -v.endpoint.y());
     }
 
     info!("going to insert {} rail entities", entities.len());
@@ -282,7 +296,60 @@ fn insert_turn_around_base(
         admiral.execute_checked_commands_in_wrapper_function(entities)?;
     }
     info!("Inserted {} rail", entities_length);
-    Ok(base_turn_arounds)
+    Ok(turn_arounds)
+}
+
+fn insert_base_robo(
+    admiral: &mut AdmiralClient,
+    surface: &VSurface,
+    turn_arounds: TurnArounds,
+) -> AdmiralResult<()> {
+    const ACCOUNT_FOR_45S: i32 = RAIL_STEP_SIZE_I32 * 2;
+    const OFFSET: i32 = (MINE_FRONT_RAIL_STEPS as i32 * RAIL_STEP_SIZE_I32 * 2) + ACCOUNT_FOR_45S;
+    let mut entities = Vec::new();
+
+    'outer: for side in [turn_arounds.positive_columns, turn_arounds.negative_columns] {
+        for (column_index, column) in side.iter().enumerate() {
+            for (turn_index, turn_around) in column.iter().enumerate() {
+                // column index 0 or 1 makes horizontal line
+                if turn_index % 2 == column_index {
+                    continue;
+                }
+
+                let start = turn_around
+                    .endpoint
+                    .move_xy(-OFFSET, (4 * 5) + /*arbitrary*/1);
+                let bottom_left_corner = make_robo_square_sub(
+                    start.x(),
+                    start.y(),
+                    (MINE_FRONT_RAIL_STEPS as f32 * 0.75) as u32,
+                    1,
+                    3,
+                    &mut entities,
+                );
+
+                let extra_robo = bottom_left_corner.move_xy(4, -10);
+                entities.push(FacSurfaceCreateEntity::new_roboport(extra_robo).into_boxed());
+
+                let extra_substation = bottom_left_corner.move_x(8);
+                entities
+                    .push(FacSurfaceCreateEntity::new_substation(extra_substation).into_boxed());
+
+                // if turn_index > 5 {
+                //     break 'outer;
+                // }
+            }
+        }
+        if 1 + 1 == 2 {
+            break;
+        }
+    }
+
+    let entities_length = entities.len();
+    admiral.execute_checked_commands_in_wrapper_function(entities)?;
+    info!("Inserted {} entities", entities_length);
+
+    Ok(())
 }
 
 fn insert_signals(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
@@ -660,7 +727,7 @@ fn max_command_size_finder(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     Ok(())
 }
 
-fn admiral_quick_test(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+fn admiral_quick_test_turn_around(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     const WORK_RADIUS: u32 = 10;
 
     // scan_area(admiral, WORK_RADIUS)?;
@@ -702,6 +769,44 @@ fn admiral_quick_test(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     // rail.to_factorio_entities(&mut rail_to_place);
 
     admiral.execute_checked_command(LuaBatchCommand::new(entities).into_boxed())?;
+
+    Ok(())
+}
+
+fn admiral_quick_test(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    const WORK_RADIUS: u32 = 10;
+
+    let mut entities = Vec::new();
+
+    entities.push(
+        FacDestroy::new_filtered_area(
+            VArea::from_arbitrary_points_pair(VPoint::new(380, -128), VPoint::new(500, -80)),
+            vec![
+                "large-electric-pole",
+                "medium-electric-pole",
+                "small-lamp",
+                "roboport",
+            ],
+        )
+        .into_boxed(),
+    );
+
+    make_robo_square_sub(520, -95, 1, 1, 3, &mut entities);
+
+    admiral.execute_checked_command(LuaBatchCommand::new(entities).into_boxed())?;
+
+    Ok(())
+}
+
+fn stats(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    let step = "step21-demark";
+    let mut surface = VSurface::load(&Path::new("work/out0").join(step))?;
+
+    let mut total = 0;
+    for mine in surface.get_mines() {
+        total += mine.mine_base.patch_indexes.len();
+    }
+    error!("total {}", total);
 
     Ok(())
 }
