@@ -3,6 +3,7 @@ use crate::{
     def_entity_size_square,
 };
 
+#[derive(Clone)]
 pub enum FacInserterType {
     Burner,
     Basic,
@@ -12,9 +13,7 @@ pub enum FacInserterType {
 }
 
 pub struct FacInserter {
-    typef: FacInserterType,
-    // todo
-    item: String,
+    itype: FacInserterType,
     name: FacEntityName,
 }
 
@@ -23,5 +22,14 @@ impl FacEntity for FacInserter {
 
     fn name(&self) -> &FacEntityName {
         &self.name
+    }
+}
+
+impl FacInserter {
+    pub fn new(itype: FacInserterType) -> Self {
+        Self {
+            name: FacEntityName::Inserter(itype.clone()),
+            itype,
+        }
     }
 }

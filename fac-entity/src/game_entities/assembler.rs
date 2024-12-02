@@ -3,6 +3,7 @@ use crate::{
     def_entity_size_square,
 };
 
+#[derive(Clone)]
 pub enum FacAssemblerLevel {
     Tier1,
     Tier2,
@@ -21,5 +22,15 @@ impl FacEntity for FacAssembler {
 
     fn name(&self) -> &FacEntityName {
         &self.name
+    }
+}
+
+impl FacAssembler {
+    pub fn new(level: FacAssemblerLevel, item: String) -> Self {
+        Self {
+            name: FacEntityName::Assembler(level.clone()),
+            level,
+            item,
+        }
     }
 }

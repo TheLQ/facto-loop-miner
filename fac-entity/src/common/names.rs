@@ -1,4 +1,6 @@
-use crate::game_entities::{assembler::FacAssemblerLevel, inserter::FacInserterType};
+use crate::game_entities::{
+    assembler::FacAssemblerLevel, chest::FacChestType, inserter::FacInserterType,
+};
 
 pub enum FacEntityName {
     SquarePole,
@@ -6,5 +8,5 @@ pub enum FacEntityName {
     Rail,
     Assembler(FacAssemblerLevel),
     Inserter(FacInserterType),
-    Chest,
+    Chest(FacChestType),
 }

@@ -3,19 +3,36 @@ use crate::{
     def_entity_name, def_entity_size_square,
 };
 
-pub enum FacAssemblerLevel {
-    Tier1,
-    Tier2,
-    Tier3,
+#[derive(Clone)]
+pub enum FacChestType {
+    Wood,
+    Iron,
+    Steel,
+    Active,
+    Passive,
+    Storage,
+    Buffer,
+    Requestor,
 }
 
 pub struct FacChest {
-    level: FacAssemblerLevel,
-    // todo
-    item: String,
+    ctype: FacChestType,
+    name: FacEntityName,
 }
 
 impl FacEntity for FacChest {
     def_entity_size_square!(2);
-    def_entity_name!(FacEntityName::Chest);
+
+    fn name(&self) -> &FacEntityName {
+        &self.name
+    }
+}
+
+impl FacChest {
+    pub fn new(ctype: FacChestType) -> Self {
+        Self {
+            name: FacEntityName::Chest(ctype.clone()),
+            ctype,
+        }
+    }
 }

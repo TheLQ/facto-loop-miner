@@ -9,3 +9,9 @@ impl FacEntity for FacLamp {
     def_entity_size_square!(1);
     def_entity_name!(FacEntityName::Lamp);
 }
+
+impl FacLamp {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
