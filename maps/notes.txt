@@ -1,0 +1,4 @@
+/c game.player.character_running_speed_modifier = 2
+
+/c print(game.player.force.technologies['worker-robots-speed-6'].level)
+/c game.player.force.technologies['worker-robots-speed-6'].level = 100
