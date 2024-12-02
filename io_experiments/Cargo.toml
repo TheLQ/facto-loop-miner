@@ -17,6 +17,3 @@ tracing-subscriber = "0.3.17"
 
 [features]
 lol = []
-
-[profile.release]
-lto = "fat"

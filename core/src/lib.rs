@@ -10,7 +10,6 @@
 #![feature(array_chunks)]
 #![feature(error_generic_member_access)]
 #![feature(int_roundings)]
-#![feature(option_get_or_insert_default)]
 #![feature(const_trait_impl)]
 // lints
 #![allow(unused_variables)]
