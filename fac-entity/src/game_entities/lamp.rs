@@ -1,11 +1,11 @@
 use crate::{
-    common::{
-        entity::{FacEntity, Size},
-        name::FacEntityName,
-    },
-    impl_facentity,
+    common::{entity::FacEntity, names::FacEntityName},
+    def_entity_name, def_entity_size_square,
 };
 
 pub struct FacLamp {}
 
-impl_facentity!(FacLamp, 2, FacEntityName::Lamp);
+impl FacEntity for FacLamp {
+    def_entity_size_square!(1);
+    def_entity_name!(FacEntityName::Lamp);
+}

@@ -1,4 +1,5 @@
 pub mod entity;
 pub mod entity_macro;
 pub mod group;
-pub mod name;
+#[macro_use]
+pub mod names;

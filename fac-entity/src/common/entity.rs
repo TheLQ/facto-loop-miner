@@ -1,4 +1,4 @@
-use crate::common::name::FacEntityName;
+use crate::common::names::FacEntityName;
 
 pub trait FacEntity {
     fn name(&self) -> &FacEntityName;

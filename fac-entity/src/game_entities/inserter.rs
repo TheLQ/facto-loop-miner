@@ -3,20 +3,22 @@ use crate::{
     def_entity_size_square,
 };
 
-pub enum FacAssemblerLevel {
-    Tier1,
-    Tier2,
-    Tier3,
+pub enum FacInserterType {
+    Burner,
+    Basic,
+    Long,
+    Fast,
+    Bulk,
 }
 
-pub struct FacAssembler {
-    level: FacAssemblerLevel,
+pub struct FacInserter {
+    typef: FacInserterType,
     // todo
     item: String,
     name: FacEntityName,
 }
 
-impl FacEntity for FacAssembler {
+impl FacEntity for FacInserter {
     def_entity_size_square!(3);
 
     fn name(&self) -> &FacEntityName {
