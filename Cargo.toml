@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "fac-entity", "io_experiments"]
+members = [ "common","core", "fac-entity", "io_experiments"]
 resolver = "2"
 
 default-members = ["core"]
