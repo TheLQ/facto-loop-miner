@@ -1,7 +1,7 @@
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
+use crate::point::Point2f;
 use crate::surfacev::vpoint::must_half_number;
-use opencv::core::Point2f;
 
 pub const BEACON_SIZE: u32 = 3;
 

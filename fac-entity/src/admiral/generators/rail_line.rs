@@ -1,7 +1,7 @@
-use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::LuaCommand;
+use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::navigator::mori::RailDirection;
-use opencv::core::Point2f;
+use crate::point::Point2f;
 use tracing::debug;
 
 #[derive(Debug)]

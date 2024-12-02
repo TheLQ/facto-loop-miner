@@ -1,12 +1,11 @@
 use crate::admiral::generators::assembler_farm::{AssemblerChest, AssemblerFarmGenerator};
-use crate::admiral::generators::beacon_farm::{BeaconFarmGenerator, BEACON_SIZE};
+use crate::admiral::generators::beacon_farm::{BEACON_SIZE, BeaconFarmGenerator};
 use crate::admiral::generators::xy_grid;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
+use crate::point::Point2f;
 use crate::surfacev::varea::VArea;
 use crate::surfacev::vpoint::VPoint;
-use num_format::Locale::he;
-use opencv::core::Point2f;
 use tracing::{debug, trace};
 
 const ROBOPORT_SIZE: u32 = 4;
@@ -74,13 +73,10 @@ impl LuaCommandBatch for AssemblerRoboFarmGenerator {
 
                 // big pole connects top of assembly to robo's big pole
                 lua_commands.push(
-                    FacSurfaceCreateEntity::new(
-                        "big-electric-pole",
-                        Point2f {
-                            x: self.start.x - 5.0 + row_height,
-                            y: assembler_start_y,
-                        },
-                    )
+                    FacSurfaceCreateEntity::new("big-electric-pole", Point2f {
+                        x: self.start.x - 5.0 + row_height,
+                        y: assembler_start_y,
+                    })
                     .into_boxed(),
                 );
             }
@@ -119,46 +115,34 @@ pub fn make_robo_square_sub(
                 && (pos.iy % ROBO_POLE_STEP) + 1 == ROBO_POLE_STEP_MIDDLE
             {
                 lua_commands.push(
-                    FacSurfaceCreateEntity::new(
-                        "substation",
-                        Point2f {
-                            x: pos.x as f32 - 1.0,
-                            y: pos.y as f32,
-                        },
-                    )
+                    FacSurfaceCreateEntity::new("substation", Point2f {
+                        x: pos.x as f32 - 1.0,
+                        y: pos.y as f32,
+                    })
                     .into_boxed(),
                 );
 
                 lua_commands.push(
-                    FacSurfaceCreateEntity::new(
-                        "big-electric-pole",
-                        Point2f {
-                            x: pos.x as f32 + 1.0,
-                            y: pos.y as f32,
-                        },
-                    )
+                    FacSurfaceCreateEntity::new("big-electric-pole", Point2f {
+                        x: pos.x as f32 + 1.0,
+                        y: pos.y as f32,
+                    })
                     .into_boxed(),
                 );
 
                 lua_commands.push(
-                    FacSurfaceCreateEntity::new(
-                        "small-lamp",
-                        Point2f {
-                            x: pos.x as f32 - 1.5,
-                            y: pos.y as f32 + 1.5,
-                        },
-                    )
+                    FacSurfaceCreateEntity::new("small-lamp", Point2f {
+                        x: pos.x as f32 - 1.5,
+                        y: pos.y as f32 + 1.5,
+                    })
                     .into_boxed(),
                 );
             } else {
                 lua_commands.push(
-                    FacSurfaceCreateEntity::new(
-                        "roboport",
-                        Point2f {
-                            x: pos.x as f32,
-                            y: pos.y as f32,
-                        },
-                    )
+                    FacSurfaceCreateEntity::new("roboport", Point2f {
+                        x: pos.x as f32,
+                        y: pos.y as f32,
+                    })
                     .into_boxed(),
                 );
                 scanned_area.push(pos);

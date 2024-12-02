@@ -1,14 +1,13 @@
 use crate::admiral::err::AdmiralResult;
+use crate::admiral::executor::LuaCompiler;
 use crate::admiral::executor::client::AdmiralClient;
 use crate::admiral::executor::entrypoint::chart_pulse;
-use crate::admiral::executor::LuaCompiler;
+use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::lua_command::fac_destroy::FacDestroy;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
-use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori::RailDirection;
 use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
-use itertools::Itertools;
 use std::path::Path;
 
 pub fn admiral_mines(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
@@ -17,15 +16,12 @@ pub fn admiral_mines(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     let radius = surface.get_radius();
 
     admiral.execute_checked_command(
-        FacDestroy::new_filtered(
-            radius,
-            vec![
-                "logistic-chest-passive-provider",
-                "medium-electric-pole",
-                "electric-mining-drill",
-                "small-lamp",
-            ],
-        )
+        FacDestroy::new_filtered(radius, vec![
+            "logistic-chest-passive-provider",
+            "medium-electric-pole",
+            "electric-mining-drill",
+            "small-lamp",
+        ])
         .into_boxed(),
     )?;
 

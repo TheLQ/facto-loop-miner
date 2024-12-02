@@ -1,11 +1,11 @@
 //! How Factorio does rail turning
 
+use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::lua_command::fac_surface_create_entity::{
     FacSurfaceCreateEntity, FactoDirection,
 };
-use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori::RailDirection;
-use crate::surfacev::bit_grid::{StaticBitGrid, GRID_16X16_SIZE};
+use crate::surfacev::bit_grid::{GRID_16X16_SIZE, StaticBitGrid};
 use crate::surfacev::vpoint::VPoint;
 
 pub fn rail_degrees_north(start: VPoint) -> Vec<Box<dyn LuaCommand>> {

@@ -1,16 +1,16 @@
 use crate::admiral::err::{AdmiralError, AdmiralResult};
+use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::lua_command::checked_command::CheckedLuaCommand;
 use crate::admiral::lua_command::fac_surface_create_entity::{
     DEBUG_POSITION_EXPECTED, DEBUG_PRE_COLLISION,
 };
 use crate::admiral::lua_command::lua_batch::LuaBatchCommand;
-use crate::admiral::lua_command::LuaCommand;
 use itertools::Itertools;
 use std::backtrace::Backtrace;
 
-pub mod client;
-pub mod entrypoint;
-pub mod file;
+// pub mod client;
+// pub mod entrypoint;
+// pub mod file;
 
 const BATCH_SIZE: usize = if DEBUG_POSITION_EXPECTED || DEBUG_PRE_COLLISION {
     // max lua variables per function

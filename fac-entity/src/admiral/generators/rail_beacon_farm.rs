@@ -1,9 +1,9 @@
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::join_commands;
-use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
 use crate::admiral::lua_command::LuaCommand;
+use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
 use crate::navigator::mori::RailDirection;
-use opencv::core::Point2f;
+use crate::point::Point2f;
 use tracing::info;
 
 #[derive(Debug)]

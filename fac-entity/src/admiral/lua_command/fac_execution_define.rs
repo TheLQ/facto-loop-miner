@@ -28,7 +28,7 @@ impl LuaCommand for FacExectionDefine {
             .replace('\n', " ")
             .to_string();
 
-        let regex = Regex::new("( \\s+)");
+        let regex = Regex::new("( \\s+)").unwrap();
         all_function_chunks = regex
             .unwrap()
             .replace_all(&all_function_chunks, " ")

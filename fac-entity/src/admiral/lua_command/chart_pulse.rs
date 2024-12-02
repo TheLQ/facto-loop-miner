@@ -19,6 +19,8 @@ impl ChartPulse {
 impl LuaCommand for ChartPulse {
     fn make_lua(&self) -> String {
         let radius = self.radius;
-        format!("game.forces[1].chart(game.surfaces[1], {{ {{ -{radius}, -{radius} }}, {{ {radius}, {radius} }} }})")
+        format!(
+            "game.forces[1].chart(game.surfaces[1], {{ {{ -{radius}, -{radius} }}, {{ {radius}, {radius} }} }})"
+        )
     }
 }

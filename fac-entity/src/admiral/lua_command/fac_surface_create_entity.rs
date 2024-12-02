@@ -1,4 +1,4 @@
-use crate::admiral::lua_command::{LuaCommand, DEFAULT_FORCE_VAR};
+use crate::admiral::lua_command::{DEFAULT_FORCE_VAR, LuaCommand};
 use crate::navigator::mori::RailDirection;
 use crate::surfacev::vpoint::VPoint;
 use itertools::Itertools;
@@ -141,11 +141,9 @@ impl FacSurfaceCreateEntity {
     }
 
     pub fn new_rail_straight_facto(position: Point2f, direction: FactoDirection) -> Self {
-        Self::new_params(
-            "straight-rail",
-            position,
-            vec![CreateParam::DirectionFacto(direction)],
-        )
+        Self::new_params("straight-rail", position, vec![
+            CreateParam::DirectionFacto(direction),
+        ])
     }
 
     pub fn new_rail_curved(position: Point2f, direction: RailDirection) -> Self {
@@ -153,19 +151,15 @@ impl FacSurfaceCreateEntity {
     }
 
     pub fn new_rail_curved_facto(position: Point2f, direction: FactoDirection) -> Self {
-        Self::new_params(
-            "curved-rail",
-            position,
-            vec![CreateParam::DirectionFacto(direction)],
-        )
+        Self::new_params("curved-rail", position, vec![CreateParam::DirectionFacto(
+            direction,
+        )])
     }
 
     pub fn new_rail_signal(position: Point2f, direction: RailDirection) -> Self {
-        Self::new_params(
-            "rail-signal",
-            position,
-            vec![CreateParam::Direction(direction)],
-        )
+        Self::new_params("rail-signal", position, vec![CreateParam::Direction(
+            direction,
+        )])
     }
 
     pub fn new_electric_pole_big(position: Point2f) -> Self {
@@ -177,11 +171,9 @@ impl FacSurfaceCreateEntity {
     }
 
     pub fn new_drill(position: Point2f, direction: RailDirection) -> Self {
-        Self::new_params(
-            "electric-mining-drill",
-            position,
-            vec![CreateParam::Direction(direction)],
-        )
+        Self::new_params("electric-mining-drill", position, vec![
+            CreateParam::Direction(direction),
+        ])
     }
 
     pub fn new_chest_red(position: Point2f) -> Self {

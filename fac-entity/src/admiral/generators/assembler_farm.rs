@@ -1,9 +1,9 @@
 use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
-use crate::admiral::generators::{xy_grid, XyGridPosition};
+use crate::admiral::generators::{XyGridPosition, xy_grid};
 use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
 use crate::navigator::mori::RailDirection;
-use opencv::core::Point2f;
+use crate::point::Point2f;
 
 pub const ASSEMBLER_SIZE: u32 = 3;
 
@@ -175,24 +175,18 @@ impl AssemblerFarmGenerator {
                 continue;
             }
             lua_commands.push(
-                FacSurfaceCreateEntity::new(
-                    "substation",
-                    Point2f {
-                        x: pos.x as f32 + 3.0,
-                        y: pos.y as f32 + 3.0,
-                    },
-                )
+                FacSurfaceCreateEntity::new("substation", Point2f {
+                    x: pos.x as f32 + 3.0,
+                    y: pos.y as f32 + 3.0,
+                })
                 .into_boxed(),
             );
 
             lua_commands.push(
-                FacSurfaceCreateEntity::new(
-                    "small-lamp",
-                    Point2f {
-                        x: pos.x as f32 + 7.5,
-                        y: pos.y as f32 + 7.5,
-                    },
-                )
+                FacSurfaceCreateEntity::new("small-lamp", Point2f {
+                    x: pos.x as f32 + 7.5,
+                    y: pos.y as f32 + 7.5,
+                })
                 .into_boxed(),
             );
         }
@@ -200,13 +194,10 @@ impl AssemblerFarmGenerator {
 
     fn make_power_interface(&self, lua_commands: &mut Vec<Box<dyn LuaCommand>>) {
         lua_commands.push(
-            FacSurfaceCreateEntity::new(
-                "electric-energy-interface",
-                Point2f {
-                    x: self.inner.start.x - 2.5,
-                    y: self.inner.start.y - 0.5,
-                },
-            )
+            FacSurfaceCreateEntity::new("electric-energy-interface", Point2f {
+                x: self.inner.start.x - 2.5,
+                y: self.inner.start.y - 0.5,
+            })
             .into_boxed(),
         );
     }
