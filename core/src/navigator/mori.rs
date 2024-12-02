@@ -205,6 +205,7 @@ impl TurnType {
     }
 }
 
+// TODO: REMOVE ME, DUPLICATE IN FAC-ENGINE
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize, AsRefStr)]
 pub enum RailDirection {
     Up,
