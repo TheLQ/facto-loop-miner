@@ -556,23 +556,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fac-entity"
-version = "0.1.0"
-dependencies = [
- "facto-loop-miner-common",
- "itertools 0.13.0",
- "num-format",
- "rand",
- "rcon-client",
- "regex",
- "serde",
- "strum",
- "strum_macros",
- "thiserror 2.0.3",
- "tracing",
-]
-
-[[package]]
 name = "facto-loop-miner"
 version = "0.1.0"
 dependencies = [
@@ -612,6 +595,23 @@ name = "facto-loop-miner-common"
 version = "0.1.0"
 dependencies = [
  "num-format",
+]
+
+[[package]]
+name = "facto-loop-miner-fac-engine"
+version = "0.1.0"
+dependencies = [
+ "facto-loop-miner-common",
+ "itertools 0.13.0",
+ "num-format",
+ "rand",
+ "rcon-client",
+ "regex",
+ "serde",
+ "strum",
+ "strum_macros",
+ "thiserror 2.0.3",
+ "tracing",
 ]
 
 [[package]]
