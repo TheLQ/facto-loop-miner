@@ -1,5 +1,5 @@
 use crate::admiral::err::AdmiralResult;
-use crate::admiral::executor::client::AdmiralClient;
+// use crate::admiral::executor::client::AdmiralClient;
 use tracing::error;
 
 pub fn admiral() {
@@ -122,35 +122,35 @@ pub fn inner_admiral() -> AdmiralResult<()> {
     Ok(())
 }
 
-fn _generate_mega_block(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    // for x in 0..50 {
-    //     for y in 0..50 {
-    //         let text = admiral.execute_block(FacSurfaceCreateEntitySafe {
-    //             inner: FacSurfaceCreateEntity {
-    //                 surface_var: "game.surfaces[1]".to_string(),
-    //                 position: Point2f::new(1f32 + (x as f32 * 2.0), 1f32 + (y as f32 * 2.0)),
-    //                 name: "straight-rail".to_string(),
-    //                 params: HashMap::new(),
-    //             },
-    //         })?;
-    //     }
-    // }
-    //
-    // admiral.execute_lua_empty(RailLineGenerator {
-    //     length: 200,
-    //     rail_loops: 20,
-    //     start: Point2f { x: 1f32, y: 1f32 },
-    //     separator_every_num: 8,
-    // })?;
-    //
-    // admiral.execute_block(RailBeaconFarmGenerator {
-    //     inner: BeaconFarmGenerator {
-    //         cell_size: 3,
-    //         width: 20,
-    //         height: 15,
-    //         start: Point2f { x: 200.5, y: 200.5 },
-    //     },
-    // })?;
+// fn _generate_mega_block(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+// for x in 0..50 {
+//     for y in 0..50 {
+//         let text = admiral.execute_block(FacSurfaceCreateEntitySafe {
+//             inner: FacSurfaceCreateEntity {
+//                 surface_var: "game.surfaces[1]".to_string(),
+//                 position: Point2f::new(1f32 + (x as f32 * 2.0), 1f32 + (y as f32 * 2.0)),
+//                 name: "straight-rail".to_string(),
+//                 params: HashMap::new(),
+//             },
+//         })?;
+//     }
+// }
+//
+// admiral.execute_lua_empty(RailLineGenerator {
+//     length: 200,
+//     rail_loops: 20,
+//     start: Point2f { x: 1f32, y: 1f32 },
+//     separator_every_num: 8,
+// })?;
+//
+// admiral.execute_block(RailBeaconFarmGenerator {
+//     inner: BeaconFarmGenerator {
+//         cell_size: 3,
+//         width: 20,
+//         height: 15,
+//         start: Point2f { x: 200.5, y: 200.5 },
+//     },
+// })?;
 
-    Ok(())
-}
+// Ok(())
+// }

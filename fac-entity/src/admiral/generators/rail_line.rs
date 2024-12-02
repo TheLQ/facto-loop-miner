@@ -1,7 +1,7 @@
 use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
-use crate::navigator::mori::RailDirection;
-use crate::point::Point2f;
+use crate::game_entities::direction::RailDirection;
+use crate::common::cvpoint::Point2f;
 use tracing::debug;
 
 #[derive(Debug)]

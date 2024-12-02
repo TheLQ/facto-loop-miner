@@ -1,5 +1,6 @@
-use crate::LOCALE;
+// use crate::LOCALE;
 use crate::admiral::lua_command::LuaCommand;
+use facto_loop_miner_common::LOCALE;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use tracing::trace;

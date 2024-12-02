@@ -1,6 +1,7 @@
-use crate::admiral::err::{pretty_panic_admiral, AdmiralResult};
-use crate::admiral::executor::client::AdmiralClient;
+use crate::LOCALE;
+use crate::admiral::err::{AdmiralResult, pretty_panic_admiral};
 use crate::admiral::executor::LuaCompiler;
+use crate::admiral::executor::client::AdmiralClient;
 use crate::admiral::generators::assembler_robo_farm::{make_robo_square, make_robo_square_sub};
 use crate::admiral::generators::rail45::{rail_45_down, rail_45_up};
 use crate::admiral::generators::rail90::{
@@ -8,30 +9,29 @@ use crate::admiral::generators::rail90::{
     dual_rail_south_empty, dual_rail_west, dual_rail_west_empty, rail_degrees_east,
     rail_degrees_north, rail_degrees_south, rail_degrees_west,
 };
+use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::lua_command::chart_pulse::ChartPulse;
 use crate::admiral::lua_command::fac_destroy::FacDestroy;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::lua_batch::LuaBatchCommand;
 use crate::admiral::lua_command::raw_lua::RawLuaCommand;
 use crate::admiral::lua_command::scanner::BaseScanner;
-use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::mine_builder::admiral_mines;
+use crate::common::varea::VArea;
 use crate::navigator::mori::{
-    DockFaceDirection, Rail, RailDirection, RailMode, RAIL_STEP_SIZE, RAIL_STEP_SIZE_I32,
+    DockFaceDirection, RAIL_STEP_SIZE, RAIL_STEP_SIZE_I32, Rail, RailDirection, RailMode,
 };
 use crate::navigator::path_executor::MINE_FRONT_RAIL_STEPS;
 use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::bit_grid::BitGrid;
-use crate::surfacev::varea::VArea;
-use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
+use crate::surfacev::vpoint::{SHIFT_POINT_ONE, VPoint};
 use crate::surfacev::vsurface::VSurface;
-use crate::LOCALE;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use opencv::core::Point2f;
 use regex::Regex;
-use simd_json::{to_owned_value, OwnedValue, StaticNode};
+use simd_json::{OwnedValue, StaticNode, to_owned_value};
 use std::path::Path;
 use tracing::{debug, error, info, trace};
 
@@ -146,19 +146,16 @@ fn scan_area(admiral: &mut AdmiralClient, radius: u32) -> AdmiralResult<()> {
 }
 
 fn destroy_placed_entities(admiral: &mut AdmiralClient, radius: u32) -> AdmiralResult<()> {
-    let command = FacDestroy::new_filtered(
-        radius,
-        vec![
-            // "straight-rail",
-            // "curved-rail",
-            "roboport",
-            "substation",
-            "big-electric-pole",
-            "small-lamp",
-            // "rail-signal",
-            // "steel-chest",
-        ],
-    );
+    let command = FacDestroy::new_filtered(radius, vec![
+        // "straight-rail",
+        // "curved-rail",
+        "roboport",
+        "substation",
+        "big-electric-pole",
+        "small-lamp",
+        // "rail-signal",
+        // "steel-chest",
+    ]);
     admiral.execute_checked_command(command.into_boxed())?;
 
     Ok(())
@@ -573,11 +570,13 @@ pub fn create_minified_bitgrid(
                 let lamp_x = chunk_x_offset + lamp_x_offset;
                 let lamp_y = -64 + lamp_y_offset;
 
-                let command = RawLuaCommand::new(format!("\
+                let command = RawLuaCommand::new(format!(
+                    "\
                 if game.surfaces[1].can_place_entity{{ name=\"steel-chest\",position={{ {lamp_x},{lamp_y} }} }} then \
                 game.surfaces[1].create_entity{{ name=\"steel-chest\",position={{ {lamp_x},{lamp_y} }} }}\
                 end\
-                "));
+                "
+                ));
                 commands.push(command.into_boxed());
             }
         }
@@ -686,13 +685,10 @@ fn insert_minified_kit(
                     continue;
                 }
                 commands.push(
-                    FacSurfaceCreateEntity::new(
-                        "steel-chest",
-                        Point2f {
-                            x: (chunk_x_offset + lamp_x_offset) as f32,
-                            y: (chunk_y_offset + lamp_y_offset as i32) as f32,
-                        },
-                    )
+                    FacSurfaceCreateEntity::new("steel-chest", Point2f {
+                        x: (chunk_x_offset + lamp_x_offset) as f32,
+                        y: (chunk_y_offset + lamp_y_offset as i32) as f32,
+                    })
                     .into_boxed(),
                 )
             }

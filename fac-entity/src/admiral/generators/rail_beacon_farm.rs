@@ -2,8 +2,8 @@ use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::join_commands;
 use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
-use crate::navigator::mori::RailDirection;
-use crate::point::Point2f;
+use crate::common::cvpoint::Point2f;
+use crate::game_entities::direction::RailDirection;
 use tracing::info;
 
 #[derive(Debug)]

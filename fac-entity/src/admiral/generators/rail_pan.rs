@@ -5,7 +5,7 @@
 // };
 // use crate::navigator::mori::{Rail, RailDirection};
 // use crate::surface::surface::PointU32;
-// use crate::point::Point2f;
+// use crate::common::cvpoint::Point2f;
 //
 // #[derive(Debug)]
 // pub struct RailPanGenerator {

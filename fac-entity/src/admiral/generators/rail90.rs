@@ -2,28 +2,28 @@
 
 use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::lua_command::fac_surface_create_entity::{
-    FacSurfaceCreateEntity, FactoDirection,
+    FacDirectionQuarter, FacSurfaceCreateEntity,
 };
-use crate::navigator::mori::RailDirection;
+use crate::game_entities::direction::RailDirection;
 use crate::surfacev::bit_grid::{GRID_16X16_SIZE, StaticBitGrid};
-use crate::surfacev::vpoint::VPoint;
+use crate::common::vpoint::VPoint;
 
 pub fn rail_degrees_north(start: VPoint) -> Vec<Box<dyn LuaCommand>> {
     start.assert_odd_position();
     vec![
         FacSurfaceCreateEntity::new_rail_curved_facto(
             start.move_xy(9, 7).to_f32(),
-            FactoDirection::North,
+            FacDirectionQuarter::North,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_straight_facto(
             start.move_xy(6, 4).to_f32(),
-            FactoDirection::NorthEast,
+            FacDirectionQuarter::NorthEast,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_curved_facto(
             start.move_xy(3, 1).to_f32(),
-            FactoDirection::SouthEast,
+            FacDirectionQuarter::SouthEast,
         )
         .into_boxed(),
     ]
@@ -34,17 +34,17 @@ pub fn rail_degrees_south(start: VPoint) -> Vec<Box<dyn LuaCommand>> {
     vec![
         FacSurfaceCreateEntity::new_rail_curved_facto(
             start.move_xy(1, 3).to_f32(),
-            FactoDirection::South,
+            FacDirectionQuarter::South,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_straight_facto(
             start.move_xy(4, 6).to_f32(),
-            FactoDirection::SouthWest,
+            FacDirectionQuarter::SouthWest,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_curved_facto(
             start.move_xy(7, 9).to_f32(),
-            FactoDirection::NorthWest,
+            FacDirectionQuarter::NorthWest,
         )
         .into_boxed(),
     ]
@@ -55,17 +55,17 @@ pub fn rail_degrees_west(start: VPoint) -> Vec<Box<dyn LuaCommand>> {
     vec![
         FacSurfaceCreateEntity::new_rail_curved_facto(
             start.move_xy(7, 1).to_f32(),
-            FactoDirection::West,
+            FacDirectionQuarter::West,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_straight_facto(
             start.move_xy(4, 4).to_f32(),
-            FactoDirection::NorthWest,
+            FacDirectionQuarter::NorthWest,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_curved_facto(
             start.move_xy(1, 7).to_f32(),
-            FactoDirection::NorthEast, // wtf?
+            FacDirectionQuarter::NorthEast, // wtf?
         )
         .into_boxed(),
     ]
@@ -76,17 +76,17 @@ pub fn rail_degrees_east(start: VPoint) -> Vec<Box<dyn LuaCommand>> {
     vec![
         FacSurfaceCreateEntity::new_rail_curved_facto(
             start.move_xy(3, 9).to_f32(),
-            FactoDirection::East,
+            FacDirectionQuarter::East,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_straight_facto(
             start.move_xy(6, 6).to_f32(),
-            FactoDirection::SouthEast,
+            FacDirectionQuarter::SouthEast,
         )
         .into_boxed(),
         FacSurfaceCreateEntity::new_rail_curved_facto(
             start.move_xy(9, 3).to_f32(),
-            FactoDirection::SouthWest,
+            FacDirectionQuarter::SouthWest,
         )
         .into_boxed(),
     ]

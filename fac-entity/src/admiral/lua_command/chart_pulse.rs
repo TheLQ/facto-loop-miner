@@ -1,5 +1,4 @@
 use crate::admiral::lua_command::LuaCommand;
-use crate::surfacev::vsurface::VSurface;
 
 #[derive(Debug)]
 pub struct ChartPulse {
@@ -11,9 +10,9 @@ impl ChartPulse {
         Self { radius }
     }
 
-    pub fn new(surface: &VSurface) -> Self {
-        Self::new_radius(surface.get_radius())
-    }
+    // pub fn new(surface: &VSurface) -> Self {
+    //     Self::new_radius(surface.get_radius())
+    // }
 }
 
 impl LuaCommand for ChartPulse {

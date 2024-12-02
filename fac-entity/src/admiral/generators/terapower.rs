@@ -1,7 +1,7 @@
 use crate::admiral::generators::xy_grid;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
-use opencv::core::{Point, Point2f};
+use crate::common::cvpoint::{Point, Point2f};
 
 #[derive(Debug)]
 pub struct Terapower {

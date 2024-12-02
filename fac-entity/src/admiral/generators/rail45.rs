@@ -1,14 +1,12 @@
 use crate::admiral::lua_command::LuaCommand;
-use crate::admiral::lua_command::fac_surface_create_entity::{
-    FacSurfaceCreateEntity, FactoDirection,
-};
+use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
+use crate::common::vpoint::VPoint;
 use crate::navigator::mori::{Rail, RailDirection, TurnType};
-use crate::surfacev::vpoint::VPoint;
 
 pub fn rail_45(
     result: &mut Vec<Box<dyn LuaCommand>>,
     start: Rail,
-    directions: [FactoDirection; 2],
+    directions: [FacDirectionQuarter; 2],
     turn_type: TurnType,
     sections: usize,
 ) -> Rail {
@@ -54,7 +52,7 @@ pub fn rail_45_down(
                 .move_forward_micro_num(1)
                 .endpoint
                 .to_f32(),
-            FactoDirection::West,
+            FacDirectionQuarter::West,
         )
         .into_boxed(),
     );
@@ -67,7 +65,10 @@ pub fn rail_45_down(
             .move_force_rotate_clockwise(1)
             .move_forward_micro_num(4)
             .move_force_rotate_clockwise(3),
-        [FactoDirection::NorthWest, FactoDirection::SouthEast],
+        [
+            FacDirectionQuarter::NorthWest,
+            FacDirectionQuarter::SouthEast,
+        ],
         TurnType::Turn90,
         angle_sections,
     );
@@ -81,7 +82,7 @@ pub fn rail_45_down(
     result.push(
         FacSurfaceCreateEntity::new_rail_curved_facto(
             straight_lead.endpoint.to_f32(),
-            FactoDirection::East,
+            FacDirectionQuarter::East,
         )
         .into_boxed(),
     );
@@ -104,7 +105,7 @@ pub fn rail_45_up(
                 .move_forward_micro_num(1)
                 .endpoint
                 .to_f32(),
-            FactoDirection::NorthWest,
+            FacDirectionQuarter::NorthWest,
         )
         .into_boxed(),
     );
@@ -117,7 +118,10 @@ pub fn rail_45_up(
             .move_force_rotate_clockwise(3)
             .move_forward_micro_num(2)
             .move_force_rotate_clockwise(1),
-        [FactoDirection::SouthWest, FactoDirection::NorthEast],
+        [
+            FacDirectionQuarter::SouthWest,
+            FacDirectionQuarter::NorthEast,
+        ],
         TurnType::Turn270,
         angle_sections,
     );
@@ -131,7 +135,7 @@ pub fn rail_45_up(
     result.push(
         FacSurfaceCreateEntity::new_rail_curved_facto(
             straight_lead.endpoint.to_f32(),
-            FactoDirection::SouthEast,
+            FacDirectionQuarter::SouthEast,
         )
         .into_boxed(),
     );

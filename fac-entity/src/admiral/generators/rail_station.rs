@@ -1,8 +1,8 @@
 use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
-use crate::navigator::mori::RailDirection;
-use crate::point::Point2f;
-use crate::surfacev::vpoint::{must_even_number, must_whole_number};
+use crate::common::vpoint::{must_even_number, must_whole_number};
+use crate::game_entities::direction::RailDirection;
+use crate::common::cvpoint::Point2f;
 
 #[derive(Debug)]
 pub struct RailStationGenerator {

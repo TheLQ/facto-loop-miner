@@ -29,10 +29,7 @@ impl LuaCommand for FacExectionDefine {
             .to_string();
 
         let regex = Regex::new("( \\s+)").unwrap();
-        all_function_chunks = regex
-            .unwrap()
-            .replace_all(&all_function_chunks, " ")
-            .to_string();
+        all_function_chunks = regex.replace_all(&all_function_chunks, " ").to_string();
 
         format!(
             r#"

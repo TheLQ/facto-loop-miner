@@ -2,8 +2,8 @@ use crate::admiral::generators::beacon_farm::BeaconFarmGenerator;
 use crate::admiral::generators::{XyGridPosition, xy_grid};
 use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
-use crate::navigator::mori::RailDirection;
-use crate::point::Point2f;
+use crate::common::cvpoint::Point2f;
+use crate::game_entities::direction::RailDirection;
 
 pub const ASSEMBLER_SIZE: u32 = 3;
 

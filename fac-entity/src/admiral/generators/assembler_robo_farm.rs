@@ -3,9 +3,9 @@ use crate::admiral::generators::beacon_farm::{BEACON_SIZE, BeaconFarmGenerator};
 use crate::admiral::generators::xy_grid;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
-use crate::point::Point2f;
-use crate::surfacev::varea::VArea;
-use crate::surfacev::vpoint::VPoint;
+use crate::common::varea::VArea;
+use crate::common::vpoint::VPoint;
+use crate::common::cvpoint::Point2f;
 use tracing::{debug, trace};
 
 const ROBOPORT_SIZE: u32 = 4;

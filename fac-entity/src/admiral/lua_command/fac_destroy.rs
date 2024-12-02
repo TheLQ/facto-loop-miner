@@ -1,5 +1,5 @@
 use crate::admiral::lua_command::LuaCommand;
-use crate::surfacev::varea::VArea;
+use crate::common::varea::VArea;
 use itertools::Itertools;
 use std::borrow::Borrow;
 

@@ -3,5 +3,6 @@
 
 pub mod admiral;
 pub mod common;
+pub mod constants;
+pub mod err;
 pub mod game_entities;
-pub mod point;

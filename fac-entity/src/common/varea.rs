@@ -1,7 +1,8 @@
-use crate::surfacev::vpoint::VPoint;
-use opencv::core::Rect;
+use crate::common::vpoint::VPoint;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
+
+use super::cvpoint::Rect;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct VArea {
@@ -57,14 +58,14 @@ impl VArea {
         }
     }
 
-    pub fn to_rect(&self) -> Rect {
-        Rect {
-            x: self.start.x(),
-            y: self.start.y(),
-            width: self.width as i32,
-            height: self.height as i32,
-        }
-    }
+    // pub fn to_rect(&self) -> Rect {
+    //     Rect {
+    //         x: self.start.x(),
+    //         y: self.start.y(),
+    //         width: self.width as i32,
+    //         height: self.height as i32,
+    //     }
+    // }
 
     pub fn contains_point(&self, target: &VPoint) -> bool {
         target.x() >= self.start.x()

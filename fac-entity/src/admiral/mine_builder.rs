@@ -1,13 +1,10 @@
 use crate::admiral::err::AdmiralResult;
 use crate::admiral::executor::LuaCompiler;
-use crate::admiral::executor::client::AdmiralClient;
-use crate::admiral::executor::entrypoint::chart_pulse;
 use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::lua_command::fac_destroy::FacDestroy;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
-use crate::navigator::mori::RailDirection;
-use crate::surfacev::vpoint::VPoint;
-use crate::surfacev::vsurface::VSurface;
+use crate::common::vpoint::VPoint;
+use crate::game_entities::direction::RailDirection;
 use std::path::Path;
 
 pub fn admiral_mines(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
@@ -25,10 +22,10 @@ pub fn admiral_mines(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         .into_boxed(),
     )?;
 
-    insert_mines(admiral, &surface)
+    insert_mines(&surface)
 }
 
-fn insert_mines(admiral: &mut AdmiralClient, surface: &VSurface) -> AdmiralResult<()> {
+fn insert_mines(surface: &VSurface) -> AdmiralResult<()> {
     const X_CHUNK: i32 = 4;
     const Y_CHUNK: i32 = 3;
 

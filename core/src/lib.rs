@@ -60,7 +60,9 @@ pub mod util;
 // pub type PixelKdTree = KdTree<f32, 2usize>;
 pub type PixelKdTree = float::kdtree::KdTree<f32, usize, 2usize, 32, u32>;
 
+// TODO: Remove now duplicated
 pub const LOCALE: Locale = Locale::en;
+// TODO: REmove now duplicated
 pub const TILES_PER_CHUNK: usize = 32;
 pub fn inner_main() {
     let tracing_format = tracing_subscriber::fmt::format().compact();

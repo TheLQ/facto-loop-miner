@@ -1,8 +1,9 @@
-use crate::surfacev::err::{VError, VResult};
-use opencv::core::{Point, Point2f};
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
+
+use crate::common::cvpoint::{Point, Point2f};
+use crate::err::{FError, FResult};
 
 /// Core XY Point. i32 for simpler math
 #[derive(
@@ -33,19 +34,19 @@ impl VPoint {
         VPoint { x: 0, y: 0 }
     }
 
-    pub fn from_cv_point(point: Point) -> Self {
-        VPoint {
-            x: point.x,
-            y: point.y,
-        }
-    }
+    // pub fn from_cv_point(point: Point) -> Self {
+    //     VPoint {
+    //         x: point.x,
+    //         y: point.y,
+    //     }
+    // }
 
     pub fn from_value(value: i32) -> Self {
         VPoint { x: value, y: value }
     }
 
     /// Factorio import. Offset is half the entity width
-    pub fn from_f32_with_offset(point: Point2f, offset: f32) -> VResult<Self> {
+    pub fn from_f32_with_offset(point: Point2f, offset: f32) -> FResult<Self> {
         let new_point = Point2f {
             x: point.x - offset,
             y: point.y - offset,
@@ -56,7 +57,7 @@ impl VPoint {
                 y: new_point.y as i32,
             })
         } else {
-            Err(VError::XYNotInteger {
+            Err(FError::XYNotInteger {
                 position: point,
                 backtrace: Backtrace::capture(),
             })

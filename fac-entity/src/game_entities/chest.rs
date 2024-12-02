@@ -1,6 +1,6 @@
 use crate::{
     common::{entity::FacEntity, names::FacEntityName},
-    def_entity_name, def_entity_size_square,
+    def_entity_size_square,
 };
 
 #[derive(Clone)]
