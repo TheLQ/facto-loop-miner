@@ -1,6 +1,6 @@
-use crate::{
-    common::{entity::FacEntity, names::FacEntityName},
-    def_entity_size_square,
+use crate::common::{
+    entity::{FacEntity, SquareArea},
+    names::FacEntityName,
 };
 
 #[derive(Clone)]
@@ -21,10 +21,14 @@ pub struct FacChest {
 }
 
 impl FacEntity for FacChest {
-    def_entity_size_square!(2);
-
     fn name(&self) -> &FacEntityName {
         &self.name
+    }
+}
+
+impl SquareArea for FacChest {
+    fn area_diameter() -> usize {
+        1
     }
 }
 

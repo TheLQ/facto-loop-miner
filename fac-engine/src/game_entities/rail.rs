@@ -1,6 +1,9 @@
 use crate::{
-    common::{entity::FacEntity, names::FacEntityName},
-    def_entity_name, def_entity_size_square,
+    common::{
+        entity::{FacEntity, SquareArea},
+        names::FacEntityName,
+    },
+    def_entity_name,
 };
 
 use super::direction::FacDirectionEighth;
@@ -10,8 +13,13 @@ pub struct FacRail {
 }
 
 impl FacEntity for FacRail {
-    def_entity_size_square!(2);
     def_entity_name!(FacEntityName::Rail);
+}
+
+impl SquareArea for FacRail {
+    fn area_diameter() -> usize {
+        1
+    }
 }
 
 impl FacRail {

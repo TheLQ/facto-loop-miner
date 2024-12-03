@@ -30,6 +30,13 @@ impl VPoint {
         VPoint { x, y }
     }
 
+    pub fn new_usize(x: usize, y: usize) -> Self {
+        VPoint {
+            x: x.try_into().unwrap(),
+            y: y.try_into().unwrap(),
+        }
+    }
+
     pub fn zero() -> Self {
         VPoint { x: 0, y: 0 }
     }

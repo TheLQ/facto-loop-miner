@@ -602,6 +602,7 @@ name = "facto-loop-miner-fac-engine"
 version = "0.1.0"
 dependencies = [
  "facto-loop-miner-common",
+ "generic_static",
  "itertools 0.13.0",
  "num-format",
  "rand",
@@ -686,6 +687,15 @@ dependencies = [
  "log",
  "rustversion",
  "windows",
+]
+
+[[package]]
+name = "generic_static"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28ccff179d8070317671db09aee6d20affc26e88c5394714553b04f509b43a60"
+dependencies = [
+ "once_cell",
 ]
 
 [[package]]

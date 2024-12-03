@@ -1,21 +1,51 @@
 use crate::common::names::FacEntityName;
 
-pub trait FacEntity {
-    fn name(&self) -> &FacEntityName;
+use super::vpoint::VPoint;
 
-    fn size(&self) -> &Size;
+pub trait FacEntity: FacArea {
+    fn name(&self) -> &FacEntityName;
 }
 
 pub struct Size {
-    width: u64,
-    height: u64,
+    width: usize,
+    height: usize,
 }
 
 impl Size {
-    pub const fn square(size: u64) -> Self {
+    pub const fn square(size: usize) -> Self {
         Size {
             height: size,
             width: size,
+        }
+    }
+}
+
+pub trait FacArea {
+    fn area(&self) -> Vec<VPoint>;
+
+    fn rectangle_size(&self) -> Size;
+}
+
+pub trait SquareArea {
+    fn area_diameter() -> usize;
+}
+
+impl<T: SquareArea> FacArea for T {
+    fn area(&self) -> Vec<VPoint> {
+        let diameter = T::area_diameter();
+        let mut res = vec![VPoint::zero(); diameter];
+        for x in 0..diameter {
+            for y in 0..diameter {
+                res[y * diameter + x] = VPoint::new_usize(x, y)
+            }
+        }
+        res
+    }
+
+    fn rectangle_size(&self) -> Size {
+        Size {
+            height: T::area_diameter(),
+            width: T::area_diameter(),
         }
     }
 }
