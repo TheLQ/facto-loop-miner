@@ -3,10 +3,7 @@ use std::io::{Read, Write};
 use base64ct::{Base64, Encoding};
 use flate2::{Compression, read::ZlibDecoder};
 
-use crate::{
-    blueprint::bpfac::blueprint::{BpFacBlueprint, BpFacBlueprintWrapper},
-    err::{FError, FResult},
-};
+use crate::{blueprint::bpfac::blueprint::BpFacBlueprintWrapper, err::FResult};
 
 const VERSION_BYTE: &str = "0";
 
@@ -19,6 +16,8 @@ pub fn decode_blueprint_string(bp_string_raw: impl AsRef<str>) -> FResult<BpFacB
     let mut raw_json = String::new();
     let mut zlib = ZlibDecoder::new(compressed.as_slice());
     zlib.read_to_string(&mut raw_json).unwrap();
+
+    // println!("JSON: {}", raw_json);
 
     Ok(serde_json::from_str(&raw_json)?)
 }

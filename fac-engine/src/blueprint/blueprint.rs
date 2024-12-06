@@ -30,7 +30,8 @@ impl Blueprint {
             blueprint: BpFacBlueprint {
                 icons: Vec::new(),
                 entities: self.contents.to_fac(),
-                ..todo!()
+                item: "blueprint".into(),
+                version: 0,
             },
         }
     }

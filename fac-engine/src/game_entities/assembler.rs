@@ -12,8 +12,7 @@ pub enum FacAssemblerLevel {
 
 pub struct FacAssembler {
     level: FacAssemblerLevel,
-    // todo
-    item: String,
+    recipe: String,
     name: FacEntityName,
 }
 
@@ -36,14 +35,18 @@ impl FacEntity for FacAssembler {
         }
         .into()
     }
+
+    fn to_fac_recipe(&self) -> Option<String> {
+        Some(self.recipe.clone())
+    }
 }
 
 impl FacAssembler {
-    pub fn new(level: FacAssemblerLevel, item: String) -> Self {
+    pub fn new(level: FacAssemblerLevel, recipe: String) -> Self {
         Self {
             name: FacEntityName::Assembler(level.clone()),
             level,
-            item,
+            recipe,
         }
     }
 }

@@ -1,11 +1,9 @@
-use serde::{Deserialize, Serialize};
-use std::backtrace::Backtrace;
-use std::ops::{Add, AddAssign, Sub, SubAssign};
-
-use crate::blueprint::bpfac::entity::BpFacEntity;
 use crate::blueprint::bpfac::position::BpFacPosition;
 use crate::common::cvpoint::{Point, Point2f};
 use crate::err::{FError, FResult};
+use serde::{Deserialize, Serialize};
+use std::backtrace::Backtrace;
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 /// Core XY Point. i32 for simpler math
 #[derive(
@@ -40,7 +38,7 @@ impl VPoint {
     }
 
     pub fn zero() -> Self {
-        VPoint { x: 0, y: 0 }
+        VPOINT_ABS_0
     }
 
     // pub fn from_cv_point(point: Point) -> Self {
@@ -174,13 +172,13 @@ impl VPoint {
         }
     }
 
-    fn move_round2_down(&self) -> Self {
-        self.move_round_down(2)
-    }
+    // fn move_round2_down(&self) -> Self {
+    //     self.move_round_down(2)
+    // }
 
-    fn move_round3_down(&self) -> Self {
-        self.move_round_down(3)
-    }
+    // fn move_round3_down(&self) -> Self {
+    //     self.move_round_down(3)
+    // }
 
     pub fn move_round16_down(&self) -> Self {
         self.move_round_down(16)
@@ -258,7 +256,7 @@ impl VPoint {
 }
 
 const VPOINT_ABS_0: VPoint = VPoint { x: 0, y: 0 };
-const VPOINT_ABS_1: VPoint = VPoint { x: 1, y: 1 };
+// const VPOINT_ABS_1: VPoint = VPoint { x: 1, y: 1 };
 
 impl Add for VPoint {
     type Output = VPoint;

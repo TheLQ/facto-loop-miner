@@ -25,10 +25,15 @@ pub trait FacEntity: FacArea {
             position: self.to_fac_position(position),
             direction: self.to_fac_direction(),
             neighbours: Some(Vec::new()),
+            recipe: self.to_fac_recipe(),
         }
     }
 
     fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
+        None
+    }
+
+    fn to_fac_recipe(&self) -> Option<String> {
         None
     }
 }

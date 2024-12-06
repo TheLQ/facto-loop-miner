@@ -16,6 +16,8 @@ pub struct BpFacEntity {
     pub direction: Option<FacDirectionEighth>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub neighbours: Option<Vec<BpFacInteger>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recipe: Option<String>,
 }
 
 #[cfg(test)]

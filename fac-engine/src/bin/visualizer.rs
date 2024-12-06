@@ -1,5 +1,8 @@
 use facto_loop_miner_fac_engine::{
-    blueprint::{blueprint::Blueprint, bpitem::BlueprintItem, contents::BlueprintContents},
+    blueprint::{
+        blueprint::Blueprint, bpitem::BlueprintItem, contents::BlueprintContents,
+        converter::encode_blueprint_to_string,
+    },
     common::{entity::FacEntity, vpoint::VPoint},
     game_blocks::rail_station::RailStation,
     game_entities::{
@@ -21,6 +24,9 @@ fn main() {
     visualize_blueprint(&bp_contents);
 
     let blueprint = Blueprint::new(bp_contents);
+
+    let res = encode_blueprint_to_string(&blueprint.to_fac()).unwrap();
+    println!("bp {}", res)
 }
 
 fn basic_build_bp(bp: &mut BlueprintContents) {
