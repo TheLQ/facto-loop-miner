@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use crate::blueprint::{blueprint::Blueprint, contents::BlueprintContents};
+use crate::blueprint::contents::BlueprintContents;
 
 const STYLE: &str = r#"
 <style>
@@ -22,7 +22,7 @@ pub fn visualize_blueprint(blueprint: &BlueprintContents) {
 
         let size_unit = 50;
         let size_unit_usize = 50usize;
-        output.push_str(r#"<div style=""#);
+        output.push_str(r#"<div style="word-break: break-word;"#);
         output.push_str(&format!("top: {}px;", pos.y() * size_unit));
         output.push_str(&format!("left: {}px;", pos.x() * size_unit));
         output.push_str(&format!("width: {}px;", size.width() * size_unit_usize));
