@@ -14,4 +14,5 @@ pub enum FacEntityName {
     Inserter(FacInserterType),
     Chest(FacChestType),
     ElectricPoleSmall(ElectricPoleSmallType),
+    TrainStop,
 }

@@ -5,3 +5,4 @@ pub mod electric_pole_small;
 pub mod inserter;
 pub mod lamp;
 pub mod rail;
+pub mod train_stop;

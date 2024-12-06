@@ -42,7 +42,7 @@ fn basic_build_bp(bp: &mut BlueprintContents) {
 }
 
 fn basic_build_gen(bp: &mut BlueprintContents) {
-    let station = RailStation::new(3, Some(FacChestType::Passive));
+    let station = RailStation::new(3, Some(FacChestType::Passive), 2);
 
     for entity in station.generate(VPoint::new(5, 5)) {
         bp.add_entity_each(entity);
