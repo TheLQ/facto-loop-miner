@@ -165,6 +165,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b7e4c2464d97fe331d41de9d5db0def0a96f4d823b8b32a2efd503578988973"
 
 [[package]]
+name = "base64ct"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
+
+[[package]]
 name = "bindgen"
 version = "0.69.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -601,7 +607,9 @@ dependencies = [
 name = "facto-loop-miner-fac-engine"
 version = "0.1.0"
 dependencies = [
+ "base64ct",
  "facto-loop-miner-common",
+ "flate2",
  "generic_static",
  "itertools 0.13.0",
  "num-format",
