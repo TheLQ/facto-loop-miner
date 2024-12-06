@@ -103,21 +103,6 @@ pub fn inner_admiral() -> AdmiralResult<()> {
     //     },
     // })?;
 
-    // admiral.execute_block(RailStationPathfoundGenerator {
-    //     start: Point2f {
-    //         x: origin.x + (assembler_width * 9) as f32,
-    //         y: origin.y - 10.0,
-    //     },
-    //     station: Point2f {
-    //         x: origin.x - 40.0,
-    //         y: origin.y - 10.0,
-    //     },
-    //     pan: Point2f {
-    //         x: origin.x + 50.0,
-    //         y: origin.y + 160.0,
-    //     },
-    // })?;
-
     // admiral.end_file()?;
     Ok(())
 }

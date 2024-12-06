@@ -9,7 +9,6 @@ pub mod rail_beacon_farm;
 pub mod rail_line;
 pub mod rail_pan;
 pub mod rail_station;
-pub mod rail_station_pathfound;
 pub mod terapower;
 
 pub fn join_commands<'a>(
