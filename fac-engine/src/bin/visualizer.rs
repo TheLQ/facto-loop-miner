@@ -2,7 +2,10 @@ use facto_loop_miner_fac_engine::{
     blueprint::{blueprint::Blueprint, bpitem::BlueprintItem, contents::BlueprintContents},
     common::{entity::FacEntity, vpoint::VPoint},
     game_blocks::rail_station::RailStation,
-    game_entities::assembler::{FacAssembler, FacAssemblerLevel},
+    game_entities::{
+        assembler::{FacAssembler, FacAssemblerLevel},
+        chest::FacChestType,
+    },
     visualizer::visualizer::visualize_blueprint,
 };
 
@@ -31,7 +34,7 @@ fn basic_build_bp(bp: &mut BlueprintContents) {
 }
 
 fn basic_build_gen(bp: &mut BlueprintContents) {
-    let station = RailStation::new(3);
+    let station = RailStation::new(3, Some(FacChestType::Passive));
 
     for entity in station.generate(VPoint::new(5, 5)) {
         bp.add_entity_each(entity);
