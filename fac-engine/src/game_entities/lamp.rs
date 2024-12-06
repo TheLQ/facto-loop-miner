@@ -10,6 +10,10 @@ pub struct FacLamp {}
 
 impl FacEntity for FacLamp {
     def_entity_name!(FacEntityName::Lamp);
+
+    fn to_facto_name(&self) -> String {
+        "small-lamp".into()
+    }
 }
 
 impl SquareArea for FacLamp {

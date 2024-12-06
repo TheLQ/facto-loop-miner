@@ -9,7 +9,9 @@ pub enum FacInserterType {
     Basic,
     Long,
     Fast,
-    Bulk,
+    Filter,
+    Stack,
+    StackFilter,
 }
 
 pub struct FacInserter {
@@ -20,6 +22,19 @@ pub struct FacInserter {
 impl FacEntity for FacInserter {
     fn name(&self) -> &FacEntityName {
         &self.name
+    }
+
+    fn to_facto_name(&self) -> String {
+        match self.itype {
+            FacInserterType::Burner => "burner-inserter",
+            FacInserterType::Basic => "inserter",
+            FacInserterType::Long => "long-handed-inserter",
+            FacInserterType::Fast => "fast-inserter",
+            FacInserterType::Filter => "filter-inserter",
+            FacInserterType::Stack => "stack-inserter",
+            FacInserterType::StackFilter => "stack-filter-inserter",
+        }
+        .into()
     }
 }
 impl SquareArea for FacInserter {

@@ -11,6 +11,8 @@ pub trait FacEntity: FacArea {
     {
         Box::new(self)
     }
+
+    fn to_facto_name(&self) -> String;
 }
 
 pub struct Size {

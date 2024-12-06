@@ -14,6 +14,10 @@ pub struct FacRail {
 
 impl FacEntity for FacRail {
     def_entity_name!(FacEntityName::Rail);
+
+    fn to_facto_name(&self) -> String {
+        todo!("god help us")
+    }
 }
 
 impl SquareArea for FacRail {
