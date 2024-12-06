@@ -4,6 +4,14 @@ use super::vpoint::VPoint;
 
 pub trait FacEntity: FacArea {
     fn name(&self) -> &FacEntityName;
+
+    fn into_boxed(self) -> Box<impl FacEntity>
+    where
+        Self: Sized,
+    {
+        Box::new(self)
+        // self.name().as_ref().to_string()
+    }
 }
 
 pub struct Size {
@@ -17,6 +25,14 @@ impl Size {
             height: size,
             width: size,
         }
+    }
+
+    pub fn height(&self) -> &usize {
+        &self.height
+    }
+
+    pub fn width(&self) -> &usize {
+        &self.width
     }
 }
 
