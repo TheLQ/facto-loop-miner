@@ -10,7 +10,6 @@ pub trait FacEntity: FacArea {
         Self: Sized,
     {
         Box::new(self)
-        // self.name().as_ref().to_string()
     }
 }
 
