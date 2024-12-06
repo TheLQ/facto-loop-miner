@@ -10,15 +10,17 @@ use facto_loop_miner_fac_engine::{
 };
 
 fn main() {
-    let mut bpContents = BlueprintContents::new();
+    let mut bp_contents = BlueprintContents::new();
 
     match 2 {
-        1 => basic_build_bp(&mut bpContents),
-        2 => basic_build_gen(&mut bpContents),
+        1 => basic_build_bp(&mut bp_contents),
+        2 => basic_build_gen(&mut bp_contents),
         _ => panic!("asdf"),
     }
 
-    visualize_blueprint(&bpContents);
+    visualize_blueprint(&bp_contents);
+
+    let blueprint = Blueprint::new(bp_contents);
 }
 
 fn basic_build_bp(bp: &mut BlueprintContents) {

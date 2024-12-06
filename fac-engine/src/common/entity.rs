@@ -1,4 +1,8 @@
-use crate::common::names::FacEntityName;
+use crate::{
+    blueprint::bpfac::{BpFacInteger, entity::BpFacEntity, position::BpFacPosition},
+    common::names::FacEntityName,
+    game_entities::direction::FacDirectionEighth,
+};
 
 use super::vpoint::VPoint;
 
@@ -12,7 +16,21 @@ pub trait FacEntity: FacArea {
         Box::new(self)
     }
 
-    fn to_facto_name(&self) -> String;
+    fn to_fac_name(&self) -> String;
+
+    fn to_fac(&self, entity_number: BpFacInteger, position: &VPoint) -> BpFacEntity {
+        BpFacEntity {
+            entity_number,
+            name: self.to_fac_name(),
+            position: self.to_fac_position(position),
+            direction: self.to_fac_direction(),
+            neighbours: Some(Vec::new()),
+        }
+    }
+
+    fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
+        None
+    }
 }
 
 pub struct Size {
@@ -41,6 +59,8 @@ pub trait FacArea {
     fn area(&self) -> Vec<VPoint>;
 
     fn rectangle_size(&self) -> Size;
+
+    fn to_fac_position(&self, position: &VPoint) -> BpFacPosition;
 }
 
 pub trait SquareArea {
@@ -64,5 +84,9 @@ impl<T: SquareArea> FacArea for T {
             height: T::area_diameter(),
             width: T::area_diameter(),
         }
+    }
+
+    fn to_fac_position(&self, position: &VPoint) -> BpFacPosition {
+        position.to_fac(T::area_diameter() as f32 / 2.0)
     }
 }

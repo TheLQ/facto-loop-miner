@@ -20,7 +20,7 @@ impl FacEntity for FacElectricPoleSmall {
         &self.name
     }
 
-    fn to_facto_name(&self) -> String {
+    fn to_fac_name(&self) -> String {
         match self.ptype {
             ElectricPoleSmallType::Wooden => "small-electric-pole",
             ElectricPoleSmallType::Steel => "medium-electric-pole",

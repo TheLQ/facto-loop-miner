@@ -1,14 +1,16 @@
-use super::{bpitem::BlueprintItem, contents::BlueprintContents};
+use super::{
+    bpfac::blueprint::{BpFacBlueprint, BpFacBlueprintWrapper},
+    bpitem::BlueprintItem,
+    contents::BlueprintContents,
+};
 
 pub struct Blueprint {
     contents: BlueprintContents,
 }
 
 impl Blueprint {
-    pub fn new() -> Self {
-        Self {
-            contents: BlueprintContents::new(),
-        }
+    pub fn new(contents: BlueprintContents) -> Self {
+        Self { contents }
     }
 
     pub fn contents(&self) -> &BlueprintContents {
@@ -21,5 +23,15 @@ impl Blueprint {
 
     pub fn inner_entities(&self) -> &[BlueprintItem] {
         self.contents.entities()
+    }
+
+    pub fn to_fac(&self) -> BpFacBlueprintWrapper {
+        BpFacBlueprintWrapper {
+            blueprint: BpFacBlueprint {
+                icons: Vec::new(),
+                entities: self.contents.to_fac(),
+                ..todo!()
+            },
+        }
     }
 }

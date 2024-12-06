@@ -28,7 +28,7 @@ impl FacEntity for FacAssembler {
         &self.name
     }
 
-    fn to_facto_name(&self) -> String {
+    fn to_fac_name(&self) -> String {
         match self.level {
             FacAssemblerLevel::Tier1 => "assembling-machine-1",
             FacAssemblerLevel::Tier2 => "assembling-machine-2",

@@ -24,7 +24,7 @@ impl FacEntity for FacChest {
     fn name(&self) -> &FacEntityName {
         &self.name
     }
-    fn to_facto_name(&self) -> String {
+    fn to_fac_name(&self) -> String {
         match self.ctype {
             FacChestType::Wood => "wooden-chest",
             FacChestType::Iron => "iron-chest",

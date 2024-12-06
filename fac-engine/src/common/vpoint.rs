@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
+use crate::blueprint::bpfac::entity::BpFacEntity;
+use crate::blueprint::bpfac::position::BpFacPosition;
 use crate::common::cvpoint::{Point, Point2f};
 use crate::err::{FError, FResult};
 
@@ -71,6 +73,7 @@ impl VPoint {
         }
     }
 
+    #[deprecated]
     /// Factorio export. Offset is half the entity width
     pub fn to_f32(&self) -> Point2f {
         Point2f {
@@ -80,11 +83,16 @@ impl VPoint {
     }
 
     /// Factorio export. Offset is half the entity width
+    #[deprecated]
     pub fn to_f32_with_offset(&self, offset: f32) -> Point2f {
         Point2f {
             x: self.x as f32 + offset,
             y: self.y as f32 + offset,
         }
+    }
+
+    pub fn to_fac(&self, offset: f32) -> BpFacPosition {
+        BpFacPosition::new(self.x as f32 + offset, self.y as f32 + offset)
     }
 
     pub fn to_cv_point(&self) -> Point {

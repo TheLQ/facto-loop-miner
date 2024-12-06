@@ -3,6 +3,7 @@ use crate::{
     common::{entity::FacEntity, vpoint::VPoint},
     game_entities::{
         chest::{FacChest, FacChestType},
+        direction::FacDirectionEighth,
         electric_pole_small::{ElectricPoleSmallType, FacElectricPoleSmall},
         inserter::{FacInserter, FacInserterType},
         lamp::FacLamp,
@@ -45,7 +46,8 @@ impl RailStation {
                         .move_x((/*pre-pole*/1 + car_x_offset + exit) as i32)
                         .move_y(offset);
                     res.push(BlueprintItem::new(
-                        FacInserter::new(FacInserterType::Basic).into_boxed(),
+                        FacInserter::new(FacInserterType::Basic, FacDirectionEighth::East)
+                            .into_boxed(),
                         start,
                     ));
                 }
