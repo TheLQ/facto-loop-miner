@@ -18,13 +18,13 @@ impl BlockFac for BlockFacTerapower {
         for pos in xy_grid_vpoint(origin, self.width, self.height, 30) {
             res.push(BlueprintItem::new(
                 FacElectricPoleBig::new().into_boxed(),
-                pos.to_vpoint(),
+                pos.point(),
             ));
 
             if pos.ix % 6 == 0 && pos.iy % 7 == 6 {
                 res.push(BlueprintItem::new(
                     FacRadar::new().into_boxed(),
-                    pos.to_vpoint(),
+                    pos.point(),
                 ));
             }
         }

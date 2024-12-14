@@ -29,7 +29,7 @@ pub struct XyGridPosition {
 }
 
 impl XyGridPosition {
-    pub fn to_vpoint(&self) -> VPoint {
+    pub fn point(&self) -> VPoint {
         VPoint::new(self.x, self.y)
     }
 }

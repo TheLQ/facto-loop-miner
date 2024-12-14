@@ -3,9 +3,9 @@ use crate::admiral::generators::beacon_farm::{BEACON_SIZE, BeaconFarmGenerator};
 use crate::admiral::generators::xy_grid;
 use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
+use crate::common::cvpoint::Point2f;
 use crate::common::varea::VArea;
 use crate::common::vpoint::VPoint;
-use crate::common::cvpoint::Point2f;
 use tracing::{debug, trace};
 
 const ROBOPORT_SIZE: u32 = 4;
@@ -150,6 +150,5 @@ pub fn make_robo_square_sub(
         }
     }
 
-    VArea::from_arbitrary_points(scanned_area.into_iter().map(|v| v.to_vpoint()))
-        .point_bottom_left()
+    VArea::from_arbitrary_points(scanned_area.into_iter().map(|v| v.point())).point_bottom_left()
 }
