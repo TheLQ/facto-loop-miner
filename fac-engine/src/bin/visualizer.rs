@@ -2,7 +2,7 @@ use facto_loop_miner_fac_engine::{
     admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity,
     blueprint::{blueprint::Blueprint, bpitem::BlueprintItem, contents::BlueprintContents},
     common::{entity::FacEntity, vpoint::VPoint},
-    game_blocks::rail_station::RailStation,
+    game_blocks::{block::BlockFac, rail_station::RailStation},
     game_entities::{assembler::FacAssembler, chest::FacChestType, tier::FacTier},
     visualizer::visualizer::visualize_blueprint,
 };

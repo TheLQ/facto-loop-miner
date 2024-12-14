@@ -11,6 +11,8 @@ use crate::{
     },
 };
 
+use super::block::BlockFac;
+
 const INSERTERS_PER_CAR: usize = 6;
 
 pub enum RailStationSide {}
@@ -21,6 +23,19 @@ pub struct RailStation {
     front_engines: usize,
 }
 
+impl BlockFac for RailStation {
+    fn generate(&self, origin: VPoint) -> Vec<BlueprintItem> {
+        let mut res = Vec::new();
+        self.place_side_inserters(&mut res, origin);
+        self.place_side_inserter_electrics(&mut res, origin);
+        if let Some(chests) = &self.chests {
+            self.place_side_chests(&mut res, origin, chests);
+        }
+        self.place_train_stop(&mut res, origin);
+        res
+    }
+}
+
 impl RailStation {
     pub fn new(cars: usize, chests: Option<FacChestType>, front_engines: usize) -> Self {
         Self {
@@ -28,19 +43,6 @@ impl RailStation {
             chests,
             front_engines,
         }
-    }
-
-    pub fn generate(&self, origin: VPoint) -> Vec<BlueprintItem> {
-        let mut res: Vec<BlueprintItem> = Vec::new();
-
-        self.place_side_inserters(&mut res, origin);
-        self.place_side_inserter_electrics(&mut res, origin);
-        if let Some(chests) = &self.chests {
-            self.place_side_chests(&mut res, origin, chests);
-        }
-        self.place_train_stop(&mut res, origin);
-
-        res
     }
 
     fn place_side_inserters(&self, res: &mut Vec<BlueprintItem>, start_rail_center: VPoint) {
