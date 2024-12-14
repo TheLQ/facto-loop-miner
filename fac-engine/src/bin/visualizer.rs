@@ -1,19 +1,24 @@
 use facto_loop_miner_fac_engine::{
-    admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity,
-    blueprint::{blueprint::Blueprint, bpitem::BlueprintItem, contents::BlueprintContents},
+    blueprint::{bpitem::BlueprintItem, contents::BlueprintContents},
     common::{entity::FacEntity, vpoint::VPoint},
-    game_blocks::{block::BlockFac, rail_station::RailStation, terapower::BlockFacTerapower},
-    game_entities::{assembler::FacAssembler, chest::FacChestType, tier::FacTier},
+    game_blocks::{
+        beacon_farm::BlockFacBeaconFarm, block::BlockFac, rail_station::RailStation,
+        terapower::BlockFacTerapower,
+    },
+    game_entities::{
+        assembler::FacAssembler, chest::FacChestType, module::FacModule, tier::FacTier,
+    },
     visualizer::visualizer::visualize_blueprint,
 };
 
 fn main() {
     let mut bp_contents = BlueprintContents::new();
 
-    match 3 {
+    match 4 {
         1 => basic_build_bp(&mut bp_contents),
         2 => basic_build_gen(&mut bp_contents),
         3 => basic_build_terapower(&mut bp_contents),
+        4 => basic_build_beacon_farm(&mut bp_contents),
         _ => panic!("asdf"),
     }
 
@@ -53,6 +58,18 @@ fn basic_build_gen(bp: &mut BlueprintContents) {
 
 fn basic_build_terapower(bp: &mut BlueprintContents) {
     let station = BlockFacTerapower::new(3, 2);
+    for entity in station.generate(VPoint::new(5, 5)) {
+        bp.add_entity_each(entity);
+    }
+}
+
+fn basic_build_beacon_farm(bp: &mut BlueprintContents) {
+    let station = BlockFacBeaconFarm {
+        inner_cell_size: 1,
+        width: 3,
+        height: 3,
+        module: FacModule::Speed(FacTier::Tier3),
+    };
     for entity in station.generate(VPoint::new(5, 5)) {
         bp.add_entity_each(entity);
     }

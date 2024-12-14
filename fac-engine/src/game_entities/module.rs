@@ -2,7 +2,7 @@ use strum_macros::AsRefStr;
 
 use super::tier::FacTier;
 
-#[derive(AsRefStr)]
+#[derive(Clone, AsRefStr)]
 pub enum FacModule {
     Speed(FacTier),
     Production(FacTier),
