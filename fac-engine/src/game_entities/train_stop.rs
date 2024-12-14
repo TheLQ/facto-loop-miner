@@ -14,10 +14,6 @@ pub struct FacTrainStop {
 
 impl FacEntity for FacTrainStop {
     def_entity_name!(FacEntityName::TrainStop);
-
-    fn to_fac_name(&self) -> String {
-        "train-stop".into()
-    }
 }
 
 impl SquareArea for FacTrainStop {

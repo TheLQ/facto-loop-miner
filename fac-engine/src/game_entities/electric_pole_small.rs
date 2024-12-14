@@ -19,14 +19,6 @@ impl FacEntity for FacElectricPoleSmall {
     fn name(&self) -> &FacEntityName {
         &self.name
     }
-
-    fn to_fac_name(&self) -> String {
-        match self.ptype {
-            ElectricPoleSmallType::Wooden => "small-electric-pole",
-            ElectricPoleSmallType::Steel => "medium-electric-pole",
-        }
-        .into()
-    }
 }
 
 impl SquareArea for FacElectricPoleSmall {

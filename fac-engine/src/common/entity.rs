@@ -16,7 +16,9 @@ pub trait FacEntity: FacArea {
         Box::new(self)
     }
 
-    fn to_fac_name(&self) -> String;
+    fn to_fac_usize(&self, entity_number: usize, position: &VPoint) -> BpFacEntity {
+        self.to_fac(entity_number.try_into().unwrap(), position)
+    }
 
     fn to_fac(&self, entity_number: BpFacInteger, position: &VPoint) -> BpFacEntity {
         BpFacEntity {

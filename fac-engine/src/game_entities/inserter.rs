@@ -27,19 +27,6 @@ impl FacEntity for FacInserter {
         &self.name
     }
 
-    fn to_fac_name(&self) -> String {
-        match self.itype {
-            FacInserterType::Burner => "burner-inserter",
-            FacInserterType::Basic => "inserter",
-            FacInserterType::Long => "long-handed-inserter",
-            FacInserterType::Fast => "fast-inserter",
-            FacInserterType::Filter => "filter-inserter",
-            FacInserterType::Stack => "stack-inserter",
-            FacInserterType::StackFilter => "stack-filter-inserter",
-        }
-        .into()
-    }
-
     fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
         Some(self.direction.clone())
     }

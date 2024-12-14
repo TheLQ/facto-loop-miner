@@ -14,10 +14,6 @@ pub struct FacBeacon {
 
 impl FacEntity for FacBeacon {
     def_entity_name!(FacEntityName::Beacon);
-
-    fn to_fac_name(&self) -> String {
-        "beacon".into()
-    }
 }
 
 impl SquareArea for FacBeacon {

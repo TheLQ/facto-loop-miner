@@ -6,19 +6,19 @@ use crate::{
     def_entity_name,
 };
 
-pub struct FacLamp {}
+pub struct FacRadar {}
 
-impl FacEntity for FacLamp {
-    def_entity_name!(FacEntityName::Lamp);
+impl FacEntity for FacRadar {
+    def_entity_name!(FacEntityName::Radar);
 }
 
-impl SquareArea for FacLamp {
+impl SquareArea for FacRadar {
     fn area_diameter() -> usize {
         1
     }
 }
 
-impl FacLamp {
+impl FacRadar {
     pub fn new() -> Self {
         Self {}
     }

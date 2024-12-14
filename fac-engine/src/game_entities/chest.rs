@@ -24,19 +24,6 @@ impl FacEntity for FacChest {
     fn name(&self) -> &FacEntityName {
         &self.name
     }
-    fn to_fac_name(&self) -> String {
-        match self.ctype {
-            FacChestType::Wood => "wooden-chest",
-            FacChestType::Iron => "iron-chest",
-            FacChestType::Steel => "steel-chest",
-            FacChestType::Active => "logistic-chest-active-provider",
-            FacChestType::Passive => "logistic-chest-passive-provider",
-            FacChestType::Storage => "logistic-chest-storage",
-            FacChestType::Buffer => "logistic-chest-buffer",
-            FacChestType::Requestor => "logistic-chest-requestor",
-        }
-        .into()
-    }
 }
 
 impl SquareArea for FacChest {

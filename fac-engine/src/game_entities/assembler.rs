@@ -22,15 +22,6 @@ impl FacEntity for FacAssembler {
         &self.name
     }
 
-    fn to_fac_name(&self) -> String {
-        match self.level {
-            FacTier::Tier1 => "assembling-machine-1",
-            FacTier::Tier2 => "assembling-machine-2",
-            FacTier::Tier3 => "assembling-machine-3",
-        }
-        .into()
-    }
-
     fn to_fac_recipe(&self) -> Option<String> {
         Some(self.recipe.clone())
     }
