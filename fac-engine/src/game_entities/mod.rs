@@ -1,8 +1,11 @@
 pub mod assembler;
+pub mod beacon;
 pub mod chest;
 pub mod direction;
 pub mod electric_pole_small;
 pub mod inserter;
 pub mod lamp;
+pub mod module;
 pub mod rail;
+pub mod tier;
 pub mod train_stop;

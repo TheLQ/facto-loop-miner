@@ -1,14 +1,9 @@
 use facto_loop_miner_fac_engine::{
-    blueprint::{
-        blueprint::Blueprint, bpitem::BlueprintItem, contents::BlueprintContents,
-        converter::encode_blueprint_to_string,
-    },
+    admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity,
+    blueprint::{blueprint::Blueprint, bpitem::BlueprintItem, contents::BlueprintContents},
     common::{entity::FacEntity, vpoint::VPoint},
     game_blocks::rail_station::RailStation,
-    game_entities::{
-        assembler::{FacAssembler, FacAssemblerLevel},
-        chest::FacChestType,
-    },
+    game_entities::{assembler::FacAssembler, chest::FacChestType, tier::FacTier},
     visualizer::visualizer::visualize_blueprint,
 };
 
@@ -31,12 +26,12 @@ fn main() {
 
 fn basic_build_bp(bp: &mut BlueprintContents) {
     {
-        let entity = FacAssembler::new(FacAssemblerLevel::Tier1, "something".into());
+        let entity = FacAssembler::new_basic(FacTier::Tier1, "something".into());
         bp.add_entity_each(BlueprintItem::new(entity.into_boxed(), VPoint::new(1, 1)));
     }
 
     {
-        let entity = FacAssembler::new(FacAssemblerLevel::Tier1, "something2".into());
+        let entity = FacAssembler::new_basic(FacTier::Tier1, "something2".into());
         bp.add_entity_each(BlueprintItem::new(entity.into_boxed(), VPoint::new(1, 4)));
     }
 }
