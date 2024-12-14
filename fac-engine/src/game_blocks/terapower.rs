@@ -31,3 +31,9 @@ impl BlockFac for BlockFacTerapower {
         res
     }
 }
+
+impl BlockFacTerapower {
+    pub fn new(width: u32, height: u32) -> Self {
+        Self { width, height }
+    }
+}
