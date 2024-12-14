@@ -5,12 +5,12 @@ use serde::{Deserialize, Serialize};
 pub struct BpFacSignalId {
     name: String,
     #[serde(rename = "type")]
-    stype: BpFacSignalIdType,
+    stype: FacBpSignalIdType,
 }
 
 #[derive(Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
-pub enum BpFacSignalIdType {
+pub enum FacBpSignalIdType {
     Item,
     Fluid,
     Virtual,

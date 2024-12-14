@@ -4,20 +4,20 @@ use crate::common::{
     names::FacEntityName,
 };
 
-pub struct FacAssembler {
+pub struct FacEntAssembler {
     level: FacTier,
     recipe: String,
     name: FacEntityName,
     modules: [Option<FacModule>; 3],
 }
 
-impl SquareArea for FacAssembler {
+impl SquareArea for FacEntAssembler {
     fn area_diameter() -> usize {
         3
     }
 }
 
-impl FacEntity for FacAssembler {
+impl FacEntity for FacEntAssembler {
     fn name(&self) -> &FacEntityName {
         &self.name
     }
@@ -27,7 +27,7 @@ impl FacEntity for FacAssembler {
     }
 }
 
-impl FacAssembler {
+impl FacEntAssembler {
     pub fn new(level: FacTier, recipe: String, modules: [Option<FacModule>; 3]) -> Self {
         Self {
             name: FacEntityName::Assembler(level.clone()),

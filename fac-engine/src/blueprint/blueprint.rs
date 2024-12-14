@@ -1,5 +1,5 @@
 use super::{
-    bpfac::blueprint::{BpFacBlueprint, BpFacBlueprintWrapper},
+    bpfac::blueprint::{BpFacBlueprint, FacBpBlueprintWrapper},
     bpitem::BlueprintItem,
     contents::BlueprintContents,
 };
@@ -25,8 +25,8 @@ impl Blueprint {
         self.contents.entities()
     }
 
-    pub fn to_fac(&self) -> BpFacBlueprintWrapper {
-        BpFacBlueprintWrapper {
+    pub fn to_fac(&self) -> FacBpBlueprintWrapper {
+        FacBpBlueprintWrapper {
             blueprint: BpFacBlueprint {
                 icons: Vec::new(),
                 entities: self.contents.to_fac(),

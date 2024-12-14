@@ -1,5 +1,5 @@
 use crate::{
-    blueprint::bpfac::{BpFacInteger, entity::BpFacEntity, position::BpFacPosition},
+    blueprint::bpfac::{BpFacInteger, entity::FacBpEntity, position::FacBpPosition},
     common::names::FacEntityName,
     game_entities::direction::FacDirectionEighth,
 };
@@ -16,12 +16,12 @@ pub trait FacEntity: FacArea {
         Box::new(self)
     }
 
-    fn to_fac_usize(&self, entity_number: usize, position: &VPoint) -> BpFacEntity {
+    fn to_fac_usize(&self, entity_number: usize, position: &VPoint) -> FacBpEntity {
         self.to_fac(entity_number.try_into().unwrap(), position)
     }
 
-    fn to_fac(&self, entity_number: BpFacInteger, position: &VPoint) -> BpFacEntity {
-        BpFacEntity {
+    fn to_fac(&self, entity_number: BpFacInteger, position: &VPoint) -> FacBpEntity {
+        FacBpEntity {
             entity_number,
             name: self.name().to_fac_name(),
             position: self.to_fac_position(position),
@@ -67,7 +67,7 @@ pub trait FacArea {
 
     fn rectangle_size(&self) -> Size;
 
-    fn to_fac_position(&self, position: &VPoint) -> BpFacPosition;
+    fn to_fac_position(&self, position: &VPoint) -> FacBpPosition;
 }
 
 pub trait SquareArea {
@@ -93,7 +93,7 @@ impl<T: SquareArea> FacArea for T {
         }
     }
 
-    fn to_fac_position(&self, position: &VPoint) -> BpFacPosition {
+    fn to_fac_position(&self, position: &VPoint) -> FacBpPosition {
         position.to_fac(T::area_diameter() as f32 / 2.0)
     }
 }

@@ -3,11 +3,11 @@ use std::io::{Read, Write};
 use base64ct::{Base64, Encoding};
 use flate2::{Compression, read::ZlibDecoder};
 
-use crate::{blueprint::bpfac::blueprint::BpFacBlueprintWrapper, err::FResult};
+use crate::{blueprint::bpfac::blueprint::FacBpBlueprintWrapper, err::FResult};
 
 const VERSION_BYTE: &str = "0";
 
-pub fn decode_blueprint_string(bp_string_raw: impl AsRef<str>) -> FResult<BpFacBlueprintWrapper> {
+pub fn decode_blueprint_string(bp_string_raw: impl AsRef<str>) -> FResult<FacBpBlueprintWrapper> {
     let (version_byte, bp_string) = bp_string_raw.as_ref().split_at(1);
     assert_eq!(version_byte, VERSION_BYTE, "unexpected Blueprint version");
 
@@ -22,7 +22,7 @@ pub fn decode_blueprint_string(bp_string_raw: impl AsRef<str>) -> FResult<BpFacB
     Ok(serde_json::from_str(&raw_json)?)
 }
 
-pub fn encode_blueprint_to_string(blueprint: &BpFacBlueprintWrapper) -> FResult<String> {
+pub fn encode_blueprint_to_string(blueprint: &FacBpBlueprintWrapper) -> FResult<String> {
     let json = serde_json::to_string(blueprint)?;
 
     let mut zlib = flate2::write::ZlibEncoder::new(Vec::new(), Compression::default());

@@ -6,19 +6,19 @@ use crate::{
     def_entity_name,
 };
 
-pub struct FacElectricPoleBig {}
+pub struct FacEntElectricPoleBig {}
 
-impl FacEntity for FacElectricPoleBig {
+impl FacEntity for FacEntElectricPoleBig {
     def_entity_name!(FacEntityName::ElectricPoleBig);
 }
 
-impl SquareArea for FacElectricPoleBig {
+impl SquareArea for FacEntElectricPoleBig {
     fn area_diameter() -> usize {
         2
     }
 }
 
-impl FacElectricPoleBig {
+impl FacEntElectricPoleBig {
     pub fn new() -> Self {
         Self {}
     }

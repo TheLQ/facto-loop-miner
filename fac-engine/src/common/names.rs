@@ -1,8 +1,8 @@
 use strum_macros::AsRefStr;
 
 use crate::game_entities::{
-    chest::FacChestType, electric_pole_small::ElectricPoleSmallType, inserter::FacInserterType,
-    tier::FacTier,
+    chest::FacEntityChestType, electric_pole_small::ElectricPoleSmallType,
+    inserter::FacEntInserterType, tier::FacTier,
 };
 
 #[derive(AsRefStr)]
@@ -10,8 +10,8 @@ pub enum FacEntityName {
     Lamp,
     Rail,
     Assembler(FacTier),
-    Inserter(FacInserterType),
-    Chest(FacChestType),
+    Inserter(FacEntInserterType),
+    Chest(FacEntityChestType),
     ElectricPoleSmall(ElectricPoleSmallType),
     ElectricPoleBig,
     TrainStop,
@@ -26,24 +26,24 @@ impl FacEntityName {
             Self::Rail => todo!(),
             Self::Assembler(tier) => format!("assembling-machine-{}", tier.to_number()),
             Self::Inserter(itype) => match itype {
-                FacInserterType::Burner => "burner-inserter",
-                FacInserterType::Basic => "inserter",
-                FacInserterType::Long => "long-handed-inserter",
-                FacInserterType::Fast => "fast-inserter",
-                FacInserterType::Filter => "filter-inserter",
-                FacInserterType::Stack => "stack-inserter",
-                FacInserterType::StackFilter => "stack-filter-inserter",
+                FacEntInserterType::Burner => "burner-inserter",
+                FacEntInserterType::Basic => "inserter",
+                FacEntInserterType::Long => "long-handed-inserter",
+                FacEntInserterType::Fast => "fast-inserter",
+                FacEntInserterType::Filter => "filter-inserter",
+                FacEntInserterType::Stack => "stack-inserter",
+                FacEntInserterType::StackFilter => "stack-filter-inserter",
             }
             .into(),
             Self::Chest(ctype) => match ctype {
-                FacChestType::Wood => "wooden-chest",
-                FacChestType::Iron => "iron-chest",
-                FacChestType::Steel => "steel-chest",
-                FacChestType::Active => "logistic-chest-active-provider",
-                FacChestType::Passive => "logistic-chest-passive-provider",
-                FacChestType::Storage => "logistic-chest-storage",
-                FacChestType::Buffer => "logistic-chest-buffer",
-                FacChestType::Requestor => "logistic-chest-requestor",
+                FacEntityChestType::Wood => "wooden-chest",
+                FacEntityChestType::Iron => "iron-chest",
+                FacEntityChestType::Steel => "steel-chest",
+                FacEntityChestType::Active => "logistic-chest-active-provider",
+                FacEntityChestType::Passive => "logistic-chest-passive-provider",
+                FacEntityChestType::Storage => "logistic-chest-storage",
+                FacEntityChestType::Buffer => "logistic-chest-buffer",
+                FacEntityChestType::Requestor => "logistic-chest-requestor",
             }
             .into(),
             Self::ElectricPoleSmall(ptype) => match ptype {

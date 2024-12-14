@@ -2,11 +2,11 @@ use facto_loop_miner_fac_engine::{
     blueprint::{bpitem::BlueprintItem, contents::BlueprintContents},
     common::{entity::FacEntity, vpoint::VPoint},
     game_blocks::{
-        beacon_farm::BlockFacBeaconFarm, block::BlockFac, rail_station::RailStation,
-        terapower::BlockFacTerapower,
+        beacon_farm::FacBlkBeaconFarm, block::FacBlock, rail_station::FacBlkRailStation,
+        terapower::FacBlkTerapower,
     },
     game_entities::{
-        assembler::FacAssembler, chest::FacChestType, module::FacModule, tier::FacTier,
+        assembler::FacEntAssembler, chest::FacEntityChestType, module::FacModule, tier::FacTier,
     },
     visualizer::visualizer::visualize_blueprint,
 };
@@ -39,32 +39,32 @@ fn main() {
 
 fn basic_build_bp(bp: &mut BlueprintContents) {
     {
-        let entity = FacAssembler::new_basic(FacTier::Tier1, "something".into());
+        let entity = FacEntAssembler::new_basic(FacTier::Tier1, "something".into());
         bp.add_entity_each(BlueprintItem::new(entity.into_boxed(), VPoint::new(1, 1)));
     }
 
     {
-        let entity = FacAssembler::new_basic(FacTier::Tier1, "something2".into());
+        let entity = FacEntAssembler::new_basic(FacTier::Tier1, "something2".into());
         bp.add_entity_each(BlueprintItem::new(entity.into_boxed(), VPoint::new(1, 4)));
     }
 }
 
 fn basic_build_gen(bp: &mut BlueprintContents) {
-    let station = RailStation::new(3, Some(FacChestType::Passive), 2);
+    let station = FacBlkRailStation::new(3, Some(FacEntityChestType::Passive), 2);
     for entity in station.generate(VPoint::new(5, 5)) {
         bp.add_entity_each(entity);
     }
 }
 
 fn basic_build_terapower(bp: &mut BlueprintContents) {
-    let station = BlockFacTerapower::new(3, 2);
+    let station = FacBlkTerapower::new(3, 2);
     for entity in station.generate(VPoint::new(5, 5)) {
         bp.add_entity_each(entity);
     }
 }
 
 fn basic_build_beacon_farm(bp: &mut BlueprintContents) {
-    let station = BlockFacBeaconFarm {
+    let station = FacBlkBeaconFarm {
         inner_cell_size: 1,
         width: 3,
         height: 3,
@@ -73,4 +73,5 @@ fn basic_build_beacon_farm(bp: &mut BlueprintContents) {
     for entity in station.generate(VPoint::new(5, 5)) {
         bp.add_entity_each(entity);
     }
+    Fac
 }

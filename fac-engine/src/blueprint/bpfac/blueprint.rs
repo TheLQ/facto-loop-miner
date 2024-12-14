@@ -1,18 +1,18 @@
 use serde::{Deserialize, Serialize};
 
-use super::{entity::BpFacEntity, icons::BpFacIcon};
+use super::{entity::FacBpEntity, icons::FacBpIcon};
 
 #[derive(Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct BpFacBlueprint {
-    pub icons: Vec<BpFacIcon>,
-    pub entities: Vec<BpFacEntity>,
+    pub icons: Vec<FacBpIcon>,
+    pub entities: Vec<FacBpEntity>,
     pub item: String,
     pub version: usize,
 }
 
 #[derive(Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
-pub struct BpFacBlueprintWrapper {
+pub struct FacBpBlueprintWrapper {
     pub blueprint: BpFacBlueprint,
 }

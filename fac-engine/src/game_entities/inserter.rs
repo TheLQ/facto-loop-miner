@@ -6,7 +6,7 @@ use crate::common::{
 use super::direction::FacDirectionEighth;
 
 #[derive(Clone)]
-pub enum FacInserterType {
+pub enum FacEntInserterType {
     Burner,
     Basic,
     Long,
@@ -16,12 +16,12 @@ pub enum FacInserterType {
     StackFilter,
 }
 
-pub struct FacInserter {
+pub struct FacEntInserter {
     name: FacEntityName,
     direction: FacDirectionEighth,
 }
 
-impl FacEntity for FacInserter {
+impl FacEntity for FacEntInserter {
     fn name(&self) -> &FacEntityName {
         &self.name
     }
@@ -30,21 +30,21 @@ impl FacEntity for FacInserter {
         Some(self.direction.clone())
     }
 }
-impl SquareArea for FacInserter {
+impl SquareArea for FacEntInserter {
     fn area_diameter() -> usize {
         1
     }
 }
 
-impl FacInserter {
-    pub fn new(itype: FacInserterType, direction: FacDirectionEighth) -> Self {
+impl FacEntInserter {
+    pub fn new(itype: FacEntInserterType, direction: FacDirectionEighth) -> Self {
         Self {
             name: FacEntityName::Inserter(itype),
             direction,
         }
     }
 
-    pub fn inserter_type(&self) -> &FacInserterType {
+    pub fn inserter_type(&self) -> &FacEntInserterType {
         match &self.name {
             FacEntityName::Inserter(t) => t,
             _ => panic!("wtf"),

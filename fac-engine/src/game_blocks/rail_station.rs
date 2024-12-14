@@ -2,28 +2,28 @@ use crate::{
     blueprint::bpitem::BlueprintItem,
     common::{entity::FacEntity, vpoint::VPoint},
     game_entities::{
-        chest::{FacChest, FacChestType},
+        chest::{FacEntChest, FacEntityChestType},
         direction::{FacDirectionEighth, FacDirectionQuarter},
-        electric_pole_small::{ElectricPoleSmallType, FacElectricPoleSmall},
-        inserter::{FacInserter, FacInserterType},
-        lamp::FacLamp,
-        train_stop::FacTrainStop,
+        electric_pole_small::{ElectricPoleSmallType, FacEntElectricPoleSmall},
+        inserter::{FacEntInserter, FacEntInserterType},
+        lamp::FacEntLamp,
+        train_stop::FacEntTrainStop,
     },
 };
 
-use super::block::BlockFac;
+use super::block::FacBlock;
 
 const INSERTERS_PER_CAR: usize = 6;
 
 pub enum RailStationSide {}
 
-pub struct RailStation {
+pub struct FacBlkRailStation {
     cars: usize,
-    chests: Option<FacChestType>,
+    chests: Option<FacEntityChestType>,
     front_engines: usize,
 }
 
-impl BlockFac for RailStation {
+impl FacBlock for FacBlkRailStation {
     fn generate(&self, origin: VPoint) -> Vec<BlueprintItem> {
         let mut res = Vec::new();
         self.place_side_inserters(&mut res, origin);
@@ -36,8 +36,8 @@ impl BlockFac for RailStation {
     }
 }
 
-impl RailStation {
-    pub fn new(cars: usize, chests: Option<FacChestType>, front_engines: usize) -> Self {
+impl FacBlkRailStation {
+    pub fn new(cars: usize, chests: Option<FacEntityChestType>, front_engines: usize) -> Self {
         Self {
             cars,
             chests,
@@ -55,7 +55,7 @@ impl RailStation {
                         .move_x((/*pre-pole*/1 + car_x_offset + exit) as i32)
                         .move_y(offset);
                     res.push(BlueprintItem::new(
-                        FacInserter::new(FacInserterType::Basic, FacDirectionEighth::East)
+                        FacEntInserter::new(FacEntInserterType::Basic, FacDirectionEighth::East)
                             .into_boxed(),
                         start,
                     ));
@@ -76,11 +76,11 @@ impl RailStation {
             let start = start_rail_center.move_x((car_x_offset) as i32);
 
             res.push(BlueprintItem::new(
-                FacLamp::new().into_boxed(),
+                FacEntLamp::new().into_boxed(),
                 start.move_y(1),
             ));
             res.push(BlueprintItem::new(
-                FacElectricPoleSmall::new(ElectricPoleSmallType::Steel).into_boxed(),
+                FacEntElectricPoleSmall::new(ElectricPoleSmallType::Steel).into_boxed(),
                 start.move_y(-1),
             ));
         }
@@ -90,7 +90,7 @@ impl RailStation {
         &self,
         res: &mut Vec<BlueprintItem>,
         start_rail_center: VPoint,
-        chest_type: &FacChestType,
+        chest_type: &FacEntityChestType,
     ) {
         for car in 0..self.cars {
             let car_x_offset = get_car_offset(car);
@@ -101,7 +101,7 @@ impl RailStation {
                         .move_x((/*pre-pole*/1 + car_x_offset + exit) as i32)
                         .move_y(offset);
                     res.push(BlueprintItem::new(
-                        FacChest::new(chest_type.clone()).into_boxed(),
+                        FacEntChest::new(chest_type.clone()).into_boxed(),
                         start,
                     ));
                 }
@@ -113,7 +113,7 @@ impl RailStation {
         let car_x_offset = get_car_offset(self.cars + self.front_engines + /*after engines*/1);
         let start = start_rail_center.move_x(car_x_offset as i32).move_y(1);
         res.push(BlueprintItem::new(
-            FacTrainStop::new(FacDirectionQuarter::East).into_boxed(),
+            FacEntTrainStop::new(FacDirectionQuarter::East).into_boxed(),
             start,
         ))
     }

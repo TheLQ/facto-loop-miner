@@ -4,12 +4,12 @@ use super::BpFacFloat;
 
 #[derive(Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
-pub struct BpFacPosition {
+pub struct FacBpPosition {
     x: BpFacFloat,
     y: BpFacFloat,
 }
 
-impl BpFacPosition {
+impl FacBpPosition {
     pub fn new(x: BpFacFloat, y: BpFacFloat) -> Self {
         Self { x, y }
     }

@@ -8,21 +8,21 @@ use crate::{
 
 use super::direction::FacDirectionQuarter;
 
-pub struct FacTrainStop {
+pub struct FacEntTrainStop {
     direction: FacDirectionQuarter,
 }
 
-impl FacEntity for FacTrainStop {
+impl FacEntity for FacEntTrainStop {
     def_entity_name!(FacEntityName::TrainStop);
 }
 
-impl SquareArea for FacTrainStop {
+impl SquareArea for FacEntTrainStop {
     fn area_diameter() -> usize {
         1
     }
 }
 
-impl FacTrainStop {
+impl FacEntTrainStop {
     pub fn new(direction: FacDirectionQuarter) -> Self {
         Self { direction }
     }

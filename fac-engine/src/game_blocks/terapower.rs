@@ -2,28 +2,28 @@ use crate::{
     admiral::generators::xy_grid_vpoint,
     blueprint::bpitem::BlueprintItem,
     common::{entity::FacEntity, vpoint::VPoint},
-    game_entities::{electric_pole_big::FacElectricPoleBig, radar::FacRadar},
+    game_entities::{electric_pole_big::FacEntElectricPoleBig, radar::FacEntRadar},
 };
 
-use super::block::BlockFac;
+use super::block::FacBlock;
 
-pub struct BlockFacTerapower {
+pub struct FacBlkTerapower {
     pub width: u32,
     pub height: u32,
 }
 
-impl BlockFac for BlockFacTerapower {
+impl FacBlock for FacBlkTerapower {
     fn generate(&self, origin: VPoint) -> Vec<BlueprintItem> {
         let mut res = Vec::new();
         for pos in xy_grid_vpoint(origin, self.width, self.height, 30) {
             res.push(BlueprintItem::new(
-                FacElectricPoleBig::new().into_boxed(),
+                FacEntElectricPoleBig::new().into_boxed(),
                 pos.point(),
             ));
 
             if pos.ix % 6 == 0 && pos.iy % 7 == 6 {
                 res.push(BlueprintItem::new(
-                    FacRadar::new().into_boxed(),
+                    FacEntRadar::new().into_boxed(),
                     pos.point(),
                 ));
             }
@@ -32,7 +32,7 @@ impl BlockFac for BlockFacTerapower {
     }
 }
 
-impl BlockFacTerapower {
+impl FacBlkTerapower {
     pub fn new(width: u32, height: u32) -> Self {
         Self { width, height }
     }

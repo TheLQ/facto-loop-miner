@@ -1,4 +1,4 @@
-use crate::blueprint::bpfac::position::BpFacPosition;
+use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::common::cvpoint::{Point, Point2f};
 use crate::err::{FError, FResult};
 use serde::{Deserialize, Serialize};
@@ -89,8 +89,8 @@ impl VPoint {
         }
     }
 
-    pub fn to_fac(&self, offset: f32) -> BpFacPosition {
-        BpFacPosition::new(self.x as f32 + offset, self.y as f32 + offset)
+    pub fn to_fac(&self, offset: f32) -> FacBpPosition {
+        FacBpPosition::new(self.x as f32 + offset, self.y as f32 + offset)
     }
 
     pub fn to_cv_point(&self) -> Point {

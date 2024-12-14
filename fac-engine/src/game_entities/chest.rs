@@ -4,7 +4,7 @@ use crate::common::{
 };
 
 #[derive(Clone)]
-pub enum FacChestType {
+pub enum FacEntityChestType {
     Wood,
     Iron,
     Steel,
@@ -15,30 +15,30 @@ pub enum FacChestType {
     Requestor,
 }
 
-pub struct FacChest {
+pub struct FacEntChest {
     name: FacEntityName,
 }
 
-impl FacEntity for FacChest {
+impl FacEntity for FacEntChest {
     fn name(&self) -> &FacEntityName {
         &self.name
     }
 }
 
-impl SquareArea for FacChest {
+impl SquareArea for FacEntChest {
     fn area_diameter() -> usize {
         1
     }
 }
 
-impl FacChest {
-    pub fn new(ctype: FacChestType) -> Self {
+impl FacEntChest {
+    pub fn new(ctype: FacEntityChestType) -> Self {
         Self {
             name: FacEntityName::Chest(ctype.clone()),
         }
     }
 
-    pub fn chest_type(&self) -> &FacChestType {
+    pub fn chest_type(&self) -> &FacEntityChestType {
         match &self.name {
             FacEntityName::Chest(t) => t,
             _ => panic!("wtf"),

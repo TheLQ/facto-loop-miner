@@ -6,19 +6,19 @@ use crate::{
     def_entity_name,
 };
 
-pub struct FacRadar {}
+pub struct FacEntRadar {}
 
-impl FacEntity for FacRadar {
+impl FacEntity for FacEntRadar {
     def_entity_name!(FacEntityName::Radar);
 }
 
-impl SquareArea for FacRadar {
+impl SquareArea for FacEntRadar {
     fn area_diameter() -> usize {
         3
     }
 }
 
-impl FacRadar {
+impl FacEntRadar {
     pub fn new() -> Self {
         Self {}
     }

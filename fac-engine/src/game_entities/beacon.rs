@@ -8,21 +8,21 @@ use crate::{
 
 use super::module::FacModule;
 
-pub struct FacBeacon {
+pub struct FacEntBeacon {
     modules: [Option<FacModule>; 2],
 }
 
-impl FacEntity for FacBeacon {
+impl FacEntity for FacEntBeacon {
     def_entity_name!(FacEntityName::Beacon);
 }
 
-impl SquareArea for FacBeacon {
+impl SquareArea for FacEntBeacon {
     fn area_diameter() -> usize {
         3
     }
 }
 
-impl FacBeacon {
+impl FacEntBeacon {
     pub fn new(modules: [Option<FacModule>; 2]) -> Self {
         Self { modules }
     }

@@ -1,0 +1,471 @@
+{
+    "blueprint": {
+        "icons": [
+            {
+                "signal": {
+                    "type": "item",
+                    "name": "logistic-chest-passive-provider"
+                },
+                "index": 1
+            }
+        ],
+        "entities": [
+            {
+                "entity_number": 1,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": -6.5,
+                    "y": -4.5
+                }
+            },
+            {
+                "entity_number": 2,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": -4.5,
+                    "y": -4.5
+                }
+            },
+            {
+                "entity_number": 3,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": -5.5,
+                    "y": -4.5
+                }
+            },
+            {
+                "entity_number": 4,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": -2.5,
+                    "y": -4.5
+                }
+            },
+            {
+                "entity_number": 5,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": -3.5,
+                    "y": -4.5
+                }
+            },
+            {
+                "entity_number": 6,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": -1.5,
+                    "y": -4.5
+                }
+            },
+            {
+                "entity_number": 7,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": 1.5,
+                    "y": -4.5
+                }
+            },
+            {
+                "entity_number": 8,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": 0.5,
+                    "y": -4.5
+                }
+            },
+            {
+                "entity_number": 9,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": 3.5,
+                    "y": -4.5
+                }
+            },
+            {
+                "entity_number": 10,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": 2.5,
+                    "y": -4.5
+                }
+            },
+            {
+                "entity_number": 11,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": 5.5,
+                    "y": -4.5
+                }
+            },
+            {
+                "entity_number": 12,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": 4.5,
+                    "y": -4.5
+                }
+            },
+            {
+                "entity_number": 13,
+                "name": "medium-electric-pole",
+                "position": {
+                    "x": -7.5,
+                    "y": -3.5
+                },
+                "neighbours": [
+                    19
+                ]
+            },
+            {
+                "entity_number": 14,
+                "name": "stack-inserter",
+                "position": {
+                    "x": -6.5,
+                    "y": -3.5
+                },
+                "direction": 4
+            },
+            {
+                "entity_number": 15,
+                "name": "stack-inserter",
+                "position": {
+                    "x": -4.5,
+                    "y": -3.5
+                },
+                "direction": 4
+            },
+            {
+                "entity_number": 16,
+                "name": "stack-inserter",
+                "position": {
+                    "x": -5.5,
+                    "y": -3.5
+                },
+                "direction": 4
+            },
+            {
+                "entity_number": 17,
+                "name": "stack-inserter",
+                "position": {
+                    "x": -2.5,
+                    "y": -3.5
+                },
+                "direction": 4
+            },
+            {
+                "entity_number": 18,
+                "name": "stack-inserter",
+                "position": {
+                    "x": -3.5,
+                    "y": -3.5
+                },
+                "direction": 4
+            },
+            {
+                "entity_number": 19,
+                "name": "medium-electric-pole",
+                "position": {
+                    "x": -0.5,
+                    "y": -3.5
+                },
+                "neighbours": [
+                    13,
+                    27
+                ]
+            },
+            {
+                "entity_number": 20,
+                "name": "stack-inserter",
+                "position": {
+                    "x": -1.5,
+                    "y": -3.5
+                },
+                "direction": 4
+            },
+            {
+                "entity_number": 21,
+                "name": "stack-inserter",
+                "position": {
+                    "x": 1.5,
+                    "y": -3.5
+                },
+                "direction": 4
+            },
+            {
+                "entity_number": 22,
+                "name": "stack-inserter",
+                "position": {
+                    "x": 0.5,
+                    "y": -3.5
+                },
+                "direction": 4
+            },
+            {
+                "entity_number": 23,
+                "name": "stack-inserter",
+                "position": {
+                    "x": 3.5,
+                    "y": -3.5
+                },
+                "direction": 4
+            },
+            {
+                "entity_number": 24,
+                "name": "stack-inserter",
+                "position": {
+                    "x": 2.5,
+                    "y": -3.5
+                },
+                "direction": 4
+            },
+            {
+                "entity_number": 25,
+                "name": "stack-inserter",
+                "position": {
+                    "x": 5.5,
+                    "y": -3.5
+                },
+                "direction": 4
+            },
+            {
+                "entity_number": 26,
+                "name": "stack-inserter",
+                "position": {
+                    "x": 4.5,
+                    "y": -3.5
+                },
+                "direction": 4
+            },
+            {
+                "entity_number": 27,
+                "name": "medium-electric-pole",
+                "position": {
+                    "x": 6.5,
+                    "y": -3.5
+                },
+                "neighbours": [
+                    19
+                ]
+            },
+            {
+                "entity_number": 28,
+                "name": "small-lamp",
+                "position": {
+                    "x": -7.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 29,
+                "name": "stack-inserter",
+                "position": {
+                    "x": -6.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 30,
+                "name": "stack-inserter",
+                "position": {
+                    "x": -4.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 31,
+                "name": "stack-inserter",
+                "position": {
+                    "x": -5.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 32,
+                "name": "stack-inserter",
+                "position": {
+                    "x": -2.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 33,
+                "name": "stack-inserter",
+                "position": {
+                    "x": -3.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 34,
+                "name": "small-lamp",
+                "position": {
+                    "x": -0.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 35,
+                "name": "stack-inserter",
+                "position": {
+                    "x": -1.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 36,
+                "name": "stack-inserter",
+                "position": {
+                    "x": 1.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 37,
+                "name": "stack-inserter",
+                "position": {
+                    "x": 0.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 38,
+                "name": "stack-inserter",
+                "position": {
+                    "x": 3.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 39,
+                "name": "stack-inserter",
+                "position": {
+                    "x": 2.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 40,
+                "name": "stack-inserter",
+                "position": {
+                    "x": 5.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 41,
+                "name": "stack-inserter",
+                "position": {
+                    "x": 4.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 42,
+                "name": "small-lamp",
+                "position": {
+                    "x": 6.5,
+                    "y": -0.5
+                }
+            },
+            {
+                "entity_number": 43,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": -6.5,
+                    "y": 0.5
+                }
+            },
+            {
+                "entity_number": 44,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": -5.5,
+                    "y": 0.5
+                }
+            },
+            {
+                "entity_number": 45,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": -4.5,
+                    "y": 0.5
+                }
+            },
+            {
+                "entity_number": 46,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": -3.5,
+                    "y": 0.5
+                }
+            },
+            {
+                "entity_number": 47,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": -2.5,
+                    "y": 0.5
+                }
+            },
+            {
+                "entity_number": 48,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": -1.5,
+                    "y": 0.5
+                }
+            },
+            {
+                "entity_number": 49,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": 0.5,
+                    "y": 0.5
+                }
+            },
+            {
+                "entity_number": 50,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": 1.5,
+                    "y": 0.5
+                }
+            },
+            {
+                "entity_number": 51,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": 2.5,
+                    "y": 0.5
+                }
+            },
+            {
+                "entity_number": 52,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": 3.5,
+                    "y": 0.5
+                }
+            },
+            {
+                "entity_number": 53,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": 4.5,
+                    "y": 0.5
+                }
+            },
+            {
+                "entity_number": 54,
+                "name": "logistic-chest-passive-provider",
+                "position": {
+                    "x": 5.5,
+                    "y": 0.5
+                }
+            }
+        ],
+        "item": "blueprint",
+        "version": 281479278886912
+    }
+}

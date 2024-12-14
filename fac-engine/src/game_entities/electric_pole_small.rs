@@ -10,23 +10,23 @@ pub enum ElectricPoleSmallType {
     Steel,
 }
 
-pub struct FacElectricPoleSmall {
+pub struct FacEntElectricPoleSmall {
     name: FacEntityName,
 }
 
-impl FacEntity for FacElectricPoleSmall {
+impl FacEntity for FacEntElectricPoleSmall {
     fn name(&self) -> &FacEntityName {
         &self.name
     }
 }
 
-impl SquareArea for FacElectricPoleSmall {
+impl SquareArea for FacEntElectricPoleSmall {
     fn area_diameter() -> usize {
         1
     }
 }
 
-impl FacElectricPoleSmall {
+impl FacEntElectricPoleSmall {
     pub fn new(ptype: ElectricPoleSmallType) -> Self {
         Self {
             name: FacEntityName::ElectricPoleSmall(ptype),
