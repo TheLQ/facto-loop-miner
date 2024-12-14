@@ -9,7 +9,6 @@ pub mod rail_beacon_farm;
 pub mod rail_line;
 pub mod rail_pan;
 pub mod rail_station;
-pub mod terapower;
 
 pub fn join_commands<'a>(
     creation_commands: impl Iterator<Item = &'a Box<dyn LuaCommand>>,
@@ -25,14 +24,23 @@ pub fn join_commands<'a>(
 pub struct XyGridPosition {
     x: i32,
     y: i32,
-    ix: u32,
-    iy: u32,
+    pub ix: u32,
+    pub iy: u32,
 }
 
 impl XyGridPosition {
     pub fn to_vpoint(&self) -> VPoint {
         VPoint::new(self.x, self.y)
     }
+}
+
+pub fn xy_grid_vpoint(
+    start: VPoint,
+    width: u32,
+    height: u32,
+    step: u32,
+) -> impl Iterator<Item = XyGridPosition> {
+    xy_grid(start.x(), start.y(), width, height, step)
 }
 
 pub fn xy_grid(

@@ -23,7 +23,7 @@ pub trait FacEntity: FacArea {
     fn to_fac(&self, entity_number: BpFacInteger, position: &VPoint) -> BpFacEntity {
         BpFacEntity {
             entity_number,
-            name: self.to_fac_name(),
+            name: self.name().to_fac_name(),
             position: self.to_fac_position(position),
             direction: self.to_fac_direction(),
             neighbours: Some(Vec::new()),
