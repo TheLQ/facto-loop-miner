@@ -16,7 +16,6 @@ pub enum FacChestType {
 }
 
 pub struct FacChest {
-    ctype: FacChestType,
     name: FacEntityName,
 }
 
@@ -36,7 +35,13 @@ impl FacChest {
     pub fn new(ctype: FacChestType) -> Self {
         Self {
             name: FacEntityName::Chest(ctype.clone()),
-            ctype,
+        }
+    }
+
+    pub fn chest_type(&self) -> &FacChestType {
+        match &self.name {
+            FacEntityName::Chest(t) => t,
+            _ => panic!("wtf"),
         }
     }
 }

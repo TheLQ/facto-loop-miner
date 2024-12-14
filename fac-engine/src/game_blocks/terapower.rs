@@ -1,5 +1,5 @@
 use crate::{
-    admiral::generators::{xy_grid, xy_grid_vpoint},
+    admiral::generators::xy_grid_vpoint,
     blueprint::bpitem::BlueprintItem,
     common::{entity::FacEntity, vpoint::VPoint},
     game_entities::{electric_pole_big::FacElectricPoleBig, radar::FacRadar},

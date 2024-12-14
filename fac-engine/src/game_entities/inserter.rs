@@ -17,7 +17,6 @@ pub enum FacInserterType {
 }
 
 pub struct FacInserter {
-    itype: FacInserterType,
     name: FacEntityName,
     direction: FacDirectionEighth,
 }
@@ -40,9 +39,15 @@ impl SquareArea for FacInserter {
 impl FacInserter {
     pub fn new(itype: FacInserterType, direction: FacDirectionEighth) -> Self {
         Self {
-            name: FacEntityName::Inserter(itype.clone()),
-            itype,
+            name: FacEntityName::Inserter(itype),
             direction,
+        }
+    }
+
+    pub fn inserter_type(&self) -> &FacInserterType {
+        match &self.name {
+            FacEntityName::Inserter(t) => t,
+            _ => panic!("wtf"),
         }
     }
 }

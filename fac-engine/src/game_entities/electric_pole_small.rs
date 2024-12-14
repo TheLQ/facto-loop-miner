@@ -11,7 +11,6 @@ pub enum ElectricPoleSmallType {
 }
 
 pub struct FacElectricPoleSmall {
-    ptype: ElectricPoleSmallType,
     name: FacEntityName,
 }
 
@@ -30,8 +29,14 @@ impl SquareArea for FacElectricPoleSmall {
 impl FacElectricPoleSmall {
     pub fn new(ptype: ElectricPoleSmallType) -> Self {
         Self {
-            name: FacEntityName::ElectricPoleSmall(ptype.clone()),
-            ptype,
+            name: FacEntityName::ElectricPoleSmall(ptype),
+        }
+    }
+
+    pub fn pole_type(&self) -> &ElectricPoleSmallType {
+        match &self.name {
+            FacEntityName::ElectricPoleSmall(t) => t,
+            _ => panic!("wtf"),
         }
     }
 }
