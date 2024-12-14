@@ -18,7 +18,7 @@ impl FacEntity for FacBeacon {
 
 impl SquareArea for FacBeacon {
     fn area_diameter() -> usize {
-        2
+        3
     }
 }
 

@@ -14,7 +14,7 @@ impl FacEntity for FacRadar {
 
 impl SquareArea for FacRadar {
     fn area_diameter() -> usize {
-        1
+        3
     }
 }
 

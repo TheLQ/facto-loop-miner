@@ -14,7 +14,7 @@ impl FacEntity for FacElectricPoleBig {
 
 impl SquareArea for FacElectricPoleBig {
     fn area_diameter() -> usize {
-        1
+        2
     }
 }
 
