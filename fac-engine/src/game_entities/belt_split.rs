@@ -1,7 +1,7 @@
 use crate::{
     blueprint::bpfac::position::FacBpPosition,
     common::{
-        entity::{FacArea, FacEntity, Size, SquareArea},
+        entity::{FacArea, FacEntity, Size},
         names::FacEntityName,
         vpoint::VPoint,
     },

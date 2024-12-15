@@ -7,7 +7,7 @@ use crate::{
         direction::FacDirectionQuarter,
         electric_large::{FacEntElectricLarge, FacEntElectricLargeType},
         electric_mini::{FacEntElectricMini, FacEntElectricMiniType},
-        inserter::FacEntInserter,
+        inserter::{FacEntInserter, FacEntInserterType},
         lamp::FacEntLamp,
     },
 };
@@ -22,7 +22,7 @@ pub struct FacBlkAssemblerCell {
 }
 
 pub struct FacBlkAssemblerCellEntry {
-    pub inserter: FacEntInserter,
+    pub inserter: FacEntInserterType,
     pub chest: FacEntChest,
     pub is_loader: bool,
 }
@@ -55,13 +55,15 @@ impl FacBlock for FacBlkAssemblerCell {
             if let Some(entry) = bottom_entry {
                 let row_point = origin.move_xy_usize(1 + i, 4);
 
-                let mut inserter = entry.inserter.clone();
-                if entry.is_loader {
-                    inserter.set_direction(FacDirectionQuarter::South);
+                let inserter_direction = if entry.is_loader {
+                    FacDirectionQuarter::South
                 } else {
-                    inserter.set_direction(FacDirectionQuarter::North);
-                }
-                res.push(BlueprintItem::new(inserter.into_boxed(), row_point));
+                    FacDirectionQuarter::North
+                };
+                res.push(BlueprintItem::new(
+                    FacEntInserter::new(entry.inserter.clone(), inserter_direction).into_boxed(),
+                    row_point,
+                ));
 
                 res.push(BlueprintItem::new(
                     entry.chest.clone().into_boxed(),
@@ -74,13 +76,15 @@ impl FacBlock for FacBlkAssemblerCell {
             if let Some(entry) = right_entry {
                 let row_point = origin.move_xy_usize(4, 3 + i);
 
-                let mut inserter = entry.inserter.clone();
-                if entry.is_loader {
-                    inserter.set_direction(FacDirectionQuarter::East);
+                let inserter_direction = if entry.is_loader {
+                    FacDirectionQuarter::South
                 } else {
-                    inserter.set_direction(FacDirectionQuarter::West);
-                }
-                res.push(BlueprintItem::new(inserter.into_boxed(), row_point));
+                    FacDirectionQuarter::North
+                };
+                res.push(BlueprintItem::new(
+                    FacEntInserter::new(entry.inserter.clone(), inserter_direction).into_boxed(),
+                    row_point,
+                ));
 
                 res.push(BlueprintItem::new(
                     entry.chest.clone().into_boxed(),

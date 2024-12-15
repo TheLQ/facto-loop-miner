@@ -88,36 +88,24 @@ fn basic_build_beacon_farm(bp: &mut BlueprintContents) {
             side_bottom: [
                 Some(FacBlkAssemblerCellEntry {
                     chest: FacEntChest::new(FacEntityChestType::Requestor),
-                    inserter: FacEntInserter::new(
-                        FacEntInserterType::Fast,
-                        FacDirectionQuarter::East,
-                    ),
+                    inserter: FacEntInserterType::Fast,
                     is_loader: false,
                 }),
                 Some(FacBlkAssemblerCellEntry {
                     chest: FacEntChest::new(FacEntityChestType::Requestor),
-                    inserter: FacEntInserter::new(
-                        FacEntInserterType::Fast,
-                        FacDirectionQuarter::East,
-                    ),
+                    inserter: FacEntInserterType::Fast,
                     is_loader: false,
                 }),
                 Some(FacBlkAssemblerCellEntry {
                     chest: FacEntChest::new(FacEntityChestType::Passive),
-                    inserter: FacEntInserter::new(
-                        FacEntInserterType::Fast,
-                        FacDirectionQuarter::East,
-                    ),
+                    inserter: FacEntInserterType::Fast,
                     is_loader: true,
                 }),
             ],
             side_right: [
                 Some(FacBlkAssemblerCellEntry {
                     chest: FacEntChest::new(FacEntityChestType::Passive),
-                    inserter: FacEntInserter::new(
-                        FacEntInserterType::Fast,
-                        FacDirectionQuarter::East,
-                    ),
+                    inserter: FacEntInserterType::Fast,
                     is_loader: true,
                 }),
                 None,
