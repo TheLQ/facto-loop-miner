@@ -3,7 +3,7 @@ use crate::common::{
     names::FacEntityName,
 };
 
-use super::direction::FacDirectionEighth;
+use super::direction::{FacDirectionEighth, FacDirectionQuarter};
 
 #[derive(Clone)]
 pub enum FacEntInserterType {
@@ -16,9 +16,10 @@ pub enum FacEntInserterType {
     StackFilter,
 }
 
+#[derive(Clone)]
 pub struct FacEntInserter {
     name: FacEntityName,
-    direction: FacDirectionEighth,
+    direction: FacDirectionQuarter,
 }
 
 impl FacEntity for FacEntInserter {
@@ -27,7 +28,7 @@ impl FacEntity for FacEntInserter {
     }
 
     fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
-        Some(self.direction.clone())
+        Some(self.direction.to_direction_eighth())
     }
 }
 impl SquareArea for FacEntInserter {
@@ -37,7 +38,7 @@ impl SquareArea for FacEntInserter {
 }
 
 impl FacEntInserter {
-    pub fn new(itype: FacEntInserterType, direction: FacDirectionEighth) -> Self {
+    pub fn new(itype: FacEntInserterType, direction: FacDirectionQuarter) -> Self {
         Self {
             name: FacEntityName::Inserter(itype),
             direction,
@@ -49,5 +50,9 @@ impl FacEntInserter {
             FacEntityName::Inserter(t) => t,
             _ => panic!("wtf"),
         }
+    }
+
+    pub fn set_direction(&mut self, direction: FacDirectionQuarter) {
+        self.direction = direction;
     }
 }

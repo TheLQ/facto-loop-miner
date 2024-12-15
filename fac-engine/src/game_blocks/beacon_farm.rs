@@ -7,14 +7,15 @@ use crate::{
 
 use super::block::FacBlock;
 
-pub struct FacBlkBeaconFarm {
+pub struct FacBlkBeaconFarm<C: FacBlock> {
     pub inner_cell_size: u32,
     pub width: u32,
     pub height: u32,
     pub module: FacModule,
+    pub cell: Option<C>,
 }
 
-impl FacBlock for FacBlkBeaconFarm {
+impl<C: FacBlock> FacBlock for FacBlkBeaconFarm<C> {
     fn generate(&self, origin: VPoint) -> Vec<BlueprintItem> {
         let mut res = Vec::new();
         let zero_cell_size = self.inner_cell_size + 1;
@@ -31,6 +32,11 @@ impl FacBlock for FacBlkBeaconFarm {
                         .into_boxed(),
                     pos.point(),
                 ));
+            } else if pos.ix % zero_cell_size == 1 && pos.iy % zero_cell_size == 1 {
+                if let Some(inner) = &self.cell {
+                    let inner_res = inner.generate(pos.point());
+                    res.extend(inner_res);
+                }
             }
         }
 

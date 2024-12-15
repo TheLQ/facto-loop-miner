@@ -172,6 +172,10 @@ impl VPoint {
         }
     }
 
+    pub fn move_xy_usize(&self, x_steps: usize, y_steps: usize) -> Self {
+        self.move_xy(x_steps as i32, y_steps as i32)
+    }
+
     // pub fn move_xy_u32(&self, x_steps: u32, y_steps: u32) -> Self {
     //     self.move_xy(x_steps as i32, y_steps as i32)
     // }

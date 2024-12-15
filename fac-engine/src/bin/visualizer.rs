@@ -2,11 +2,19 @@ use facto_loop_miner_fac_engine::{
     blueprint::{bpitem::BlueprintItem, contents::BlueprintContents},
     common::{entity::FacEntity, vpoint::VPoint},
     game_blocks::{
-        beacon_farm::FacBlkBeaconFarm, block::FacBlock, rail_station::FacBlkRailStation,
+        assembler_cell::{FacBlkAssemblerCell, FacBlkAssemblerCellEntry},
+        beacon_farm::FacBlkBeaconFarm,
+        block::FacBlock,
+        rail_station::FacBlkRailStation,
         terapower::FacBlkTerapower,
     },
     game_entities::{
-        assembler::FacEntAssembler, chest::FacEntityChestType, module::FacModule, tier::FacTier,
+        assembler::FacEntAssembler,
+        chest::{FacEntChest, FacEntityChestType},
+        direction::FacDirectionQuarter,
+        inserter::{FacEntInserter, FacEntInserterType},
+        module::FacModule,
+        tier::FacTier,
     },
     visualizer::visualizer::visualize_blueprint,
 };
@@ -65,13 +73,58 @@ fn basic_build_terapower(bp: &mut BlueprintContents) {
 
 fn basic_build_beacon_farm(bp: &mut BlueprintContents) {
     let station = FacBlkBeaconFarm {
-        inner_cell_size: 1,
+        inner_cell_size: 2,
         width: 3,
         height: 3,
         module: FacModule::Speed(FacTier::Tier3),
+        cell: Some(FacBlkAssemblerCell {
+            assembler: FacEntAssembler::new(
+                FacTier::Tier1,
+                "small-lamp".into(),
+                Default::default(),
+            ),
+            side_bottom: [
+                Some(FacBlkAssemblerCellEntry {
+                    chest: FacEntChest::new(FacEntityChestType::Requestor),
+                    inserter: FacEntInserter::new(
+                        FacEntInserterType::Fast,
+                        FacDirectionQuarter::East,
+                    ),
+                    is_loader: false,
+                }),
+                Some(FacBlkAssemblerCellEntry {
+                    chest: FacEntChest::new(FacEntityChestType::Requestor),
+                    inserter: FacEntInserter::new(
+                        FacEntInserterType::Fast,
+                        FacDirectionQuarter::East,
+                    ),
+                    is_loader: false,
+                }),
+                Some(FacBlkAssemblerCellEntry {
+                    chest: FacEntChest::new(FacEntityChestType::Passive),
+                    inserter: FacEntInserter::new(
+                        FacEntInserterType::Fast,
+                        FacDirectionQuarter::East,
+                    ),
+                    is_loader: true,
+                }),
+            ],
+            side_right: [
+                Some(FacBlkAssemblerCellEntry {
+                    chest: FacEntChest::new(FacEntityChestType::Passive),
+                    inserter: FacEntInserter::new(
+                        FacEntInserterType::Fast,
+                        FacDirectionQuarter::East,
+                    ),
+                    is_loader: true,
+                }),
+                None,
+                None,
+            ],
+            is_big_power: true,
+        }),
     };
     for entity in station.generate(VPoint::new(5, 5)) {
         bp.add_entity_each(entity);
     }
-    Fac
 }

@@ -5,7 +5,7 @@ use crate::game_entities::{
     inserter::FacEntInserterType, tier::FacTier,
 };
 
-#[derive(AsRefStr)]
+#[derive(Clone, AsRefStr)]
 pub enum FacEntityName {
     Lamp,
     Rail,
@@ -51,7 +51,7 @@ impl FacEntityName {
                 ElectricPoleSmallType::Steel => "medium-electric-pole",
             }
             .into(),
-            Self::ElectricPoleBig => "big-electric-pole".into(),
+            Self::ElectricPoleBig => "substation".into(),
             Self::TrainStop => "train-stop".into(),
             Self::Beacon => "beacon".into(),
             Self::Radar => "radar".into(),

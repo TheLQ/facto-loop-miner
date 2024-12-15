@@ -55,7 +55,7 @@ impl FacBlkRailStation {
                         .move_x((/*pre-pole*/1 + car_x_offset + exit) as i32)
                         .move_y(offset);
                     res.push(BlueprintItem::new(
-                        FacEntInserter::new(FacEntInserterType::Basic, FacDirectionEighth::East)
+                        FacEntInserter::new(FacEntInserterType::Basic, FacDirectionQuarter::East)
                             .into_boxed(),
                         start,
                     ));

@@ -15,6 +15,7 @@ pub enum FacEntityChestType {
     Requestor,
 }
 
+#[derive(Clone)]
 pub struct FacEntChest {
     name: FacEntityName,
 }

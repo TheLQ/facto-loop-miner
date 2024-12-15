@@ -4,6 +4,7 @@ use crate::common::{
     names::FacEntityName,
 };
 
+#[derive(Clone)]
 pub struct FacEntAssembler {
     level: FacTier,
     recipe: String,

@@ -1,6 +1,5 @@
 use crate::{admiral::lua_command::LuaCommand, common::vpoint::VPoint};
 
-pub mod assembler_farm;
 pub mod assembler_robo_farm;
 // pub mod rail45;
 // pub mod rail90;

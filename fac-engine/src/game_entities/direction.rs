@@ -26,6 +26,17 @@ pub enum FacDirectionQuarter {
     West,
 }
 
+impl FacDirectionQuarter {
+    pub fn to_direction_eighth(&self) -> FacDirectionEighth {
+        match self {
+            Self::North => FacDirectionEighth::North,
+            Self::East => FacDirectionEighth::East,
+            Self::South => FacDirectionEighth::South,
+            Self::West => FacDirectionEighth::West,
+        }
+    }
+}
+
 const RAIL_DIRECTION_CLOCKWISE: [RailDirection; 4] = [
     RailDirection::Up,
     RailDirection::Right,
