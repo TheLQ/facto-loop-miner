@@ -35,6 +35,15 @@ impl FacDirectionQuarter {
             Self::West => FacDirectionEighth::West,
         }
     }
+
+    pub fn rotate_flip(&self) -> FacDirectionQuarter {
+        match self {
+            Self::North => Self::South,
+            Self::East => Self::West,
+            Self::South => Self::North,
+            Self::West => Self::East,
+        }
+    }
 }
 
 const RAIL_DIRECTION_CLOCKWISE: [RailDirection; 4] = [

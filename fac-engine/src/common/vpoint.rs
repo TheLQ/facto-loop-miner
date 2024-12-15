@@ -165,6 +165,10 @@ impl VPoint {
         }
     }
 
+    pub fn move_y_usize(&self, steps: usize) -> Self {
+        self.move_y(steps as i32)
+    }
+
     pub fn move_xy(&self, x_steps: i32, y_steps: i32) -> Self {
         VPoint {
             x: self.x + x_steps,
