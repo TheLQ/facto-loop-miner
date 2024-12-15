@@ -5,8 +5,8 @@ use crate::{
         assembler::FacEntAssembler,
         chest::FacEntChest,
         direction::FacDirectionQuarter,
-        electric_pole_big::{FacEntElectricPoleBig, FacEntElectricPoleBigType},
-        electric_pole_small::{ElectricPoleSmallType, FacEntElectricPoleSmall},
+        electric_large::{FacEntElectricLarge, FacEntElectricLargeType},
+        electric_mini::{FacEntElectricMini, FacEntElectricMiniType},
         inserter::FacEntInserter,
         lamp::FacEntLamp,
     },
@@ -41,12 +41,12 @@ impl FacBlock for FacBlkAssemblerCell {
         let power_pos = origin.move_xy(4, 4);
         if self.is_big_power {
             res.push(BlueprintItem::new(
-                FacEntElectricPoleBig::new(FacEntElectricPoleBigType::Substation).into_boxed(),
+                FacEntElectricLarge::new(FacEntElectricLargeType::Substation).into_boxed(),
                 power_pos,
             ));
         } else {
             res.push(BlueprintItem::new(
-                FacEntElectricPoleSmall::new(ElectricPoleSmallType::Steel).into_boxed(),
+                FacEntElectricMini::new(FacEntElectricMiniType::Medium).into_boxed(),
                 power_pos,
             ));
         }

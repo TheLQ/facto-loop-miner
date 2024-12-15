@@ -3,8 +3,8 @@ use crate::{
     common::{entity::FacEntity, vpoint::VPoint},
     game_entities::{
         chest::{FacEntChest, FacEntityChestType},
-        direction::{FacDirectionEighth, FacDirectionQuarter},
-        electric_pole_small::{ElectricPoleSmallType, FacEntElectricPoleSmall},
+        direction::FacDirectionQuarter,
+        electric_mini::{FacEntElectricMini, FacEntElectricMiniType},
         inserter::{FacEntInserter, FacEntInserterType},
         lamp::FacEntLamp,
         train_stop::FacEntTrainStop,
@@ -80,7 +80,7 @@ impl FacBlkRailStation {
                 start.move_y(1),
             ));
             res.push(BlueprintItem::new(
-                FacEntElectricPoleSmall::new(ElectricPoleSmallType::Steel).into_boxed(),
+                FacEntElectricMini::new(FacEntElectricMiniType::Medium).into_boxed(),
                 start.move_y(-1),
             ));
         }

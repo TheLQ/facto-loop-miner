@@ -5,8 +5,8 @@ use crate::{
     blueprint::bpitem::BlueprintItem,
     common::{entity::FacEntity, vpoint::VPoint},
     game_entities::{
-        electric_pole_big::{
-            FACENT_ELECTRIC_LARGE_DIAMETER, FacEntElectricPoleBig, FacEntElectricPoleBigType,
+        electric_large::{
+            FACENT_ELECTRIC_LARGE_DIAMETER, FacEntElectricLarge, FacEntElectricLargeType,
         },
         lamp::FacEntLamp,
         roboport::{FACENT_ROBOPORT_DIAMETER, FacEntRoboport},
@@ -43,14 +43,13 @@ impl FacBlock for FacBlkRobofarm {
                 if pos.ix == center_i && pos.iy == center_i {
                     // substation to grab all roboports
                     res.push(BlueprintItem::new(
-                        FacEntElectricPoleBig::new(FacEntElectricPoleBigType::Substation)
-                            .into_boxed(),
+                        FacEntElectricLarge::new(FacEntElectricLargeType::Substation).into_boxed(),
                         pos.point().move_xy(0, 1),
                     ));
 
                     // big pole to get all
                     res.push(BlueprintItem::new(
-                        FacEntElectricPoleBig::new(FacEntElectricPoleBigType::Big).into_boxed(),
+                        FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
                         pos.point().move_xy(2, 1),
                     ));
 

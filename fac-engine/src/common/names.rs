@@ -1,8 +1,8 @@
 use strum_macros::AsRefStr;
 
 use crate::game_entities::{
-    chest::FacEntityChestType, electric_pole_small::ElectricPoleSmallType,
-    inserter::FacEntInserterType, tier::FacTier,
+    chest::FacEntityChestType, electric_large::FacEntElectricLargeType,
+    electric_mini::FacEntElectricMiniType, inserter::FacEntInserterType, tier::FacTier,
 };
 
 #[derive(Clone, AsRefStr)]
@@ -12,8 +12,8 @@ pub enum FacEntityName {
     Assembler(FacTier),
     Inserter(FacEntInserterType),
     Chest(FacEntityChestType),
-    ElectricPoleSmall(ElectricPoleSmallType),
-    ElectricPoleBig,
+    ElectricMini(FacEntElectricMiniType),
+    ElectricLarge(FacEntElectricLargeType),
     TrainStop,
     Beacon,
     Radar,
@@ -47,12 +47,16 @@ impl FacEntityName {
                 FacEntityChestType::Requestor => "logistic-chest-requestor",
             }
             .into(),
-            Self::ElectricPoleSmall(ptype) => match ptype {
-                ElectricPoleSmallType::Wooden => "small-electric-pole",
-                ElectricPoleSmallType::Steel => "medium-electric-pole",
+            Self::ElectricMini(etype) => match etype {
+                FacEntElectricMiniType::Small => "small-electric-pole",
+                FacEntElectricMiniType::Medium => "medium-electric-pole",
             }
             .into(),
-            Self::ElectricPoleBig => "substation".into(),
+            Self::ElectricLarge(etype) => match etype {
+                FacEntElectricLargeType::Big => "big-electric-pole",
+                FacEntElectricLargeType::Substation => "substation",
+            }
+            .into(),
             Self::TrainStop => "train-stop".into(),
             Self::Beacon => "beacon".into(),
             Self::Radar => "radar".into(),
