@@ -8,6 +8,7 @@ default-run = "main"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+facto-loop-miner-common = { path = "../common" }
 image = "0.25.0"
 jemallocator = "0.5.4"
 num-format = "0.4.4"
@@ -30,8 +31,6 @@ bitvec = "1.0.1"
 lazy_static = "1.4.0"
 mimalloc = "0.1.39"
 tracing = "0.1.37"
-tracing-subscriber = "0.3.17"
-tracing-test = "0.2.4"
 rcon-client = "0.1.2"
 #rcon-client = { path = "../../rcon-rs" }
 thiserror = "1.0.50"

@@ -125,14 +125,3 @@ where
 {
     (value - (value % bucket_size)) / bucket_size
 }
-
-pub fn log_init(force_level: Option<Level>) {
-    tracing_subscriber::fmt()
-        .with_max_level(if let Some(level) = force_level {
-            level
-        } else {
-            Level::INFO
-        })
-        .compact()
-        .init();
-}

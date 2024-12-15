@@ -1,5 +1,7 @@
 use std::{fs, path::Path};
 
+use tracing::info;
+
 use crate::blueprint::contents::BlueprintContents;
 
 const STYLE: &str = r#"
@@ -36,9 +38,8 @@ pub fn visualize_blueprint(blueprint: &BlueprintContents) {
     }
 
     output.push_str("</div>");
-    println!("html {}", output);
 
     let path = Path::new("out.html");
     fs::write(path, output).unwrap();
-    println!("wrote to {}", path.display());
+    info!("wrote to {}", path.display());
 }

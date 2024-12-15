@@ -1,3 +1,4 @@
+use facto_loop_miner_common::log_init;
 use facto_loop_miner_fac_engine::{
     blueprint::{bpitem::BlueprintItem, contents::BlueprintContents},
     common::{entity::FacEntity, vpoint::VPoint},
@@ -21,6 +22,8 @@ use facto_loop_miner_fac_engine::{
 };
 
 fn main() {
+    log_init(None);
+
     let mut bp_contents = BlueprintContents::new();
 
     match 5 {
