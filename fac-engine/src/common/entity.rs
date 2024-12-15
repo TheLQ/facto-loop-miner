@@ -54,6 +54,10 @@ impl Size {
         }
     }
 
+    pub const fn rectangle(width: usize, height: usize) -> Self {
+        Size { width, height }
+    }
+
     pub fn height(&self) -> &usize {
         &self.height
     }
@@ -64,7 +68,7 @@ impl Size {
 }
 
 pub trait FacArea {
-    fn area(&self) -> Vec<VPoint>;
+    // fn area(&self) -> Vec<VPoint>;
 
     fn rectangle_size(&self) -> Size;
 
@@ -76,22 +80,19 @@ pub trait SquareArea {
 }
 
 impl<T: SquareArea> FacArea for T {
-    fn area(&self) -> Vec<VPoint> {
-        let diameter = T::area_diameter();
-        let mut res = vec![VPoint::zero(); diameter];
-        for x in 0..diameter {
-            for y in 0..diameter {
-                res[y * diameter + x] = VPoint::new_usize(x, y)
-            }
-        }
-        res
-    }
+    // fn area(&self) -> Vec<VPoint> {
+    //     let diameter = T::area_diameter();
+    //     let mut res = vec![VPoint::zero(); diameter];
+    //     for x in 0..diameter {
+    //         for y in 0..diameter {
+    //             res[y * diameter + x] = VPoint::new_usize(x, y)
+    //         }
+    //     }
+    //     res
+    // }
 
     fn rectangle_size(&self) -> Size {
-        Size {
-            height: T::area_diameter(),
-            width: T::area_diameter(),
-        }
+        Size::square(T::area_diameter())
     }
 
     fn to_fac_position(&self, position: &VPoint) -> FacBpPosition {

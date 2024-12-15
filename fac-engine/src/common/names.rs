@@ -1,9 +1,8 @@
 use strum_macros::AsRefStr;
 
 use crate::game_entities::{
-    belt_transport::FacEntBeltTransportType, chest::FacEntityChestType,
-    electric_large::FacEntElectricLargeType, electric_mini::FacEntElectricMiniType,
-    inserter::FacEntInserterType, tier::FacTier,
+    belt::FacEntBeltType, chest::FacEntityChestType, electric_large::FacEntElectricLargeType,
+    electric_mini::FacEntElectricMiniType, inserter::FacEntInserterType, tier::FacTier,
 };
 
 #[derive(Clone, AsRefStr)]
@@ -19,7 +18,9 @@ pub enum FacEntityName {
     Beacon,
     Radar,
     Roboport,
-    BeltTransport(FacEntBeltTransportType),
+    BeltTransport(FacEntBeltType),
+    BeltUnder(FacEntBeltType),
+    BeltSplit(FacEntBeltType),
 }
 
 impl FacEntityName {
@@ -63,12 +64,9 @@ impl FacEntityName {
             Self::Beacon => "beacon".into(),
             Self::Radar => "radar".into(),
             Self::Roboport => "roboport".into(),
-            Self::BeltTransport(btype) => match btype {
-                FacEntBeltTransportType::Basic => "transport-belt",
-                FacEntBeltTransportType::Fast => "fast-transport-belt",
-                FacEntBeltTransportType::Express => "express-transport-belt",
-            }
-            .into(),
+            Self::BeltTransport(btype) => format!("{}transport-belt", btype.name_prefix()),
+            Self::BeltUnder(btype) => format!("{}underground-belt", btype.name_prefix()),
+            Self::BeltSplit(btype) => format!("{}splitter", btype.name_prefix()),
         }
     }
 }

@@ -5,27 +5,27 @@ use crate::common::{
 
 use super::{belt::FacEntBeltType, direction::FacDirectionQuarter};
 
-pub struct FacEntBeltTransport {
+pub struct FacEntBeltUnder {
     name: FacEntityName,
     direction: FacDirectionQuarter,
 }
 
-impl FacEntity for FacEntBeltTransport {
+impl FacEntity for FacEntBeltUnder {
     fn name(&self) -> &FacEntityName {
         &self.name
     }
 }
 
-impl SquareArea for FacEntBeltTransport {
+impl SquareArea for FacEntBeltUnder {
     fn area_diameter() -> usize {
         1
     }
 }
 
-impl FacEntBeltTransport {
+impl FacEntBeltUnder {
     pub fn new(btype: FacEntBeltType, direction: FacDirectionQuarter) -> Self {
         Self {
-            name: FacEntityName::BeltTransport(btype),
+            name: FacEntityName::BeltSplit(btype),
             direction,
         }
     }

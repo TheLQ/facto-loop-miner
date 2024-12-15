@@ -1,6 +1,9 @@
 pub mod assembler;
 pub mod beacon;
+pub mod belt;
+pub mod belt_split;
 pub mod belt_transport;
+pub mod belt_under;
 pub mod chest;
 pub mod direction;
 pub mod electric_large;
