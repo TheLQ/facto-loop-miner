@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity,
-    game_entities::direction::FacDirectionEighth,
-};
+use crate::game_entities::{direction::FacDirectionEighth, module::FacModule};
 
 use super::{BpFacInteger, position::FacBpPosition};
 
@@ -21,6 +18,8 @@ pub struct FacBpEntity {
     pub neighbours: Option<Vec<BpFacInteger>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recipe: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub items: Option<Vec<FacModule>>,
 }
 
 #[cfg(test)]

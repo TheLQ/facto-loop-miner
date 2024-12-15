@@ -26,8 +26,9 @@ pub trait FacEntity: FacArea {
             name: self.name().to_fac_name(),
             position: self.to_fac_position(position),
             direction: self.to_fac_direction(),
-            neighbours: Some(Vec::new()),
+            neighbours: None,
             recipe: self.to_fac_recipe(),
+            items: None,
         }
     }
 
