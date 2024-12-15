@@ -9,5 +9,6 @@ pub mod lamp;
 pub mod module;
 pub mod radar;
 pub mod rail;
+pub mod roboport;
 pub mod tier;
 pub mod train_stop;

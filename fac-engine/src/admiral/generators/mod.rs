@@ -1,9 +1,7 @@
 use crate::{admiral::lua_command::LuaCommand, common::vpoint::VPoint};
 
-pub mod assembler_robo_farm;
 // pub mod rail45;
 // pub mod rail90;
-pub mod rail_beacon_farm;
 pub mod rail_line;
 pub mod rail_pan;
 pub mod rail_station;

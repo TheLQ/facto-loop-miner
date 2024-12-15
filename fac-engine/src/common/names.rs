@@ -17,6 +17,7 @@ pub enum FacEntityName {
     TrainStop,
     Beacon,
     Radar,
+    Roboport,
 }
 
 impl FacEntityName {
@@ -55,6 +56,7 @@ impl FacEntityName {
             Self::TrainStop => "train-stop".into(),
             Self::Beacon => "beacon".into(),
             Self::Radar => "radar".into(),
+            Self::Roboport => "roboport".into(),
         }
     }
 }

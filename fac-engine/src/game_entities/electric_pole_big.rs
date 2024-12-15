@@ -6,7 +6,16 @@ use crate::{
     def_entity_name,
 };
 
-pub struct FacEntElectricPoleBig {}
+pub const FACENT_ELECTRIC_LARGE_DIAMETER: usize = 2;
+
+pub enum FacEntElectricPoleBigType {
+    Substation,
+    Big,
+}
+
+pub struct FacEntElectricPoleBig {
+    etype: FacEntElectricPoleBigType,
+}
 
 impl FacEntity for FacEntElectricPoleBig {
     def_entity_name!(FacEntityName::ElectricPoleBig);
@@ -14,12 +23,12 @@ impl FacEntity for FacEntElectricPoleBig {
 
 impl SquareArea for FacEntElectricPoleBig {
     fn area_diameter() -> usize {
-        2
+        FACENT_ELECTRIC_LARGE_DIAMETER
     }
 }
 
 impl FacEntElectricPoleBig {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(etype: FacEntElectricPoleBigType) -> Self {
+        Self { etype }
     }
 }
