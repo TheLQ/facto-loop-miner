@@ -1,8 +1,9 @@
 use strum_macros::AsRefStr;
 
 use crate::game_entities::{
-    chest::FacEntityChestType, electric_large::FacEntElectricLargeType,
-    electric_mini::FacEntElectricMiniType, inserter::FacEntInserterType, tier::FacTier,
+    belt_transport::FacEntBeltTransportType, chest::FacEntityChestType,
+    electric_large::FacEntElectricLargeType, electric_mini::FacEntElectricMiniType,
+    inserter::FacEntInserterType, tier::FacTier,
 };
 
 #[derive(Clone, AsRefStr)]
@@ -18,6 +19,7 @@ pub enum FacEntityName {
     Beacon,
     Radar,
     Roboport,
+    BeltTransport(FacEntBeltTransportType),
 }
 
 impl FacEntityName {
@@ -61,6 +63,12 @@ impl FacEntityName {
             Self::Beacon => "beacon".into(),
             Self::Radar => "radar".into(),
             Self::Roboport => "roboport".into(),
+            Self::BeltTransport(btype) => match btype {
+                FacEntBeltTransportType::Basic => "transport-belt",
+                FacEntBeltTransportType::Fast => "fast-transport-belt",
+                FacEntBeltTransportType::Express => "express-transport-belt",
+            }
+            .into(),
         }
     }
 }
