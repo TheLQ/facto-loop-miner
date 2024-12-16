@@ -10,6 +10,13 @@ pub struct FacDestroy {
 }
 
 impl FacDestroy {
+    pub fn new_everything(radius: u32) -> Self {
+        Self {
+            area: format!("{{ {{ -{radius}, -{radius} }} , {{ {radius}, {radius} }} }}"),
+            entity_names: Vec::new(),
+        }
+    }
+
     pub fn new_filtered(radius: u32, entity_names: Vec<&'static str>) -> Self {
         if entity_names.is_empty() {
             panic!("empty entities, not destroying everything")
@@ -38,6 +45,16 @@ impl FacDestroy {
 
 impl LuaCommand for FacDestroy {
     fn make_lua(&self) -> String {
+        if self.entity_names.is_empty() {
+            self.destroy_everything()
+        } else {
+            self.destroy_filtered()
+        }
+    }
+}
+
+impl FacDestroy {
+    fn destroy_filtered(&self) -> String {
         // game.players[1].teleport({{ 1000, 1000 }})
         // rcon.print('destroy_' .. entity.name )
         // for entity in
@@ -53,6 +70,20 @@ local entities = game.surfaces[1].find_entities_filtered{{
     area = {area}, 
     name = {{ {filters} }} 
 }}
+for _, entity in ipairs(entities) do
+    entity.destroy()
+end
+        "
+        )
+        .trim()
+        .replace('\n', "")
+    }
+
+    fn destroy_everything(&self) -> String {
+        let area = &self.area;
+        format!(
+            r"
+local entities = game.surfaces[1].find_entities({area})
 for _, entity in ipairs(entities) do
     entity.destroy()
 end
