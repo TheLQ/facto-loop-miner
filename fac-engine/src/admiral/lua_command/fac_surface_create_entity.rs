@@ -146,6 +146,7 @@ pub enum CreateParam {
     Direction(RailDirection),
     DirectionFacto(FacDirectionEighth),
     Recipe(String),
+    Type(String),
 }
 
 impl CreateParam {
@@ -162,7 +163,8 @@ impl CreateParam {
                     format!("defines.direction.{}", direction.to_lowercase()),
                 )
             }
-            CreateParam::Recipe(name) => ("recipe", name.clone()),
+            CreateParam::Recipe(name) => ("recipe", wrap_quotes(name)),
+            CreateParam::Type(name) => ("type", wrap_quotes(name)),
         }
     }
 
@@ -173,4 +175,8 @@ impl CreateParam {
     pub fn recipe_str(recipe: &'static str) -> Vec<Self> {
         vec![CreateParam::Recipe(recipe.to_string())]
     }
+}
+
+fn wrap_quotes(input: impl AsRef<str>) -> String {
+    format!(r#""{}""#, input.as_ref())
 }

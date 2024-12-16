@@ -5,7 +5,7 @@ use crate::{
         assembler::FacEntAssembler,
         belt::FacEntBeltType,
         belt_transport::FacEntBeltTransport,
-        belt_under::FacEntBeltUnder,
+        belt_under::{FacEntBeltUnder, FacEntBeltUnderType},
         direction::FacDirectionQuarter,
         electric_mini::{FacEntElectricMini, FacEntElectricMiniType},
         inserter::{FacEntInserter, FacEntInserterType},
@@ -69,7 +69,12 @@ impl FacBlkAssemblerThru {
 
                 // going underground
                 res.push(BlueprintItem::new(
-                    FacEntBeltUnder::new(self.belt_type.clone(), direction.clone()).into_boxed(),
+                    FacEntBeltUnder::new(
+                        self.belt_type.clone(),
+                        FacEntBeltUnderType::Input,
+                        direction.clone(),
+                    )
+                    .into_boxed(),
                     origin.move_xy_usize(cell_x_offset + 1, y_offset),
                 ));
 
@@ -92,7 +97,12 @@ impl FacBlkAssemblerThru {
             for y_offset in 0..3 {
                 // coming up underground
                 res.push(BlueprintItem::new(
-                    FacEntBeltUnder::new(self.belt_type.clone(), direction.clone()).into_boxed(),
+                    FacEntBeltUnder::new(
+                        self.belt_type.clone(),
+                        FacEntBeltUnderType::Output,
+                        direction.clone(),
+                    )
+                    .into_boxed(),
                     origin.move_xy_usize(cell_x_offset, y_offset),
                 ));
             }

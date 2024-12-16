@@ -1,7 +1,9 @@
 use crate::{
     blueprint::bpfac::{FacBpInteger, entity::FacBpEntity, position::FacBpPosition},
     common::names::FacEntityName,
-    game_entities::{direction::FacDirectionEighth, module::FacModule},
+    game_entities::{
+        belt_under::FacEntBeltUnderType, direction::FacDirectionEighth, module::FacModule,
+    },
 };
 
 use super::vpoint::VPoint;
@@ -29,6 +31,7 @@ pub trait FacEntity: FacArea {
             neighbours: None,
             recipe: self.to_fac_recipe(),
             items: self.to_fac_items(),
+            utype: self.to_fac_belt_under_type(),
         }
     }
 
@@ -41,6 +44,10 @@ pub trait FacEntity: FacArea {
     }
 
     fn to_fac_items(&self) -> Option<Vec<FacModule>> {
+        None
+    }
+
+    fn to_fac_belt_under_type(&self) -> Option<FacEntBeltUnderType> {
         None
     }
 }
