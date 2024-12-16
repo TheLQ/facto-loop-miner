@@ -9,35 +9,35 @@ default-run = "main"
 
 [dependencies]
 facto-loop-miner-common = { path = "../common" }
-image = "0.25.0"
+image = "0.25.5"
 jemallocator = "0.5.4"
 num-format = "0.4.4"
-num-traits = "0.2.16"
-serde = { version = "1.0.183", features = ["derive"] }
-serde_json = { version = "1.0.104" }
-simd-json = { version = "0.13.9", features = ["serde"] }
+num-traits = "0.2.19"
+serde = { version = "1.0.216", features = ["derive"] }
+serde_json = { version = "1.0.133" }
+simd-json = { version = "0.13.11", features = ["serde"] }
 opencv = { version = "0.89.0", default-features = false, features = [
     "clang-runtime",
     "imgcodecs",
     "imgproc"
 ] }
 
-strum = { version = "0.26.2", features = ["derive"] }
+strum = { version = "0.26.3", features = ["derive"] }
 itertools = "0.12.1"
-kiddo = "4.2.0"
+kiddo = "4.2.1"
 pathfinding = { version = "4.9.1", path = "../../pathfinding" }
-rayon = "1.7.0"
+rayon = "1.10.0"
 bitvec = "1.0.1"
-lazy_static = "1.4.0"
-mimalloc = "0.1.39"
-tracing = "0.1.37"
+lazy_static = "1.5.0"
+mimalloc = "0.1.43"
+tracing = "0.1.41"
 rcon-client = "0.1.2"
 #rcon-client = { path = "../../rcon-rs" }
-thiserror = "1.0.50"
-regex = "1.10.2"
-crossbeam = "0.8.2"
-clap = { version = "4.4.11", features = ["derive"] }
-bytemuck = { version = "1.14.0", features = ["extern_crate_alloc"] }
+thiserror = "1.0.69"
+regex = "1.11.1"
+crossbeam = "0.8.4"
+clap = { version = "4.5.23", features = ["derive"] }
+bytemuck = { version = "1.20.0", features = ["extern_crate_alloc"] }
 enum-map = "2.7.3"
 facto-loop-miner-io = { path = "../io_experiments" }
 rand = "0.8.5"

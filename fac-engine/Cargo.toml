@@ -10,10 +10,10 @@ num-format = "0.4.4"
 rand = "0.8.5"
 regex = "1.11.1"
 strum = { version = "0.26.3", features = ["derive"] }
-thiserror = "2.0.3"
+thiserror = "2.0.7"
 tracing = "0.1.41"
 rcon-client = "0.1.2"
-serde = "1.0.215"
+serde = "1.0.216"
 generic_static = "0.2.0"
 base64ct = { version = "1.6.0", features = ["alloc"] }
 flate2 = "1.0.35"
