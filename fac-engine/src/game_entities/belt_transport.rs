@@ -3,7 +3,10 @@ use crate::common::{
     names::FacEntityName,
 };
 
-use super::{belt::FacEntBeltType, direction::FacDirectionQuarter};
+use super::{
+    belt::FacEntBeltType,
+    direction::{FacDirectionEighth, FacDirectionQuarter},
+};
 
 pub struct FacEntBeltTransport {
     name: FacEntityName,
@@ -13,6 +16,10 @@ pub struct FacEntBeltTransport {
 impl FacEntity for FacEntBeltTransport {
     fn name(&self) -> &FacEntityName {
         &self.name
+    }
+
+    fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
+        Some(self.direction.to_direction_eighth())
     }
 }
 

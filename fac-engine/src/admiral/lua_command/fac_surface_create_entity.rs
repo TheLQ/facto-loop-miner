@@ -1,6 +1,5 @@
 use crate::admiral::lua_command::{DEFAULT_FORCE_VAR, LuaCommand};
-use crate::common::cvpoint::Point2f;
-use crate::common::vpoint::VPoint;
+use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::game_entities::direction::FacDirectionEighth;
 use crate::game_entities::direction::RailDirection;
 use itertools::Itertools;
@@ -12,7 +11,7 @@ pub const DEBUG_POSITION_EXPECTED: bool = false;
 #[derive(Debug)]
 pub struct FacSurfaceCreateEntity {
     pub name: String,
-    pub position: Point2f,
+    pub position: FacBpPosition,
     pub params: Vec<CreateParam>,
     pub commands: Vec<String>,
 }
@@ -96,7 +95,7 @@ impl LuaCommand for FacSurfaceCreateEntity {
 }
 
 impl FacSurfaceCreateEntity {
-    pub fn new(name: &'static str, position: Point2f) -> Self {
+    pub fn new(name: &str, position: FacBpPosition) -> Self {
         FacSurfaceCreateEntity {
             name: name.to_string(),
             position,
@@ -105,7 +104,7 @@ impl FacSurfaceCreateEntity {
         }
     }
 
-    pub fn new_params(name: &'static str, position: Point2f, params: Vec<CreateParam>) -> Self {
+    pub fn new_params(name: &str, position: FacBpPosition, params: Vec<CreateParam>) -> Self {
         FacSurfaceCreateEntity {
             name: name.to_string(),
             position,
@@ -114,7 +113,7 @@ impl FacSurfaceCreateEntity {
         }
     }
 
-    pub fn new_commands(name: &'static str, position: Point2f, commands: Vec<String>) -> Self {
+    pub fn new_commands(name: &str, position: FacBpPosition, commands: Vec<String>) -> Self {
         FacSurfaceCreateEntity {
             name: name.to_string(),
             position,
@@ -124,8 +123,8 @@ impl FacSurfaceCreateEntity {
     }
 
     pub fn new_params_commands(
-        name: &'static str,
-        position: Point2f,
+        name: &str,
+        position: FacBpPosition,
         params: Vec<CreateParam>,
         commands: Vec<String>,
     ) -> Self {
@@ -137,60 +136,8 @@ impl FacSurfaceCreateEntity {
         }
     }
 
-    pub fn new_rail_straight(position: Point2f, direction: RailDirection) -> Self {
-        Self::new_params("straight-rail", position, CreateParam::direction(direction))
-    }
-
-    pub fn new_rail_straight_facto(position: Point2f, direction: FacDirectionEighth) -> Self {
-        Self::new_params("straight-rail", position, vec![
-            CreateParam::DirectionFacto(direction),
-        ])
-    }
-
-    pub fn new_rail_curved(position: Point2f, direction: RailDirection) -> Self {
-        Self::new_params("curved-rail", position, CreateParam::direction(direction))
-    }
-
-    pub fn new_rail_curved_facto(position: Point2f, direction: FacDirectionEighth) -> Self {
-        Self::new_params("curved-rail", position, vec![CreateParam::DirectionFacto(
-            direction,
-        )])
-    }
-
-    pub fn new_rail_signal(position: Point2f, direction: RailDirection) -> Self {
-        Self::new_params("rail-signal", position, vec![CreateParam::Direction(
-            direction,
-        )])
-    }
-
-    pub fn new_electric_pole_big(position: Point2f) -> Self {
-        Self::new("big-electric-pole", position)
-    }
-
-    pub fn new_radar(position: Point2f) -> Self {
-        Self::new("radar", position)
-    }
-
-    pub fn new_drill(position: Point2f, direction: RailDirection) -> Self {
-        Self::new_params("electric-mining-drill", position, vec![
-            CreateParam::Direction(direction),
-        ])
-    }
-
-    pub fn new_chest_red(position: Point2f) -> Self {
-        Self::new("logistic-chest-passive-provider", position)
-    }
-
-    pub fn new_electric_pole_medium(position: VPoint) -> Self {
-        Self::new("medium-electric-pole", position.to_f32_with_offset(0.5))
-    }
-
-    pub fn new_substation(position: VPoint) -> Self {
-        Self::new("substation", position.to_f32_with_offset(1.0))
-    }
-
-    pub fn new_roboport(position: VPoint) -> Self {
-        Self::new("roboport", position.to_f32_with_offset(1.5))
+    pub fn with_param(&mut self, param: CreateParam) {
+        self.params.push(param);
     }
 }
 

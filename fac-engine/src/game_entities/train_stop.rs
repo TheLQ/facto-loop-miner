@@ -6,7 +6,7 @@ use crate::{
     def_entity_name,
 };
 
-use super::direction::FacDirectionQuarter;
+use super::direction::{FacDirectionEighth, FacDirectionQuarter};
 
 pub struct FacEntTrainStop {
     direction: FacDirectionQuarter,
@@ -14,6 +14,10 @@ pub struct FacEntTrainStop {
 
 impl FacEntity for FacEntTrainStop {
     def_entity_name!(FacEntityName::TrainStop);
+
+    fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
+        Some(self.direction.to_direction_eighth())
+    }
 }
 
 impl SquareArea for FacEntTrainStop {

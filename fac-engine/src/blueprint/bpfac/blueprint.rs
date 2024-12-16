@@ -4,7 +4,7 @@ use super::{entity::FacBpEntity, icons::FacBpIcon};
 
 #[derive(Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
-pub struct BpFacBlueprint {
+pub struct FacBpBlueprint {
     pub icons: Vec<FacBpIcon>,
     pub entities: Vec<FacBpEntity>,
     pub item: String,
@@ -14,5 +14,5 @@ pub struct BpFacBlueprint {
 #[derive(Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct FacBpBlueprintWrapper {
-    pub blueprint: BpFacBlueprint,
+    pub blueprint: FacBpBlueprint,
 }

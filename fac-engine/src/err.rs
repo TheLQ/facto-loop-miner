@@ -3,7 +3,7 @@ use std::backtrace::Backtrace;
 use itertools::Itertools;
 use thiserror::Error;
 
-use crate::common::{cvpoint::Point2f, vpoint::VPoint};
+use crate::{blueprint::bpfac::position::FacBpPosition, common::vpoint::VPoint};
 
 pub type FResult<T> = Result<T, FError>;
 
@@ -16,7 +16,7 @@ pub enum FError {
     },
     #[error("XYNotInteger point {:?}", position)]
     XYNotInteger {
-        position: Point2f,
+        position: FacBpPosition,
         backtrace: Backtrace,
     },
     #[error("Serde {}", err)]

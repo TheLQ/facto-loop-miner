@@ -1,8 +1,8 @@
 use crate::blueprint::bpfac::position::FacBpPosition;
-use crate::common::cvpoint::{Point, Point2f};
 use crate::err::{FError, FResult};
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
+use std::borrow::Borrow;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 /// Core XY Point. i32 for simpler math
@@ -53,12 +53,12 @@ impl VPoint {
     }
 
     /// Factorio import. Offset is half the entity width
-    pub fn from_f32_with_offset(point: Point2f, offset: f32) -> FResult<Self> {
-        let new_point = Point2f {
+    pub fn from_f32_with_offset(point: FacBpPosition, offset: f32) -> FResult<Self> {
+        let new_point = FacBpPosition {
             x: point.x - offset,
             y: point.y - offset,
         };
-        if is_integer_f32(new_point) {
+        if is_integer_f32(&new_point) {
             Ok(VPoint {
                 x: new_point.x as i32,
                 y: new_point.y as i32,
@@ -71,34 +71,17 @@ impl VPoint {
         }
     }
 
-    #[deprecated]
     /// Factorio export. Offset is half the entity width
-    pub fn to_f32(&self) -> Point2f {
-        Point2f {
-            x: self.x as f32,
-            y: self.y as f32,
-        }
-    }
-
-    /// Factorio export. Offset is half the entity width
-    #[deprecated]
-    pub fn to_f32_with_offset(&self, offset: f32) -> Point2f {
-        Point2f {
-            x: self.x as f32 + offset,
-            y: self.y as f32 + offset,
-        }
-    }
-
-    pub fn to_fac(&self, offset: f32) -> FacBpPosition {
+    pub fn to_fac_with_offset(&self, offset: f32) -> FacBpPosition {
         FacBpPosition::new(self.x as f32 + offset, self.y as f32 + offset)
     }
 
-    pub fn to_cv_point(&self) -> Point {
-        Point {
-            x: self.x,
-            y: self.y,
-        }
-    }
+    // pub fn to_cv_point(&self) -> Point {
+    //     Point {
+    //         x: self.x,
+    //         y: self.y,
+    //     }
+    // }
 
     pub fn to_slice_f32(&self) -> [f32; 2] {
         [self.x as f32, self.y as f32]
@@ -308,19 +291,20 @@ impl SubAssign for VPoint {
     }
 }
 
-fn is_integer_f32(point: Point2f) -> bool {
+fn is_integer_f32(point: impl Borrow<FacBpPosition>) -> bool {
+    let point = point.borrow();
     point.x.round() == point.x && point.y.round() == point.y
 }
 
-pub fn must_whole_number(point: Point2f) {
-    let rounded = Point2f {
+pub fn must_whole_number(point: FacBpPosition) {
+    let rounded = FacBpPosition {
         x: point.x.round(),
         y: point.y.round(),
     };
     assert_eq!(rounded, point, "Point is not round {:?}", rounded);
 }
 
-pub fn must_odd_number(point: Point2f) {
+pub fn must_odd_number(point: FacBpPosition) {
     assert!(
         !(point.x as i32 % 2 == 0 || point.y as i32 % 2 == 0),
         "Point is even {:?}",
@@ -328,7 +312,7 @@ pub fn must_odd_number(point: Point2f) {
     );
 }
 
-pub fn must_even_number(point: Point2f) {
+pub fn must_even_number(point: FacBpPosition) {
     assert!(
         !(point.x as i32 % 2 == 1 || point.y as i32 % 2 == 1),
         "Point is odd {:?}",
@@ -336,7 +320,7 @@ pub fn must_even_number(point: Point2f) {
     );
 }
 
-pub fn must_half_number(point: Point2f) {
+pub fn must_half_number(point: FacBpPosition) {
     let dec_x = point.x.floor() - point.x;
     let dec_y = point.y.floor() - point.y;
     assert!(

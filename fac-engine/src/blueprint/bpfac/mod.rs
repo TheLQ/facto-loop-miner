@@ -4,5 +4,5 @@ pub mod icons;
 pub mod position;
 pub mod signal_id;
 
-pub type BpFacInteger = u32;
-pub type BpFacFloat = f32;
+pub type FacBpInteger = u32;
+pub type FacBpFloat = f32;

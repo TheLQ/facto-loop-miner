@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
-pub struct BpFacSignalId {
+pub struct FacBpSignalId {
     name: String,
     #[serde(rename = "type")]
     stype: FacBpSignalIdType,

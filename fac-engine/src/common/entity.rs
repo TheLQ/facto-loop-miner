@@ -1,7 +1,7 @@
 use crate::{
-    blueprint::bpfac::{BpFacInteger, entity::FacBpEntity, position::FacBpPosition},
+    blueprint::bpfac::{FacBpInteger, entity::FacBpEntity, position::FacBpPosition},
     common::names::FacEntityName,
-    game_entities::direction::FacDirectionEighth,
+    game_entities::{direction::FacDirectionEighth, module::FacModule},
 };
 
 use super::vpoint::VPoint;
@@ -20,7 +20,7 @@ pub trait FacEntity: FacArea {
         self.to_fac(entity_number.try_into().unwrap(), position)
     }
 
-    fn to_fac(&self, entity_number: BpFacInteger, position: &VPoint) -> FacBpEntity {
+    fn to_fac(&self, entity_number: FacBpInteger, position: &VPoint) -> FacBpEntity {
         FacBpEntity {
             entity_number,
             name: self.name().to_fac_name(),
@@ -28,7 +28,7 @@ pub trait FacEntity: FacArea {
             direction: self.to_fac_direction(),
             neighbours: None,
             recipe: self.to_fac_recipe(),
-            items: None,
+            items: self.to_fac_items(),
         }
     }
 
@@ -37,6 +37,10 @@ pub trait FacEntity: FacArea {
     }
 
     fn to_fac_recipe(&self) -> Option<String> {
+        None
+    }
+
+    fn to_fac_items(&self) -> Option<Vec<FacModule>> {
         None
     }
 }
@@ -96,6 +100,11 @@ impl<T: SquareArea> FacArea for T {
     }
 
     fn to_fac_position(&self, position: &VPoint) -> FacBpPosition {
-        position.to_fac(T::area_diameter() as f32 / 2.0)
+        position.to_fac_with_offset(T::area_diameter() as f32 / 2.0)
     }
+}
+
+pub fn unwrap_options_to_option_vec<T: Clone>(input: &[Option<T>]) -> Option<Vec<T>> {
+    let res: Vec<T> = input.iter().filter_map(|v| v.to_owned()).collect();
+    if res.is_empty() { None } else { Some(res) }
 }

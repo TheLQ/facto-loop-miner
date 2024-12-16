@@ -1,8 +1,8 @@
 use crate::admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity};
 use crate::admiral::lua_command::{LuaCommand, LuaCommandBatch};
+use crate::common::cvpoint::Point2f;
 use crate::common::vpoint::{must_even_number, must_whole_number};
 use crate::game_entities::direction::RailDirection;
-use crate::common::cvpoint::Point2f;
 
 #[derive(Debug)]
 pub struct RailStationGenerator {
@@ -21,11 +21,13 @@ impl LuaCommandBatch for RailStationGenerator {
 }
 
 impl RailStationGenerator {
+    /// ```text
     /// ---------------------
     ///                       -
     ///                         -
     ///                       -
     /// ---------------------
+    /// ```
     fn make_pocket_rail_loop(&self, creation_commands: &mut Vec<Box<dyn LuaCommand>>) {
         let x_end = self.x_end();
 
@@ -66,11 +68,13 @@ impl RailStationGenerator {
         // .for_each(|e| creation_commands.push(e));
     }
 
+    /// ```text
     /// ---------------------
     ///                     s -
     ///                         -
     ///                       -
     /// ---------------------
+    /// ```
     fn make_station(&self, creation_commands: &mut Vec<Box<dyn LuaCommand>>) {
         let x_end = self.x_end();
         creation_commands.push(

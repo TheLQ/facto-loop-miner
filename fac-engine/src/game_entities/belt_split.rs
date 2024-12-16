@@ -7,7 +7,10 @@ use crate::{
     },
 };
 
-use super::{belt::FacEntBeltType, direction::FacDirectionQuarter};
+use super::{
+    belt::FacEntBeltType,
+    direction::{FacDirectionEighth, FacDirectionQuarter},
+};
 
 pub struct FacEntBeltSplit {
     name: FacEntityName,
@@ -17,6 +20,10 @@ pub struct FacEntBeltSplit {
 impl FacEntity for FacEntBeltSplit {
     fn name(&self) -> &FacEntityName {
         &self.name
+    }
+
+    fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
+        Some(self.direction.to_direction_eighth())
     }
 }
 
@@ -33,7 +40,7 @@ impl FacArea for FacEntBeltSplit {
             FacDirectionQuarter::North | FacDirectionQuarter::South => position.move_x(1),
             FacDirectionQuarter::East | FacDirectionQuarter::West => position.move_y(1),
         }
-        .to_fac(0.0)
+        .to_fac_with_offset(0.0)
     }
 }
 

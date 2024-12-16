@@ -1,6 +1,6 @@
 use crate::{
     common::{
-        entity::{FacEntity, SquareArea},
+        entity::{FacEntity, SquareArea, unwrap_options_to_option_vec},
         names::FacEntityName,
     },
     def_entity_name,
@@ -14,6 +14,10 @@ pub struct FacEntBeacon {
 
 impl FacEntity for FacEntBeacon {
     def_entity_name!(FacEntityName::Beacon);
+
+    fn to_fac_items(&self) -> Option<Vec<FacModule>> {
+        unwrap_options_to_option_vec(&self.modules)
+    }
 }
 
 impl SquareArea for FacEntBeacon {
