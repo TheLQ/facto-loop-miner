@@ -1,7 +1,7 @@
 use strum_macros::AsRefStr;
 
 use crate::game_entities::{
-    belt::FacEntBeltType, chest::FacEntityChestType, electric_large::FacEntElectricLargeType,
+    belt::FacEntBeltType, chest::FacEntChestType, electric_large::FacEntElectricLargeType,
     electric_mini::FacEntElectricMiniType, inserter::FacEntInserterType, tier::FacTier,
 };
 
@@ -11,7 +11,7 @@ pub enum FacEntityName {
     Rail,
     Assembler(FacTier),
     Inserter(FacEntInserterType),
-    Chest(FacEntityChestType),
+    Chest(FacEntChestType),
     ElectricMini(FacEntElectricMiniType),
     ElectricLarge(FacEntElectricLargeType),
     TrainStop,
@@ -40,14 +40,14 @@ impl FacEntityName {
             }
             .into(),
             Self::Chest(ctype) => match ctype {
-                FacEntityChestType::Wood => "wooden-chest",
-                FacEntityChestType::Iron => "iron-chest",
-                FacEntityChestType::Steel => "steel-chest",
-                FacEntityChestType::Active => "logistic-chest-active-provider",
-                FacEntityChestType::Passive => "logistic-chest-passive-provider",
-                FacEntityChestType::Storage => "logistic-chest-storage",
-                FacEntityChestType::Buffer => "logistic-chest-buffer",
-                FacEntityChestType::Requestor => "logistic-chest-requestor",
+                FacEntChestType::Wood => "wooden-chest",
+                FacEntChestType::Iron => "iron-chest",
+                FacEntChestType::Steel => "steel-chest",
+                FacEntChestType::Active => "logistic-chest-active-provider",
+                FacEntChestType::Passive => "logistic-chest-passive-provider",
+                FacEntChestType::Storage => "logistic-chest-storage",
+                FacEntChestType::Buffer => "logistic-chest-buffer",
+                FacEntChestType::Requestor => "logistic-chest-requestor",
             }
             .into(),
             Self::ElectricMini(etype) => match etype {

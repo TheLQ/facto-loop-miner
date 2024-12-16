@@ -14,7 +14,7 @@ use facto_loop_miner_fac_engine::{
     game_entities::{
         assembler::FacEntAssembler,
         belt::FacEntBeltType,
-        chest::{FacEntChest, FacEntityChestType},
+        chest::{FacEntChest, FacEntChestType},
         inserter::FacEntInserterType,
         module::FacModule,
         tier::FacTier,
@@ -65,7 +65,7 @@ fn basic_build_bp(bp: &mut BlueprintContents) {
 }
 
 fn basic_build_gen(bp: &mut BlueprintContents) {
-    let station = FacBlkRailStation::new(3, Some(FacEntityChestType::Passive), 2);
+    let station = FacBlkRailStation::new(3, Some(FacEntChestType::Passive), 2);
     for entity in station.generate(VPoint::new(5, 5)) {
         bp.add_entity_each(entity);
     }
@@ -92,24 +92,24 @@ fn basic_build_beacon_farm(bp: &mut BlueprintContents) {
             ),
             side_bottom: [
                 Some(FacBlkAssemblerCellEntry {
-                    chest: FacEntChest::new(FacEntityChestType::Requestor),
+                    chest: FacEntChest::new(FacEntChestType::Requestor),
                     inserter: FacEntInserterType::Fast,
                     is_loader: false,
                 }),
                 Some(FacBlkAssemblerCellEntry {
-                    chest: FacEntChest::new(FacEntityChestType::Requestor),
+                    chest: FacEntChest::new(FacEntChestType::Requestor),
                     inserter: FacEntInserterType::Fast,
                     is_loader: false,
                 }),
                 Some(FacBlkAssemblerCellEntry {
-                    chest: FacEntChest::new(FacEntityChestType::Passive),
+                    chest: FacEntChest::new(FacEntChestType::Passive),
                     inserter: FacEntInserterType::Fast,
                     is_loader: true,
                 }),
             ],
             side_right: [
                 Some(FacBlkAssemblerCellEntry {
-                    chest: FacEntChest::new(FacEntityChestType::Passive),
+                    chest: FacEntChest::new(FacEntChestType::Passive),
                     inserter: FacEntInserterType::Fast,
                     is_loader: true,
                 }),

@@ -2,7 +2,7 @@ use crate::{
     blueprint::bpitem::BlueprintItem,
     common::{entity::FacEntity, vpoint::VPoint},
     game_entities::{
-        chest::{FacEntChest, FacEntityChestType},
+        chest::{FacEntChest, FacEntChestType},
         direction::FacDirectionQuarter,
         electric_mini::{FacEntElectricMini, FacEntElectricMiniType},
         inserter::{FacEntInserter, FacEntInserterType},
@@ -19,7 +19,7 @@ pub enum RailStationSide {}
 
 pub struct FacBlkRailStation {
     cars: usize,
-    chests: Option<FacEntityChestType>,
+    chests: Option<FacEntChestType>,
     front_engines: usize,
 }
 
@@ -37,7 +37,7 @@ impl FacBlock for FacBlkRailStation {
 }
 
 impl FacBlkRailStation {
-    pub fn new(cars: usize, chests: Option<FacEntityChestType>, front_engines: usize) -> Self {
+    pub fn new(cars: usize, chests: Option<FacEntChestType>, front_engines: usize) -> Self {
         Self {
             cars,
             chests,
@@ -90,7 +90,7 @@ impl FacBlkRailStation {
         &self,
         res: &mut Vec<BlueprintItem>,
         start_rail_center: VPoint,
-        chest_type: &FacEntityChestType,
+        chest_type: &FacEntChestType,
     ) {
         for car in 0..self.cars {
             let car_x_offset = get_car_offset(car);
