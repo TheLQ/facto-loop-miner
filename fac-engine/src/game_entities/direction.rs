@@ -1,5 +1,3 @@
-use serde::Deserialize;
-use serde::Serialize;
 use serde_repr::Deserialize_repr;
 use serde_repr::Serialize_repr;
 use strum::AsRefStr;
@@ -55,57 +53,31 @@ impl FacDirectionQuarter {
             Self::West => Self::North,
         }
     }
-}
 
-const RAIL_DIRECTION_CLOCKWISE: [RailDirection; 4] = [
-    RailDirection::Up,
-    RailDirection::Right,
-    RailDirection::Down,
-    RailDirection::Left,
-];
+    // pub fn is_up_down(&self) -> bool {
+    //     *self == RailDirection::Up || *self == RailDirection::Down
+    // }
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize, AsRefStr)]
-pub enum RailDirection {
-    Up,
-    Down,
-    Left,
-    Right,
-}
+    // pub fn spinner(&self, post_rotations: usize) -> RailDirection {
+    //     let mut directions = RAIL_DIRECTION_CLOCKWISE.iter().cycle();
 
-impl RailDirection {
-    pub fn spinner(&self, post_rotations: usize) -> RailDirection {
-        let mut directions = RAIL_DIRECTION_CLOCKWISE.iter().cycle();
+    //     while directions.next().unwrap() != self {}
 
-        while directions.next().unwrap() != self {}
+    //     let mut new_direction = directions.next().unwrap();
+    //     for _ in 1..post_rotations {
+    //         new_direction = directions.next().unwrap();
+    //     }
+    //     new_direction.clone()
+    // }
 
-        let mut new_direction = directions.next().unwrap();
-        for _ in 1..post_rotations {
-            new_direction = directions.next().unwrap();
-        }
-        new_direction.clone()
-    }
-
-    pub fn is_same_axis(&self, other: &Self) -> bool {
-        match self {
-            RailDirection::Up | RailDirection::Down => {
-                *other == RailDirection::Up || *other == RailDirection::Down
-            }
-            RailDirection::Left | RailDirection::Right => {
-                *other == RailDirection::Left || *other == RailDirection::Right
-            }
-        }
-    }
-
-    pub fn to_factorio(&self) -> &'static str {
-        match self {
-            RailDirection::Up => "north",
-            RailDirection::Down => "south",
-            RailDirection::Left => "west",
-            RailDirection::Right => "east",
-        }
-    }
-
-    pub fn is_up_down(&self) -> bool {
-        *self == RailDirection::Up || *self == RailDirection::Down
-    }
+    // pub fn is_same_axis(&self, other: &Self) -> bool {
+    //     match self {
+    //         RailDirection::Up | RailDirection::Down => {
+    //             *other == RailDirection::Up || *other == RailDirection::Down
+    //         }
+    //         RailDirection::Left | RailDirection::Right => {
+    //             *other == RailDirection::Left || *other == RailDirection::Right
+    //         }
+    //     }
+    // }
 }

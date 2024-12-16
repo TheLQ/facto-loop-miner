@@ -1,7 +1,6 @@
 use crate::admiral::lua_command::{DEFAULT_FORCE_VAR, LuaCommand};
 use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::game_entities::direction::FacDirectionEighth;
-use crate::game_entities::direction::RailDirection;
 use itertools::Itertools;
 use std::convert::AsRef;
 
@@ -35,7 +34,6 @@ impl LuaCommand for FacSurfaceCreateEntity {
 
         if DEBUG_PRE_COLLISION {
             let direction = self.params.iter().find_map(|v| match v {
-                CreateParam::Direction(direction) => Some(direction.to_factorio()),
                 CreateParam::DirectionFacto(direction) => Some(direction.as_ref()),
                 _ => None,
             });
@@ -143,7 +141,6 @@ impl FacSurfaceCreateEntity {
 
 #[derive(Debug)]
 pub enum CreateParam {
-    Direction(RailDirection),
     DirectionFacto(FacDirectionEighth),
     Recipe(String),
     Type(String),
@@ -152,10 +149,6 @@ pub enum CreateParam {
 impl CreateParam {
     pub fn to_param(&self) -> (&'static str, String) {
         match self {
-            CreateParam::Direction(direction) => (
-                "direction",
-                format!("defines.direction.{}", direction.to_factorio()),
-            ),
             CreateParam::DirectionFacto(direction) => {
                 let direction: &str = direction.as_ref();
                 (
@@ -166,14 +159,6 @@ impl CreateParam {
             CreateParam::Recipe(name) => ("recipe", wrap_quotes(name)),
             CreateParam::Type(name) => ("type", wrap_quotes(name)),
         }
-    }
-
-    pub fn direction(direction: RailDirection) -> Vec<Self> {
-        vec![CreateParam::Direction(direction)]
-    }
-
-    pub fn recipe_str(recipe: &'static str) -> Vec<Self> {
-        vec![CreateParam::Recipe(recipe.to_string())]
     }
 }
 
