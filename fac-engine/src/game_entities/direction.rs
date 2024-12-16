@@ -2,8 +2,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use serde_repr::Deserialize_repr;
 use serde_repr::Serialize_repr;
-use strum_macros::AsRefStr;
-use strum_macros::IntoStaticStr;
+use strum::AsRefStr;
+use strum::IntoStaticStr;
 
 #[derive(Debug, Clone, PartialEq, AsRefStr, IntoStaticStr, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]

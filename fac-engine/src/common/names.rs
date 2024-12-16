@@ -1,4 +1,4 @@
-use strum_macros::AsRefStr;
+use strum::AsRefStr;
 
 use crate::game_entities::{
     belt::FacEntBeltType, chest::FacEntChestType, electric_large::FacEntElectricLargeType,

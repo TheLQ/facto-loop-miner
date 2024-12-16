@@ -2,7 +2,7 @@ use core::fmt;
 use std::fmt::Formatter;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Visitor};
-use strum_macros::AsRefStr;
+use strum::AsRefStr;
 
 use super::tier::FacTier;
 

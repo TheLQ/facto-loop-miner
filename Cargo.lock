@@ -707,7 +707,6 @@ dependencies = [
  "serde_repr",
  "serde_with",
  "strum",
- "strum_macros",
  "thiserror 2.0.3",
  "tracing",
 ]

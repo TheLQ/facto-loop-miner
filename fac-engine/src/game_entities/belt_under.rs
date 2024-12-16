@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use strum_macros::AsRefStr;
+use strum::AsRefStr;
 
 use crate::common::{
     entity::{FacEntity, SquareArea},
