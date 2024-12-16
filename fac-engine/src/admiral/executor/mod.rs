@@ -8,7 +8,7 @@ use crate::admiral::lua_command::lua_batch::LuaBatchCommand;
 use itertools::Itertools;
 use std::backtrace::Backtrace;
 
-// pub mod client;
+pub mod client;
 // pub mod entrypoint;
 // pub mod file;
 
