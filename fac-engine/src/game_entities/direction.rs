@@ -19,7 +19,9 @@ pub enum FacDirectionEighth {
 }
 
 #[derive(Debug, Clone, AsRefStr, IntoStaticStr)]
+#[repr(u8)]
 pub enum FacDirectionQuarter {
+    // clockwise order
     North,
     East,
     South,
@@ -27,7 +29,7 @@ pub enum FacDirectionQuarter {
 }
 
 impl FacDirectionQuarter {
-    pub fn to_direction_eighth(&self) -> FacDirectionEighth {
+    pub const fn to_direction_eighth(&self) -> FacDirectionEighth {
         match self {
             Self::North => FacDirectionEighth::North,
             Self::East => FacDirectionEighth::East,
@@ -36,12 +38,21 @@ impl FacDirectionQuarter {
         }
     }
 
-    pub fn rotate_flip(&self) -> FacDirectionQuarter {
+    pub const fn rotate_flip(&self) -> FacDirectionQuarter {
         match self {
             Self::North => Self::South,
             Self::East => Self::West,
             Self::South => Self::North,
             Self::West => Self::East,
+        }
+    }
+
+    pub fn rotate_once(&self) -> FacDirectionQuarter {
+        match self {
+            Self::North => Self::East,
+            Self::East => Self::South,
+            Self::South => Self::West,
+            Self::West => Self::North,
         }
     }
 }

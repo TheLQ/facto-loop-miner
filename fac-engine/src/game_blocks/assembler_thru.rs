@@ -35,11 +35,14 @@ impl FacBlock for FacBlkAssemblerThru {
                 FacDirectionQuarter::West,
                 &mut res,
             );
+            self.generate_belt_turn_for_row(super_row_pos, FacDirectionQuarter::West, &mut res);
         }
 
         res
     }
 }
+
+const CELL_HEIGHT: usize = 3;
 
 impl FacBlkAssemblerThru {
     fn cell_width(&self) -> usize {
@@ -151,6 +154,52 @@ impl FacBlkAssemblerThru {
                 FacEntBeltTransport::new(self.belt_type.clone(), direction.clone()).into_boxed(),
                 origin.move_xy_usize(cell_x_offset, cell_y_offset + 1),
             ));
+        }
+    }
+
+    fn generate_belt_turn_for_row(
+        &self,
+        origin: VPoint,
+        direction: FacDirectionQuarter,
+        res: &mut Vec<BlueprintItem>,
+    ) {
+        let start = origin.move_x_usize(self.cell_width() * self.width);
+
+        // going out
+        for belt_num in 0..CELL_HEIGHT {
+            let start = start.move_y_usize(/*reverse expansion*/ 2 - belt_num);
+            for i in 0..belt_num {
+                res.push(BlueprintItem::new(
+                    FacEntBeltTransport::new(self.belt_type.clone(), direction.clone())
+                        .into_boxed(),
+                    start.move_x_usize(i),
+                ));
+            }
+        }
+
+        // going down
+        for belt_num in 0..CELL_HEIGHT {
+            let start = start.move_xy_usize(belt_num, 3 - belt_num);
+            for i in 0..((belt_num * /*both rows*/2) + /*center*/CELL_HEIGHT) {
+                res.push(BlueprintItem::new(
+                    FacEntBeltTransport::new(self.belt_type.clone(), direction.rotate_once())
+                        .into_boxed(),
+                    start.move_y_usize(i),
+                ));
+            }
+        }
+
+        // coming back
+        let start = start.move_y_usize(CELL_HEIGHT * 2);
+        for belt_num in 0..CELL_HEIGHT {
+            let start = start.move_y_usize(belt_num);
+            for i in 0..belt_num {
+                res.push(BlueprintItem::new(
+                    FacEntBeltTransport::new(self.belt_type.clone(), direction.rotate_flip())
+                        .into_boxed(),
+                    start.move_x_usize(i),
+                ));
+            }
         }
     }
 }
