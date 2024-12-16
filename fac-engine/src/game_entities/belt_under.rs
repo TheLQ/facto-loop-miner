@@ -19,6 +19,15 @@ pub enum FacEntBeltUnderType {
 }
 
 impl FacEntBeltUnderType {
+    pub fn flip(&self) -> Self {
+        match self {
+            Self::Input => Self::Output,
+            Self::Output => Self::Input,
+        }
+    }
+}
+
+impl FacEntBeltUnderType {
     /// needed for lua
     pub fn to_fac(&self) -> String {
         self.as_ref().to_lowercase()
