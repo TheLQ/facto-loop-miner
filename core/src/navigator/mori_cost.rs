@@ -1,7 +1,7 @@
 use crate::navigator::mori::{Rail, RailMode, RAIL_STEP_SIZE};
 use crate::navigator::rail_point_compare::RailPointCompare;
 use crate::navigator::resource_cloud::ResourceCloud;
-use crate::surfacev::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use strum::IntoStaticStr;
 
 // const ANTI_WRONG_BIAS_EFFECT: f32 = 10f32;

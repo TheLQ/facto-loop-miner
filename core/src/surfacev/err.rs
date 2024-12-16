@@ -1,4 +1,4 @@
-use crate::surfacev::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_io::err::VIoError;
 use itertools::Itertools;
 use opencv::core::Point2f;

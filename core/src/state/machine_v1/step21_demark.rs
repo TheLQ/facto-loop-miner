@@ -3,7 +3,7 @@ use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::Surface;
-use crate::surfacev::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use itertools::Itertools;
 use tracing::{error, info, warn};

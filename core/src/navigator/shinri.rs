@@ -1,6 +1,6 @@
 use crate::navigator::mori::{Rail, RailMode, TurnType};
 use crate::navigator::rail_point_compare::RailPointCompare;
-use crate::surfacev::varea::VArea;
+use facto_loop_miner_fac_engine::common::varea::VArea;
 use crate::surfacev::vsurface::VSurface;
 use itertools::Itertools;
 use strum::Display;

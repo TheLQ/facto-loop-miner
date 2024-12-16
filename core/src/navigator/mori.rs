@@ -3,10 +3,6 @@ use crate::admiral::generators::rail90::{
     dual_rail_east, dual_rail_north, dual_rail_south, dual_rail_west, rail_degrees_east,
     rail_degrees_north, rail_degrees_south, rail_degrees_west,
 };
-use crate::admiral::lua_command::fac_surface_create_entity::{
-    FacSurfaceCreateEntity, FactoDirection,
-};
-use crate::admiral::lua_command::LuaCommand;
 use crate::navigator::mori_cost::calculate_cost_for_point;
 use crate::navigator::rail_point_compare::RailPointCompare;
 use crate::navigator::resource_cloud::ResourceCloud;
@@ -15,11 +11,13 @@ use crate::simd_diff::SurfaceDiff;
 use crate::surface::pixel::Pixel;
 use crate::surface::surface::PointU32;
 use crate::surfacev::err::VResult;
-use crate::surfacev::varea::VArea;
-use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use crossbeam::atomic::AtomicCell;
+use facto_loop_miner_fac_engine::admiral::lua_command::LuaCommand;
+use facto_loop_miner_fac_engine::common::varea::VArea;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionEighth;
 use itertools::Itertools;
 use pathfinding::prelude::astar_mori;
 use serde::{Deserialize, Serialize};
@@ -663,7 +661,7 @@ impl Rail {
                         .move_force_rotate_clockwise(1)
                         .move_forward_micro_num(4)
                         .move_force_rotate_clockwise(3),
-                    [FactoDirection::NorthWest, FactoDirection::SouthEast],
+                    [FacDirectionEighth::NorthWest, FacDirectionEighth::SouthEast],
                     TurnType::Turn90,
                     6,
                 );
@@ -677,7 +675,7 @@ impl Rail {
                             .move_forward_micro_num(1)
                             .endpoint
                             .to_f32(),
-                        FactoDirection::West,
+                        FacDirectionEighth::West,
                     )
                     .into_boxed(),
                 );
@@ -691,7 +689,7 @@ impl Rail {
                 result.push(
                     FacSurfaceCreateEntity::new_rail_curved_facto(
                         straight_lead.endpoint.to_f32(),
-                        FactoDirection::East,
+                        FacDirectionEighth::East,
                     )
                     .into_boxed(),
                 );
@@ -730,7 +728,7 @@ impl Rail {
                         .move_force_rotate_clockwise(3)
                         .move_forward_micro_num(4)
                         .move_force_rotate_clockwise(1),
-                    [FactoDirection::SouthWest, FactoDirection::NorthEast],
+                    [FacDirectionEighth::SouthWest, FacDirectionEighth::NorthEast],
                     TurnType::Turn270,
                     6,
                 );
@@ -744,7 +742,7 @@ impl Rail {
                             .move_forward_micro_num(1)
                             .endpoint
                             .to_f32(),
-                        FactoDirection::NorthWest,
+                        FacDirectionEighth::NorthWest,
                     )
                     .into_boxed(),
                 );
@@ -758,7 +756,7 @@ impl Rail {
                 result.push(
                     FacSurfaceCreateEntity::new_rail_curved_facto(
                         straight_lead.endpoint.to_f32(),
-                        FactoDirection::SouthEast,
+                        FacDirectionEighth::SouthEast,
                     )
                     .into_boxed(),
                 );
@@ -797,7 +795,7 @@ impl Rail {
                         .move_force_rotate_clockwise(1)
                         .move_forward_micro_num(4)
                         .move_force_rotate_clockwise(3),
-                    [FactoDirection::SouthEast, FactoDirection::NorthWest],
+                    [FacDirectionEighth::SouthEast, FacDirectionEighth::NorthWest],
                     TurnType::Turn90,
                     6,
                 );
@@ -811,7 +809,7 @@ impl Rail {
                             .move_forward_micro_num(1)
                             .endpoint
                             .to_f32(),
-                        FactoDirection::East,
+                        FacDirectionEighth::East,
                     )
                     .into_boxed(),
                 );
@@ -825,7 +823,7 @@ impl Rail {
                 result.push(
                     FacSurfaceCreateEntity::new_rail_curved_facto(
                         straight_lead.endpoint.to_f32(),
-                        FactoDirection::West,
+                        FacDirectionEighth::West,
                     )
                     .into_boxed(),
                 );
@@ -866,7 +864,7 @@ impl Rail {
                         .move_force_rotate_clockwise(3)
                         .move_forward_micro_num(4)
                         .move_force_rotate_clockwise(1),
-                    [FactoDirection::NorthEast, FactoDirection::SouthWest],
+                    [FacDirectionEighth::NorthEast, FacDirectionEighth::SouthWest],
                     TurnType::Turn270,
                     6,
                 );
@@ -880,7 +878,7 @@ impl Rail {
                             .move_forward_micro_num(1)
                             .endpoint
                             .to_f32(),
-                        FactoDirection::SouthEast,
+                        FacDirectionEighth::SouthEast,
                     )
                     .into_boxed(),
                 );
@@ -894,7 +892,7 @@ impl Rail {
                 result.push(
                     FacSurfaceCreateEntity::new_rail_curved_facto(
                         straight_lead.endpoint.to_f32(),
-                        FactoDirection::NorthWest,
+                        FacDirectionEighth::NorthWest,
                     )
                     .into_boxed(),
                 );
@@ -1482,13 +1480,6 @@ pub fn write_rail_with_pixel(surface: &mut VSurface, path: &[Rail], pixel: Pixel
     }
     debug!("wrote {} rail", total_rail);
     Ok(())
-}
-
-fn get_current_unix_time_millis() -> u128 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis()
 }
 
 pub fn draw_rail(surface: &mut VSurface, rail: &Rail) {

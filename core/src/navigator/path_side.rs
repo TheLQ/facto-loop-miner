@@ -1,6 +1,6 @@
 use crate::navigator::mori::RAIL_STEP_SIZE_I32;
 use crate::state::machine_v1::CENTRAL_BASE_TILES;
-use crate::surfacev::vpoint::{VPoint, SHIFT_POINT_ONE};
+use facto_loop_miner_fac_engine::common::vpoint::{VPoint, SHIFT_POINT_ONE};
 use std::rc::Rc;
 use std::sync::Mutex;
 

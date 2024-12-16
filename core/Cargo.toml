@@ -9,6 +9,7 @@ default-run = "main"
 
 [dependencies]
 facto-loop-miner-common = { path = "../common" }
+facto-loop-miner-fac-engine = { path = "../fac-engine" }
 image = "0.25.5"
 jemallocator = "0.5.4"
 num-format = "0.4.4"

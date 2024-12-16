@@ -1,4 +1,3 @@
-use crate::admiral::lua_command::fac_surface_create_entity::FacSurfaceCreateEntity;
 use crate::navigator::mori::Rail;
 use crate::navigator::mori_cost::{
     AXIS_COST_UNIT, DIRECTION_COST_UNIT, MORI_COST_MODE, MULTI_TURN_COST_UNIT, STRAIGHT_COST_UNIT,
@@ -14,12 +13,12 @@ use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
-use crate::surfacev::varea::VArea;
 use crate::surfacev::ventity_map::{VEntityMap, VEntityXY};
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vpoint::VPoint;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
+use facto_loop_miner_fac_engine::common::varea::VArea;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_io::err::VIoError;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::PngEncoder;
@@ -636,8 +635,4 @@ impl VEntityXY for VEntity {
     fn get_xy(&self) -> &[VPoint] {
         &self.points
     }
-}
-
-pub trait PlaceableEntity: Serialize + for<'a> Deserialize<'a> {
-    fn place_lua_command(&self) -> Vec<FacSurfaceCreateEntity>;
 }

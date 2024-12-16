@@ -4,10 +4,10 @@ use crate::navigator::path_planner::{
     MineRouteCombination, MineRouteCombinationBatch, MineRouteEndpoints,
 };
 use crate::navigator::PathingResult;
-use crate::surfacev::varea::VArea;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
+use facto_loop_miner_fac_engine::common::varea::VArea;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use rayon::iter::IntoParallelIterator;

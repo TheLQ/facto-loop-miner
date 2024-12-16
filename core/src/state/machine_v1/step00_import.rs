@@ -2,7 +2,7 @@ use crate::gamedata::lua::{read_lua_tiles, LuaEntity, LuaPoint, LuaThing};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::err::VResult;
-use crate::surfacev::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use std::path::Path;

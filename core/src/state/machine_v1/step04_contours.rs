@@ -18,11 +18,11 @@ use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::patch::map_patch_corners_to_kdtree;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::varea::VArea;
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::PixelKdTree;
+use facto_loop_miner_fac_engine::common::varea::VArea;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 
 const WRITE_DEBUG_IMAGE: bool = false;
 

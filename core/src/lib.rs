@@ -33,20 +33,18 @@
 
 extern crate core;
 
-use crate::admiral::executor::client::AdmiralClient;
-use crate::admiral::executor::entrypoint::admiral_entrypoint;
 use crate::navigator::mori::{draw_rail, Rail, RailDirection};
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
-use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
+use facto_loop_miner_common::log_init;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use kiddo::float;
 use num_format::Locale;
 use num_traits::PrimInt;
 use std::path::Path;
 use tracing::Level;
 
-mod admiral;
 mod gamedata;
 pub mod navigator;
 mod opencv;
@@ -65,8 +63,6 @@ pub const LOCALE: Locale = Locale::en;
 // TODO: REmove now duplicated
 pub const TILES_PER_CHUNK: usize = 32;
 pub fn inner_main() {
-    let tracing_format = tracing_subscriber::fmt::format().compact();
-
     log_init(None);
 
     tracing::debug!("hello");
@@ -78,23 +74,11 @@ pub fn inner_main() {
     match 1 {
         1 => new_v1_machine().start(root_dir),
         3 => generate_lookup_image(),
-        5 => admiral::client::admiral(),
         _ => panic!("wtf"),
     }
 }
 
-pub fn rcon_inner_main() {
-    let tracing_format = tracing_subscriber::fmt::format().compact();
-    log_init(Some(Level::TRACE));
-
-    let mut admiral = AdmiralClient::new().unwrap();
-    admiral.auth().unwrap();
-
-    admiral_entrypoint(admiral);
-}
-
 pub fn inner_surface_tester() {
-    let tracing_format = tracing_subscriber::fmt::format().compact();
     log_init(None);
 
     let mut surface = VSurface::load(Path::new("./work/out0/step20-nav")).unwrap();

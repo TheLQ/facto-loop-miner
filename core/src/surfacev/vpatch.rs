@@ -1,6 +1,6 @@
 use crate::surface::pixel::Pixel;
-use crate::surfacev::varea::VArea;
-use crate::surfacev::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::varea::VArea;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use derivative::Derivative;
 use opencv::core::Rect;

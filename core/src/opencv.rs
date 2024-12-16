@@ -1,6 +1,6 @@
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use opencv::core::{Mat, Point, Rect, Vector};
 use opencv::imgproc::bounding_rect;
 use std::fs::read;

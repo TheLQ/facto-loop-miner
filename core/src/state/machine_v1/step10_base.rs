@@ -7,7 +7,7 @@ use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::VResult;
-use crate::surfacev::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::TILES_PER_CHUNK;
 

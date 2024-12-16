@@ -11,7 +11,7 @@ use tracing::debug;
 
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
-use crate::surfacev::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use crate::surfacev::vsurface::VPixel;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
@@ -522,7 +522,7 @@ impl VEntityMap<VPixel> {
 #[cfg(test)]
 mod test {
     use crate::surfacev::ventity_map::VEntityMap;
-    use crate::surfacev::vpoint::VPoint;
+    use facto_loop_miner_fac_engine::common::vpoint::VPoint;
     use crate::surfacev::vsurface::VPixel;
 
     #[test]
