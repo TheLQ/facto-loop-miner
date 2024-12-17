@@ -39,7 +39,7 @@ pub fn visualize_blueprint(blueprint: &BlueprintContents) {
 
     output.push_str("</div>");
 
-    let path = Path::new("out.html");
-    fs::write(path, output).unwrap();
+    let path = Path::new("out.html").to_path_buf().canonicalize().unwrap();
+    fs::write(&path, output).unwrap();
     info!("wrote to {}", path.display());
 }

@@ -1,11 +1,12 @@
 use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::err::{FError, FResult};
+use crate::game_entities::direction::FacDirectionQuarter;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::borrow::Borrow;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-/// Core XY Point. i32 for simpler math
+/// Core XY Point. Entity origin is top left, not Factorio's center
 #[derive(
     Debug, Serialize, Deserialize, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Hash, Ord,
 )]
@@ -14,8 +15,9 @@ pub struct VPoint {
     y: i32,
 }
 
-pub const SHIFT_POINT_ONE: VPoint = VPoint { x: 1, y: 1 };
-pub const SHIFT_POINT_EIGHT: VPoint = VPoint { x: 8, y: 8 };
+pub const VPOINT_ZERO: VPoint = VPoint { x: 0, y: 0 };
+pub const VPOINT_ONE: VPoint = VPoint { x: 1, y: 1 };
+pub const VPOINT_EIGHT: VPoint = VPoint { x: 8, y: 8 };
 
 impl VPoint {
     pub fn x(&self) -> i32 {
@@ -38,7 +40,7 @@ impl VPoint {
     }
 
     pub fn zero() -> Self {
-        VPOINT_ABS_0
+        VPOINT_ZERO
     }
 
     // pub fn from_cv_point(point: Point) -> Self {
@@ -167,6 +169,19 @@ impl VPoint {
         self.move_xy(x_steps as i32, y_steps as i32)
     }
 
+    pub fn move_direction(
+        &self,
+        direction: impl Borrow<FacDirectionQuarter>,
+        steps: usize,
+    ) -> Self {
+        match direction.borrow() {
+            FacDirectionQuarter::North => self.move_y_usize(steps),
+            FacDirectionQuarter::South => self.move_y(-(steps as i32)),
+            FacDirectionQuarter::East => self.move_x_usize(steps),
+            FacDirectionQuarter::West => self.move_x(-(steps as i32)),
+        }
+    }
+
     // pub fn move_xy_u32(&self, x_steps: u32, y_steps: u32) -> Self {
     //     self.move_xy(x_steps as i32, y_steps as i32)
     // }
@@ -253,9 +268,6 @@ impl VPoint {
         self.y - other.y
     }
 }
-
-const VPOINT_ABS_0: VPoint = VPoint { x: 0, y: 0 };
-// const VPOINT_ABS_1: VPoint = VPoint { x: 1, y: 1 };
 
 impl Add for VPoint {
     type Output = VPoint;

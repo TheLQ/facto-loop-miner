@@ -1,4 +1,8 @@
 use facto_loop_miner_common::log_init;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
+use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::{
     blueprint::{bpitem::BlueprintItem, contents::BlueprintContents},
     common::{entity::FacEntity, vpoint::VPoint},
@@ -27,13 +31,15 @@ fn main() {
 
     let mut bp_contents = BlueprintContents::new();
 
-    match 6 {
+    match 8 {
         1 => basic_build_bp(&mut bp_contents),
         2 => basic_build_gen(&mut bp_contents),
         3 => basic_build_terapower(&mut bp_contents),
         4 => basic_build_beacon_farm(&mut bp_contents),
         5 => basic_build_robo_farm(&mut bp_contents),
         6 => basic_build_assembler_thru(&mut bp_contents),
+        7 => basic_build_rail_hope_single(&mut bp_contents),
+        8 => basic_build_rail_hope_dual(&mut bp_contents),
         _ => panic!("asdf"),
     }
 
@@ -144,6 +150,20 @@ fn basic_build_assembler_thru(bp: &mut BlueprintContents) {
         height: 3,
     };
     for entity in farm.generate(VPoint::new(5, 5)) {
+        bp.add_entity_each(entity);
+    }
+}
+
+fn basic_build_rail_hope_single(bp: &mut BlueprintContents) {
+    let farm = RailHopeSingle::new(VPoint::new(5, 5), FacDirectionQuarter::East);
+    for entity in farm.to_fac() {
+        bp.add_entity_each(entity);
+    }
+}
+
+fn basic_build_rail_hope_dual(bp: &mut BlueprintContents) {
+    let farm = RailHopeDual::new(VPoint::new(5, 5), FacDirectionQuarter::East);
+    for entity in farm.to_fac() {
         bp.add_entity_each(entity);
     }
 }

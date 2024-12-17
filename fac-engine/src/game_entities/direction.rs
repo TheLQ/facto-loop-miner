@@ -2,6 +2,7 @@ use serde_repr::Deserialize_repr;
 use serde_repr::Serialize_repr;
 use strum::AsRefStr;
 use strum::IntoStaticStr;
+use strum::VariantArray;
 
 #[derive(Debug, Clone, PartialEq, AsRefStr, IntoStaticStr, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
@@ -16,7 +17,7 @@ pub enum FacDirectionEighth {
     NorthWest,
 }
 
-#[derive(Debug, Clone, AsRefStr, IntoStaticStr)]
+#[derive(Debug, Clone, PartialEq, AsRefStr, IntoStaticStr, VariantArray)]
 #[repr(u8)]
 pub enum FacDirectionQuarter {
     // clockwise order
@@ -45,12 +46,21 @@ impl FacDirectionQuarter {
         }
     }
 
-    pub fn rotate_once(&self) -> FacDirectionQuarter {
+    pub const fn rotate_once(&self) -> FacDirectionQuarter {
         match self {
             Self::North => Self::East,
             Self::East => Self::South,
             Self::South => Self::West,
             Self::West => Self::North,
+        }
+    }
+
+    pub const fn rotate_opposite(&self) -> FacDirectionQuarter {
+        match self {
+            Self::North => Self::West,
+            Self::East => Self::North,
+            Self::South => Self::East,
+            Self::West => Self::South,
         }
     }
 
@@ -80,4 +90,56 @@ impl FacDirectionQuarter {
     //         }
     //     }
     // }
+}
+
+#[cfg(test)]
+mod test {
+    use strum::VariantArray;
+
+    use super::FacDirectionQuarter;
+
+    const DIRECTION_ORDER: [FacDirectionQuarter; 4] = [
+        FacDirectionQuarter::North,
+        FacDirectionQuarter::East,
+        FacDirectionQuarter::South,
+        FacDirectionQuarter::West,
+    ];
+
+    fn direction_get(i: usize) -> &'static FacDirectionQuarter {
+        &DIRECTION_ORDER[i % 4]
+    }
+
+    fn direction_index_of(direction: &FacDirectionQuarter) -> usize {
+        DIRECTION_ORDER.iter().position(|v| v == direction).unwrap()
+    }
+
+    #[test]
+    fn test_rotate_flip() {
+        for direction in FacDirectionQuarter::VARIANTS {
+            assert_eq!(
+                &direction.rotate_flip(),
+                direction_get(direction_index_of(direction) + 2)
+            )
+        }
+    }
+
+    #[test]
+    fn test_rotate_once() {
+        for direction in FacDirectionQuarter::VARIANTS {
+            assert_eq!(
+                &direction.rotate_once(),
+                direction_get(direction_index_of(direction) + 1)
+            )
+        }
+    }
+
+    #[test]
+    fn test_rotate_opposite() {
+        for direction in FacDirectionQuarter::VARIANTS {
+            assert_eq!(
+                &direction.rotate_opposite(),
+                direction_get(direction_index_of(direction) + 3)
+            )
+        }
+    }
 }
