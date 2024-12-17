@@ -1,8 +1,8 @@
 use serde_repr::Deserialize_repr;
 use serde_repr::Serialize_repr;
-use strum::AsRefStr;
 use strum::IntoStaticStr;
 use strum::VariantArray;
+use strum::{AsRefStr, Display};
 
 #[derive(Debug, Clone, PartialEq, AsRefStr, IntoStaticStr, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
@@ -17,7 +17,7 @@ pub enum FacDirectionEighth {
     NorthWest,
 }
 
-#[derive(Debug, Clone, PartialEq, AsRefStr, IntoStaticStr, VariantArray)]
+#[derive(Debug, Clone, PartialEq, Display, AsRefStr, IntoStaticStr, VariantArray)]
 #[repr(u8)]
 pub enum FacDirectionQuarter {
     // clockwise order

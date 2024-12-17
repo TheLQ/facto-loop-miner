@@ -63,13 +63,13 @@ impl SquareArea for FacEntBeltUnder {
 impl FacEntBeltUnder {
     pub fn new(
         btype: FacEntBeltType,
-        utype: FacEntBeltUnderType,
         direction: FacDirectionQuarter,
+        utype: FacEntBeltUnderType,
     ) -> Self {
         Self {
             name: FacEntityName::BeltUnder(btype),
-            utype,
             direction,
+            utype,
         }
     }
 }

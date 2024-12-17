@@ -1,4 +1,6 @@
 use facto_loop_miner_common::log_init;
+use facto_loop_miner_fac_engine::game_blocks::belt_bettel::FacBlkBettelBelt;
+use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::{
     admiral::{
         err::{AdmiralResult, pretty_panic_admiral},
@@ -30,9 +32,10 @@ fn inner_main() -> AdmiralResult<()> {
     let mut client = AdmiralClient::new()?;
     client.auth()?;
 
-    match 2 {
+    match 3 {
         1 => make_basic(&mut client)?,
         2 => make_assembler_thru(&mut client)?,
+        3 => make_belt_bettel(&mut client)?,
         _ => panic!("uihhh"),
     }
 
@@ -59,6 +62,27 @@ fn make_assembler_thru(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         height: 2,
     };
     for entity in farm.generate(VPoint::new(5, 5)) {
+        admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
+    }
+
+    Ok(())
+}
+
+fn make_belt_bettel(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    execute_destroy(admiral)?;
+
+    let mut belt = FacBlkBettelBelt::new(
+        FacEntBeltType::Basic,
+        VPoint::new(5, 5),
+        FacDirectionQuarter::South,
+    );
+    belt.add_straight(5, false);
+    belt.add_turn90(false);
+    belt.add_straight(5, true);
+    belt.add_turn90(true);
+    belt.add_straight(5, false);
+
+    for entity in belt.to_fac() {
         admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
     }
 

@@ -174,9 +174,10 @@ impl VPoint {
         direction: impl Borrow<FacDirectionQuarter>,
         steps: usize,
     ) -> Self {
+        // cardinal directions are "north == up == -1" not "north == +1"
         match direction.borrow() {
-            FacDirectionQuarter::North => self.move_y_usize(steps),
-            FacDirectionQuarter::South => self.move_y(-(steps as i32)),
+            FacDirectionQuarter::North => self.move_y(-(steps as i32)),
+            FacDirectionQuarter::South => self.move_y_usize(steps),
             FacDirectionQuarter::East => self.move_x_usize(steps),
             FacDirectionQuarter::West => self.move_x(-(steps as i32)),
         }

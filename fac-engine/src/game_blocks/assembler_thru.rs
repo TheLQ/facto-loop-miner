@@ -84,7 +84,7 @@ impl FacBlkAssemblerThru {
 
                 // going underground
                 res.push(BlueprintItem::new(
-                    FacEntBeltUnder::new(self.belt_type.clone(), utype.clone(), direction.clone())
+                    FacEntBeltUnder::new(self.belt_type.clone(), direction.clone(), utype.clone())
                         .into_boxed(),
                     origin.move_xy_usize(cell_x_offset + 1, y_offset),
                 ));
@@ -114,7 +114,7 @@ impl FacBlkAssemblerThru {
             for y_offset in 0..3 {
                 // coming up underground
                 res.push(BlueprintItem::new(
-                    FacEntBeltUnder::new(self.belt_type.clone(), utype.flip(), direction.clone())
+                    FacEntBeltUnder::new(self.belt_type.clone(), direction.clone(), utype.flip())
                         .into_boxed(),
                     origin.move_xy_usize(cell_x_offset, y_offset),
                 ));

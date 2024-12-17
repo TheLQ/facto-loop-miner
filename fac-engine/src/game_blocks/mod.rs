@@ -1,6 +1,7 @@
 pub mod assembler_cell;
 pub mod assembler_thru;
 pub mod beacon_farm;
+pub mod belt_bettel;
 pub mod block;
 pub mod rail_hope;
 pub mod rail_hope_dual;
