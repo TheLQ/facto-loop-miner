@@ -1,3 +1,5 @@
+use super::block::FacBlock;
+use crate::game_blocks::belt_bettel::FacBlkBettelBelt;
 use crate::{
     blueprint::bpitem::BlueprintItem,
     common::{entity::FacEntity, vpoint::VPoint},
@@ -12,8 +14,6 @@ use crate::{
         lamp::FacEntLamp,
     },
 };
-
-use super::block::FacBlock;
 
 pub struct FacBlkAssemblerThru {
     pub width: usize,
@@ -44,7 +44,7 @@ impl FacBlock for FacBlkAssemblerThru {
                 true,
                 &mut res,
             );
-            self.generate_belt_turn_for_row(super_row_pos, FacDirectionQuarter::East, &mut res);
+            self.generate_belt_turn_for_row(super_row_pos, &mut res);
         }
 
         res
@@ -180,52 +180,10 @@ impl FacBlkAssemblerThru {
         }
     }
 
-    fn generate_belt_turn_for_row(
-        &self,
-        origin: VPoint,
-        direction: FacDirectionQuarter,
-        res: &mut Vec<BlueprintItem>,
-    ) {
+    fn generate_belt_turn_for_row(&self, origin: VPoint, res: &mut Vec<BlueprintItem>) {
         let start = origin.move_x_usize(self.cell_width() * self.width);
-
-        // going out
-        for belt_num in 0..CELL_HEIGHT {
-            let start = start.move_y_usize(/*reverse expansion*/ 2 - belt_num);
-            for i in 0..belt_num {
-                res.push(BlueprintItem::new(
-                    FacEntBeltTransport::new(self.belt_type.clone(), direction.clone())
-                        .into_boxed(),
-                    start.move_x_usize(i),
-                ));
-            }
-        }
-
-        // going down
-        for belt_num in 0..CELL_HEIGHT {
-            let start = start.move_xy_usize(belt_num, /*-1 to start turn*/ 2 - belt_num);
-            for i in
-                0..((belt_num * /*span both rows*/2) + /*center*/CELL_HEIGHT + /*+1 from turn*/1)
-            {
-                res.push(BlueprintItem::new(
-                    FacEntBeltTransport::new(self.belt_type.clone(), direction.rotate_once())
-                        .into_boxed(),
-                    start.move_y_usize(i),
-                ));
-            }
-        }
-
-        // coming back
-        // 1 belt longer to do the turn
-        let start = start.move_y_usize(CELL_HEIGHT * 2);
-        for belt_num in 0..CELL_HEIGHT {
-            let start = start.move_y_usize(belt_num);
-            for i in 0..(belt_num + /*turn start*/1) {
-                res.push(BlueprintItem::new(
-                    FacEntBeltTransport::new(self.belt_type.clone(), direction.rotate_flip())
-                        .into_boxed(),
-                    start.move_x_usize(i),
-                ));
-            }
-        }
+        let entities =
+            FacBlkBettelBelt::u_turn_from_east(&self.belt_type, start, CELL_HEIGHT, CELL_HEIGHT);
+        res.extend(entities);
     }
 }

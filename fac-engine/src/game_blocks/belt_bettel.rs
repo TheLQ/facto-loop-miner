@@ -5,12 +5,14 @@ use crate::game_entities::belt::FacEntBeltType;
 use crate::game_entities::belt_transport::FacEntBeltTransport;
 use crate::game_entities::belt_under::{FacEntBeltUnder, FacEntBeltUnderType};
 use crate::game_entities::direction::FacDirectionQuarter;
-use tracing::debug;
+use std::borrow::Borrow;
+use tracing::warn;
 
 /// Belt linkage v1 "Gavis Bettel"
 /// Describe belts as a sequence of links
 pub struct FacBlkBettelBelt {
     origin: VPoint,
+    origin_direction: FacDirectionQuarter,
     btype: FacEntBeltType,
     links: Vec<FacBlkBettelBeltLink>,
 }
@@ -32,13 +34,12 @@ impl FacBlkBettelBelt {
         origin: VPoint,
         origin_direction: FacDirectionQuarter,
     ) -> Self {
-        let mut res = Self {
+        Self {
             btype,
             origin,
+            origin_direction,
             links: Vec::new(),
-        };
-        res.add_straight_raw(1, false, origin_direction);
-        res
+        }
     }
 
     fn add_straight_raw(
@@ -47,7 +48,12 @@ impl FacBlkBettelBelt {
         is_underground: bool,
         direction: FacDirectionQuarter,
     ) {
-        assert_ne!(length, 0, "length cannot be 0");
+        // assert_ne!(length, 0, "length cannot be 0");
+        if length == 0 {
+            warn!("not adding empty straight");
+            return;
+        }
+
         self.links.push(FacBlkBettelBeltLink {
             ltype: if is_underground {
                 assert!(length > 2, "underground length {} too short", length);
@@ -59,27 +65,27 @@ impl FacBlkBettelBelt {
         })
     }
 
-    pub fn add_straight(&mut self, length: usize, is_underground: bool) {
-        let last_link = self.last_link();
-        self.add_straight_raw(length, is_underground, last_link.direction.clone());
+    pub fn add_straight(&mut self, length: usize) {
+        self.add_straight_raw(length, false, self.current_direction().clone());
+    }
+
+    pub fn add_straight_underground(&mut self, length: usize) {
+        self.add_straight_raw(length, true, self.current_direction().clone());
     }
 
     pub fn add_turn90(&mut self, opposite: bool) {
-        let last_link = self.last_link();
         let new_direction = if opposite {
-            last_link.direction.rotate_opposite()
+            self.current_direction().rotate_opposite()
         } else {
-            last_link.direction.rotate_once()
+            self.current_direction().rotate_once()
         };
         self.add_straight_raw(1, false, new_direction);
     }
 
     pub fn to_fac(&self) -> Vec<BlueprintItem> {
         let mut res = Vec::new();
-        // let mut previous_direction = &self.links[0].direction;
         let mut cursor = self.origin;
         for link in &self.links {
-            debug!("moving {}", link.direction);
             match &link.ltype {
                 FacBlkBettelBeltLinkType::Transport { length } => {
                     let mut last_cursor = cursor;
@@ -119,14 +125,42 @@ impl FacBlkBettelBelt {
                 }
                 FacBlkBettelBeltLinkType::Splitter => unimplemented!(),
             };
-            // previous_direction = &link.direction;
         }
         res
     }
 
-    fn last_link(&self) -> &FacBlkBettelBeltLink {
-        // should always have something
-        self.links.last().unwrap()
+    fn current_direction(&self) -> &FacDirectionQuarter {
+        self.links
+            .last()
+            .map(|v| &v.direction)
+            .unwrap_or(&self.origin_direction)
+    }
+
+    pub fn u_turn_from_east(
+        btype: impl Borrow<FacEntBeltType>,
+        origin: VPoint,
+        mid_span: usize,
+        belt_num: usize,
+    ) -> Vec<BlueprintItem> {
+        let mut res = Vec::new();
+
+        for belt_num in 0..belt_num {
+            let mut belt: FacBlkBettelBelt = FacBlkBettelBelt::new(
+                btype.borrow().clone(),
+                origin.move_y_usize(belt_num),
+                FacDirectionQuarter::East,
+            );
+            belt.add_straight(2 - belt_num);
+            belt.add_turn90(false);
+            // go down past the middle "cell"
+            belt.add_straight((2 - belt_num) * 2 + mid_span);
+            belt.add_turn90(false);
+            belt.add_straight(2 - belt_num);
+
+            res.extend(belt.to_fac());
+        }
+
+        res
     }
 }
 

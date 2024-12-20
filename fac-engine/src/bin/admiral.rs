@@ -76,11 +76,11 @@ fn make_belt_bettel(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         VPoint::new(5, 5),
         FacDirectionQuarter::South,
     );
-    belt.add_straight(5, false);
+    belt.add_straight(5);
     belt.add_turn90(false);
-    belt.add_straight(5, true);
+    belt.add_straight_underground(5);
     belt.add_turn90(true);
-    belt.add_straight(5, false);
+    belt.add_straight(5);
 
     for entity in belt.to_fac() {
         admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
