@@ -17,6 +17,7 @@ const INSERTERS_PER_CAR: usize = 6;
 
 pub enum RailStationSide {}
 
+/// Rail onload/offload station
 pub struct FacBlkRailStation {
     cars: usize,
     chests: Option<FacEntChestType>,

@@ -14,6 +14,7 @@ use crate::{
 
 use super::block::FacBlock;
 
+/// A single assembler cell, placable in a beacon farm
 pub struct FacBlkAssemblerCell {
     pub assembler: FacEntAssembler,
     pub side_bottom: [Option<FacBlkAssemblerCellEntry>; 3],

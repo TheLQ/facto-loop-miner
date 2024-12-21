@@ -10,6 +10,7 @@ use crate::{
 
 use super::block::FacBlock;
 
+/// Max distance substation array
 pub struct FacBlkTerapower {
     pub width: u32,
     pub height: u32,

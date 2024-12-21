@@ -9,6 +9,7 @@ use std::borrow::Borrow;
 
 /// Belt linkage v1 "Gavis Bettel"
 /// Describe belts as a sequence of links
+/// without pathfinding concerns
 pub struct FacBlkBettelBelt {
     origin: VPoint,
     origin_direction: FacDirectionQuarter,

@@ -5,6 +5,7 @@ use crate::game_blocks::rail_hope_single::RailHopeSingle;
 use crate::game_entities::direction::FacDirectionQuarter;
 use crate::game_entities::rail::RAIL_STRAIGHT_DIAMETER;
 
+// Side-by-side rail
 pub struct RailHopeDual {
     hopes: [RailHopeSingle; 2],
 }

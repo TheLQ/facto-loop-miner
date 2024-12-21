@@ -16,6 +16,7 @@ use crate::{
     },
 };
 
+/// Assembler farm with belt through design
 pub struct FacBlkAssemblerThru {
     pub width: usize,
     pub height: usize,

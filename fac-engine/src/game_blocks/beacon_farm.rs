@@ -7,6 +7,7 @@ use crate::{
 
 use super::block::FacBlock;
 
+/// Beacon farm to support assemblers or smelters
 pub struct FacBlkBeaconFarm<C: FacBlock> {
     pub inner_cell_size: u32,
     pub width: u32,

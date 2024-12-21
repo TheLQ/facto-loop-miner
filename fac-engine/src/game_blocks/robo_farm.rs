@@ -13,6 +13,7 @@ use crate::{
 
 use super::block::FacBlock;
 
+/// Large block of roboports
 pub struct FacBlkRobofarm {
     pub width: u32,
     pub height: u32,
