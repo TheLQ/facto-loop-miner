@@ -5,7 +5,7 @@ use crate::game_entities::{
     electric_mini::FacEntElectricMiniType, inserter::FacEntInserterType, tier::FacTier,
 };
 
-#[derive(Clone, AsRefStr)]
+#[derive(Clone, Debug, AsRefStr)]
 pub enum FacEntityName {
     Lamp,
     Rail,

@@ -5,7 +5,7 @@ use crate::common::{
 
 use super::direction::{FacDirectionEighth, FacDirectionQuarter};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum FacEntInserterType {
     Burner,
     Basic,
@@ -16,7 +16,7 @@ pub enum FacEntInserterType {
     StackFilter,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct FacEntInserter {
     name: FacEntityName,
     direction: FacDirectionQuarter,

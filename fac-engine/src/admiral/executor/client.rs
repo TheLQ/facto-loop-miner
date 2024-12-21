@@ -5,7 +5,7 @@ use crate::admiral::lua_command::LuaCommand;
 use crate::admiral::lua_command::fac_log::FacLog;
 use rcon_client::{AuthRequest, RCONClient, RCONConfig, RCONRequest};
 use std::backtrace::Backtrace;
-use tracing::{debug, info};
+use tracing::{info, trace};
 
 pub struct AdmiralClient {
     client: RCONClient,
@@ -70,7 +70,7 @@ impl LuaCompiler for AdmiralClient {
         // let exec_type = "/c";
         let final_command = format!("{} {}", exec_type, lua_text);
 
-        debug!("executing {}", truncate_huge_lua(&final_command));
+        trace!("executing {}", truncate_huge_lua(&final_command));
 
         // let request = RCONRequest::new(final_command);
         let request = RCONRequest {

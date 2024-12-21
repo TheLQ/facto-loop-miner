@@ -3,7 +3,7 @@ use crate::common::{
     names::FacEntityName,
 };
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum FacEntChestType {
     Wood,
     Iron,
@@ -15,7 +15,7 @@ pub enum FacEntChestType {
     Requestor,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct FacEntChest {
     name: FacEntityName,
 }

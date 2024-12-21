@@ -3,13 +3,14 @@ use crate::common::{
     names::FacEntityName,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 
 pub enum FacEntElectricMiniType {
     Small,
     Medium,
 }
 
+#[derive(Debug)]
 pub struct FacEntElectricMini {
     name: FacEntityName,
 }

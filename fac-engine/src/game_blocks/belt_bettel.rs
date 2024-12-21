@@ -6,7 +6,6 @@ use crate::game_entities::belt_transport::FacEntBeltTransport;
 use crate::game_entities::belt_under::{FacEntBeltUnder, FacEntBeltUnderType};
 use crate::game_entities::direction::FacDirectionQuarter;
 use std::borrow::Borrow;
-use tracing::warn;
 
 /// Belt linkage v1 "Gavis Bettel"
 /// Describe belts as a sequence of links
@@ -50,7 +49,7 @@ impl FacBlkBettelBelt {
     ) {
         // assert_ne!(length, 0, "length cannot be 0");
         if length == 0 {
-            warn!("not adding empty straight");
+            // warn!("not adding empty straight");
             return;
         }
 

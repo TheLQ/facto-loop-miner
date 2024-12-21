@@ -6,6 +6,7 @@ use crate::{
     def_entity_name,
 };
 
+#[derive(Debug)]
 pub struct FacEntLamp {}
 
 impl FacEntity for FacEntLamp {

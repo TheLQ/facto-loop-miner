@@ -8,6 +8,7 @@ use crate::{
 
 pub const FACENT_ROBOPORT_DIAMETER: usize = 4;
 
+#[derive(Debug)]
 pub struct FacEntRoboport {}
 
 impl FacEntity for FacEntRoboport {

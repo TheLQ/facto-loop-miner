@@ -1,3 +1,5 @@
+use tracing::debug;
+
 use crate::{
     blueprint::bpfac::{FacBpInteger, entity::FacBpEntity, position::FacBpPosition},
     common::names::FacEntityName,
@@ -8,7 +10,7 @@ use crate::{
 
 use super::vpoint::VPoint;
 
-pub trait FacEntity: FacArea {
+pub trait FacEntity: FacArea + std::fmt::Debug {
     fn name(&self) -> &FacEntityName;
 
     fn into_boxed(self) -> Box<impl FacEntity>
@@ -23,6 +25,7 @@ pub trait FacEntity: FacArea {
     }
 
     fn to_fac(&self, entity_number: FacBpInteger, position: &VPoint) -> FacBpEntity {
+        debug!("create {} x {} {:?}", position.x(), position.y(), self);
         FacBpEntity {
             entity_number,
             name: self.name().to_fac_name(),

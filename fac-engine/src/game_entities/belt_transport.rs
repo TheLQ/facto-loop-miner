@@ -8,6 +8,7 @@ use super::{
     direction::{FacDirectionEighth, FacDirectionQuarter},
 };
 
+#[derive(Debug)]
 pub struct FacEntBeltTransport {
     name: FacEntityName,
     direction: FacDirectionQuarter,

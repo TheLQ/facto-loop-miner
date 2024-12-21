@@ -11,12 +11,13 @@ use crate::{
 
 pub const RAIL_STRAIGHT_DIAMETER: usize = 2;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum FacEntRailType {
     Straight,
     Curved,
 }
 
+#[derive(Debug)]
 pub struct FacEntRail {
     rtype: FacEntRailType,
     direction: FacDirectionEighth,

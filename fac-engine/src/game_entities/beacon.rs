@@ -8,6 +8,7 @@ use crate::{
 
 use super::module::FacModule;
 
+#[derive(Debug)]
 pub struct FacEntBeacon {
     modules: [Option<FacModule>; 2],
 }

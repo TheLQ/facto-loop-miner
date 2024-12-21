@@ -8,6 +8,7 @@ use crate::{
 
 use super::direction::{FacDirectionEighth, FacDirectionQuarter};
 
+#[derive(Debug)]
 pub struct FacEntTrainStop {
     direction: FacDirectionQuarter,
 }
