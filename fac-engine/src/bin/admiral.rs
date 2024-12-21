@@ -129,7 +129,7 @@ fn make_rail_spiral_90(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
             hope.add_turn90(clockwise);
             hope.add_straight(2);
 
-            for entity in hope.to_fac().into_iter().skip(0) {
+            for entity in hope.to_fac() {
                 let bpfac = entity.to_blueprint();
                 let bppos = &bpfac.position;
                 if existing_points.contains(bppos) {

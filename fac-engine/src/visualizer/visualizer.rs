@@ -30,7 +30,7 @@ pub fn visualize_blueprint(blueprint: &BlueprintContents) {
         output.push_str(&format!("width: {}px;", size.width() * size_unit_usize));
         output.push_str(&format!("height: {}px;", size.height() * size_unit_usize));
         output.push_str(r#"" class="placed">"#);
-        output.push_str("\n");
+        output.push('\n');
 
         output.push_str(name.as_ref());
 

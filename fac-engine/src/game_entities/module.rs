@@ -43,7 +43,7 @@ impl<'de> Deserialize<'de> for FacModule {
 
 struct FacModuleVisitor;
 
-impl<'de> Visitor<'de> for FacModuleVisitor {
+impl Visitor<'_> for FacModuleVisitor {
     type Value = FacModule;
 
     fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {

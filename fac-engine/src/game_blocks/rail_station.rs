@@ -121,5 +121,5 @@ impl FacBlkRailStation {
 }
 
 fn get_car_offset(car: usize) -> usize {
-    return car * (INSERTERS_PER_CAR + /*connection*/1);
+    car * (INSERTERS_PER_CAR + /*connection*/1)
 }

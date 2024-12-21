@@ -1,4 +1,5 @@
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! def_entity_size_square {
     ($size: literal) => {
         fn size(&self) -> &crate::common::entity::Size {

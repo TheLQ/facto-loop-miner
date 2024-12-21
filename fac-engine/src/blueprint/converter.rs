@@ -11,7 +11,7 @@ pub fn decode_blueprint_string(bp_string_raw: impl AsRef<str>) -> FResult<FacBpB
     let (version_byte, bp_string) = bp_string_raw.as_ref().split_at(1);
     assert_eq!(version_byte, VERSION_BYTE, "unexpected Blueprint version");
 
-    let compressed = base64ct::Base64::decode_vec(&bp_string).unwrap();
+    let compressed = base64ct::Base64::decode_vec(bp_string).unwrap();
 
     let mut raw_json = String::new();
     let mut zlib = ZlibDecoder::new(compressed.as_slice());

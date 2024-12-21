@@ -1,5 +1,7 @@
 #![feature(int_roundings)]
 #![feature(error_generic_member_access)]
+// Prefer explicit
+#![allow(clippy::new_without_default)]
 
 pub mod admiral;
 pub mod blueprint;
