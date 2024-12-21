@@ -8,7 +8,8 @@ use crate::game_entities::{
 #[derive(Clone, Debug, AsRefStr)]
 pub enum FacEntityName {
     Lamp,
-    Rail,
+    RailStraight,
+    RailCurved,
     Assembler(FacTier),
     Inserter(FacEntInserterType),
     Chest(FacEntChestType),
@@ -28,7 +29,8 @@ impl FacEntityName {
     pub fn to_fac_name(&self) -> String {
         match self {
             Self::Lamp => "small-lamp".into(),
-            Self::Rail => todo!(),
+            Self::RailStraight => "straight-rail".into(),
+            Self::RailCurved => "curved-rail".into(),
             Self::Assembler(tier) => format!("assembling-machine-{}", tier.to_number()),
             Self::Inserter(itype) => match itype {
                 FacEntInserterType::Burner => "burner-inserter",

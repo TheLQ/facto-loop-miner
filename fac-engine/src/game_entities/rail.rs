@@ -1,61 +1,47 @@
 use super::direction::FacDirectionEighth;
 use crate::{
-    blueprint::bpfac::position::FacBpPosition,
     common::{
-        entity::{FacArea, FacEntity, Size},
+        entity::{FacEntity, SquareArea},
         names::FacEntityName,
-        vpoint::VPoint,
     },
     def_entity_name,
 };
 
 pub const RAIL_STRAIGHT_DIAMETER: usize = 2;
-
-#[derive(Debug, Clone)]
-pub enum FacEntRailType {
-    Straight,
-    Curved,
-}
+pub const RAIL_STRAIGHT_DIAMETER_I32: i32 = 2;
 
 #[derive(Debug)]
-pub struct FacEntRail {
-    rtype: FacEntRailType,
+pub struct FacEntRailStraight {
     direction: FacDirectionEighth,
 }
 
-impl FacEntity for FacEntRail {
-    def_entity_name!(FacEntityName::Rail);
-}
+impl FacEntity for FacEntRailStraight {
+    def_entity_name!(FacEntityName::RailStraight);
 
-impl FacArea for FacEntRail {
-    fn rectangle_size(&self) -> Size {
-        match (&self.rtype, &self.direction) {
-            (FacEntRailType::Straight, _) => Size::square(RAIL_STRAIGHT_DIAMETER),
-            (FacEntRailType::Curved, _) => Size::square(8),
-            // (
-            //     FacEntRailType::Curved,
-            //     FacDirectionEighth::North
-            //     | FacDirectionEighth::NorthEast
-            //     | FacDirectionEighth::South
-            //     | FacDirectionEighth::SouthWest,
-            // ) => Size::rectangle(5, 8),
-            // (
-            //     FacEntRailType::Curved,
-            //     FacDirectionEighth::NorthWest
-            //     | FacDirectionEighth::West
-            //     | FacDirectionEighth::SouthEast
-            //     | FacDirectionEighth::East,
-            // ) => Size::rectangle(8, 5),
-        }
-    }
-
-    fn to_fac_position(&self, position: &VPoint) -> FacBpPosition {
-        todo!()
+    fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
+        Some(self.direction.clone())
     }
 }
 
-impl FacEntRail {
-    pub fn new(rtype: FacEntRailType, direction: FacDirectionEighth) -> Self {
-        Self { rtype, direction }
+impl SquareArea for FacEntRailStraight {
+    fn area_diameter() -> usize {
+        RAIL_STRAIGHT_DIAMETER
+    }
+}
+
+// impl FacArea for FacEntRailStraight {
+//     fn rectangle_size(&self) -> Size {
+//         Size::square(RAIL_STRAIGHT_DIAMETER)
+//     }
+
+//     fn to_fac_position(&self, position: &VPoint) -> FacBpPosition {
+//         // position is exact because rail is complicated
+//         position.to_fac_with_offset(0.0)
+//     }
+// }
+
+impl FacEntRailStraight {
+    pub fn new(direction: FacDirectionEighth) -> Self {
+        Self { direction }
     }
 }
