@@ -1,5 +1,6 @@
 use super::block::FacBlock;
 use crate::game_blocks::belt_bettel::FacBlkBettelBelt;
+use crate::game_entities::infinity_power::FacEntInfinityPower;
 use crate::{
     blueprint::bpitem::BlueprintItem,
     common::{entity::FacEntity, vpoint::VPoint},
@@ -30,21 +31,33 @@ impl FacBlock for FacBlkAssemblerThru {
             let super_row_pos = origin.move_y_usize(height * 9);
 
             // built first so when executing everything has power
-            self.generate_center_offload(super_row_pos, FacDirectionQuarter::East, &mut res);
+            self.generate_center_offload(
+                super_row_pos,
+                FacDirectionQuarter::East,
+                &mut res,
+                height,
+            );
 
             self.generate_assembler_chain(
-                super_row_pos,
+                super_row_pos.move_x_usize(START_BUFFER),
                 FacDirectionQuarter::East,
                 false,
                 &mut res,
             );
             self.generate_assembler_chain(
-                super_row_pos.move_y(6),
+                super_row_pos.move_xy_usize(START_BUFFER, CELL_HEIGHT * 2),
                 FacDirectionQuarter::West,
                 true,
                 &mut res,
             );
-            self.generate_belt_turn_for_row(super_row_pos, &mut res);
+            self.generate_belt_turn_for_row(super_row_pos.move_x_usize(START_BUFFER), &mut res);
+
+            if self.height > 1 && height != self.height - 1 {
+                self.generate_belt_turn_for_between(
+                    super_row_pos.move_y_usize(CELL_HEIGHT * 2),
+                    &mut res,
+                );
+            }
         }
 
         res
@@ -52,6 +65,7 @@ impl FacBlock for FacBlkAssemblerThru {
 }
 
 const CELL_HEIGHT: usize = 3;
+const START_BUFFER: usize = 5;
 
 impl FacBlkAssemblerThru {
     fn cell_width(&self) -> usize {
@@ -127,6 +141,7 @@ impl FacBlkAssemblerThru {
         origin: VPoint,
         direction: FacDirectionQuarter,
         res: &mut Vec<BlueprintItem>,
+        cur_height: usize,
     ) {
         let cell_y_offset = 3;
 
@@ -148,7 +163,7 @@ impl FacBlkAssemblerThru {
             },
         ] {
             for row_pos in 0..self.width {
-                let cell_x_offset = row_pos * self.cell_width();
+                let cell_x_offset = START_BUFFER + row_pos * self.cell_width();
 
                 // cell power
                 res.push(BlueprintItem::new(
@@ -171,7 +186,23 @@ impl FacBlkAssemblerThru {
             }
         }
 
-        for cell_x_offset in 0..(self.width * self.cell_width()) {
+        if cur_height == 0 {
+            res.push(BlueprintItem::new(
+                FacEntInfinityPower::new().into_boxed(),
+                origin.move_x_usize(
+                    START_BUFFER + (self.width * self.cell_width()) + CELL_HEIGHT + 1,
+                ),
+            ));
+            res.push(BlueprintItem::new(
+                FacEntElectricMini::new(FacEntElectricMiniType::Medium).into_boxed(),
+                origin.move_xy_usize(
+                    START_BUFFER + (self.width * self.cell_width()) + CELL_HEIGHT + 1,
+                    3,
+                ),
+            ));
+        }
+
+        for cell_x_offset in 0..((self.width * self.cell_width()) + CELL_HEIGHT) {
             // belt row
             res.push(BlueprintItem::new(
                 FacEntBeltTransport::new(self.belt_type.clone(), direction.clone()).into_boxed(),
@@ -184,6 +215,12 @@ impl FacBlkAssemblerThru {
         let start = origin.move_x_usize(self.cell_width() * self.width);
         let entities =
             FacBlkBettelBelt::u_turn_from_east(&self.belt_type, start, CELL_HEIGHT, CELL_HEIGHT);
+        res.extend(entities);
+    }
+
+    fn generate_belt_turn_for_between(&self, origin: VPoint, res: &mut Vec<BlueprintItem>) {
+        let start = origin.move_x_usize(START_BUFFER - CELL_HEIGHT);
+        let entities = FacBlkBettelBelt::u_turn_from_west(&self.belt_type, start, 0, CELL_HEIGHT);
         res.extend(entities);
     }
 }

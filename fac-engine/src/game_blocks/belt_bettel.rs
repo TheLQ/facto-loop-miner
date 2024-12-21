@@ -140,22 +140,51 @@ impl FacBlkBettelBelt {
         btype: impl Borrow<FacEntBeltType>,
         origin: VPoint,
         mid_span: usize,
-        belt_num: usize,
+        belt_total: usize,
     ) -> Vec<BlueprintItem> {
+        let belt_total_0 = belt_total - 1;
         let mut res = Vec::new();
 
-        for belt_num in 0..belt_num {
+        for belt_num in 0..belt_total {
             let mut belt: FacBlkBettelBelt = FacBlkBettelBelt::new(
                 btype.borrow().clone(),
                 origin.move_y_usize(belt_num),
                 FacDirectionQuarter::East,
             );
-            belt.add_straight(2 - belt_num);
+            belt.add_straight(belt_total_0 - belt_num);
             belt.add_turn90(false);
             // go down past the middle "cell"
-            belt.add_straight((2 - belt_num) * 2 + mid_span);
+            belt.add_straight((belt_total_0 - belt_num) * 2 + mid_span);
             belt.add_turn90(false);
-            belt.add_straight(2 - belt_num);
+            belt.add_straight(belt_total_0 - belt_num);
+
+            res.extend(belt.to_fac());
+        }
+
+        res
+    }
+
+    pub fn u_turn_from_west(
+        btype: impl Borrow<FacEntBeltType>,
+        origin: VPoint,
+        mid_span: usize,
+        belt_total: usize,
+    ) -> Vec<BlueprintItem> {
+        let belt_total_0 = belt_total - 1;
+        let mut res = Vec::new();
+
+        for belt_num in 0..belt_total {
+            let mut belt: FacBlkBettelBelt = FacBlkBettelBelt::new(
+                btype.borrow().clone(),
+                origin.move_xy_usize(belt_total_0, belt_num),
+                FacDirectionQuarter::West,
+            );
+            belt.add_straight(belt_total_0 - belt_num);
+            belt.add_turn90(true);
+            // go down past the middle "cell"
+            belt.add_straight((belt_total_0 - belt_num) * 2 + mid_span);
+            belt.add_turn90(true);
+            belt.add_straight(belt_total_0 - belt_num);
 
             res.extend(belt.to_fac());
         }
@@ -165,11 +194,11 @@ impl FacBlkBettelBelt {
 }
 
 impl FacBlkBettelBeltLinkType {
-    fn length(&self) -> usize {
-        match self {
-            FacBlkBettelBeltLinkType::Transport { length } => *length,
-            FacBlkBettelBeltLinkType::Underground { length } => *length,
-            FacBlkBettelBeltLinkType::Splitter => 1,
-        }
-    }
+    // fn length(&self) -> usize {
+    //     match self {
+    //         FacBlkBettelBeltLinkType::Transport { length } => *length,
+    //         FacBlkBettelBeltLinkType::Underground { length } => *length,
+    //         FacBlkBettelBeltLinkType::Splitter => 1,
+    //     }
+    // }
 }
