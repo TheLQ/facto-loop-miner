@@ -1,11 +1,12 @@
-use serde_repr::Deserialize_repr;
-use serde_repr::Serialize_repr;
+use serde::Deserialize;
+use serde::Serialize;
 use strum::IntoStaticStr;
 use strum::VariantArray;
 use strum::{AsRefStr, Display};
 
-#[derive(Debug, Clone, PartialEq, AsRefStr, IntoStaticStr, Serialize_repr, Deserialize_repr)]
-#[repr(u8)]
+#[derive(
+    Debug, Clone, PartialEq, AsRefStr, IntoStaticStr, VariantArray, Serialize, Deserialize,
+)]
 pub enum FacDirectionEighth {
     North,
     NorthEast,
@@ -15,6 +16,34 @@ pub enum FacDirectionEighth {
     SouthWest,
     West,
     NorthWest,
+}
+
+impl FacDirectionEighth {
+    pub const fn rotate_once(&self) -> FacDirectionEighth {
+        match self {
+            Self::North => Self::NorthEast,
+            Self::NorthEast => Self::East,
+            Self::East => Self::SouthEast,
+            Self::SouthEast => Self::South,
+            Self::South => Self::SouthWest,
+            Self::SouthWest => Self::West,
+            Self::West => Self::NorthWest,
+            Self::NorthWest => Self::North,
+        }
+    }
+
+    pub const fn rotate_opposite(&self) -> FacDirectionEighth {
+        match self {
+            Self::North => Self::NorthWest,
+            Self::NorthEast => Self::North,
+            Self::East => Self::NorthEast,
+            Self::SouthEast => Self::East,
+            Self::South => Self::SouthEast,
+            Self::SouthWest => Self::South,
+            Self::West => Self::SouthWest,
+            Self::NorthWest => Self::West,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Display, AsRefStr, IntoStaticStr, VariantArray)]
@@ -96,49 +125,90 @@ impl FacDirectionQuarter {
 mod test {
     use strum::VariantArray;
 
-    use super::FacDirectionQuarter;
+    use super::{FacDirectionEighth, FacDirectionQuarter};
 
-    const DIRECTION_ORDER: [FacDirectionQuarter; 4] = [
-        FacDirectionQuarter::North,
-        FacDirectionQuarter::East,
-        FacDirectionQuarter::South,
-        FacDirectionQuarter::West,
-    ];
-
-    fn direction_get(i: usize) -> &'static FacDirectionQuarter {
-        &DIRECTION_ORDER[i % 4]
+    fn direction_quarter_get(i: usize) -> &'static FacDirectionQuarter {
+        &FacDirectionQuarter::VARIANTS[i % 4]
     }
 
-    fn direction_index_of(direction: &FacDirectionQuarter) -> usize {
-        DIRECTION_ORDER.iter().position(|v| v == direction).unwrap()
+    fn direction_quarter_index_of(direction: &FacDirectionQuarter) -> usize {
+        FacDirectionQuarter::VARIANTS
+            .iter()
+            .position(|v| v == direction)
+            .unwrap()
     }
 
     #[test]
-    fn test_rotate_flip() {
+    fn test_quarter_rotate_flip() {
         for direction in FacDirectionQuarter::VARIANTS {
             assert_eq!(
                 &direction.rotate_flip(),
-                direction_get(direction_index_of(direction) + 2)
+                direction_quarter_get(direction_quarter_index_of(direction) + 2)
             )
         }
     }
 
     #[test]
-    fn test_rotate_once() {
+    fn test_quarter_rotate_once() {
         for direction in FacDirectionQuarter::VARIANTS {
             assert_eq!(
                 &direction.rotate_once(),
-                direction_get(direction_index_of(direction) + 1)
+                direction_quarter_get(direction_quarter_index_of(direction) + 1)
             )
         }
     }
 
     #[test]
-    fn test_rotate_opposite() {
+    fn test_quarter_rotate_opposite() {
         for direction in FacDirectionQuarter::VARIANTS {
             assert_eq!(
                 &direction.rotate_opposite(),
-                direction_get(direction_index_of(direction) + 3)
+                direction_quarter_get(direction_quarter_index_of(direction) + 3)
+            )
+        }
+    }
+
+    fn direction_eighth_get(i: usize) -> &'static FacDirectionEighth {
+        &FacDirectionEighth::VARIANTS[i % 8]
+    }
+
+    fn direction_eighth_index_of(direction: &FacDirectionEighth) -> usize {
+        FacDirectionEighth::VARIANTS
+            .iter()
+            .position(|v| v == direction)
+            .unwrap()
+    }
+
+    // #[test]
+    // fn test_eighth_rotate_flip() {
+    //     for direction in FacDirectionEighth::VARIANTS {
+    //         assert_eq!(
+    //             &direction.rotate_flip(),
+    //             direction_quarter_get(direction_eighth_index_of(direction) + 2)
+    //         )
+    //     }
+    // }
+
+    #[test]
+    fn test_eighth_rotate_once() {
+        for direction in FacDirectionEighth::VARIANTS {
+            assert_eq!(
+                &direction.rotate_once(),
+                direction_eighth_get(direction_eighth_index_of(direction) + 1),
+                "from source dir {:?}",
+                direction,
+            )
+        }
+    }
+
+    #[test]
+    fn test_eighth_rotate_opposite() {
+        for direction in FacDirectionEighth::VARIANTS {
+            assert_eq!(
+                &direction.rotate_opposite(),
+                direction_eighth_get(direction_eighth_index_of(direction) + 7),
+                "from source dir {:?}",
+                direction,
             )
         }
     }
