@@ -163,6 +163,38 @@ fn make_rail_shift_45(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     Ok(())
 }
 
+fn make_rail_dual_turning(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    execute_destroy(admiral)?;
+
+    let mut existing_points = Vec::new();
+
+    for opposite in [true, false] {
+        for direction in [
+            FacDirectionQuarter::North,
+            FacDirectionQuarter::East,
+            FacDirectionQuarter::South,
+            FacDirectionQuarter::West,
+        ] {
+            let mut hope = RailHopeDual::new(VPoint::zero(), direction);
+            hope.add_straight(5);
+            hope.add_turn90(opposite);
+
+            for entity in hope.to_fac() {
+                let bpfac = entity.to_blueprint();
+                let bppos = &bpfac.position;
+                if existing_points.contains(bppos) {
+                    continue;
+                } else {
+                    existing_points.push(bppos.clone());
+                }
+                admiral.execute_checked_command(bpfac.to_lua().into_boxed())?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn execute_destroy(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     let command = FacDestroy::new_filtered(
         50,

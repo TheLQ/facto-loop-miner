@@ -80,7 +80,7 @@ impl RailHopeSingle {
     //     self.links.last().unwrap()
     // }
 
-    fn current_direction(&self) -> &FacDirectionQuarter {
+    pub(crate) fn current_direction(&self) -> &FacDirectionQuarter {
         self.links
             .last()
             .map(|v| &v.link_direction)

@@ -126,9 +126,12 @@ impl FacDirectionQuarter {
         }
     }
 
-    // pub fn is_up_down(&self) -> bool {
-    //     *self == RailDirection::Up || *self == RailDirection::Down
-    // }
+    pub fn is_up_down(&self) -> bool {
+        match self {
+            Self::North | Self::South => true,
+            Self::East | Self::West => false,
+        }
+    }
 
     // pub fn spinner(&self, post_rotations: usize) -> RailDirection {
     //     let mut directions = RAIL_DIRECTION_CLOCKWISE.iter().cycle();
