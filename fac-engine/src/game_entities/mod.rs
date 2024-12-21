@@ -8,6 +8,7 @@ pub mod chest;
 pub mod direction;
 pub mod electric_large;
 pub mod electric_mini;
+pub mod infinity_power;
 pub mod inserter;
 pub mod lamp;
 pub mod module;

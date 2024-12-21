@@ -21,6 +21,7 @@ pub enum FacEntityName {
     BeltTransport(FacEntBeltType),
     BeltUnder(FacEntBeltType),
     BeltSplit(FacEntBeltType),
+    InfinityPower,
 }
 
 impl FacEntityName {
@@ -67,6 +68,7 @@ impl FacEntityName {
             Self::BeltTransport(btype) => format!("{}transport-belt", btype.name_prefix()),
             Self::BeltUnder(btype) => format!("{}underground-belt", btype.name_prefix()),
             Self::BeltSplit(btype) => format!("{}splitter", btype.name_prefix()),
+            Self::InfinityPower => "electric-energy-interface".into(),
         }
     }
 }
