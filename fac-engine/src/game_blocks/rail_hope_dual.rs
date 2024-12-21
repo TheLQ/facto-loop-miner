@@ -1,13 +1,18 @@
 use crate::blueprint::bpitem::BlueprintItem;
+use crate::common::entity::FacEntity;
 use crate::common::vpoint::VPoint;
 use crate::game_blocks::rail_hope::RailHopeAppender;
 use crate::game_blocks::rail_hope_single::RailHopeSingle;
 use crate::game_entities::direction::FacDirectionQuarter;
+use crate::game_entities::electric_large::{FacEntElectricLarge, FacEntElectricLargeType};
+use crate::game_entities::lamp::FacEntLamp;
 use crate::game_entities::rail::RAIL_STRAIGHT_DIAMETER;
 
 // Side-by-side rail
 pub struct RailHopeDual {
     hopes: [RailHopeSingle; 2],
+    electric_larges: Vec<VPoint>,
+    lamps: Vec<VPoint>,
 }
 
 impl RailHopeDual {
@@ -21,7 +26,28 @@ impl RailHopeDual {
                 RailHopeSingle::new(origin, origin_direction.clone()),
                 RailHopeSingle::new(next_origin, origin_direction),
             ],
+            electric_larges: Vec::new(),
+            lamps: Vec::new(),
         }
+    }
+
+    pub fn add_straight_section(&mut self) {
+        self.add_electric_next();
+        for rail in &mut self.hopes {
+            rail.add_straight(15);
+        }
+    }
+
+    pub fn add_electric_next(&mut self) {
+        let cur_direction = self.hopes[0].current_direction();
+
+        let electric_large_pos = self.hopes[0]
+            .current_next_pos()
+            .move_direction_sideways(cur_direction, -2);
+        self.electric_larges.push(electric_large_pos);
+
+        let lamp_pos = electric_large_pos.move_direction(cur_direction, 1);
+        self.lamps.push(lamp_pos);
     }
 }
 
@@ -33,14 +59,16 @@ impl RailHopeAppender for RailHopeDual {
     }
 
     fn add_turn90(&mut self, clockwise: bool) {
+        self.add_electric_next();
         if clockwise {
             self.hopes[1].add_straight(2);
         } else {
             self.hopes[0].add_straight(2);
         }
 
-        self.hopes[0].add_turn90(clockwise);
-        self.hopes[1].add_turn90(clockwise);
+        for rail in &mut self.hopes {
+            rail.add_turn90(clockwise);
+        }
 
         if clockwise {
             self.hopes[1].add_straight(2);
@@ -54,6 +82,18 @@ impl RailHopeAppender for RailHopeDual {
     }
 
     fn to_fac(&self) -> Vec<BlueprintItem> {
-        self.hopes.iter().flat_map(RailHopeSingle::to_fac).collect()
+        [].into_iter()
+            .chain(self.hopes.iter().flat_map(RailHopeSingle::to_fac))
+            // this is a bit sketchy...
+            .chain(self.electric_larges.iter().map(|position| {
+                BlueprintItem::new(
+                    FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
+                    position.clone(),
+                )
+            }))
+            .chain(self.lamps.iter().map(|position| {
+                BlueprintItem::new(FacEntLamp::new().into_boxed(), position.clone())
+            }))
+            .collect()
     }
 }

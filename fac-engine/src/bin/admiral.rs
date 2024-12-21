@@ -40,13 +40,14 @@ fn inner_main() -> AdmiralResult<()> {
     let mut client = AdmiralClient::new()?;
     client.auth()?;
 
-    match 6 {
+    match 7 {
         1 => make_basic(&mut client)?,
         2 => make_assembler_thru(&mut client)?,
         3 => make_belt_bettel(&mut client)?,
         4 => make_rail_spiral_90(&mut client)?,
         5 => make_rail_shift_45(&mut client)?,
         6 => make_rail_dual_turning(&mut client)?,
+        7 => make_rail_dual_powered(&mut client)?,
         _ => panic!("uihhh"),
     }
 
@@ -210,9 +211,42 @@ fn make_rail_dual_turning(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     Ok(())
 }
 
+fn make_rail_dual_powered(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    execute_destroy(admiral)?;
+
+    for direction in [
+        FacDirectionQuarter::North,
+        // FacDirectionQuarter::East,
+        // FacDirectionQuarter::South,
+        // FacDirectionQuarter::West,
+    ] {
+        let origin = VPoint::zero().move_direction(&direction, 6);
+
+        let mut hope = RailHopeDual::new(origin, direction);
+        hope.add_straight_section();
+        hope.add_turn90(true);
+        hope.add_straight_section();
+        hope.add_turn90(true);
+        hope.add_straight_section();
+
+        for entity in hope.to_fac() {
+            let bpfac = entity.to_blueprint();
+            let bppos = &bpfac.position;
+            // if existing_points.contains(bppos) {
+            //     continue;
+            // } else {
+            //     existing_points.push(bppos.clone());
+            // }
+            admiral.execute_checked_command(bpfac.to_lua().into_boxed())?;
+        }
+    }
+
+    Ok(())
+}
+
 fn execute_destroy(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     let command = FacDestroy::new_filtered(
-        50,
+        70,
         [
             FacEntityName::Lamp,
             FacEntityName::RailStraight,

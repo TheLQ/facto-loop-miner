@@ -90,7 +90,7 @@ impl RailHopeSingle {
             .unwrap_or(&self.origin_direction)
     }
 
-    fn current_next_pos(&self) -> VPoint {
+    pub(crate) fn current_next_pos(&self) -> VPoint {
         self.links
             .last()
             .map(|v| v.next_straight_position())
