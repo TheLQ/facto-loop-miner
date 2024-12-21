@@ -6,7 +6,7 @@ use crate::game_entities::direction::{FacDirectionEighth, FacDirectionQuarter};
 use crate::game_entities::rail::{FacEntRailStraight, RAIL_STRAIGHT_DIAMETER};
 use crate::game_entities::rail_curved::FacEntRailCurved;
 
-/// Rail Pathing v10.999?, "Irys Hope"
+/// Rail Pathing v10.999?, "Irys💎 Hope"
 ///
 /// Describe Rail as a self-contained sequence of links,
 /// without significant Pathfinding-specific code overhead
@@ -109,7 +109,7 @@ impl RailHopeAppender for RailHopeSingle {
         Factorio 1 Rails are really complicated
         This is version 3544579 💎, written obviously generic with hindsight
 
-        Order is Curve > Straight 45 > Curve
+        Order: Curve > Straight 45 > Curve
 
         In X, steps are 3 > 3 > 3
         In Y, steps are 1 > 3 > 3
@@ -120,12 +120,11 @@ impl RailHopeAppender for RailHopeSingle {
         Opposite rotations are 1 > 2 > 1
         (yes, curved rail from North to NorthWest in Factorio is... curved-rail North?)
         */
+        let mut rails = Vec::new();
 
         let cur_direction = self.current_direction();
         // 1,1 to cancel RailStraight's to_fac offset
         let origin_fac = self.current_next_pos() + VPOINT_ONE;
-
-        let mut rails = Vec::new();
 
         // curve 1
         let first_curve_pos = origin_fac
@@ -188,6 +187,104 @@ impl RailHopeAppender for RailHopeSingle {
         })
     }
 
+    fn add_shift45(&mut self, opposite: bool, length: usize) {
+        /*
+        Factorio 1 Rails at 45 degrees are still really complicated
+
+        Order: Curve > 2x 45 straights > Curve back
+
+        Middle rail is in pairs of 2 on the same X axis.
+        In game, in preview-item-place-view they're stacked on top of eachother.
+        Curves start only on these pairs,
+        if only 1 the game rail planner inserts other 45
+
+        Between 2x pairs, the middle 2 rails are on the same Y axis
+        */
+        let mut rails = Vec::new();
+
+        let cur_direction = self.current_direction();
+        // 1,1 to cancel RailStraight's to_fac offset
+        let origin_fac = self.current_next_pos() + VPOINT_ONE;
+
+        // curve 1 (copy of above turn90)
+        let first_curve_pos = origin_fac
+            .move_direction(cur_direction, 3)
+            .move_direction_sideways(cur_direction, neg_opposite(opposite, -1));
+        let first_curve_direction = cur_direction.to_direction_eighth();
+        let first_curve_direction = if opposite {
+            first_curve_direction.rotate_once()
+        } else {
+            first_curve_direction
+        };
+        rails.push(RailHopeLinkRail {
+            position: first_curve_pos,
+            direction: first_curve_direction.clone(),
+            rtype: FacEntRailType::Curved,
+        });
+
+        // middle
+        let middle_straight_pos = first_curve_pos
+            .move_direction(cur_direction, 3)
+            .move_direction_sideways(cur_direction, neg_opposite(opposite, -3));
+        let middle_a_direction = if opposite {
+            first_curve_direction.rotate_opposite().rotate_opposite()
+        } else {
+            first_curve_direction.rotate_once()
+        };
+        let middle_b_direction = middle_a_direction.rotate_flip();
+
+        let mut next_a_pos = middle_straight_pos;
+        let mut last_b_pos =
+            middle_straight_pos.move_direction_sideways(cur_direction, neg_opposite(opposite, 2));
+        for _ in 0..length {
+            rails.push(RailHopeLinkRail {
+                // -1,-1 to cancel RailStraight's to_fac offset
+                position: next_a_pos - VPOINT_ONE,
+                direction: middle_a_direction.clone(),
+                rtype: FacEntRailType::Straight,
+            });
+            last_b_pos = next_a_pos.move_direction(cur_direction, 2);
+            rails.push(RailHopeLinkRail {
+                // -1,-1 to cancel RailStraight's to_fac offset
+                position: last_b_pos - VPOINT_ONE,
+                direction: middle_b_direction.clone(),
+                rtype: FacEntRailType::Straight,
+            });
+            next_a_pos =
+                last_b_pos.move_direction_sideways(cur_direction, neg_opposite(opposite, -2))
+        }
+
+        // curve 2 back
+        let last_curve_pos = last_b_pos
+            .move_direction(cur_direction, 3)
+            .move_direction_sideways(cur_direction, neg_opposite(opposite, -3));
+        let last_curve_direction = if opposite {
+            first_curve_direction
+                .rotate_once()
+                .rotate_once()
+                .rotate_once()
+                .rotate_once()
+        } else {
+            first_curve_direction
+                .rotate_opposite()
+                .rotate_opposite()
+                .rotate_opposite()
+                .rotate_opposite()
+        };
+        rails.push(RailHopeLinkRail {
+            position: last_curve_pos,
+            direction: last_curve_direction.clone(),
+            rtype: FacEntRailType::Curved,
+        });
+
+        self.links.push(RailHopeLink {
+            start_pos: self.current_next_pos(),
+            link_direction: cur_direction.clone(),
+            rails,
+            rtype: RailHopeLinkType::Shift45 { opposite, length },
+        })
+    }
+
     fn to_fac(&self) -> Vec<BlueprintItem> {
         let mut res = Vec::new();
         for link in &self.links {
@@ -213,7 +310,13 @@ impl RailHopeLink {
                     .move_direction(&unrotated, 10)
                     .move_direction_sideways(&unrotated, neg_opposite(*opposite, -14))
             }
-            _ => todo!("wip"),
+            RailHopeLinkType::Shift45 { opposite, length } => self
+                .start_pos
+                .move_direction(&self.link_direction, 14 + (*length * 2))
+                .move_direction_sideways(
+                    &self.link_direction,
+                    neg_opposite(*opposite, -6 - (*length as i32 * 2)),
+                ),
         }
     }
 

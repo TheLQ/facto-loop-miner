@@ -7,9 +7,10 @@ use crate::game_entities::belt_under::{FacEntBeltUnder, FacEntBeltUnderType};
 use crate::game_entities::direction::FacDirectionQuarter;
 use std::borrow::Borrow;
 
-/// Belt linkage v1 "Gavis Bettel"
-/// Describe belts as a sequence of links
-/// without pathfinding concerns
+/// Belt linkage v1 "Gavis Bettel 🎩"
+///
+/// Describe belts as a sequence of links,
+/// without pathfinding concerns or complicated loop math
 pub struct FacBlkBettelBelt {
     origin: VPoint,
     origin_direction: FacDirectionQuarter,

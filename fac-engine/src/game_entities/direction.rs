@@ -29,6 +29,19 @@ impl FacDirectionEighth {
         Self::VARIANTS.iter().position(|v| v == direction).unwrap()
     }
 
+    pub const fn rotate_flip(&self) -> Self {
+        match self {
+            Self::North => Self::South,
+            Self::NorthEast => Self::SouthWest,
+            Self::East => Self::West,
+            Self::SouthEast => Self::NorthWest,
+            Self::South => Self::North,
+            Self::SouthWest => Self::NorthEast,
+            Self::West => Self::East,
+            Self::NorthWest => Self::SouthEast,
+        }
+    }
+
     pub const fn rotate_once(&self) -> Self {
         match self {
             Self::North => Self::NorthEast,
@@ -86,7 +99,7 @@ impl FacDirectionQuarter {
         }
     }
 
-    pub const fn rotate_flip(&self) -> FacDirectionQuarter {
+    pub const fn rotate_flip(&self) -> Self {
         match self {
             Self::North => Self::South,
             Self::East => Self::West,
@@ -95,7 +108,7 @@ impl FacDirectionQuarter {
         }
     }
 
-    pub const fn rotate_once(&self) -> FacDirectionQuarter {
+    pub const fn rotate_once(&self) -> Self {
         match self {
             Self::North => Self::East,
             Self::East => Self::South,
@@ -104,7 +117,7 @@ impl FacDirectionQuarter {
         }
     }
 
-    pub const fn rotate_opposite(&self) -> FacDirectionQuarter {
+    pub const fn rotate_opposite(&self) -> Self {
         match self {
             Self::North => Self::West,
             Self::East => Self::North,
@@ -177,15 +190,17 @@ mod test {
         }
     }
 
-    // #[test]
-    // fn test_eighth_rotate_flip() {
-    //     for direction in FacDirectionEighth::VARIANTS {
-    //         assert_eq!(
-    //             &direction.rotate_flip(),
-    //             direction_quarter_get(direction_eighth_index_of(direction) + 2)
-    //         )
-    //     }
-    // }
+    #[test]
+    fn test_eighth_rotate_flip() {
+        for direction in FacDirectionEighth::VARIANTS {
+            assert_eq!(
+                &direction.rotate_flip(),
+                FacDirectionEighth::get_index(FacDirectionEighth::index_of(direction) + 4),
+                "from source dir {:?}",
+                direction,
+            )
+        }
+    }
 
     #[test]
     fn test_eighth_rotate_once() {

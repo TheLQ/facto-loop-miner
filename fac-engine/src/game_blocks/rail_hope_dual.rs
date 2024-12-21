@@ -34,6 +34,11 @@ impl RailHopeAppender for RailHopeDual {
 
     fn add_turn90(&mut self, opposite: bool) {
         // outer rail has 2 straights on each side
+        unimplemented!()
+    }
+
+    fn add_shift45(&mut self, opposite: bool, length: usize) {
+        unimplemented!()
     }
 
     fn to_fac(&self) -> Vec<BlueprintItem> {

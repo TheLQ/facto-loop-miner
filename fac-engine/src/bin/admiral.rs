@@ -38,11 +38,12 @@ fn inner_main() -> AdmiralResult<()> {
     let mut client = AdmiralClient::new()?;
     client.auth()?;
 
-    match 4 {
+    match 5 {
         1 => make_basic(&mut client)?,
         2 => make_assembler_thru(&mut client)?,
         3 => make_belt_bettel(&mut client)?,
-        4 => make_rail_spiral(&mut client)?,
+        4 => make_rail_spiral_90(&mut client)?,
+        5 => make_rail_shift_45(&mut client)?,
         _ => panic!("uihhh"),
     }
 
@@ -100,7 +101,7 @@ fn make_belt_bettel(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     Ok(())
 }
 
-fn make_rail_spiral(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+fn make_rail_spiral_90(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
 
     let mut existing_points = Vec::new();
@@ -113,6 +114,37 @@ fn make_rail_spiral(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         for mut hope in [hope1, hope2, hope3, hope4] {
             hope.add_straight(2);
             hope.add_turn90(opposite);
+            hope.add_straight(2);
+
+            for entity in hope.to_fac() {
+                let bpfac = entity.to_blueprint();
+                let bppos = &bpfac.position;
+                if existing_points.contains(bppos) {
+                    continue;
+                } else {
+                    existing_points.push(bppos.clone());
+                }
+                admiral.execute_checked_command(bpfac.to_lua().into_boxed())?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn make_rail_shift_45(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    execute_destroy(admiral)?;
+
+    let mut existing_points = Vec::new();
+    let origin = VPoint::zero();
+    for opposite in [true, false] {
+        let hope1 = RailHopeSingle::new(origin, FacDirectionQuarter::North);
+        let hope2 = RailHopeSingle::new(origin, FacDirectionQuarter::South);
+        let hope3 = RailHopeSingle::new(origin, FacDirectionQuarter::East);
+        let hope4 = RailHopeSingle::new(origin, FacDirectionQuarter::West);
+        for mut hope in [hope1, hope2, hope3, hope4] {
+            hope.add_straight(2);
+            hope.add_shift45(opposite, 3);
             hope.add_straight(2);
 
             for entity in hope.to_fac() {
