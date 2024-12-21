@@ -1,3 +1,5 @@
+use tracing::warn;
+
 use crate::blueprint::bpitem::BlueprintItem;
 use crate::common::entity::FacEntity;
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
@@ -37,8 +39,8 @@ pub struct RailHopeLinkRail {
 
 pub enum RailHopeLinkType {
     Straight { length: usize },
-    Turn90 { opposite: bool },
-    Shift45 { opposite: bool, length: usize },
+    Turn90 { clockwise: bool },
+    Shift45 { clockwise: bool, length: usize },
 }
 
 impl RailHopeSingle {
@@ -59,6 +61,7 @@ impl RailHopeSingle {
         direction: FacDirectionQuarter,
         length: usize,
     ) {
+        warn!("writing direction {}", direction);
         let mut rails = Vec::new();
         for i in 0..length {
             rails.push(RailHopeLinkRail {
@@ -104,10 +107,11 @@ impl RailHopeAppender for RailHopeSingle {
         );
     }
 
-    fn add_turn90(&mut self, opposite: bool) {
+    fn add_turn90(&mut self, clockwise: bool) {
+        warn!("turn 90 start---- clockwise {}", clockwise);
         /*
         Factorio 1 Rails are really complicated
-        This is version 3544579 💎, written obviously generic with hindsight
+        This is version 3544579 💎
 
         Order: Curve > Straight 45 > Curve
 
@@ -115,23 +119,22 @@ impl RailHopeAppender for RailHopeSingle {
         In Y, steps are 1 > 3 > 3
         (signs and axis depend on direction)
 
-        Compass "normal" is counter-clockwise, opposite is clockwise (my decision)
-        Normal   rotations are 0 > 2 > 2
-        Opposite rotations are 1 > 2 > 1
-        (yes, curved rail from North to NorthWest in Factorio is... curved-rail North?)
+        Compass rotations have no apparent pattern but stable in all turn directions
+        (eg. curved rail from North to NorthWest in Factorio is... curved-rail North?)
         */
         let mut rails = Vec::new();
 
         let cur_direction = self.current_direction();
+        warn!("cur direction {}", cur_direction);
         // 1,1 to cancel RailStraight's to_fac offset
         let origin_fac = self.current_next_pos() + VPOINT_ONE;
 
         // curve 1
         let first_curve_pos = origin_fac
             .move_direction(cur_direction, 3)
-            .move_direction_sideways(cur_direction, neg_opposite(opposite, -1));
+            .move_direction_sideways(cur_direction, neg_if_false(clockwise, 1));
         let first_curve_direction = cur_direction.to_direction_eighth();
-        let first_curve_direction = if opposite {
+        let first_curve_direction = if clockwise {
             first_curve_direction.rotate_once()
         } else {
             first_curve_direction
@@ -141,16 +144,18 @@ impl RailHopeAppender for RailHopeSingle {
             direction: first_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
         });
+        warn!("first curve {:?}", first_curve_direction);
 
         // middle
         let middle_straight_pos = first_curve_pos
             .move_direction(cur_direction, 3)
-            .move_direction_sideways(cur_direction, neg_opposite(opposite, -3));
-        let middle_straight_direction = if opposite {
+            .move_direction_sideways(cur_direction, neg_if_false(clockwise, 3));
+        let middle_straight_direction = if clockwise {
             first_curve_direction.rotate_opposite().rotate_opposite()
         } else {
             first_curve_direction.rotate_once()
         };
+        warn!("middle straight {:?}", middle_straight_direction);
         rails.push(RailHopeLinkRail {
             // -1,-1 to cancel RailStraight's to_fac offset
             position: middle_straight_pos - VPOINT_ONE,
@@ -161,12 +166,13 @@ impl RailHopeAppender for RailHopeSingle {
         // curve 2
         let last_curve_pos = middle_straight_pos
             .move_direction(cur_direction, 3)
-            .move_direction_sideways(cur_direction, neg_opposite(opposite, -3));
-        let last_curve_direction = if opposite {
+            .move_direction_sideways(cur_direction, neg_if_false(clockwise, 3));
+        let last_curve_direction = if clockwise {
             middle_straight_direction.rotate_opposite()
         } else {
             middle_straight_direction.rotate_once().rotate_once()
         };
+        warn!("last curve {:?}", middle_straight_direction);
         rails.push(RailHopeLinkRail {
             position: last_curve_pos,
             direction: last_curve_direction.clone(),
@@ -174,20 +180,24 @@ impl RailHopeAppender for RailHopeSingle {
         });
 
         // where to go next
-        let end_direction = if opposite {
-            cur_direction.rotate_opposite()
-        } else {
+        let link_direction = if clockwise {
             cur_direction.rotate_once()
+        } else {
+            cur_direction.rotate_opposite()
         };
+        warn!(
+            "from start direction {} to end direction {}",
+            cur_direction, link_direction
+        );
         self.links.push(RailHopeLink {
             start_pos: self.current_next_pos(),
-            link_direction: end_direction,
+            link_direction,
             rails,
-            rtype: RailHopeLinkType::Turn90 { opposite },
+            rtype: RailHopeLinkType::Turn90 { clockwise },
         })
     }
 
-    fn add_shift45(&mut self, opposite: bool, length: usize) {
+    fn add_shift45(&mut self, clockwise: bool, length: usize) {
         /*
         Factorio 1 Rails at 45 degrees are still really complicated
 
@@ -209,9 +219,9 @@ impl RailHopeAppender for RailHopeSingle {
         // curve 1 (copy of above turn90)
         let first_curve_pos = origin_fac
             .move_direction(cur_direction, 3)
-            .move_direction_sideways(cur_direction, neg_opposite(opposite, -1));
+            .move_direction_sideways(cur_direction, neg_if_false(clockwise, 1));
         let first_curve_direction = cur_direction.to_direction_eighth();
-        let first_curve_direction = if opposite {
+        let first_curve_direction = if clockwise {
             first_curve_direction.rotate_once()
         } else {
             first_curve_direction
@@ -225,8 +235,8 @@ impl RailHopeAppender for RailHopeSingle {
         // middle
         let middle_straight_pos = first_curve_pos
             .move_direction(cur_direction, 3)
-            .move_direction_sideways(cur_direction, neg_opposite(opposite, -3));
-        let middle_a_direction = if opposite {
+            .move_direction_sideways(cur_direction, neg_if_false(clockwise, 3));
+        let middle_a_direction = if clockwise {
             first_curve_direction.rotate_opposite().rotate_opposite()
         } else {
             first_curve_direction.rotate_once()
@@ -235,7 +245,7 @@ impl RailHopeAppender for RailHopeSingle {
 
         let mut next_a_pos = middle_straight_pos;
         let mut last_b_pos =
-            middle_straight_pos.move_direction_sideways(cur_direction, neg_opposite(opposite, 2));
+            middle_straight_pos.move_direction_sideways(cur_direction, neg_if_false(clockwise, -2));
         for _ in 0..length {
             rails.push(RailHopeLinkRail {
                 // -1,-1 to cancel RailStraight's to_fac offset
@@ -251,14 +261,14 @@ impl RailHopeAppender for RailHopeSingle {
                 rtype: FacEntRailType::Straight,
             });
             next_a_pos =
-                last_b_pos.move_direction_sideways(cur_direction, neg_opposite(opposite, -2))
+                last_b_pos.move_direction_sideways(cur_direction, neg_if_false(clockwise, 2))
         }
 
         // curve 2 back
         let last_curve_pos = last_b_pos
             .move_direction(cur_direction, 3)
-            .move_direction_sideways(cur_direction, neg_opposite(opposite, -3));
-        let last_curve_direction = if opposite {
+            .move_direction_sideways(cur_direction, neg_if_false(clockwise, 3));
+        let last_curve_direction = if clockwise {
             first_curve_direction
                 .rotate_once()
                 .rotate_once()
@@ -281,7 +291,7 @@ impl RailHopeAppender for RailHopeSingle {
             start_pos: self.current_next_pos(),
             link_direction: cur_direction.clone(),
             rails,
-            rtype: RailHopeLinkType::Shift45 { opposite, length },
+            rtype: RailHopeLinkType::Shift45 { clockwise, length },
         })
     }
 
@@ -300,22 +310,23 @@ impl RailHopeLink {
             RailHopeLinkType::Straight { length } => self
                 .start_pos
                 .move_direction(&self.link_direction, length * RAIL_STRAIGHT_DIAMETER),
-            RailHopeLinkType::Turn90 { opposite } => {
-                let unrotated = if *opposite {
-                    self.link_direction.rotate_once()
-                } else {
+            RailHopeLinkType::Turn90 { clockwise } => {
+                let unrotated = if *clockwise {
                     self.link_direction.rotate_opposite()
+                } else {
+                    self.link_direction.rotate_once()
                 };
+                warn!("unrotated {}", unrotated);
                 self.start_pos
                     .move_direction(&unrotated, 10)
-                    .move_direction_sideways(&unrotated, neg_opposite(*opposite, -14))
+                    .move_direction_sideways(&unrotated, neg_if_false(*clockwise, 12))
             }
-            RailHopeLinkType::Shift45 { opposite, length } => self
+            RailHopeLinkType::Shift45 { clockwise, length } => self
                 .start_pos
                 .move_direction(&self.link_direction, 14 + (*length * 2))
                 .move_direction_sideways(
                     &self.link_direction,
-                    neg_opposite(*opposite, -6 - (*length as i32 * 2)),
+                    neg_if_false(*clockwise, 6 + (*length as i32 * 2)),
                 ),
         }
     }
@@ -336,8 +347,8 @@ impl RailHopeLink {
     }
 }
 
-fn neg_opposite(opposite: bool, value: i32) -> i32 {
-    if opposite { -value } else { value }
+fn neg_if_false(flag: bool, value: i32) -> i32 {
+    if flag { value } else { -value }
 }
 
 #[cfg(test)]

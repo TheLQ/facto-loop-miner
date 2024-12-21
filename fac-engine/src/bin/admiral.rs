@@ -1,7 +1,9 @@
 use facto_loop_miner_common::log_init;
+use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
 use facto_loop_miner_fac_engine::game_blocks::belt_bettel::FacBlkBettelBelt;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::game_entities::electric_large::FacEntElectricLargeType;
@@ -38,12 +40,13 @@ fn inner_main() -> AdmiralResult<()> {
     let mut client = AdmiralClient::new()?;
     client.auth()?;
 
-    match 5 {
+    match 6 {
         1 => make_basic(&mut client)?,
         2 => make_assembler_thru(&mut client)?,
         3 => make_belt_bettel(&mut client)?,
         4 => make_rail_spiral_90(&mut client)?,
         5 => make_rail_shift_45(&mut client)?,
+        6 => make_rail_dual_turning(&mut client)?,
         _ => panic!("uihhh"),
     }
 
@@ -104,19 +107,29 @@ fn make_belt_bettel(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 fn make_rail_spiral_90(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
 
-    let mut existing_points = Vec::new();
-    let origin = VPoint::zero();
-    for opposite in [true, false] {
+    let mut existing_points: Vec<FacBpPosition> = Vec::new();
+    let origin: VPoint = VPoint::zero();
+    for clockwise in [
+        true,  //
+        false, //
+    ] {
         let hope1 = RailHopeSingle::new(origin, FacDirectionQuarter::North);
         let hope2 = RailHopeSingle::new(origin, FacDirectionQuarter::South);
         let hope3 = RailHopeSingle::new(origin, FacDirectionQuarter::East);
         let hope4 = RailHopeSingle::new(origin, FacDirectionQuarter::West);
-        for mut hope in [hope1, hope2, hope3, hope4] {
+        for mut hope in [
+            hope1, //
+            hope2, //
+            hope3, //
+            hope4, //
+        ] {
             hope.add_straight(2);
-            hope.add_turn90(opposite);
+            hope.add_turn90(clockwise);
+            hope.add_straight(2);
+            hope.add_turn90(clockwise);
             hope.add_straight(2);
 
-            for entity in hope.to_fac() {
+            for entity in hope.to_fac().into_iter().skip(0) {
                 let bpfac = entity.to_blueprint();
                 let bppos = &bpfac.position;
                 if existing_points.contains(bppos) {
@@ -137,14 +150,14 @@ fn make_rail_shift_45(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
     let mut existing_points = Vec::new();
     let origin = VPoint::zero();
-    for opposite in [true, false] {
+    for clockwise in [false /*, false*/] {
         let hope1 = RailHopeSingle::new(origin, FacDirectionQuarter::North);
         let hope2 = RailHopeSingle::new(origin, FacDirectionQuarter::South);
         let hope3 = RailHopeSingle::new(origin, FacDirectionQuarter::East);
         let hope4 = RailHopeSingle::new(origin, FacDirectionQuarter::West);
         for mut hope in [hope1, hope2, hope3, hope4] {
             hope.add_straight(2);
-            hope.add_shift45(opposite, 3);
+            hope.add_shift45(clockwise, 3);
             hope.add_straight(2);
 
             for entity in hope.to_fac() {
@@ -168,7 +181,7 @@ fn make_rail_dual_turning(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
     let mut existing_points = Vec::new();
 
-    for opposite in [true, false] {
+    for clockwise in [true, false] {
         for direction in [
             FacDirectionQuarter::North,
             FacDirectionQuarter::East,
@@ -177,7 +190,9 @@ fn make_rail_dual_turning(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         ] {
             let mut hope = RailHopeDual::new(VPoint::zero(), direction);
             hope.add_straight(5);
-            hope.add_turn90(opposite);
+            hope.add_turn90(clockwise);
+            hope.add_straight(5);
+            hope.add_straight(5);
 
             for entity in hope.to_fac() {
                 let bpfac = entity.to_blueprint();

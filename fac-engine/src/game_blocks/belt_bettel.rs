@@ -74,11 +74,11 @@ impl FacBlkBettelBelt {
         self.add_straight_raw(length, true, self.current_direction().clone());
     }
 
-    pub fn add_turn90(&mut self, opposite: bool) {
-        let new_direction = if opposite {
-            self.current_direction().rotate_opposite()
-        } else {
+    pub fn add_turn90(&mut self, clockwise: bool) {
+        let new_direction = if clockwise {
             self.current_direction().rotate_once()
+        } else {
+            self.current_direction().rotate_opposite()
         };
         self.add_straight_raw(1, false, new_direction);
     }

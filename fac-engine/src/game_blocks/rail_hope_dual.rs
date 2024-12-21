@@ -32,24 +32,24 @@ impl RailHopeAppender for RailHopeDual {
         }
     }
 
-    fn add_turn90(&mut self, opposite: bool) {
-        if opposite {
+    fn add_turn90(&mut self, clockwise: bool) {
+        if clockwise {
             self.hopes[1].add_straight(2);
         } else {
             self.hopes[0].add_straight(2);
         }
 
-        self.hopes[0].add_turn90(opposite);
-        self.hopes[1].add_turn90(opposite);
+        self.hopes[0].add_turn90(clockwise);
+        self.hopes[1].add_turn90(clockwise);
 
-        if opposite {
+        if clockwise {
             self.hopes[1].add_straight(2);
         } else {
             self.hopes[0].add_straight(2);
         }
     }
 
-    fn add_shift45(&mut self, opposite: bool, length: usize) {
+    fn add_shift45(&mut self, _clockwise: bool, _length: usize) {
         unimplemented!()
     }
 
