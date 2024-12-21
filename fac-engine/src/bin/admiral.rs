@@ -1,6 +1,11 @@
 use facto_loop_miner_common::log_init;
+use facto_loop_miner_fac_engine::common::names::FacEntityName;
 use facto_loop_miner_fac_engine::game_blocks::belt_bettel::FacBlkBettelBelt;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
+use facto_loop_miner_fac_engine::game_entities::electric_large::FacEntElectricLargeType;
+use facto_loop_miner_fac_engine::game_entities::electric_mini::FacEntElectricMiniType;
 use facto_loop_miner_fac_engine::game_entities::module::FacModule;
 use facto_loop_miner_fac_engine::{
     admiral::{
@@ -33,10 +38,11 @@ fn inner_main() -> AdmiralResult<()> {
     let mut client = AdmiralClient::new()?;
     client.auth()?;
 
-    match 2 {
+    match 4 {
         1 => make_basic(&mut client)?,
         2 => make_assembler_thru(&mut client)?,
         3 => make_belt_bettel(&mut client)?,
+        4 => make_rail(&mut client)?,
         _ => panic!("uihhh"),
     }
 
@@ -89,6 +95,50 @@ fn make_belt_bettel(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
     for entity in belt.to_fac() {
         admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
+    }
+
+    Ok(())
+}
+
+fn make_rail(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    execute_destroy(admiral)?;
+
+    let mut existing_points = Vec::new();
+
+    let origin = VPoint::zero();
+    let opposite = true;
+
+    let mut hope1 = RailHopeSingle::new(origin, FacDirectionQuarter::North);
+    hope1.add_straight(2);
+    hope1.add_turn90(opposite);
+
+    let mut hope2 = RailHopeSingle::new(origin, FacDirectionQuarter::South);
+    hope2.add_straight(2);
+    hope2.add_turn90(opposite);
+
+    let mut hope3 = RailHopeSingle::new(origin, FacDirectionQuarter::East);
+    hope3.add_straight(2);
+    hope3.add_turn90(opposite);
+
+    let mut hope4 = RailHopeSingle::new(origin, FacDirectionQuarter::West);
+    hope4.add_straight(2);
+    hope4.add_turn90(opposite);
+
+    for entity in []
+        .iter()
+        .chain(hope1.to_fac().iter())
+        .chain(hope2.to_fac().iter())
+        .chain(hope3.to_fac().iter())
+        .chain(hope4.to_fac().iter())
+    {
+        let bpfac = entity.to_blueprint();
+        let bppos = &bpfac.position;
+        if existing_points.contains(bppos) {
+            continue;
+        } else {
+            existing_points.push(bppos.clone());
+        }
+        admiral.execute_checked_command(bpfac.to_lua().into_boxed())?;
     }
 
     Ok(())

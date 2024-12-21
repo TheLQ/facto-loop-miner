@@ -9,7 +9,7 @@ use crate::{
 
 use super::{FacBpInteger, position::FacBpPosition};
 
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct FacBpEntity {

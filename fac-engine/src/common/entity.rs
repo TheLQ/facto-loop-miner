@@ -25,11 +25,12 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
     }
 
     fn to_fac(&self, entity_number: FacBpInteger, position: &VPoint) -> FacBpEntity {
-        debug!("create {} x {} {:?}", position.x(), position.y(), self);
+        let facpos = self.to_fac_position(position);
+        debug!("create facpos {} x {} {:?}", facpos.x(), facpos.y(), self);
         FacBpEntity {
             entity_number,
             name: self.name().to_fac_name(),
-            position: self.to_fac_position(position),
+            position: facpos,
             direction: self.to_fac_direction(),
             neighbours: None,
             recipe: self.to_fac_recipe(),

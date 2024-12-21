@@ -19,7 +19,17 @@ pub enum FacDirectionEighth {
 }
 
 impl FacDirectionEighth {
-    pub const fn rotate_once(&self) -> FacDirectionEighth {
+    #[cfg(test)]
+    fn get_index(i: usize) -> &'static Self {
+        &Self::VARIANTS[i % Self::VARIANTS.len()]
+    }
+
+    #[cfg(test)]
+    fn index_of(direction: &Self) -> usize {
+        Self::VARIANTS.iter().position(|v| v == direction).unwrap()
+    }
+
+    pub const fn rotate_once(&self) -> Self {
         match self {
             Self::North => Self::NorthEast,
             Self::NorthEast => Self::East,
@@ -32,7 +42,7 @@ impl FacDirectionEighth {
         }
     }
 
-    pub const fn rotate_opposite(&self) -> FacDirectionEighth {
+    pub const fn rotate_opposite(&self) -> Self {
         match self {
             Self::North => Self::NorthWest,
             Self::NorthEast => Self::North,
@@ -57,6 +67,16 @@ pub enum FacDirectionQuarter {
 }
 
 impl FacDirectionQuarter {
+    #[cfg(test)]
+    fn get_index(i: usize) -> &'static Self {
+        &Self::VARIANTS[i % Self::VARIANTS.len()]
+    }
+
+    #[cfg(test)]
+    fn index_of(direction: &Self) -> usize {
+        Self::VARIANTS.iter().position(|v| v == direction).unwrap()
+    }
+
     pub const fn to_direction_eighth(&self) -> FacDirectionEighth {
         match self {
             Self::North => FacDirectionEighth::North,
@@ -127,23 +147,12 @@ mod test {
 
     use super::{FacDirectionEighth, FacDirectionQuarter};
 
-    fn direction_quarter_get(i: usize) -> &'static FacDirectionQuarter {
-        &FacDirectionQuarter::VARIANTS[i % 4]
-    }
-
-    fn direction_quarter_index_of(direction: &FacDirectionQuarter) -> usize {
-        FacDirectionQuarter::VARIANTS
-            .iter()
-            .position(|v| v == direction)
-            .unwrap()
-    }
-
     #[test]
     fn test_quarter_rotate_flip() {
         for direction in FacDirectionQuarter::VARIANTS {
             assert_eq!(
                 &direction.rotate_flip(),
-                direction_quarter_get(direction_quarter_index_of(direction) + 2)
+                FacDirectionQuarter::get_index(FacDirectionQuarter::index_of(direction) + 2)
             )
         }
     }
@@ -153,7 +162,7 @@ mod test {
         for direction in FacDirectionQuarter::VARIANTS {
             assert_eq!(
                 &direction.rotate_once(),
-                direction_quarter_get(direction_quarter_index_of(direction) + 1)
+                FacDirectionQuarter::get_index(FacDirectionQuarter::index_of(direction) + 1)
             )
         }
     }
@@ -163,20 +172,9 @@ mod test {
         for direction in FacDirectionQuarter::VARIANTS {
             assert_eq!(
                 &direction.rotate_opposite(),
-                direction_quarter_get(direction_quarter_index_of(direction) + 3)
+                FacDirectionQuarter::get_index(FacDirectionQuarter::index_of(direction) + 3)
             )
         }
-    }
-
-    fn direction_eighth_get(i: usize) -> &'static FacDirectionEighth {
-        &FacDirectionEighth::VARIANTS[i % 8]
-    }
-
-    fn direction_eighth_index_of(direction: &FacDirectionEighth) -> usize {
-        FacDirectionEighth::VARIANTS
-            .iter()
-            .position(|v| v == direction)
-            .unwrap()
     }
 
     // #[test]
@@ -194,7 +192,7 @@ mod test {
         for direction in FacDirectionEighth::VARIANTS {
             assert_eq!(
                 &direction.rotate_once(),
-                direction_eighth_get(direction_eighth_index_of(direction) + 1),
+                FacDirectionEighth::get_index(FacDirectionEighth::index_of(direction) + 1),
                 "from source dir {:?}",
                 direction,
             )
@@ -206,7 +204,7 @@ mod test {
         for direction in FacDirectionEighth::VARIANTS {
             assert_eq!(
                 &direction.rotate_opposite(),
-                direction_eighth_get(direction_eighth_index_of(direction) + 7),
+                FacDirectionEighth::get_index(FacDirectionEighth::index_of(direction) + 7),
                 "from source dir {:?}",
                 direction,
             )
