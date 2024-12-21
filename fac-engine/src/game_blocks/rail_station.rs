@@ -53,7 +53,7 @@ impl FacBlkRailStation {
             for exit in 0..INSERTERS_PER_CAR {
                 for offset in [-1, 1] {
                     let start = start_rail_center
-                        .move_x((/*pre-pole*/1 + car_x_offset + exit) as i32)
+                        .move_x_usize(/*pre-pole*/ 1 + car_x_offset + exit)
                         .move_y(offset);
                     res.push(BlueprintItem::new(
                         FacEntInserter::new(FacEntInserterType::Basic, FacDirectionQuarter::East)
@@ -74,7 +74,7 @@ impl FacBlkRailStation {
         for car in 0..(self.cars + 1) {
             let car_x_offset = get_car_offset(car);
 
-            let start = start_rail_center.move_x((car_x_offset) as i32);
+            let start = start_rail_center.move_x_usize(car_x_offset);
 
             res.push(BlueprintItem::new(
                 FacEntLamp::new().into_boxed(),
@@ -99,7 +99,7 @@ impl FacBlkRailStation {
             for exit in 0..INSERTERS_PER_CAR {
                 for offset in [-2, 2] {
                     let start = start_rail_center
-                        .move_x((/*pre-pole*/1 + car_x_offset + exit) as i32)
+                        .move_x_usize(/*pre-pole*/ 1 + car_x_offset + exit)
                         .move_y(offset);
                     res.push(BlueprintItem::new(
                         FacEntChest::new(chest_type.clone()).into_boxed(),
@@ -112,7 +112,7 @@ impl FacBlkRailStation {
 
     fn place_train_stop(&self, res: &mut Vec<BlueprintItem>, start_rail_center: VPoint) {
         let car_x_offset = get_car_offset(self.cars + self.front_engines + /*after engines*/1);
-        let start = start_rail_center.move_x(car_x_offset as i32).move_y(1);
+        let start = start_rail_center.move_x_usize(car_x_offset).move_y(1);
         res.push(BlueprintItem::new(
             FacEntTrainStop::new(FacDirectionQuarter::East).into_boxed(),
             start,

@@ -56,7 +56,7 @@ impl FacBlock for FacBlkRobofarm {
                     res.push(BlueprintItem::new(
                         FacEntLamp::new().into_boxed(),
                         pos.point()
-                            .move_xy(1, 1 + FACENT_ELECTRIC_LARGE_DIAMETER as i32),
+                            .move_xy_usize(1, 1 + FACENT_ELECTRIC_LARGE_DIAMETER),
                     ));
                 } else {
                     res.push(BlueprintItem::new(
