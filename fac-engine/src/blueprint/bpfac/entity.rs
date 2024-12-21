@@ -43,9 +43,11 @@ impl FacBpEntity {
             create.with_param(CreateParam::Type(v.to_fac()));
         }
         // TODO
-        // if let Some(v) = &self.items {
-        //     create.with_param(CreateParam::Recipe(v.clone()));
-        // }
+        if let Some(v) = &self.items {
+            for module in v {
+                create.with_command_module(module);
+            }
+        }
 
         create
     }

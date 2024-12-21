@@ -1,6 +1,7 @@
 use crate::admiral::lua_command::{DEFAULT_FORCE_VAR, LuaCommand};
 use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::game_entities::direction::FacDirectionEighth;
+use crate::game_entities::module::FacModule;
 use itertools::Itertools;
 use std::convert::AsRef;
 
@@ -136,6 +137,17 @@ impl FacSurfaceCreateEntity {
 
     pub fn with_param(&mut self, param: CreateParam) {
         self.params.push(param);
+    }
+
+    pub fn with_command(&mut self, command: String) {
+        self.commands.push(command);
+    }
+
+    pub fn with_command_module(&mut self, module: &FacModule) {
+        self.with_command(format!(
+            "admiral_create.get_module_inventory().insert(\"{}\")",
+            module.to_fac_name()
+        ));
     }
 }
 
