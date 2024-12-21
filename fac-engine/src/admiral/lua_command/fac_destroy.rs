@@ -2,11 +2,12 @@ use crate::admiral::lua_command::LuaCommand;
 use crate::common::varea::VArea;
 use itertools::Itertools;
 use std::borrow::Borrow;
+use tracing::debug;
 
 #[derive(Debug)]
 pub struct FacDestroy {
     area: String,
-    entity_names: Vec<&'static str>,
+    entity_names: Vec<String>,
 }
 
 impl FacDestroy {
@@ -17,7 +18,7 @@ impl FacDestroy {
         }
     }
 
-    pub fn new_filtered(radius: u32, entity_names: Vec<&'static str>) -> Self {
+    pub fn new_filtered(radius: u32, entity_names: Vec<String>) -> Self {
         if entity_names.is_empty() {
             panic!("empty entities, not destroying everything")
         }
@@ -27,7 +28,7 @@ impl FacDestroy {
         }
     }
 
-    pub fn new_filtered_area(area: impl Borrow<VArea>, entity_names: Vec<&'static str>) -> Self {
+    pub fn new_filtered_area(area: impl Borrow<VArea>, entity_names: Vec<String>) -> Self {
         if entity_names.is_empty() {
             panic!("empty entities, not destroying everything")
         }
@@ -55,6 +56,7 @@ impl LuaCommand for FacDestroy {
 
 impl FacDestroy {
     fn destroy_filtered(&self) -> String {
+        debug!("destroying filtered {:?}", self);
         // game.players[1].teleport({{ 1000, 1000 }})
         // rcon.print('destroy_' .. entity.name )
         // for entity in
@@ -80,6 +82,7 @@ end
     }
 
     fn destroy_everything(&self) -> String {
+        debug!("destroying everything {:?}", self);
         let area = &self.area;
         format!(
             r"

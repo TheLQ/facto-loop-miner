@@ -95,17 +95,55 @@ fn make_belt_bettel(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 }
 
 fn execute_destroy(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    // let command = FacDestroy::new_filtered(5, vec![
-    //     // "straight-rail",
-    //     // "curved-rail",
-    //     "roboport",
-    //     "substation",
-    //     "big-electric-pole",
-    //     "small-lamp",
-    //     // "rail-signal",
-    //     // "steel-chest",
-    // ]);
-    let command = FacDestroy::new_everything(50);
+    let command = FacDestroy::new_filtered(
+        50,
+        [
+            FacEntityName::Lamp,
+            FacEntityName::RailStraight,
+            FacEntityName::RailCurved,
+            FacEntityName::Assembler(FacTier::Tier1),
+            FacEntityName::Assembler(FacTier::Tier2),
+            FacEntityName::Assembler(FacTier::Tier3),
+            FacEntityName::Inserter(FacEntInserterType::Burner),
+            FacEntityName::Inserter(FacEntInserterType::Basic),
+            FacEntityName::Inserter(FacEntInserterType::Long),
+            FacEntityName::Inserter(FacEntInserterType::Fast),
+            FacEntityName::Inserter(FacEntInserterType::Filter),
+            FacEntityName::Inserter(FacEntInserterType::Stack),
+            FacEntityName::Inserter(FacEntInserterType::StackFilter),
+            FacEntityName::Chest(FacEntChestType::Wood),
+            FacEntityName::Chest(FacEntChestType::Iron),
+            FacEntityName::Chest(FacEntChestType::Steel),
+            FacEntityName::Chest(FacEntChestType::Active),
+            FacEntityName::Chest(FacEntChestType::Passive),
+            FacEntityName::Chest(FacEntChestType::Storage),
+            FacEntityName::Chest(FacEntChestType::Buffer),
+            FacEntityName::Chest(FacEntChestType::Requestor),
+            FacEntityName::ElectricMini(FacEntElectricMiniType::Small),
+            FacEntityName::ElectricMini(FacEntElectricMiniType::Medium),
+            FacEntityName::ElectricLarge(FacEntElectricLargeType::Big),
+            FacEntityName::ElectricLarge(FacEntElectricLargeType::Substation),
+            FacEntityName::TrainStop,
+            FacEntityName::Beacon,
+            FacEntityName::Radar,
+            FacEntityName::Roboport,
+            FacEntityName::BeltTransport(FacEntBeltType::Basic),
+            FacEntityName::BeltTransport(FacEntBeltType::Fast),
+            FacEntityName::BeltTransport(FacEntBeltType::Express),
+            FacEntityName::BeltUnder(FacEntBeltType::Basic),
+            FacEntityName::BeltUnder(FacEntBeltType::Fast),
+            FacEntityName::BeltUnder(FacEntBeltType::Express),
+            FacEntityName::BeltSplit(FacEntBeltType::Basic),
+            FacEntityName::BeltSplit(FacEntBeltType::Fast),
+            FacEntityName::BeltSplit(FacEntBeltType::Express),
+            FacEntityName::InfinityPower,
+        ]
+        .into_iter()
+        .map(|v| v.to_fac_name())
+        .collect(),
+    );
+    // Do not use, this deletes mine resource tiles
+    // let command = FacDestroy::new_everything(50);
     admiral.execute_checked_command(command.into_boxed())?;
 
     Ok(())
