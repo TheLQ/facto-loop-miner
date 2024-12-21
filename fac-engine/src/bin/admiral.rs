@@ -42,7 +42,7 @@ fn inner_main() -> AdmiralResult<()> {
         1 => make_basic(&mut client)?,
         2 => make_assembler_thru(&mut client)?,
         3 => make_belt_bettel(&mut client)?,
-        4 => make_rail(&mut client)?,
+        4 => make_rail_spiral(&mut client)?,
         _ => panic!("uihhh"),
     }
 
@@ -100,45 +100,32 @@ fn make_belt_bettel(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     Ok(())
 }
 
-fn make_rail(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+fn make_rail_spiral(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
 
     let mut existing_points = Vec::new();
-
     let origin = VPoint::zero();
-    let opposite = true;
+    for opposite in [true, false] {
+        let hope1 = RailHopeSingle::new(origin, FacDirectionQuarter::North);
+        let hope2 = RailHopeSingle::new(origin, FacDirectionQuarter::South);
+        let hope3 = RailHopeSingle::new(origin, FacDirectionQuarter::East);
+        let hope4 = RailHopeSingle::new(origin, FacDirectionQuarter::West);
+        for mut hope in [hope1, hope2, hope3, hope4] {
+            hope.add_straight(2);
+            hope.add_turn90(opposite);
+            hope.add_straight(2);
 
-    let mut hope1 = RailHopeSingle::new(origin, FacDirectionQuarter::North);
-    hope1.add_straight(2);
-    hope1.add_turn90(opposite);
-
-    let mut hope2 = RailHopeSingle::new(origin, FacDirectionQuarter::South);
-    hope2.add_straight(2);
-    hope2.add_turn90(opposite);
-
-    let mut hope3 = RailHopeSingle::new(origin, FacDirectionQuarter::East);
-    hope3.add_straight(2);
-    hope3.add_turn90(opposite);
-
-    let mut hope4 = RailHopeSingle::new(origin, FacDirectionQuarter::West);
-    hope4.add_straight(2);
-    hope4.add_turn90(opposite);
-
-    for entity in []
-        .iter()
-        .chain(hope1.to_fac().iter())
-        .chain(hope2.to_fac().iter())
-        .chain(hope3.to_fac().iter())
-        .chain(hope4.to_fac().iter())
-    {
-        let bpfac = entity.to_blueprint();
-        let bppos = &bpfac.position;
-        if existing_points.contains(bppos) {
-            continue;
-        } else {
-            existing_points.push(bppos.clone());
+            for entity in hope.to_fac() {
+                let bpfac = entity.to_blueprint();
+                let bppos = &bpfac.position;
+                if existing_points.contains(bppos) {
+                    continue;
+                } else {
+                    existing_points.push(bppos.clone());
+                }
+                admiral.execute_checked_command(bpfac.to_lua().into_boxed())?;
+            }
         }
-        admiral.execute_checked_command(bpfac.to_lua().into_boxed())?;
     }
 
     Ok(())

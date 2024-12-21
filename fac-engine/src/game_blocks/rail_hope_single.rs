@@ -107,6 +107,7 @@ impl RailHopeAppender for RailHopeSingle {
     fn add_turn90(&mut self, opposite: bool) {
         /*
         Factorio 1 Rails are really complicated
+        This is version 3544579 💎, written obviously generic with hindsight
 
         Order is Curve > Straight 45 > Curve
 
@@ -175,9 +176,9 @@ impl RailHopeAppender for RailHopeSingle {
 
         // where to go next
         let end_direction = if opposite {
-            self.current_direction().rotate_opposite()
+            cur_direction.rotate_opposite()
         } else {
-            self.current_direction().rotate_once()
+            cur_direction.rotate_once()
         };
         self.links.push(RailHopeLink {
             start_pos: self.current_next_pos(),
@@ -202,6 +203,16 @@ impl RailHopeLink {
             RailHopeLinkType::Straight { length } => self
                 .start_pos
                 .move_direction(&self.link_direction, length * RAIL_STRAIGHT_DIAMETER),
+            RailHopeLinkType::Turn90 { opposite } => {
+                let unrotated = if *opposite {
+                    self.link_direction.rotate_once()
+                } else {
+                    self.link_direction.rotate_opposite()
+                };
+                self.start_pos
+                    .move_direction(&unrotated, 10)
+                    .move_direction_sideways(&unrotated, neg_opposite(*opposite, -14))
+            }
             _ => todo!("wip"),
         }
     }
