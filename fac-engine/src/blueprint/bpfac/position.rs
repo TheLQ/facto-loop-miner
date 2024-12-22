@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::common::vpoint::C_BLOCK_LINE;
+
 use super::FacBpFloat;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -20,5 +22,9 @@ impl FacBpPosition {
 
     pub fn y(&self) -> FacBpFloat {
         self.y
+    }
+
+    pub fn display(&self) -> String {
+        format!("{}{}{}", self.x(), C_BLOCK_LINE, self.y())
     }
 }

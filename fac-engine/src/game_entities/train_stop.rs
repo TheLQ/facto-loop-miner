@@ -23,7 +23,7 @@ impl FacEntity for FacEntTrainStop {
 
 impl SquareArea for FacEntTrainStop {
     fn area_diameter() -> usize {
-        1
+        2
     }
 }
 

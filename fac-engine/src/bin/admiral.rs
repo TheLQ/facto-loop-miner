@@ -1,10 +1,12 @@
 use facto_loop_miner_common::log_init;
 use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
+use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
 use facto_loop_miner_fac_engine::game_blocks::belt_bettel::FacBlkBettelBelt;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
+use facto_loop_miner_fac_engine::game_blocks::rail_station::FacBlkRailStation;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::game_entities::electric_large::FacEntElectricLargeType;
 use facto_loop_miner_fac_engine::game_entities::electric_mini::FacEntElectricMiniType;
@@ -40,7 +42,7 @@ fn inner_main() -> AdmiralResult<()> {
     let mut client = AdmiralClient::new()?;
     client.auth()?;
 
-    match 7 {
+    match 8 {
         1 => make_basic(&mut client)?,
         2 => make_assembler_thru(&mut client)?,
         3 => make_belt_bettel(&mut client)?,
@@ -48,6 +50,7 @@ fn inner_main() -> AdmiralResult<()> {
         5 => make_rail_shift_45(&mut client)?,
         6 => make_rail_dual_turning(&mut client)?,
         7 => make_rail_dual_powered(&mut client)?,
+        8 => make_rail_station(&mut client)?,
         _ => panic!("uihhh"),
     }
 
@@ -244,9 +247,19 @@ fn make_rail_dual_powered(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     Ok(())
 }
 
+fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    execute_destroy(admiral)?;
+
+    let station = FacBlkRailStation::new(3, Some(FacEntChestType::Steel), 3);
+    for entity in station.generate(VPOINT_ZERO) {
+        admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
+    }
+    Ok(())
+}
+
 fn execute_destroy(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     let command = FacDestroy::new_filtered(
-        70,
+        90,
         [
             FacEntityName::Lamp,
             FacEntityName::RailStraight,
@@ -287,6 +300,8 @@ fn execute_destroy(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
             FacEntityName::BeltSplit(FacEntBeltType::Fast),
             FacEntityName::BeltSplit(FacEntBeltType::Express),
             FacEntityName::InfinityPower,
+            FacEntityName::Locomotive,
+            FacEntityName::CargoWagon,
         ]
         .into_iter()
         .map(|v| v.to_fac_name())

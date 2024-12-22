@@ -2,9 +2,6 @@ use crate::{admiral::lua_command::LuaCommand, common::vpoint::VPoint};
 
 // pub mod rail45;
 // pub mod rail90;
-// pub mod rail_line;
-pub mod rail_pan;
-// pub mod rail_station;
 
 pub fn join_commands<'a>(
     creation_commands: impl Iterator<Item = &'a Box<dyn LuaCommand>>,

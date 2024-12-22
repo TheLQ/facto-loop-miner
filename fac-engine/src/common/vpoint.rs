@@ -19,6 +19,8 @@ pub const VPOINT_ZERO: VPoint = VPoint { x: 0, y: 0 };
 pub const VPOINT_ONE: VPoint = VPoint { x: 1, y: 1 };
 pub const VPOINT_EIGHT: VPoint = VPoint { x: 8, y: 8 };
 
+pub const C_BLOCK_LINE: char = '\u{1FB72}';
+
 impl VPoint {
     pub fn x(&self) -> i32 {
         self.x
@@ -282,6 +284,10 @@ impl VPoint {
 
     pub fn subtract_y(&self, other: &Self) -> i32 {
         self.y - other.y
+    }
+
+    pub fn display(&self) -> String {
+        format!("{}{}{}", self.x(), C_BLOCK_LINE, self.y())
     }
 }
 
