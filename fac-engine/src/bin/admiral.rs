@@ -11,6 +11,7 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::game_entities::electric_large::FacEntElectricLargeType;
 use facto_loop_miner_fac_engine::game_entities::electric_mini::FacEntElectricMiniType;
 use facto_loop_miner_fac_engine::game_entities::module::FacModule;
+use facto_loop_miner_fac_engine::game_entities::rail_signal::FacEntRailSignalType;
 use facto_loop_miner_fac_engine::{
     admiral::{
         err::{AdmiralResult, pretty_panic_admiral},
@@ -255,6 +256,7 @@ fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         front_engines: 2,
         chests: Some(FacEntChestType::Steel),
         is_east: true,
+        // is_east: false,
         is_up: true,
         // is_up: false,
     };
@@ -271,6 +273,8 @@ fn execute_destroy(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
             FacEntityName::Lamp,
             FacEntityName::RailStraight,
             FacEntityName::RailCurved,
+            FacEntityName::RailSignal(FacEntRailSignalType::Basic),
+            FacEntityName::RailSignal(FacEntRailSignalType::Chain),
             FacEntityName::Assembler(FacTier::Tier1),
             FacEntityName::Assembler(FacTier::Tier2),
             FacEntityName::Assembler(FacTier::Tier3),

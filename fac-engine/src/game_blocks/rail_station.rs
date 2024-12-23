@@ -2,10 +2,7 @@ use tracing::warn;
 
 use crate::{
     blueprint::bpitem::BlueprintItem,
-    common::{
-        entity::FacEntity,
-        vpoint::{VPOINT_ONE, VPoint},
-    },
+    common::{entity::FacEntity, vpoint::VPoint},
     game_entities::{
         chest::{FacEntChest, FacEntChestType},
         direction::FacDirectionQuarter,
@@ -13,6 +10,7 @@ use crate::{
         inserter::{FacEntInserter, FacEntInserterType},
         lamp::FacEntLamp,
         rail::RAIL_STRAIGHT_DIAMETER,
+        rail_signal::{FacEntRailSignal, FacEntRailSignalType},
         train_stop::FacEntTrainStop,
     },
 };
@@ -88,6 +86,7 @@ impl FacBlock for FacBlkRailStation {
         stop_block.place_train_stop(&mut res);
         stop_block.place_side_inserter_electrics(&mut res);
         stop_block.place_side_inserters(&mut res);
+        stop_block.place_rail_signals(&mut res);
         if let Some(chests) = &self.chests {
             stop_block.place_side_chests(&mut res, chests);
         }
@@ -184,6 +183,33 @@ impl FacBlkRailStop {
         res.push(BlueprintItem::new(
             FacEntTrainStop::new(self.fill_x_direction.rotate_flip()).into_boxed(),
             self.stop_rail_pos.move_y(y_offset),
+        ));
+    }
+
+    fn place_rail_signals(&self, res: &mut Vec<BlueprintItem>) {
+        for car in 0..self.wagons {
+            let car_x_offset = self.get_wagon_x_offset(car);
+
+            let start = self
+                .stop_rail_pos
+                .move_direction(
+                    &self.fill_x_direction,
+                    /*pre-pole*/ 1 + car_x_offset + INSERTERS_PER_CAR,
+                )
+                .move_y(centered_y_offset(self.rotation, 1));
+            res.push(BlueprintItem::new(
+                FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction.clone())
+                    .into_boxed(),
+                start,
+            ));
+        }
+
+        res.push(BlueprintItem::new(
+            FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction.clone())
+                .into_boxed(),
+            self.stop_rail_pos
+                .move_direction(&self.fill_x_direction.rotate_flip(), 2)
+                .move_y(centered_y_offset(self.rotation, 1)),
         ));
     }
 

@@ -2,7 +2,8 @@ use strum::AsRefStr;
 
 use crate::game_entities::{
     belt::FacEntBeltType, chest::FacEntChestType, electric_large::FacEntElectricLargeType,
-    electric_mini::FacEntElectricMiniType, inserter::FacEntInserterType, tier::FacTier,
+    electric_mini::FacEntElectricMiniType, inserter::FacEntInserterType,
+    rail_signal::FacEntRailSignalType, tier::FacTier,
 };
 
 #[derive(Clone, Debug, AsRefStr)]
@@ -10,6 +11,7 @@ pub enum FacEntityName {
     Lamp,
     RailStraight,
     RailCurved,
+    RailSignal(FacEntRailSignalType),
     Assembler(FacTier),
     Inserter(FacEntInserterType),
     Chest(FacEntChestType),
@@ -33,6 +35,11 @@ impl FacEntityName {
             Self::Lamp => "small-lamp".into(),
             Self::RailStraight => "straight-rail".into(),
             Self::RailCurved => "curved-rail".into(),
+            Self::RailSignal(stype) => match stype {
+                FacEntRailSignalType::Basic => "rail-signal",
+                FacEntRailSignalType::Chain => "rail-chain-signal",
+            }
+            .into(),
             Self::Assembler(tier) => format!("assembling-machine-{}", tier.to_number()),
             Self::Inserter(itype) => match itype {
                 FacEntInserterType::Burner => "burner-inserter",
