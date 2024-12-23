@@ -250,7 +250,14 @@ fn make_rail_dual_powered(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
 
-    let station = FacBlkRailStation::new(3, Some(FacEntChestType::Steel), 3);
+    let station = FacBlkRailStation {
+        wagons: 3,
+        front_engines: 2,
+        chests: Some(FacEntChestType::Steel),
+        is_east: true,
+        is_up: true,
+        // is_up: false,
+    };
     for entity in station.generate(VPOINT_ZERO) {
         admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
     }
@@ -259,7 +266,7 @@ fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
 fn execute_destroy(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     let command = FacDestroy::new_filtered(
-        90,
+        150,
         [
             FacEntityName::Lamp,
             FacEntityName::RailStraight,
