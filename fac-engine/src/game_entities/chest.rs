@@ -1,9 +1,11 @@
+use exhaustive::Exhaustive;
+
 use crate::common::{
     entity::{FacEntity, SquareArea},
     names::FacEntityName,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Exhaustive)]
 pub enum FacEntChestType {
     Wood,
     Iron,

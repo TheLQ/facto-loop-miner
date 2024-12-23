@@ -632,6 +632,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "exhaustive"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a251f510ddb0e940682578a2f92e0468c3bda3214f4d8f791293c161375708b"
+dependencies = [
+ "exhaustive_macros",
+]
+
+[[package]]
+name = "exhaustive_macros"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c47e5f652b733270405807ddae7631125a977b888e04e5185a01a3c6a0b7a36"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.90",
+]
+
+[[package]]
 name = "exr"
 version = "1.73.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -695,6 +715,7 @@ name = "facto-loop-miner-fac-engine"
 version = "0.1.0"
 dependencies = [
  "base64ct",
+ "exhaustive",
  "facto-loop-miner-common",
  "flate2",
  "generic_static",

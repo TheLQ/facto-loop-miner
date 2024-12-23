@@ -1,3 +1,5 @@
+use exhaustive::Exhaustive;
+
 use crate::common::{
     entity::{FacEntity, SquareArea},
     names::FacEntityName,
@@ -5,7 +7,7 @@ use crate::common::{
 
 pub const FACENT_ELECTRIC_LARGE_DIAMETER: usize = 2;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Exhaustive)]
 pub enum FacEntElectricLargeType {
     Substation,
     Big,

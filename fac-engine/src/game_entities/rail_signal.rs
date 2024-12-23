@@ -1,3 +1,5 @@
+use exhaustive::Exhaustive;
+
 use crate::common::{
     entity::{FacEntity, SquareArea},
     names::FacEntityName,
@@ -5,7 +7,7 @@ use crate::common::{
 
 use super::direction::{FacDirectionEighth, FacDirectionQuarter};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Exhaustive)]
 pub enum FacEntRailSignalType {
     Basic,
     Chain,

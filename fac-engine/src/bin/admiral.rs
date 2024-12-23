@@ -1,3 +1,4 @@
+use exhaustive::Exhaustive;
 use facto_loop_miner_common::log_init;
 use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
@@ -8,10 +9,7 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
 use facto_loop_miner_fac_engine::game_blocks::rail_station::FacBlkRailStation;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
-use facto_loop_miner_fac_engine::game_entities::electric_large::FacEntElectricLargeType;
-use facto_loop_miner_fac_engine::game_entities::electric_mini::FacEntElectricMiniType;
 use facto_loop_miner_fac_engine::game_entities::module::FacModule;
-use facto_loop_miner_fac_engine::game_entities::rail_signal::FacEntRailSignalType;
 use facto_loop_miner_fac_engine::{
     admiral::{
         err::{AdmiralResult, pretty_panic_admiral},
@@ -235,7 +233,7 @@ fn make_rail_dual_powered(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
         for entity in hope.to_fac() {
             let bpfac = entity.to_blueprint();
-            let bppos = &bpfac.position;
+            // let bppos = &bpfac.position;
             // if existing_points.contains(bppos) {
             //     continue;
             // } else {
@@ -269,54 +267,9 @@ fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 fn execute_destroy(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     let command = FacDestroy::new_filtered(
         150,
-        [
-            FacEntityName::Lamp,
-            FacEntityName::RailStraight,
-            FacEntityName::RailCurved,
-            FacEntityName::RailSignal(FacEntRailSignalType::Basic),
-            FacEntityName::RailSignal(FacEntRailSignalType::Chain),
-            FacEntityName::Assembler(FacTier::Tier1),
-            FacEntityName::Assembler(FacTier::Tier2),
-            FacEntityName::Assembler(FacTier::Tier3),
-            FacEntityName::Inserter(FacEntInserterType::Burner),
-            FacEntityName::Inserter(FacEntInserterType::Basic),
-            FacEntityName::Inserter(FacEntInserterType::Long),
-            FacEntityName::Inserter(FacEntInserterType::Fast),
-            FacEntityName::Inserter(FacEntInserterType::Filter),
-            FacEntityName::Inserter(FacEntInserterType::Stack),
-            FacEntityName::Inserter(FacEntInserterType::StackFilter),
-            FacEntityName::Chest(FacEntChestType::Wood),
-            FacEntityName::Chest(FacEntChestType::Iron),
-            FacEntityName::Chest(FacEntChestType::Steel),
-            FacEntityName::Chest(FacEntChestType::Active),
-            FacEntityName::Chest(FacEntChestType::Passive),
-            FacEntityName::Chest(FacEntChestType::Storage),
-            FacEntityName::Chest(FacEntChestType::Buffer),
-            FacEntityName::Chest(FacEntChestType::Requestor),
-            FacEntityName::ElectricMini(FacEntElectricMiniType::Small),
-            FacEntityName::ElectricMini(FacEntElectricMiniType::Medium),
-            FacEntityName::ElectricLarge(FacEntElectricLargeType::Big),
-            FacEntityName::ElectricLarge(FacEntElectricLargeType::Substation),
-            FacEntityName::TrainStop,
-            FacEntityName::Beacon,
-            FacEntityName::Radar,
-            FacEntityName::Roboport,
-            FacEntityName::BeltTransport(FacEntBeltType::Basic),
-            FacEntityName::BeltTransport(FacEntBeltType::Fast),
-            FacEntityName::BeltTransport(FacEntBeltType::Express),
-            FacEntityName::BeltUnder(FacEntBeltType::Basic),
-            FacEntityName::BeltUnder(FacEntBeltType::Fast),
-            FacEntityName::BeltUnder(FacEntBeltType::Express),
-            FacEntityName::BeltSplit(FacEntBeltType::Basic),
-            FacEntityName::BeltSplit(FacEntBeltType::Fast),
-            FacEntityName::BeltSplit(FacEntBeltType::Express),
-            FacEntityName::InfinityPower,
-            FacEntityName::Locomotive,
-            FacEntityName::CargoWagon,
-        ]
-        .into_iter()
-        .map(|v| v.to_fac_name())
-        .collect(),
+        FacEntityName::iter_exhaustive(None)
+            .map(|v| v.to_fac_name())
+            .collect(),
     );
     // Do not use, this deletes mine resource tiles
     // let command = FacDestroy::new_everything(50);

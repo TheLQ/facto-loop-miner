@@ -1,9 +1,11 @@
+use exhaustive::Exhaustive;
+
 use crate::common::{
     entity::{FacEntity, SquareArea},
     names::FacEntityName,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Exhaustive)]
 
 pub enum FacEntElectricMiniType {
     Small,

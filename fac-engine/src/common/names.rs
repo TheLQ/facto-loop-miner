@@ -1,3 +1,4 @@
+use exhaustive::Exhaustive;
 use strum::AsRefStr;
 
 use crate::game_entities::{
@@ -6,7 +7,7 @@ use crate::game_entities::{
     rail_signal::FacEntRailSignalType, tier::FacTier,
 };
 
-#[derive(Clone, Debug, AsRefStr)]
+#[derive(Clone, Debug, AsRefStr, Exhaustive)]
 pub enum FacEntityName {
     Lamp,
     RailStraight,
