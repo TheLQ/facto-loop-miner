@@ -1,12 +1,14 @@
-use serde::Deserialize;
-use serde::Serialize;
+use serde_repr::Deserialize_repr;
+use serde_repr::Serialize_repr;
 use strum::IntoStaticStr;
 use strum::VariantArray;
 use strum::{AsRefStr, Display};
 
 #[derive(
-    Debug, Clone, PartialEq, AsRefStr, IntoStaticStr, VariantArray, Serialize, Deserialize,
+    Debug, Clone, PartialEq, AsRefStr, IntoStaticStr, VariantArray, Serialize_repr, Deserialize_repr,
 )]
+// repr(u8) in order of https://lua-api.factorio.com/1.1.110/defines.html#defines.direction
+#[repr(u8)]
 pub enum FacDirectionEighth {
     North,
     NorthEast,

@@ -71,7 +71,13 @@ fn basic_build_bp(bp: &mut BlueprintContents) {
 }
 
 fn basic_build_gen(bp: &mut BlueprintContents) {
-    let station = FacBlkRailStation::new(3, Some(FacEntChestType::Passive), 2);
+    let station = FacBlkRailStation {
+        wagons: 3,
+        front_engines: 2,
+        chests: Some(FacEntChestType::Passive),
+        is_east: true,
+        is_up: true,
+    };
     for entity in station.generate(VPoint::new(5, 5)) {
         bp.add_entity_each(entity);
     }
