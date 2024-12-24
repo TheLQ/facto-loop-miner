@@ -7,6 +7,7 @@ use facto_loop_miner_fac_engine::game_blocks::belt_bettel::FacBlkBettelBelt;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
+use facto_loop_miner_fac_engine::game_blocks::rail_loop::{FacBlkRailLoop, FacBlkRailLoopProps};
 use facto_loop_miner_fac_engine::game_blocks::rail_station::FacBlkRailStation;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::game_entities::module::FacModule;
@@ -41,7 +42,7 @@ fn inner_main() -> AdmiralResult<()> {
     let mut client = AdmiralClient::new()?;
     client.auth()?;
 
-    match 8 {
+    match 9 {
         1 => make_basic(&mut client)?,
         2 => make_assembler_thru(&mut client)?,
         3 => make_belt_bettel(&mut client)?,
@@ -50,6 +51,7 @@ fn inner_main() -> AdmiralResult<()> {
         6 => make_rail_dual_turning(&mut client)?,
         7 => make_rail_dual_powered(&mut client)?,
         8 => make_rail_station(&mut client)?,
+        9 => make_rail_loop(&mut client)?,
         _ => panic!("uihhh"),
     }
 
@@ -261,6 +263,26 @@ fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     for entity in station.generate(VPOINT_ZERO) {
         admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
     }
+    Ok(())
+}
+
+fn make_rail_loop(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+    execute_destroy(admiral)?;
+
+    let mut rail_loop = FacBlkRailLoop::new(FacBlkRailLoopProps {
+        wagons: 1,
+        front_engines: 1,
+        origin: VPoint::zero(),
+        origin_direction: FacDirectionQuarter::West,
+    });
+    rail_loop.add_turn90(false);
+    rail_loop.add_straight();
+    rail_loop.add_turn90(false);
+
+    for entity in rail_loop.to_fac() {
+        admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
+    }
+
     Ok(())
 }
 

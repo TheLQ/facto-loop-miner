@@ -6,6 +6,7 @@ pub mod block;
 pub mod rail_hope;
 pub mod rail_hope_dual;
 pub mod rail_hope_single;
+pub mod rail_loop;
 pub mod rail_station;
 pub mod robo_farm;
 pub mod terapower;
