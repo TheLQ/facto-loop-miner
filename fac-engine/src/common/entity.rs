@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use tracing::debug;
 
 use crate::{
@@ -20,17 +21,28 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
         Box::new(self)
     }
 
-    fn to_fac_usize(&self, entity_number: usize, position: &VPoint) -> FacBpEntity {
-        self.to_fac(entity_number.try_into().unwrap(), position)
+    fn to_fac_usize(
+        &self,
+        entity_number: usize,
+        position: &VPoint,
+        contexts: &Vec<String>,
+    ) -> FacBpEntity {
+        self.to_fac(entity_number.try_into().unwrap(), position, contexts)
     }
 
-    fn to_fac(&self, entity_number: FacBpInteger, position: &VPoint) -> FacBpEntity {
+    fn to_fac(
+        &self,
+        entity_number: FacBpInteger,
+        position: &VPoint,
+        contexts: &Vec<String>,
+    ) -> FacBpEntity {
         let facpos = self.to_fac_position(position);
         debug!(
-            "blueprint pos {:6} facpos {:10} {:?}",
+            "blueprint pos {:6} facpos {:10} {:?} [{}]",
             position.display(),
             facpos.display(),
-            self
+            self,
+            contexts.iter().join("/")
         );
         FacBpEntity {
             entity_number,

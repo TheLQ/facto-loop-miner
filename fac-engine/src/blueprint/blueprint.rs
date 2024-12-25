@@ -1,8 +1,4 @@
-use super::{
-    bpfac::blueprint::{FacBpBlueprint, FacBpBlueprintWrapper},
-    bpitem::BlueprintItem,
-    contents::BlueprintContents,
-};
+use super::{bpitem::BlueprintItem, contents::BlueprintContents};
 
 pub struct Blueprint {
     contents: BlueprintContents,
@@ -25,7 +21,9 @@ impl Blueprint {
         self.contents.entities()
     }
 
-    pub fn to_fac(&self) -> FacBpBlueprintWrapper {
+    #[cfg(test)] // no log context
+    pub fn to_fac(&self) -> super::bpfac::blueprint::FacBpBlueprintWrapper {
+        use super::bpfac::blueprint::{FacBpBlueprint, FacBpBlueprintWrapper};
         FacBpBlueprintWrapper {
             blueprint: FacBpBlueprint {
                 icons: Vec::new(),

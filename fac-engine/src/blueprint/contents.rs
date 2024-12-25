@@ -1,4 +1,4 @@
-use super::{bpfac::entity::FacBpEntity, bpitem::BlueprintItem};
+use super::bpitem::BlueprintItem;
 
 pub struct BlueprintContents {
     entities: Vec<BlueprintItem>,
@@ -19,14 +19,15 @@ impl BlueprintContents {
         self.entities.push(bpitem);
     }
 
-    pub fn to_fac(&self) -> Vec<FacBpEntity> {
+    #[cfg(test)]
+    pub fn to_fac(&self) -> Vec<super::bpfac::entity::FacBpEntity> {
         let mut counter = 0;
         self.entities
             .iter()
             .map(|i| {
                 let entity_number = counter;
                 counter += 1;
-                i.entity().to_fac(entity_number, i.position())
+                i.entity().to_fac(entity_number, i.position(), &Vec::new())
             })
             .collect()
     }

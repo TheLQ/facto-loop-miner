@@ -62,9 +62,12 @@ fn inner_main() -> AdmiralResult<()> {
 
 fn make_basic(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
+    let mut output = FacItemOutput::new_admiral(admiral);
 
-    let entity = FacEntChest::new(FacEntChestType::Active);
-    admiral.execute_checked_command(entity.to_fac(0, &VPoint::zero()).to_lua().into_boxed())?;
+    output.write(BlueprintItem::new(
+        FacEntChest::new(FacEntChestType::Active).into_boxed(),
+        VPoint::zero(),
+    ));
 
     Ok(())
 }

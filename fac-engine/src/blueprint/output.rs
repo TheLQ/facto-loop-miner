@@ -12,6 +12,7 @@ use super::{
 pub struct FacItemOutput<'c> {
     otype: FacItemOutputType<'c>,
     dedupe: Option<Vec<FacBpPosition>>,
+    contexts: Vec<String>,
 }
 
 impl<'c> FacItemOutput<'c> {
@@ -22,6 +23,7 @@ impl<'c> FacItemOutput<'c> {
                 // all_items: Vec::new(),
             },
             dedupe: None,
+            contexts: Vec::new(),
         }
     }
 
@@ -32,6 +34,7 @@ impl<'c> FacItemOutput<'c> {
                 // all_items: Vec::new(),
             },
             dedupe: Some(Vec::new()),
+            contexts: Vec::new(),
         }
     }
 
@@ -39,11 +42,12 @@ impl<'c> FacItemOutput<'c> {
         Self {
             otype: FacItemOutputType::Blueprint { blueprint },
             dedupe: None,
+            contexts: Vec::new(),
         }
     }
 
     pub fn write(&mut self, item: BlueprintItem) {
-        let blueprint = item.to_blueprint();
+        let blueprint = item.to_blueprint(&mut self.contexts);
         if let Some(dedupe) = &mut self.dedupe {
             let bppos = &blueprint.position;
             if dedupe.contains(bppos) {
@@ -55,6 +59,10 @@ impl<'c> FacItemOutput<'c> {
 
         self.otype.write(item, blueprint)
     }
+
+    // pub fn context_handle(&mut self, new_context: String) -> ContextHandle {
+    //     ContextHandle::new_context(&mut self.contexts, new_context)
+    // }
 }
 
 pub enum FacItemOutputType<'c> {
@@ -88,3 +96,20 @@ impl FacItemOutputType<'_> {
         }
     }
 }
+
+// pub struct ContextHandle<'c> {
+//     contexts: &'c mut Vec<String>,
+// }
+
+// impl<'c> ContextHandle<'c> {
+//     fn new_context(contexts: &'c mut Vec<String>, name: String) -> Self {
+//         contexts.push(name);
+//         Self { contexts }
+//     }
+// }
+
+// impl Drop for ContextHandle<'_> {
+//     fn drop(&mut self) {
+//         self.contexts.pop().unwrap();
+//     }
+// }

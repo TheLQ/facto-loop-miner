@@ -21,7 +21,7 @@ impl BlueprintItem {
         &self.position
     }
 
-    pub fn to_blueprint(&self) -> FacBpEntity {
-        self.entity().to_fac(0, self.position())
+    pub fn to_blueprint(&self, contexts: &Vec<String>) -> FacBpEntity {
+        self.entity().to_fac(0, self.position(), contexts)
     }
 }
