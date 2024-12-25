@@ -1,6 +1,7 @@
 use tracing::warn;
 
 use crate::blueprint::bpitem::BlueprintItem;
+use crate::blueprint::output::FacItemOutput;
 use crate::common::entity::FacEntity;
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
 use crate::game_blocks::rail_hope::RailHopeAppender;
@@ -295,12 +296,10 @@ impl RailHopeAppender for RailHopeSingle {
         })
     }
 
-    fn to_fac(&self) -> Vec<BlueprintItem> {
-        let mut res = Vec::new();
+    fn to_fac(&self, output: &mut FacItemOutput) {
         for link in &self.links {
-            link.to_fac(&mut res);
+            link.to_fac(output);
         }
-        res
     }
 }
 
@@ -331,14 +330,14 @@ impl RailHopeLink {
         }
     }
 
-    fn to_fac(&self, res: &mut Vec<BlueprintItem>) {
+    fn to_fac(&self, res: &mut FacItemOutput) {
         for rail in &self.rails {
             match rail.rtype {
-                FacEntRailType::Straight => res.push(BlueprintItem::new(
+                FacEntRailType::Straight => res.write(BlueprintItem::new(
                     FacEntRailStraight::new(rail.direction.clone()).into_boxed(),
                     rail.position,
                 )),
-                FacEntRailType::Curved => res.push(BlueprintItem::new(
+                FacEntRailType::Curved => res.write(BlueprintItem::new(
                     FacEntRailCurved::new(rail.direction.clone()).into_boxed(),
                     rail.position,
                 )),
@@ -354,8 +353,14 @@ fn neg_if_false(flag: bool, value: i32) -> i32 {
 #[cfg(test)]
 mod test {
     use crate::{
-        blueprint::bpfac::entity::FacBpEntity, common::vpoint::VPoint,
-        game_blocks::rail_hope::RailHopeAppender, game_entities::direction::FacDirectionQuarter,
+        blueprint::{
+            bpfac::entity::FacBpEntity,
+            contents::BlueprintContents,
+            output::FacItemOutput,
+        },
+        common::vpoint::VPoint,
+        game_blocks::rail_hope::RailHopeAppender,
+        game_entities::direction::FacDirectionQuarter,
     };
 
     use super::RailHopeSingle;
@@ -366,20 +371,22 @@ mod test {
         hope_long.add_straight(2);
         hope_long.add_straight(3);
         hope_long.add_straight(6);
+        let mut hope_long_bp = BlueprintContents::new();
+        hope_long.to_fac(&mut FacItemOutput::new_blueprint(&mut hope_long_bp));
 
         let mut hope_short = RailHopeSingle::new(VPoint::zero(), FacDirectionQuarter::North);
         hope_short.add_straight(11);
+        let mut hope_short_bp = BlueprintContents::new();
+        hope_short.to_fac(&mut FacItemOutput::new_blueprint(&mut hope_short_bp));
 
         assert_eq!(
-            hope_long
+            hope_long_bp
                 .to_fac()
                 .into_iter()
-                .map(|v| v.to_blueprint())
                 .collect::<Vec<FacBpEntity>>(),
-            hope_short
+            hope_short_bp
                 .to_fac()
                 .into_iter()
-                .map(|v| v.to_blueprint())
                 .collect::<Vec<FacBpEntity>>(),
         );
 

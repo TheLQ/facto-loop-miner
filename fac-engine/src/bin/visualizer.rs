@@ -1,4 +1,5 @@
 use facto_loop_miner_common::log_init;
+use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
@@ -30,16 +31,17 @@ fn main() {
     log_init(None);
 
     let mut bp_contents = BlueprintContents::new();
+    let mut output = FacItemOutput::new_blueprint(&mut bp_contents);
 
     match 8 {
-        1 => basic_build_bp(&mut bp_contents),
-        2 => basic_build_gen(&mut bp_contents),
-        3 => basic_build_terapower(&mut bp_contents),
-        4 => basic_build_beacon_farm(&mut bp_contents),
-        5 => basic_build_robo_farm(&mut bp_contents),
-        6 => basic_build_assembler_thru(&mut bp_contents),
-        7 => basic_build_rail_hope_single(&mut bp_contents),
-        8 => basic_build_rail_hope_dual(&mut bp_contents),
+        1 => basic_build_bp(&mut output),
+        2 => basic_build_gen(&mut output),
+        3 => basic_build_terapower(&mut output),
+        4 => basic_build_beacon_farm(&mut output),
+        5 => basic_build_robo_farm(&mut output),
+        6 => basic_build_assembler_thru(&mut output),
+        7 => basic_build_rail_hope_single(&mut output),
+        8 => basic_build_rail_hope_dual(&mut output),
         _ => panic!("asdf"),
     }
 
@@ -58,19 +60,19 @@ fn main() {
     // println!("bp {}", res);
 }
 
-fn basic_build_bp(bp: &mut BlueprintContents) {
+fn basic_build_bp(output: &mut FacItemOutput) {
     {
         let entity = FacEntAssembler::new_basic(FacTier::Tier1, "something".into());
-        bp.add_entity_each(BlueprintItem::new(entity.into_boxed(), VPoint::new(1, 1)));
+        output.write(BlueprintItem::new(entity.into_boxed(), VPoint::new(1, 1)));
     }
 
     {
         let entity = FacEntAssembler::new_basic(FacTier::Tier1, "something2".into());
-        bp.add_entity_each(BlueprintItem::new(entity.into_boxed(), VPoint::new(1, 4)));
+        output.write(BlueprintItem::new(entity.into_boxed(), VPoint::new(1, 4)));
     }
 }
 
-fn basic_build_gen(bp: &mut BlueprintContents) {
+fn basic_build_gen(output: &mut FacItemOutput) {
     let station = FacBlkRailStation {
         wagons: 3,
         front_engines: 2,
@@ -80,19 +82,15 @@ fn basic_build_gen(bp: &mut BlueprintContents) {
         is_up: true,
         is_input: true,
     };
-    for entity in station.generate(VPoint::new(5, 5)) {
-        bp.add_entity_each(entity);
-    }
+    station.generate(VPoint::new(5, 5), output)
 }
 
-fn basic_build_terapower(bp: &mut BlueprintContents) {
+fn basic_build_terapower(output: &mut FacItemOutput) {
     let station = FacBlkTerapower::new(3, 2);
-    for entity in station.generate(VPoint::new(5, 5)) {
-        bp.add_entity_each(entity);
-    }
+    station.generate(VPoint::new(5, 5), output);
 }
 
-fn basic_build_beacon_farm(bp: &mut BlueprintContents) {
+fn basic_build_beacon_farm(output: &mut FacItemOutput) {
     let station = FacBlkBeaconFarm {
         inner_cell_size: 2,
         width: 3,
@@ -133,23 +131,19 @@ fn basic_build_beacon_farm(bp: &mut BlueprintContents) {
             is_big_power: true,
         }),
     };
-    for entity in station.generate(VPoint::new(5, 5)) {
-        bp.add_entity_each(entity);
-    }
+    station.generate(VPoint::new(5, 5), output)
 }
 
-fn basic_build_robo_farm(bp: &mut BlueprintContents) {
+fn basic_build_robo_farm(output: &mut FacItemOutput) {
     let farm = FacBlkRobofarm {
         width: 3,
         height: 3,
         is_row_depth_full: true,
     };
-    for entity in farm.generate(VPoint::new(5, 5)) {
-        bp.add_entity_each(entity);
-    }
+    farm.generate(VPoint::new(5, 5), output)
 }
 
-fn basic_build_assembler_thru(bp: &mut BlueprintContents) {
+fn basic_build_assembler_thru(output: &mut FacItemOutput) {
     let farm = FacBlkAssemblerThru {
         assembler: FacEntAssembler::new(FacTier::Tier1, "copper-wire".into(), Default::default()),
         belt_type: FacEntBeltType::Fast,
@@ -157,21 +151,15 @@ fn basic_build_assembler_thru(bp: &mut BlueprintContents) {
         width: 2,
         height: 3,
     };
-    for entity in farm.generate(VPoint::new(5, 5)) {
-        bp.add_entity_each(entity);
-    }
+    farm.generate(VPoint::new(5, 5), output)
 }
 
-fn basic_build_rail_hope_single(bp: &mut BlueprintContents) {
+fn basic_build_rail_hope_single(output: &mut FacItemOutput) {
     let farm = RailHopeSingle::new(VPoint::new(5, 5), FacDirectionQuarter::East);
-    for entity in farm.to_fac() {
-        bp.add_entity_each(entity);
-    }
+    farm.to_fac(output);
 }
 
-fn basic_build_rail_hope_dual(bp: &mut BlueprintContents) {
+fn basic_build_rail_hope_dual(output: &mut FacItemOutput) {
     let farm = RailHopeDual::new(VPoint::new(5, 5), FacDirectionQuarter::East);
-    for entity in farm.to_fac() {
-        bp.add_entity_each(entity);
-    }
+    farm.to_fac(output);
 }

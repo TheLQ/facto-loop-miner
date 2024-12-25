@@ -1,5 +1,5 @@
 use crate::{
-    blueprint::bpitem::BlueprintItem,
+    blueprint::output::FacItemOutput,
     common::vpoint::VPoint,
     game_entities::{
         chest::FacEntChestType, direction::FacDirectionQuarter, inserter::FacEntInserterType,
@@ -16,7 +16,6 @@ pub struct FacBlkRailLoop {
     wagons: usize,
     front_engines: usize,
     hope: RailHopeDual,
-    bpitems: Vec<BlueprintItem>,
     origin: VPoint,
     // is_start_set: bool,
     // is_end_set: bool,
@@ -34,7 +33,6 @@ impl FacBlkRailLoop {
             inserter_type: props.inserter_type,
             origin: props.origin,
             hope: RailHopeDual::new(props.origin, props.origin_direction),
-            bpitems: Vec::new(),
             is_start_input: props.is_start_input,
         }
     }
@@ -47,7 +45,7 @@ impl FacBlkRailLoop {
         self.hope.add_turn90(clockwise);
     }
 
-    fn add_start(&mut self) {
+    fn add_start(&mut self, output: &mut FacItemOutput) {
         let station = FacBlkRailStation {
             wagons: self.wagons,
             front_engines: self.front_engines,
@@ -70,10 +68,10 @@ impl FacBlkRailLoop {
         // RailHope places rail here
         origin = origin.move_x(2);
 
-        self.bpitems.extend(station.generate(origin));
+        station.generate(origin, output)
     }
 
-    fn add_end(&mut self) {
+    fn add_end(&mut self, output: &mut FacItemOutput) {
         // self.is_end_set = true;
         let station = FacBlkRailStation {
             wagons: self.wagons,
@@ -92,16 +90,14 @@ impl FacBlkRailLoop {
             }
             dir => panic!("unsupported dir {}", dir),
         }
-        self.bpitems.extend(station.generate(origin));
+        station.generate(origin, output)
     }
 
-    pub fn to_fac(mut self) -> Vec<BlueprintItem> {
-        self.add_start();
-        self.add_end();
+    pub fn to_fac(mut self, output: &mut FacItemOutput) {
+        self.add_start(output);
+        self.add_end(output);
 
-        let mut res = self.bpitems;
-        res.extend(self.hope.to_fac());
-        res
+        self.hope.to_fac(output)
     }
 }
 

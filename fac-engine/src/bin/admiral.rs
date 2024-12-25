@@ -1,7 +1,7 @@
 use exhaustive::Exhaustive;
 use facto_loop_miner_common::log_init;
-use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
 use facto_loop_miner_fac_engine::blueprint::bpitem::BlueprintItem;
+use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
 use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
 use facto_loop_miner_fac_engine::game_blocks::belt_bettel::FacBlkBettelBelt;
@@ -71,6 +71,7 @@ fn make_basic(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
 fn make_assembler_thru(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
+    let mut output = FacItemOutput::new_admiral(admiral);
 
     let farm = FacBlkAssemblerThru {
         assembler: FacEntAssembler::new(FacTier::Tier3, "copper-cable".into(), [
@@ -83,15 +84,14 @@ fn make_assembler_thru(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         width: 4,
         height: 3,
     };
-    for entity in farm.generate(VPoint::new(5, 5)) {
-        admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
-    }
+    farm.generate(VPoint::new(5, 5), &mut output);
 
     Ok(())
 }
 
 fn make_belt_bettel(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
+    let mut output = FacItemOutput::new_admiral(admiral);
 
     let mut belt = FacBlkBettelBelt::new(
         FacEntBeltType::Basic,
@@ -104,17 +104,15 @@ fn make_belt_bettel(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     belt.add_turn90(true);
     belt.add_straight(5);
 
-    for entity in belt.to_fac() {
-        admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
-    }
+    belt.to_fac(&mut output);
 
     Ok(())
 }
 
 fn make_rail_spiral_90(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
+    let mut output = FacItemOutput::new_admiral_dedupe(admiral);
 
-    let mut existing_points: Vec<FacBpPosition> = Vec::new();
     let origin: VPoint = VPoint::zero();
     for clockwise in [
         true,  //
@@ -136,16 +134,7 @@ fn make_rail_spiral_90(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
             hope.add_turn90(clockwise);
             hope.add_straight(2);
 
-            for entity in hope.to_fac() {
-                let bpfac = entity.to_blueprint();
-                let bppos = &bpfac.position;
-                if existing_points.contains(bppos) {
-                    continue;
-                } else {
-                    existing_points.push(bppos.clone());
-                }
-                admiral.execute_checked_command(bpfac.to_lua().into_boxed())?;
-            }
+            hope.to_fac(&mut output);
         }
     }
 
@@ -155,7 +144,8 @@ fn make_rail_spiral_90(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 fn make_rail_shift_45(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
 
-    let mut existing_points = Vec::new();
+    let mut output: FacItemOutput<'_> = FacItemOutput::new_admiral_dedupe(admiral);
+
     let origin = VPoint::zero();
     for clockwise in [false /*, false*/] {
         let hope1 = RailHopeSingle::new(origin, FacDirectionQuarter::North);
@@ -167,16 +157,7 @@ fn make_rail_shift_45(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
             hope.add_shift45(clockwise, 3);
             hope.add_straight(2);
 
-            for entity in hope.to_fac() {
-                let bpfac = entity.to_blueprint();
-                let bppos = &bpfac.position;
-                if existing_points.contains(bppos) {
-                    continue;
-                } else {
-                    existing_points.push(bppos.clone());
-                }
-                admiral.execute_checked_command(bpfac.to_lua().into_boxed())?;
-            }
+            hope.to_fac(&mut output);
         }
     }
 
@@ -185,8 +166,7 @@ fn make_rail_shift_45(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
 fn make_rail_dual_turning(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
-
-    let mut existing_points = Vec::new();
+    let mut output = FacItemOutput::new_admiral_dedupe(admiral);
 
     for clockwise in [true, false] {
         for direction in [
@@ -201,16 +181,7 @@ fn make_rail_dual_turning(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
             hope.add_straight(5);
             hope.add_straight(5);
 
-            for entity in hope.to_fac() {
-                let bpfac = entity.to_blueprint();
-                let bppos = &bpfac.position;
-                if existing_points.contains(bppos) {
-                    continue;
-                } else {
-                    existing_points.push(bppos.clone());
-                }
-                admiral.execute_checked_command(bpfac.to_lua().into_boxed())?;
-            }
+            hope.to_fac(&mut output);
         }
     }
 
@@ -219,6 +190,7 @@ fn make_rail_dual_turning(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
 fn make_rail_dual_powered(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
+    let mut output = FacItemOutput::new_admiral(admiral);
 
     for direction in [
         FacDirectionQuarter::North,
@@ -235,16 +207,17 @@ fn make_rail_dual_powered(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         hope.add_turn90(true);
         hope.add_straight_section();
 
-        for entity in hope.to_fac() {
-            let bpfac = entity.to_blueprint();
-            // let bppos = &bpfac.position;
-            // if existing_points.contains(bppos) {
-            //     continue;
-            // } else {
-            //     existing_points.push(bppos.clone());
-            // }
-            admiral.execute_checked_command(bpfac.to_lua().into_boxed())?;
-        }
+        hope.to_fac(&mut output);
+        // for entity in hope.to_fac() {
+        //     let bpfac = entity.to_blueprint();
+        //     // let bppos = &bpfac.position;
+        //     // if existing_points.contains(bppos) {
+        //     //     continue;
+        //     // } else {
+        //     //     existing_points.push(bppos.clone());
+        //     // }
+        //     admiral.execute_checked_command(bpfac.to_lua().into_boxed())?;
+        // }
     }
 
     Ok(())
@@ -252,6 +225,7 @@ fn make_rail_dual_powered(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
 fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
+    let mut output = FacItemOutput::new_admiral(admiral);
 
     let station = FacBlkRailStation {
         wagons: 3,
@@ -264,26 +238,20 @@ fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         // is_up: false,
         is_input: true,
     };
-    for entity in station.generate(VPOINT_ZERO) {
-        admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
-    }
+    station.generate(VPOINT_ZERO, &mut output);
     Ok(())
 }
 
 fn make_rail_loop(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
+    let mut output = FacItemOutput::new_admiral(admiral);
 
     let origin = VPoint::zero();
 
-    admiral.execute_checked_command(
-        BlueprintItem::new(
-            FacEntInfinityPower::new().into_boxed(),
-            origin.move_xy(4, 2),
-        )
-        .to_blueprint()
-        .to_lua()
-        .into_boxed(),
-    )?;
+    output.write(BlueprintItem::new(
+        FacEntInfinityPower::new().into_boxed(),
+        origin.move_xy(4, 2),
+    ));
 
     let mut rail_loop = FacBlkRailLoop::new(FacBlkRailLoopProps {
         wagons: 2,
@@ -298,9 +266,7 @@ fn make_rail_loop(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     rail_loop.add_straight();
     rail_loop.add_turn90(false);
 
-    for entity in rail_loop.to_fac() {
-        admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
-    }
+    rail_loop.to_fac(&mut output);
 
     Ok(())
 }

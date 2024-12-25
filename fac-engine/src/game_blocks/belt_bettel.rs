@@ -1,4 +1,5 @@
 use crate::blueprint::bpitem::BlueprintItem;
+use crate::blueprint::output::FacItemOutput;
 use crate::common::entity::FacEntity;
 use crate::common::vpoint::VPoint;
 use crate::game_entities::belt::FacEntBeltType;
@@ -83,8 +84,7 @@ impl FacBlkBettelBelt {
         self.add_straight_raw(1, false, new_direction);
     }
 
-    pub fn to_fac(&self) -> Vec<BlueprintItem> {
-        let mut res = Vec::new();
+    pub fn to_fac(&self, output: &mut FacItemOutput) {
         let mut cursor = self.origin;
         for link in &self.links {
             match &link.ltype {
@@ -92,7 +92,7 @@ impl FacBlkBettelBelt {
                     let mut last_cursor = cursor;
                     for i in 0..*length {
                         last_cursor = cursor.move_direction(&link.direction, i);
-                        res.push(BlueprintItem::new(
+                        output.write(BlueprintItem::new(
                             FacEntBeltTransport::new(self.btype.clone(), link.direction.clone())
                                 .into_boxed(),
                             last_cursor,
@@ -102,7 +102,7 @@ impl FacBlkBettelBelt {
                     cursor = last_cursor.move_direction(&link.direction, 1);
                 }
                 FacBlkBettelBeltLinkType::Underground { length } => {
-                    res.push(BlueprintItem::new(
+                    output.write(BlueprintItem::new(
                         FacEntBeltUnder::new(
                             self.btype.clone(),
                             link.direction.clone(),
@@ -112,7 +112,7 @@ impl FacBlkBettelBelt {
                         cursor,
                     ));
 
-                    res.push(BlueprintItem::new(
+                    output.write(BlueprintItem::new(
                         FacEntBeltUnder::new(
                             self.btype.clone(),
                             link.direction.clone(),
@@ -127,7 +127,6 @@ impl FacBlkBettelBelt {
                 FacBlkBettelBeltLinkType::Splitter => unimplemented!(),
             };
         }
-        res
     }
 
     fn current_direction(&self) -> &FacDirectionQuarter {
@@ -142,9 +141,9 @@ impl FacBlkBettelBelt {
         origin: VPoint,
         mid_span: usize,
         belt_total: usize,
-    ) -> Vec<BlueprintItem> {
+        output: &mut FacItemOutput,
+    ) {
         let belt_total_0 = belt_total - 1;
-        let mut res = Vec::new();
 
         for belt_num in 0..belt_total {
             let mut belt: FacBlkBettelBelt = FacBlkBettelBelt::new(
@@ -159,10 +158,8 @@ impl FacBlkBettelBelt {
             belt.add_turn90(false);
             belt.add_straight(belt_total_0 - belt_num);
 
-            res.extend(belt.to_fac());
+            belt.to_fac(output);
         }
-
-        res
     }
 
     pub fn u_turn_from_west(
@@ -170,9 +167,9 @@ impl FacBlkBettelBelt {
         origin: VPoint,
         mid_span: usize,
         belt_total: usize,
-    ) -> Vec<BlueprintItem> {
+        output: &mut FacItemOutput,
+    ) {
         let belt_total_0 = belt_total - 1;
-        let mut res = Vec::new();
 
         for belt_num in 0..belt_total {
             let mut belt: FacBlkBettelBelt = FacBlkBettelBelt::new(
@@ -187,10 +184,8 @@ impl FacBlkBettelBelt {
             belt.add_turn90(true);
             belt.add_straight(belt_total_0 - belt_num);
 
-            res.extend(belt.to_fac());
+            belt.to_fac(output)
         }
-
-        res
     }
 }
 

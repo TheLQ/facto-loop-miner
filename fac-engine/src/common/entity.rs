@@ -27,7 +27,7 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
     fn to_fac(&self, entity_number: FacBpInteger, position: &VPoint) -> FacBpEntity {
         let facpos = self.to_fac_position(position);
         debug!(
-            "create pos {:6} facpos {:10} {:?}",
+            "blueprint pos {:6} facpos {:10} {:?}",
             position.display(),
             facpos.display(),
             self

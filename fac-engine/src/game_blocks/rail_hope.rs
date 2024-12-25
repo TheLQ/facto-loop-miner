@@ -1,4 +1,4 @@
-use crate::blueprint::bpitem::BlueprintItem;
+use crate::blueprint::output::FacItemOutput;
 
 pub trait RailHopeAppender {
     fn add_straight(&mut self, length: usize);
@@ -7,5 +7,5 @@ pub trait RailHopeAppender {
 
     fn add_shift45(&mut self, clockwise: bool, length: usize);
 
-    fn to_fac(&self) -> Vec<BlueprintItem>;
+    fn to_fac(&self, output: &mut FacItemOutput);
 }

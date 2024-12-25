@@ -1,4 +1,5 @@
 use crate::blueprint::bpitem::BlueprintItem;
+use crate::blueprint::output::FacItemOutput;
 use crate::common::entity::FacEntity;
 use crate::common::vpoint::VPoint;
 use crate::game_blocks::rail_hope::RailHopeAppender;
@@ -91,21 +92,21 @@ impl RailHopeAppender for RailHopeDual {
         unimplemented!()
     }
 
-    fn to_fac(&self) -> Vec<BlueprintItem> {
-        [].into_iter()
-            .chain(self.hopes.iter().flat_map(RailHopeSingle::to_fac))
-            // this is a bit sketchy...
-            .chain(self.electric_larges.iter().map(|position| {
-                BlueprintItem::new(
-                    FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
-                    *position,
-                )
-            }))
-            .chain(
-                self.lamps
-                    .iter()
-                    .map(|position| BlueprintItem::new(FacEntLamp::new().into_boxed(), *position)),
-            )
-            .collect()
+    fn to_fac(&self, output: &mut FacItemOutput) {
+        for hope in &self.hopes {
+            hope.to_fac(output);
+        }
+        for position in &self.electric_larges {
+            output.write(BlueprintItem::new(
+                FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
+                *position,
+            ));
+        }
+        for position in &self.electric_larges {
+            output.write(BlueprintItem::new(
+                FacEntLamp::new().into_boxed(),
+                *position,
+            ));
+        }
     }
 }

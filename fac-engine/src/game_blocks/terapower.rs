@@ -1,6 +1,6 @@
 use crate::{
     admiral::generators::xy_grid_vpoint,
-    blueprint::bpitem::BlueprintItem,
+    blueprint::{bpitem::BlueprintItem, output::FacItemOutput},
     common::{entity::FacEntity, vpoint::VPoint},
     game_entities::{
         electric_large::{FacEntElectricLarge, FacEntElectricLargeType},
@@ -17,22 +17,20 @@ pub struct FacBlkTerapower {
 }
 
 impl FacBlock for FacBlkTerapower {
-    fn generate(&self, origin: VPoint) -> Vec<BlueprintItem> {
-        let mut res = Vec::new();
+    fn generate(&self, origin: VPoint, output: &mut FacItemOutput) {
         for pos in xy_grid_vpoint(origin, self.width, self.height, 30) {
-            res.push(BlueprintItem::new(
+            output.write(BlueprintItem::new(
                 FacEntElectricLarge::new(FacEntElectricLargeType::Substation).into_boxed(),
                 pos.point(),
             ));
 
             if pos.ix % 6 == 0 && pos.iy % 7 == 6 {
-                res.push(BlueprintItem::new(
+                output.write(BlueprintItem::new(
                     FacEntRadar::new().into_boxed(),
                     pos.point(),
                 ));
             }
         }
-        res
     }
 }
 

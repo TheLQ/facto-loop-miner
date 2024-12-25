@@ -1,5 +1,7 @@
-use crate::{blueprint::bpitem::BlueprintItem, common::vpoint::VPoint};
+use crate::{
+    blueprint::output::FacItemOutput, common::vpoint::VPoint,
+};
 
 pub trait FacBlock {
-    fn generate(&self, origin: VPoint) -> Vec<BlueprintItem>;
+    fn generate(&self, origin: VPoint, ouput: &mut FacItemOutput);
 }

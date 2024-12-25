@@ -1,5 +1,5 @@
 use crate::{
-    blueprint::bpitem::BlueprintItem,
+    blueprint::{bpitem::BlueprintItem, output::FacItemOutput},
     common::{entity::FacEntity, vpoint::VPoint},
     game_entities::{
         assembler::FacEntAssembler,
@@ -29,24 +29,22 @@ pub struct FacBlkAssemblerCellEntry {
 }
 
 impl FacBlock for FacBlkAssemblerCell {
-    fn generate(&self, origin: VPoint) -> Vec<BlueprintItem> {
-        let mut res = Vec::new();
-
-        res.push(BlueprintItem::new(
+    fn generate(&self, origin: VPoint, output: &mut FacItemOutput) {
+        output.write(BlueprintItem::new(
             self.assembler.clone().into_boxed(),
             origin.move_xy(1, 1),
         ));
 
-        res.push(BlueprintItem::new(FacEntLamp::new().into_boxed(), origin));
+        output.write(BlueprintItem::new(FacEntLamp::new().into_boxed(), origin));
 
         let power_pos = origin.move_xy(4, 4);
         if self.is_big_power {
-            res.push(BlueprintItem::new(
+            output.write(BlueprintItem::new(
                 FacEntElectricLarge::new(FacEntElectricLargeType::Substation).into_boxed(),
                 power_pos,
             ));
         } else {
-            res.push(BlueprintItem::new(
+            output.write(BlueprintItem::new(
                 FacEntElectricMini::new(FacEntElectricMiniType::Medium).into_boxed(),
                 power_pos,
             ));
@@ -61,12 +59,12 @@ impl FacBlock for FacBlkAssemblerCell {
                 } else {
                     FacDirectionQuarter::North
                 };
-                res.push(BlueprintItem::new(
+                output.write(BlueprintItem::new(
                     FacEntInserter::new(entry.inserter.clone(), inserter_direction).into_boxed(),
                     row_point,
                 ));
 
-                res.push(BlueprintItem::new(
+                output.write(BlueprintItem::new(
                     entry.chest.clone().into_boxed(),
                     row_point.move_y(1),
                 ));
@@ -82,18 +80,16 @@ impl FacBlock for FacBlkAssemblerCell {
                 } else {
                     FacDirectionQuarter::North
                 };
-                res.push(BlueprintItem::new(
+                output.write(BlueprintItem::new(
                     FacEntInserter::new(entry.inserter.clone(), inserter_direction).into_boxed(),
                     row_point,
                 ));
 
-                res.push(BlueprintItem::new(
+                output.write(BlueprintItem::new(
                     entry.chest.clone().into_boxed(),
                     row_point.move_x(1),
                 ));
             }
         }
-
-        res
     }
 }
