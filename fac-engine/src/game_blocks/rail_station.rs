@@ -6,6 +6,7 @@ use crate::{
     game_entities::{
         chest::{FacEntChest, FacEntChestType},
         direction::FacDirectionQuarter,
+        electric_large::{FacEntElectricLarge, FacEntElectricLargeType},
         electric_mini::{FacEntElectricMini, FacEntElectricMiniType},
         inserter::{FacEntInserter, FacEntInserterType},
         lamp::FacEntLamp,
@@ -26,6 +27,7 @@ pub struct FacBlkRailStation {
     pub wagons: usize,
     pub front_engines: usize,
     pub chests: Option<FacEntChestType>,
+    pub inserter: FacEntInserterType,
     pub is_east: bool,
     pub is_up: bool,
 }
@@ -38,6 +40,7 @@ impl FacBlock for FacBlkRailStation {
         let fill_x_direction;
         let origin_after_straight;
         let rotation;
+        #[allow(unreachable_code)]
         match (self.is_east, self.is_up) {
             (true, true) => {
                 base_direction = FacDirectionQuarter::East;
@@ -46,17 +49,34 @@ impl FacBlock for FacBlkRailStation {
                 rotation = false;
             }
             (true, false) => {
+                todo!("bad rail insert pos");
                 base_direction = FacDirectionQuarter::East;
                 fill_x_direction = FacDirectionQuarter::East;
                 origin_after_straight = false;
                 rotation = true;
             }
-            // (false, true) => (FacDirectionQuarter::West, true),
-            _ => panic!("todo"),
+            (false, true) => {
+                todo!();
+                base_direction = FacDirectionQuarter::West;
+                fill_x_direction = FacDirectionQuarter::West;
+                origin_after_straight = false;
+                rotation = true;
+            }
+            (false, false) => {
+                todo!();
+                base_direction = FacDirectionQuarter::West;
+                fill_x_direction = FacDirectionQuarter::West;
+                origin_after_straight = false;
+                rotation = true;
+            }
         };
 
-        let mut hope = RailHopeSingle::new(origin, base_direction);
+        Self::place_electric_initial(&origin, &base_direction, &mut res);
+
+        let mut hope = RailHopeSingle::new(origin, base_direction.clone());
         hope.add_shift45(rotation, 6);
+
+        Self::place_electric_connect(&hope.current_next_pos(), &base_direction, &mut res);
 
         const RAILS_PER_CART: f32 = 3.5;
         let base_straight: usize =
@@ -85,7 +105,7 @@ impl FacBlock for FacBlkRailStation {
         };
         stop_block.place_train_stop(&mut res);
         stop_block.place_side_inserter_electrics(&mut res);
-        stop_block.place_side_inserters(&mut res);
+        stop_block.place_side_inserters(&self.inserter, &mut res);
         stop_block.place_rail_signals(&mut res);
         if let Some(chests) = &self.chests {
             stop_block.place_side_chests(&mut res, chests);
@@ -101,6 +121,34 @@ impl FacBlock for FacBlkRailStation {
     }
 }
 
+impl FacBlkRailStation {
+    fn place_electric_initial(
+        origin: &VPoint,
+        base_direction: &FacDirectionQuarter,
+        res: &mut Vec<BlueprintItem>,
+    ) {
+        let electric_start_pos = origin.move_direction(base_direction.rotate_once(), 2);
+        res.push(BlueprintItem::new(
+            FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
+            electric_start_pos,
+        ));
+    }
+
+    fn place_electric_connect(
+        origin: &VPoint,
+        base_direction: &FacDirectionQuarter,
+        res: &mut Vec<BlueprintItem>,
+    ) {
+        let electric_start_pos = origin
+            .move_direction(base_direction.rotate_once(), 4)
+            .move_direction(base_direction.rotate_once().rotate_once(), 6);
+        res.push(BlueprintItem::new(
+            FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
+            electric_start_pos,
+        ));
+    }
+}
+
 struct FacBlkRailStop {
     wagons: usize,
     front_engines: usize,
@@ -110,7 +158,7 @@ struct FacBlkRailStop {
 }
 
 impl FacBlkRailStop {
-    fn place_side_inserters(&self, res: &mut Vec<BlueprintItem>) {
+    fn place_side_inserters(&self, inserter: &FacEntInserterType, res: &mut Vec<BlueprintItem>) {
         for car in 0..self.wagons {
             let car_x_offset = self.get_wagon_x_offset(car);
 
@@ -127,7 +175,7 @@ impl FacBlkRailStop {
                         )
                         .move_y(centered_y_offset(negative, 1));
                     res.push(BlueprintItem::new(
-                        FacEntInserter::new(FacEntInserterType::Basic, direction).into_boxed(),
+                        FacEntInserter::new(inserter.clone(), direction).into_boxed(),
                         start,
                     ));
                 }

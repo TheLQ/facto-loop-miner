@@ -1,7 +1,9 @@
 use crate::{
     blueprint::bpitem::BlueprintItem,
     common::vpoint::VPoint,
-    game_entities::{chest::FacEntChestType, direction::FacDirectionQuarter},
+    game_entities::{
+        chest::FacEntChestType, direction::FacDirectionQuarter, inserter::FacEntInserterType,
+    },
 };
 
 use super::{
@@ -15,8 +17,11 @@ pub struct FacBlkRailLoop {
     front_engines: usize,
     hope: RailHopeDual,
     bpitems: Vec<BlueprintItem>,
-    origin: VPoint, // is_start_set: bool,
-                    // is_end_set: bool,
+    origin: VPoint,
+    // is_start_set: bool,
+    // is_end_set: bool,
+    chest_type: Option<FacEntChestType>,
+    inserter_type: FacEntInserterType,
 }
 
 impl FacBlkRailLoop {
@@ -24,6 +29,8 @@ impl FacBlkRailLoop {
         Self {
             wagons: props.wagons,
             front_engines: props.front_engines,
+            chest_type: props.chest_type,
+            inserter_type: props.inserter_type,
             origin: props.origin.clone(),
             hope: RailHopeDual::new(props.origin, props.origin_direction),
             bpitems: Vec::new(),
@@ -43,7 +50,8 @@ impl FacBlkRailLoop {
         let station = FacBlkRailStation {
             wagons: self.wagons,
             front_engines: self.front_engines,
-            chests: Some(FacEntChestType::Steel),
+            chests: self.chest_type.clone(),
+            inserter: self.inserter_type.clone(),
             is_east: true,
             is_up: true,
         };
@@ -68,7 +76,8 @@ impl FacBlkRailLoop {
         let station = FacBlkRailStation {
             wagons: self.wagons,
             front_engines: self.front_engines,
-            chests: Some(FacEntChestType::Steel),
+            chests: self.chest_type.clone(),
+            inserter: self.inserter_type.clone(),
             is_east: true,
             is_up: true,
         };
@@ -98,4 +107,6 @@ pub struct FacBlkRailLoopProps {
     pub front_engines: usize,
     pub origin: VPoint,
     pub origin_direction: FacDirectionQuarter,
+    pub chest_type: Option<FacEntChestType>,
+    pub inserter_type: FacEntInserterType,
 }

@@ -255,6 +255,7 @@ fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         wagons: 3,
         front_engines: 2,
         chests: Some(FacEntChestType::Steel),
+        inserter: FacEntInserterType::Basic,
         is_east: true,
         // is_east: false,
         is_up: true,
@@ -270,10 +271,12 @@ fn make_rail_loop(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
 
     let mut rail_loop = FacBlkRailLoop::new(FacBlkRailLoopProps {
-        wagons: 1,
-        front_engines: 1,
-        origin: VPoint::zero(),
+        wagons: 2,
+        front_engines: 2,
+        origin,
         origin_direction: FacDirectionQuarter::West,
+        chest_type: Some(FacEntChestType::Infinity),
+        inserter_type: FacEntInserterType::Stack,
     });
     rail_loop.add_turn90(false);
     rail_loop.add_straight();
