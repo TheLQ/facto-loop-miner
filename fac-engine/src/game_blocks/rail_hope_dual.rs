@@ -98,12 +98,14 @@ impl RailHopeAppender for RailHopeDual {
             .chain(self.electric_larges.iter().map(|position| {
                 BlueprintItem::new(
                     FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
-                    position.clone(),
+                    *position,
                 )
             }))
-            .chain(self.lamps.iter().map(|position| {
-                BlueprintItem::new(FacEntLamp::new().into_boxed(), position.clone())
-            }))
+            .chain(
+                self.lamps
+                    .iter()
+                    .map(|position| BlueprintItem::new(FacEntLamp::new().into_boxed(), *position)),
+            )
             .collect()
     }
 }

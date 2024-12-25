@@ -2,6 +2,7 @@
 #![feature(error_generic_member_access)]
 // Prefer explicit
 #![allow(clippy::new_without_default)]
+#![warn(clippy::inconsistent_struct_constructor)]
 
 pub mod admiral;
 pub mod blueprint;

@@ -12,6 +12,7 @@ impl BlueprintItem {
         Self { entity, position }
     }
 
+    #[allow(clippy::borrowed_box)] // makes this not "object safe trait"
     pub fn entity(&self) -> &Box<dyn FacEntity> {
         &self.entity
     }
