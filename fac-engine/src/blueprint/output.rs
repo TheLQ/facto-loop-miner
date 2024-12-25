@@ -1,7 +1,9 @@
-use std::ops::{Deref, DerefMut};
+use std::{cell::RefCell, ops::Deref, rc::Rc};
+use tracing::error;
 
 use crate::admiral::{
-    executor::{LuaCompiler, client::AdmiralClient},
+    err::AdmiralResult,
+    executor::{ExecuteResponse, LuaCompiler, client::AdmiralClient},
     lua_command::LuaCommand,
 };
 
@@ -11,108 +13,165 @@ use super::{
     contents::BlueprintContents,
 };
 
-pub struct FacItemOutput<'c> {
-    otype: FacItemOutputType<'c>,
-    dedupe: Option<Vec<FacBpPosition>>,
-    log_info: FacItemOutputLogInfo,
+pub struct FacItemOutput {
+    otype: FacItemOutputType,
 }
 
-impl<'c> FacItemOutput<'c> {
-    pub fn new_admiral(client: &'c mut AdmiralClient) -> Self {
+impl FacItemOutput {
+    pub fn into_rc(self) -> Rc<Self> {
+        Rc::new(self)
+    }
+
+    pub fn new_admiral(client: AdmiralClient) -> Self {
         Self {
-            otype: FacItemOutputType::AdmiralClient {
-                client,
-                // all_items: Vec::new(),
-            },
-            dedupe: None,
-            log_info: FacItemOutputLogInfo::new(),
+            otype: FacItemOutputType::AdmiralClient(RefCell::new(OutputData {
+                inner: client,
+                dedupe: None,
+                log_info: FacItemOutputLogInfo::new(),
+            })),
         }
     }
 
-    pub fn new_admiral_dedupe(client: &'c mut AdmiralClient) -> Self {
+    pub fn new_admiral_dedupe(client: AdmiralClient) -> Self {
         Self {
-            otype: FacItemOutputType::AdmiralClient {
-                client,
-                // all_items: Vec::new(),
-            },
-            dedupe: Some(Vec::new()),
-            log_info: FacItemOutputLogInfo::new(),
+            otype: FacItemOutputType::AdmiralClient(RefCell::new(OutputData {
+                inner: client,
+                dedupe: Some(Vec::new()),
+                log_info: FacItemOutputLogInfo::new(),
+            })),
         }
     }
 
-    pub fn new_blueprint(blueprint: &'c mut BlueprintContents) -> Self {
+    pub fn new_blueprint(contents: BlueprintContents) -> Self {
         Self {
-            otype: FacItemOutputType::Blueprint { blueprint },
-            dedupe: None,
-            log_info: FacItemOutputLogInfo::new(),
+            otype: FacItemOutputType::Blueprint(RefCell::new(OutputData {
+                inner: contents,
+                dedupe: None,
+                log_info: FacItemOutputLogInfo::new(),
+            })),
         }
     }
 
-    pub fn write(&mut self, item: BlueprintItem) {
+    pub fn write(&self, item: BlueprintItem) {
         let blueprint = item.to_blueprint(&self);
-        if let Some(dedupe) = &mut self.dedupe {
-            let bppos = &blueprint.position;
-            if dedupe.contains(bppos) {
-                return;
-            } else {
-                dedupe.push(bppos.clone());
-            }
-        }
 
         self.otype.write(item, blueprint)
     }
 
-    pub fn context_handle<'s>(&'s mut self, new_context: String) -> OutputContextHandle<'s, 'c> {
-        self.log_info.contexts.push(new_context);
+    pub fn any_handle<'o>(&'o mut self) -> OutputContextHandle<'o> {
         OutputContextHandle {
             output: self,
-            is_subcontext: false,
+            htype: OutputContextHandleType::Empty,
         }
     }
 
-    pub fn subcontext_handle<'s>(&'s mut self, new_context: String) -> OutputContextHandle<'s, 'c> {
-        self.log_info.subcontexts.push(new_context);
+    pub fn context_handle<'o>(&'o self, new_context: String) -> OutputContextHandle<'o> {
+        self.otype.push_context(new_context);
         OutputContextHandle {
             output: self,
-            is_subcontext: true,
+            htype: OutputContextHandleType::Context,
         }
     }
 
-    pub fn log_info(&self) -> &FacItemOutputLogInfo {
-        &self.log_info
+    pub fn subcontext_handle<'o>(&'o self, new_context: String) -> OutputContextHandle<'o> {
+        self.otype.push_subcontext(new_context);
+        OutputContextHandle {
+            output: self,
+            htype: OutputContextHandleType::Subcontext,
+        }
+    }
+
+    pub fn log_info(&self) -> FacItemOutputLogInfo {
+        self.otype.get_context()
+    }
+
+    pub fn admiral_execute_command(
+        &self,
+        lua: Box<dyn LuaCommand>,
+    ) -> AdmiralResult<ExecuteResponse> {
+        self.otype.admiral_execute_command(lua)
     }
 }
 
-pub enum FacItemOutputType<'c> {
-    AdmiralClient {
-        client: &'c mut AdmiralClient,
-        // TODO: Might be slow with full map generates?
-        // all_items: Vec<BlueprintItem>,
-    },
-    Blueprint {
-        blueprint: &'c mut BlueprintContents,
-    },
+enum FacItemOutputType {
+    AdmiralClient(RefCell<OutputData<AdmiralClient>>),
+    Blueprint(RefCell<OutputData<BlueprintContents>>),
 }
 
-impl FacItemOutputType<'_> {
-    pub fn write(&mut self, item: BlueprintItem, blueprint: FacBpEntity) {
+impl FacItemOutputType {
+    fn write(&self, item: BlueprintItem, blueprint: FacBpEntity) {
         match self {
-            Self::AdmiralClient {
-                client, /* , all_items */
-            } => {
-                let res = client.execute_checked_command(blueprint.to_lua().into_boxed());
+            Self::AdmiralClient(cell) => {
+                let OutputData { inner, dedupe, .. } = &mut *cell.borrow_mut();
+                dedupe_position(dedupe, &blueprint);
+                let res = inner.execute_checked_command(blueprint.to_lua().into_boxed());
                 // all_items.push(item);
                 // Vec::push() does not normally fail
                 // For API sanity, do not make every FacBlk need to pass up the error
                 if let Err(e) = res {
-                    panic!("⛔⛔⛔ Write failed {}", e);
+                    error!("⛔⛔⛔ Write failed {}", e);
                 }
             }
-            Self::Blueprint {
-                blueprint: blueprint_contents,
-            } => {
-                blueprint_contents.add(item, blueprint);
+            Self::Blueprint(cell) => {
+                let OutputData { inner, dedupe, .. } = &mut *cell.borrow_mut();
+                dedupe_position(dedupe, &blueprint);
+                inner.add(item, blueprint);
             }
+        }
+    }
+
+    fn push_context(&self, new_context: String) {
+        match self {
+            Self::AdmiralClient(cell) => cell.borrow_mut().log_info.contexts.push(new_context),
+            Self::Blueprint(cell) => cell.borrow_mut().log_info.contexts.push(new_context),
+        }
+    }
+
+    fn push_subcontext(&self, new_context: String) {
+        match self {
+            Self::AdmiralClient(cell) => cell.borrow_mut().log_info.subcontexts.push(new_context),
+            Self::Blueprint(cell) => cell.borrow_mut().log_info.subcontexts.push(new_context),
+        }
+    }
+
+    fn pop_context(&self) {
+        match self {
+            Self::AdmiralClient(cell) => cell.borrow_mut().log_info.contexts.pop(),
+            Self::Blueprint(cell) => cell.borrow_mut().log_info.contexts.pop(),
+        }
+        .unwrap();
+    }
+
+    fn pop_subcontext(&self) {
+        match self {
+            Self::AdmiralClient(cell) => cell.borrow_mut().log_info.subcontexts.pop(),
+            Self::Blueprint(cell) => cell.borrow_mut().log_info.subcontexts.pop(),
+        }
+        .unwrap();
+    }
+
+    fn get_context(&self) -> FacItemOutputLogInfo {
+        match self {
+            Self::AdmiralClient(cell) => cell.borrow().log_info.questitionable_clone(),
+            Self::Blueprint(cell) => cell.borrow().log_info.questitionable_clone(),
+        }
+    }
+
+    fn admiral_execute_command(&self, lua: Box<dyn LuaCommand>) -> AdmiralResult<ExecuteResponse> {
+        match self {
+            Self::AdmiralClient(cell) => cell.borrow_mut().inner.execute_checked_command(lua),
+            Self::Blueprint(_) => panic!("not a admiral"),
+        }
+    }
+}
+
+fn dedupe_position(dedupe: &mut Option<Vec<FacBpPosition>>, blueprint: &FacBpEntity) {
+    if let Some(dedupe) = dedupe {
+        let bppos = &blueprint.position;
+        if dedupe.contains(bppos) {
+            return;
+        } else {
+            dedupe.push(bppos.clone());
         }
     }
 }
@@ -123,42 +182,63 @@ pub struct FacItemOutputLogInfo {
 }
 
 impl FacItemOutputLogInfo {
-    pub const fn new() -> Self {
+    const fn new() -> Self {
         Self {
             contexts: Vec::new(),
             subcontexts: Vec::new(),
         }
     }
-}
 
-// Keeps the context alive for access during logging
-pub struct OutputContextHandle<'o, 'c> {
-    output: &'o mut FacItemOutput<'c>,
-    is_subcontext: bool,
-}
-
-impl Drop for OutputContextHandle<'_, '_> {
-    fn drop(&mut self) {
-        let pruned = if self.is_subcontext {
-            &mut self.log_info.subcontexts
-        } else {
-            &mut self.log_info.contexts
-        };
-        let _context = pruned.pop().unwrap();
-        // println!("drop context {}", _context)
+    fn questitionable_clone(&self) -> Self {
+        Self {
+            contexts: self.contexts.clone(),
+            subcontexts: self.contexts.clone(),
+        }
     }
 }
 
-impl<'c> Deref for OutputContextHandle<'_, 'c> {
-    type Target = FacItemOutput<'c>;
+struct OutputData<T> {
+    inner: T,
+    dedupe: Option<Vec<FacBpPosition>>,
+    log_info: FacItemOutputLogInfo,
+}
+
+// Keeps the context alive for access during logging
+pub struct OutputContextHandle<'o> {
+    output: &'o FacItemOutput,
+    htype: OutputContextHandleType,
+}
+impl<'o> OutputContextHandle<'o> {
+    fn new_context(&'o mut self, htype: OutputContextHandleType) -> Self {
+        Self {
+            output: self.output,
+            htype,
+        }
+    }
+}
+
+impl<'o> Drop for OutputContextHandle<'o> {
+    fn drop(&mut self) {
+        match self.htype {
+            OutputContextHandleType::Context => self.output.otype.pop_context(),
+            OutputContextHandleType::Subcontext => self.output.otype.pop_subcontext(),
+            OutputContextHandleType::Empty => {
+                // nothing
+            }
+        }
+    }
+}
+
+impl<'o> Deref for OutputContextHandle<'o> {
+    type Target = FacItemOutput;
 
     fn deref(&self) -> &Self::Target {
         self.output
     }
 }
 
-impl<'c> DerefMut for OutputContextHandle<'_, 'c> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.output
-    }
+enum OutputContextHandleType {
+    Context,
+    Subcontext,
+    Empty,
 }

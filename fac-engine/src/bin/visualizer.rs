@@ -82,6 +82,7 @@ fn basic_build_gen(output: &mut FacItemOutput) {
         is_east: true,
         is_up: true,
         is_input: true,
+        is_create_train: true,
     };
     station.generate(VPoint::new(5, 5), output)
 }

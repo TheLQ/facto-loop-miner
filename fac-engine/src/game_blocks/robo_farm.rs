@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     admiral::generators::xy_grid_vpoint,
     blueprint::{bpitem::BlueprintItem, output::FacItemOutput},
@@ -18,10 +20,11 @@ pub struct FacBlkRobofarm {
     pub width: u32,
     pub height: u32,
     pub is_row_depth_full: bool,
+    pub output: Rc<FacItemOutput>,
 }
 
 impl FacBlock for FacBlkRobofarm {
-    fn generate(&self, origin: VPoint, output: &mut FacItemOutput) {
+    fn generate(&self, origin: VPoint) {
         let cell_robo_width = if self.is_row_depth_full { 5 } else { 3 };
 
         for cell_pos in xy_grid_vpoint(
@@ -39,25 +42,25 @@ impl FacBlock for FacBlkRobofarm {
                 let center_i = cell_robo_width - /*center*/2 - /*count by 1*/1;
                 if pos.ix == center_i && pos.iy == center_i {
                     // substation to grab all roboports
-                    output.write(BlueprintItem::new(
+                    self.output.write(BlueprintItem::new(
                         FacEntElectricLarge::new(FacEntElectricLargeType::Substation).into_boxed(),
                         pos.point().move_xy(0, 1),
                     ));
 
                     // big pole to get all
-                    output.write(BlueprintItem::new(
+                    self.output.write(BlueprintItem::new(
                         FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
                         pos.point().move_xy(2, 1),
                     ));
 
                     // highlighter
-                    output.write(BlueprintItem::new(
+                    self.output.write(BlueprintItem::new(
                         FacEntLamp::new().into_boxed(),
                         pos.point()
                             .move_xy_usize(1, 1 + FACENT_ELECTRIC_LARGE_DIAMETER),
                     ));
                 } else {
-                    output.write(BlueprintItem::new(
+                    self.output.write(BlueprintItem::new(
                         FacEntRoboport::new().into_boxed(),
                         pos.point(),
                     ));

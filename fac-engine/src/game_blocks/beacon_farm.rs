@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     admiral::generators::xy_grid_vpoint,
     blueprint::{bpitem::BlueprintItem, output::FacItemOutput},
@@ -14,10 +16,11 @@ pub struct FacBlkBeaconFarm<C: FacBlock> {
     pub height: u32,
     pub module: FacModule,
     pub cell: Option<C>,
+    pub output: Rc<FacItemOutput>,
 }
 
 impl<C: FacBlock> FacBlock for FacBlkBeaconFarm<C> {
-    fn generate(&self, origin: VPoint, output: &mut FacItemOutput) {
+    fn generate(&self, origin: VPoint) {
         let zero_cell_size = self.inner_cell_size + 1;
 
         for pos in xy_grid_vpoint(
@@ -27,14 +30,14 @@ impl<C: FacBlock> FacBlock for FacBlkBeaconFarm<C> {
             3,
         ) {
             if pos.ix % zero_cell_size == 0 || pos.iy % zero_cell_size == 0 {
-                output.write(BlueprintItem::new(
+                self.output.write(BlueprintItem::new(
                     FacEntBeacon::new([Some(self.module.clone()), Some(self.module.clone())])
                         .into_boxed(),
                     pos.point(),
                 ));
             } else if pos.ix % zero_cell_size == 1 && pos.iy % zero_cell_size == 1 {
                 if let Some(inner) = &self.cell {
-                    inner.generate(pos.point(), output);
+                    inner.generate(pos.point());
                 }
             }
         }

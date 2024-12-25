@@ -1,12 +1,10 @@
-use crate::blueprint::bpitem::BlueprintItem;
+use std::rc::Rc;
+
 use crate::blueprint::output::FacItemOutput;
-use crate::common::entity::FacEntity;
 use crate::common::vpoint::VPoint;
 use crate::game_blocks::rail_hope::RailHopeAppender;
 use crate::game_blocks::rail_hope_single::RailHopeSingle;
 use crate::game_entities::direction::FacDirectionQuarter;
-use crate::game_entities::electric_large::{FacEntElectricLarge, FacEntElectricLargeType};
-use crate::game_entities::lamp::FacEntLamp;
 use crate::game_entities::rail::RAIL_STRAIGHT_DIAMETER;
 
 // Side-by-side rail
@@ -14,18 +12,26 @@ pub struct RailHopeDual {
     hopes: [RailHopeSingle; 2],
     electric_larges: Vec<VPoint>,
     lamps: Vec<VPoint>,
+    output: Rc<FacItemOutput>,
 }
 
 impl RailHopeDual {
-    pub fn new(origin: VPoint, origin_direction: FacDirectionQuarter) -> Self {
+    pub fn new(
+        origin: VPoint,
+        origin_direction: FacDirectionQuarter,
+        output: Rc<FacItemOutput>,
+    ) -> Self {
         let next_origin = origin.move_direction(
             origin_direction.rotate_opposite(),
             RAIL_STRAIGHT_DIAMETER * 2,
         );
+        // let output0 = &mut output_cell.borrow_mut();
+        // let output1 =;
         Self {
+            output: output.clone(),
             hopes: [
-                RailHopeSingle::new(origin, origin_direction.clone()),
-                RailHopeSingle::new(next_origin, origin_direction),
+                RailHopeSingle::new(origin, origin_direction.clone(), output.clone()),
+                RailHopeSingle::new(next_origin, origin_direction, output.clone()),
             ],
             electric_larges: Vec::new(),
             lamps: Vec::new(),
@@ -92,22 +98,22 @@ impl RailHopeAppender for RailHopeDual {
         unimplemented!()
     }
 
-    fn to_fac(&self, output: &mut FacItemOutput) {
-        let output = &mut output.context_handle("DualRail".into());
-        for hope in &self.hopes {
-            hope.to_fac(output);
-        }
-        for position in &self.electric_larges {
-            output.write(BlueprintItem::new(
-                FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
-                *position,
-            ));
-        }
-        for position in &self.electric_larges {
-            output.write(BlueprintItem::new(
-                FacEntLamp::new().into_boxed(),
-                *position,
-            ));
-        }
-    }
+    // fn to_fac(&self) {
+    //     let output = &mut output.context_handle("DualRail".into());
+    //     for hope in &self.hopes {
+    //         hope.to_fac(output);
+    //     }
+    //     for position in &self.electric_larges {
+    //         output.write(BlueprintItem::new(
+    //             FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
+    //             *position,
+    //         ));
+    //     }
+    //     for position in &self.electric_larges {
+    //         output.write(BlueprintItem::new(
+    //             FacEntLamp::new().into_boxed(),
+    //             *position,
+    //         ));
+    //     }
+    // }
 }

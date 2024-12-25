@@ -7,6 +7,7 @@ use crate::game_entities::belt_transport::FacEntBeltTransport;
 use crate::game_entities::belt_under::{FacEntBeltUnder, FacEntBeltUnderType};
 use crate::game_entities::direction::FacDirectionQuarter;
 use std::borrow::Borrow;
+use std::rc::Rc;
 
 /// Belt linkage v1 "Gavis Bettel 🎩"
 ///
@@ -17,6 +18,7 @@ pub struct FacBlkBettelBelt {
     origin_direction: FacDirectionQuarter,
     btype: FacEntBeltType,
     links: Vec<FacBlkBettelBeltLink>,
+    output: Rc<FacItemOutput>,
 }
 
 pub struct FacBlkBettelBeltLink {
@@ -35,12 +37,14 @@ impl FacBlkBettelBelt {
         btype: FacEntBeltType,
         origin: VPoint,
         origin_direction: FacDirectionQuarter,
+        output: Rc<FacItemOutput>,
     ) -> Self {
         Self {
             btype,
             origin,
             origin_direction,
             links: Vec::new(),
+            output,
         }
     }
 
@@ -56,7 +60,7 @@ impl FacBlkBettelBelt {
             return;
         }
 
-        self.links.push(FacBlkBettelBeltLink {
+        self.write_link(FacBlkBettelBeltLink {
             ltype: if is_underground {
                 assert!(length > 2, "underground length {} too short", length);
                 FacBlkBettelBeltLinkType::Underground { length }
@@ -84,49 +88,48 @@ impl FacBlkBettelBelt {
         self.add_straight_raw(1, false, new_direction);
     }
 
-    pub fn to_fac(&self, output: &mut FacItemOutput) {
+    pub fn write_link(&mut self, link: FacBlkBettelBeltLink) {
         let mut cursor = self.origin;
-        for link in &self.links {
-            match &link.ltype {
-                FacBlkBettelBeltLinkType::Transport { length } => {
-                    let mut last_cursor = cursor;
-                    for i in 0..*length {
-                        last_cursor = cursor.move_direction(&link.direction, i);
-                        output.write(BlueprintItem::new(
-                            FacEntBeltTransport::new(self.btype.clone(), link.direction.clone())
-                                .into_boxed(),
-                            last_cursor,
-                        ))
-                    }
-                    // move cursor past the last belt we placed
-                    cursor = last_cursor.move_direction(&link.direction, 1);
+        match &link.ltype {
+            FacBlkBettelBeltLinkType::Transport { length } => {
+                let mut last_cursor = cursor;
+                for i in 0..*length {
+                    last_cursor = cursor.move_direction(&link.direction, i);
+                    self.output.write(BlueprintItem::new(
+                        FacEntBeltTransport::new(self.btype.clone(), link.direction.clone())
+                            .into_boxed(),
+                        last_cursor,
+                    ))
                 }
-                FacBlkBettelBeltLinkType::Underground { length } => {
-                    output.write(BlueprintItem::new(
-                        FacEntBeltUnder::new(
-                            self.btype.clone(),
-                            link.direction.clone(),
-                            FacEntBeltUnderType::Input,
-                        )
-                        .into_boxed(),
-                        cursor,
-                    ));
+                // move cursor past the last belt we placed
+                cursor = last_cursor.move_direction(&link.direction, 1);
+            }
+            FacBlkBettelBeltLinkType::Underground { length } => {
+                self.output.write(BlueprintItem::new(
+                    FacEntBeltUnder::new(
+                        self.btype.clone(),
+                        link.direction.clone(),
+                        FacEntBeltUnderType::Input,
+                    )
+                    .into_boxed(),
+                    cursor,
+                ));
 
-                    output.write(BlueprintItem::new(
-                        FacEntBeltUnder::new(
-                            self.btype.clone(),
-                            link.direction.clone(),
-                            FacEntBeltUnderType::Output,
-                        )
-                        .into_boxed(),
-                        cursor.move_direction(&link.direction, *length),
-                    ));
+                self.output.write(BlueprintItem::new(
+                    FacEntBeltUnder::new(
+                        self.btype.clone(),
+                        link.direction.clone(),
+                        FacEntBeltUnderType::Output,
+                    )
+                    .into_boxed(),
+                    cursor.move_direction(&link.direction, *length),
+                ));
 
-                    cursor = cursor.move_direction(&link.direction, *length + 1)
-                }
-                FacBlkBettelBeltLinkType::Splitter => unimplemented!(),
-            };
-        }
+                cursor = cursor.move_direction(&link.direction, *length + 1)
+            }
+            FacBlkBettelBeltLinkType::Splitter => unimplemented!(),
+        };
+        self.links.push(link);
     }
 
     fn current_direction(&self) -> &FacDirectionQuarter {
@@ -141,7 +144,7 @@ impl FacBlkBettelBelt {
         origin: VPoint,
         mid_span: usize,
         belt_total: usize,
-        output: &mut FacItemOutput,
+        output: Rc<FacItemOutput>,
     ) {
         let belt_total_0 = belt_total - 1;
 
@@ -150,6 +153,7 @@ impl FacBlkBettelBelt {
                 btype.borrow().clone(),
                 origin.move_y_usize(belt_num),
                 FacDirectionQuarter::East,
+                output.clone(),
             );
             belt.add_straight(belt_total_0 - belt_num);
             belt.add_turn90(false);
@@ -157,8 +161,6 @@ impl FacBlkBettelBelt {
             belt.add_straight((belt_total_0 - belt_num) * 2 + mid_span);
             belt.add_turn90(false);
             belt.add_straight(belt_total_0 - belt_num);
-
-            belt.to_fac(output);
         }
     }
 
@@ -167,7 +169,7 @@ impl FacBlkBettelBelt {
         origin: VPoint,
         mid_span: usize,
         belt_total: usize,
-        output: &mut FacItemOutput,
+        output: Rc<FacItemOutput>,
     ) {
         let belt_total_0 = belt_total - 1;
 
@@ -176,6 +178,7 @@ impl FacBlkBettelBelt {
                 btype.borrow().clone(),
                 origin.move_xy_usize(belt_total_0, belt_num),
                 FacDirectionQuarter::West,
+                output.clone(),
             );
             belt.add_straight(belt_total_0 - belt_num);
             belt.add_turn90(true);
@@ -183,8 +186,6 @@ impl FacBlkBettelBelt {
             belt.add_straight((belt_total_0 - belt_num) * 2 + mid_span);
             belt.add_turn90(true);
             belt.add_straight(belt_total_0 - belt_num);
-
-            belt.to_fac(output)
         }
     }
 }

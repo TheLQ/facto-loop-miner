@@ -1,3 +1,6 @@
+use std::borrow::BorrowMut;
+use std::rc::Rc;
+
 use exhaustive::Exhaustive;
 use facto_loop_miner_common::log_init;
 use facto_loop_miner_fac_engine::blueprint::bpitem::BlueprintItem;
@@ -44,25 +47,26 @@ fn inner_main() -> AdmiralResult<()> {
     let mut client = AdmiralClient::new()?;
     client.auth()?;
 
-    match 9 {
-        1 => make_basic(&mut client)?,
-        2 => make_assembler_thru(&mut client)?,
-        3 => make_belt_bettel(&mut client)?,
-        4 => make_rail_spiral_90(&mut client)?,
-        5 => make_rail_shift_45(&mut client)?,
-        6 => make_rail_dual_turning(&mut client)?,
-        7 => make_rail_dual_powered(&mut client)?,
-        8 => make_rail_station(&mut client)?,
-        9 => make_rail_loop(&mut client)?,
+    let mut output = FacItemOutput::new_admiral(client).into_rc();
+
+    match 8 {
+        1 => make_basic(output)?,
+        2 => make_assembler_thru(output)?,
+        3 => make_belt_bettel(output)?,
+        4 => make_rail_spiral_90(output)?,
+        5 => make_rail_shift_45(output)?,
+        6 => make_rail_dual_turning(output)?,
+        7 => make_rail_dual_powered(output)?,
+        8 => make_rail_station(output)?,
+        9 => make_rail_loop(output)?,
         _ => panic!("uihhh"),
     }
 
     Ok(())
 }
 
-fn make_basic(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    execute_destroy(admiral)?;
-    let mut output = FacItemOutput::new_admiral(admiral);
+fn make_basic(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
+    execute_destroy(output.clone())?;
 
     output.write(BlueprintItem::new(
         FacEntChest::new(FacEntChestType::Active).into_boxed(),
@@ -72,9 +76,8 @@ fn make_basic(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     Ok(())
 }
 
-fn make_assembler_thru(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    execute_destroy(admiral)?;
-    let mut output = FacItemOutput::new_admiral(admiral);
+fn make_assembler_thru(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
+    execute_destroy(output.clone())?;
 
     let farm = FacBlkAssemblerThru {
         assembler: FacEntAssembler::new(FacTier::Tier3, "copper-cable".into(), [
@@ -86,20 +89,21 @@ fn make_assembler_thru(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         inserter_type: FacEntInserterType::Fast,
         width: 4,
         height: 3,
+        output: output.clone(),
     };
-    farm.generate(VPoint::new(5, 5), &mut output);
+    farm.generate(VPoint::new(5, 5));
 
     Ok(())
 }
 
-fn make_belt_bettel(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    execute_destroy(admiral)?;
-    let mut output = FacItemOutput::new_admiral(admiral);
+fn make_belt_bettel(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
+    execute_destroy(output.clone())?;
 
     let mut belt = FacBlkBettelBelt::new(
         FacEntBeltType::Basic,
         VPoint::new(5, 5),
         FacDirectionQuarter::South,
+        output.clone(),
     );
     belt.add_straight(5);
     belt.add_turn90(false);
@@ -107,24 +111,21 @@ fn make_belt_bettel(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     belt.add_turn90(true);
     belt.add_straight(5);
 
-    belt.to_fac(&mut output);
-
     Ok(())
 }
 
-fn make_rail_spiral_90(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    execute_destroy(admiral)?;
-    let mut output = FacItemOutput::new_admiral_dedupe(admiral);
+fn make_rail_spiral_90(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
+    execute_destroy(output.clone())?;
 
     let origin: VPoint = VPoint::zero();
     for clockwise in [
         true,  //
         false, //
     ] {
-        let hope1 = RailHopeSingle::new(origin, FacDirectionQuarter::North);
-        let hope2 = RailHopeSingle::new(origin, FacDirectionQuarter::South);
-        let hope3 = RailHopeSingle::new(origin, FacDirectionQuarter::East);
-        let hope4 = RailHopeSingle::new(origin, FacDirectionQuarter::West);
+        let hope1 = RailHopeSingle::new(origin, FacDirectionQuarter::North, output.clone());
+        let hope2 = RailHopeSingle::new(origin, FacDirectionQuarter::South, output.clone());
+        let hope3 = RailHopeSingle::new(origin, FacDirectionQuarter::East, output.clone());
+        let hope4 = RailHopeSingle::new(origin, FacDirectionQuarter::West, output.clone());
         for mut hope in [
             hope1, //
             hope2, //
@@ -136,40 +137,33 @@ fn make_rail_spiral_90(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
             hope.add_straight(2);
             hope.add_turn90(clockwise);
             hope.add_straight(2);
-
-            hope.to_fac(&mut output);
         }
     }
 
     Ok(())
 }
 
-fn make_rail_shift_45(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    execute_destroy(admiral)?;
-
-    let mut output: FacItemOutput<'_> = FacItemOutput::new_admiral_dedupe(admiral);
+fn make_rail_shift_45(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
+    execute_destroy(output.clone())?;
 
     let origin = VPoint::zero();
     for clockwise in [false /*, false*/] {
-        let hope1 = RailHopeSingle::new(origin, FacDirectionQuarter::North);
-        let hope2 = RailHopeSingle::new(origin, FacDirectionQuarter::South);
-        let hope3 = RailHopeSingle::new(origin, FacDirectionQuarter::East);
-        let hope4 = RailHopeSingle::new(origin, FacDirectionQuarter::West);
+        let hope1 = RailHopeSingle::new(origin, FacDirectionQuarter::North, output.clone());
+        let hope2 = RailHopeSingle::new(origin, FacDirectionQuarter::South, output.clone());
+        let hope3 = RailHopeSingle::new(origin, FacDirectionQuarter::East, output.clone());
+        let hope4 = RailHopeSingle::new(origin, FacDirectionQuarter::West, output.clone());
         for mut hope in [hope1, hope2, hope3, hope4] {
             hope.add_straight(2);
             hope.add_shift45(clockwise, 3);
-            hope.add_straight(2);
-
-            hope.to_fac(&mut output);
+            hope.add_straight(2)
         }
     }
 
     Ok(())
 }
 
-fn make_rail_dual_turning(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    execute_destroy(admiral)?;
-    let mut output = FacItemOutput::new_admiral_dedupe(admiral);
+fn make_rail_dual_turning(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
+    execute_destroy(output.clone())?;
 
     for clockwise in [true, false] {
         for direction in [
@@ -178,22 +172,19 @@ fn make_rail_dual_turning(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
             FacDirectionQuarter::South,
             FacDirectionQuarter::West,
         ] {
-            let mut hope = RailHopeDual::new(VPoint::zero(), direction);
+            let mut hope = RailHopeDual::new(VPoint::zero(), direction, output.clone());
             hope.add_straight(5);
             hope.add_turn90(clockwise);
             hope.add_straight(5);
             hope.add_straight(5);
-
-            hope.to_fac(&mut output);
         }
     }
 
     Ok(())
 }
 
-fn make_rail_dual_powered(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    execute_destroy(admiral)?;
-    let mut output = FacItemOutput::new_admiral(admiral);
+fn make_rail_dual_powered(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
+    execute_destroy(output.clone())?;
 
     for direction in [
         FacDirectionQuarter::North,
@@ -203,14 +194,12 @@ fn make_rail_dual_powered(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     ] {
         let origin = VPoint::zero().move_direction(&direction, 6);
 
-        let mut hope = RailHopeDual::new(origin, direction);
+        let mut hope = RailHopeDual::new(origin, direction, output.clone());
         hope.add_straight_section();
         hope.add_turn90(true);
         hope.add_straight_section();
         hope.add_turn90(true);
         hope.add_straight_section();
-
-        hope.to_fac(&mut output);
         // for entity in hope.to_fac() {
         //     let bpfac = entity.to_blueprint();
         //     // let bppos = &bpfac.position;
@@ -226,29 +215,30 @@ fn make_rail_dual_powered(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     Ok(())
 }
 
-fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    execute_destroy(admiral)?;
-    let mut output = FacItemOutput::new_admiral(admiral);
+fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
+    execute_destroy(output.clone())?;
 
     let station = FacBlkRailStation {
         name: "test".into(),
-        wagons: 3,
-        front_engines: 2,
-        chests: Some(FacEntChestType::Steel),
+        wagons: 4,
+        front_engines: 0,
+        // chests: Some(FacEntChestType::Steel),
+        chests: None,
         inserter: FacEntInserterType::Basic,
         is_east: true,
         // is_east: false,
         is_up: true,
         // is_up: false,
         is_input: true,
+        is_create_train: true,
+        output,
     };
-    station.generate(VPOINT_ZERO, &mut output);
+    station.generate(VPOINT_ZERO);
     Ok(())
 }
 
-fn make_rail_loop(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
-    execute_destroy(admiral)?;
-    let mut output = FacItemOutput::new_admiral(admiral);
+fn make_rail_loop(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
+    execute_destroy(output.clone())?;
 
     let origin = VPoint::zero();
 
@@ -259,24 +249,24 @@ fn make_rail_loop(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
     let mut rail_loop = FacBlkRailLoop::new(FacBlkRailLoopProps {
         name_prefix: "Basic".into(),
-        wagons: 2,
+        wagons: 3,
         front_engines: 2,
         origin,
         origin_direction: FacDirectionQuarter::West,
         chest_type: Some(FacEntChestType::Infinity),
         inserter_type: FacEntInserterType::Stack,
         is_start_input: true,
+        output: output.clone(),
     });
     rail_loop.add_turn90(false);
     rail_loop.add_straight();
     rail_loop.add_turn90(false);
-
-    rail_loop.to_fac(&mut output);
+    rail_loop.add_base_start_and_end();
 
     Ok(())
 }
 
-fn execute_destroy(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
+fn execute_destroy(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     let command = FacDestroy::new_filtered(
         150,
         FacEntityName::iter_exhaustive(None)
@@ -285,7 +275,7 @@ fn execute_destroy(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     );
     // Do not use, this deletes mine resource tiles
     // let command = FacDestroy::new_everything(50);
-    admiral.execute_checked_command(command.into_boxed())?;
+    output.admiral_execute_command(command.into_boxed())?;
 
     Ok(())
 }

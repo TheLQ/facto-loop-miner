@@ -1,15 +1,18 @@
-use tracing::warn;
+use std::rc::Rc;
+
+use tracing::{info, warn};
 
 use crate::{
     blueprint::{bpitem::BlueprintItem, output::FacItemOutput},
     common::{entity::FacEntity, vpoint::VPoint},
     game_entities::{
+        cargo_wagon::FacEntWagon,
         chest::{FacEntChest, FacEntChestType},
         direction::FacDirectionQuarter,
         electric_large::{FacEntElectricLarge, FacEntElectricLargeType},
         electric_mini::{FacEntElectricMini, FacEntElectricMiniType},
         inserter::{FacEntInserter, FacEntInserterType},
-        lamp::FacEntLamp,
+        locomotive::FacEntLocomotive,
         rail::RAIL_STRAIGHT_DIAMETER,
         rail_signal::{FacEntRailSignal, FacEntRailSignalType},
         train_stop::FacEntTrainStop,
@@ -32,11 +35,13 @@ pub struct FacBlkRailStation {
     pub is_east: bool,
     pub is_up: bool,
     pub is_input: bool,
+    pub is_create_train: bool,
+    pub output: Rc<FacItemOutput>,
 }
 
 impl FacBlock for FacBlkRailStation {
-    fn generate(&self, origin: VPoint, output: &mut FacItemOutput) {
-        let output = &mut output.context_handle(format!("Station-{}", self.name));
+    fn generate(&self, origin: VPoint) {
+        let _ = &mut self.output.context_handle(format!("Station-{}", self.name));
         let base_direction;
         let fill_x_direction;
         let origin_after_straight;
@@ -72,12 +77,12 @@ impl FacBlock for FacBlkRailStation {
             }
         };
 
-        Self::place_electric_initial(&origin, &base_direction, output);
+        Self::place_electric_initial(&origin, &base_direction, &self.output);
 
-        let mut hope = RailHopeSingle::new(origin, base_direction.clone());
+        let mut hope = RailHopeSingle::new(origin, base_direction.clone(), self.output.clone());
         hope.add_shift45(rotation, 6);
 
-        Self::place_electric_connect(&hope.current_next_pos(), &base_direction, output);
+        Self::place_electric_connect(&hope.current_next_pos(), &base_direction, &self.output);
 
         const RAILS_PER_CART: f32 = 3.5;
         let base_straight: usize =
@@ -103,20 +108,25 @@ impl FacBlock for FacBlkRailStation {
             stop_rail_pos,
             fill_x_direction,
             rotation,
+            output: self.output.clone(),
         };
-        stop_block.place_train_stop(output, self.name.clone());
-        stop_block.place_side_inserter_electrics(output);
-        stop_block.place_side_inserters(&self.inserter, self.is_input, output);
-        stop_block.place_rail_signals(output);
+        stop_block.place_train_stop(self.name.clone());
+        stop_block.place_side_inserter_electrics();
+        // stop_block.place_side_inserters(&self.inserter, self.is_input);
+        stop_block.place_rail_signals();
         if let Some(chests) = &self.chests {
-            stop_block.place_side_chests(output, chests);
+            stop_block.place_side_chests(chests);
         }
 
         hope.add_turn90(!rotation);
         hope.add_turn90(!rotation);
         hope.add_straight(base_straight + /*opposite of 45*/13);
 
-        hope.to_fac(output);
+        if self.is_create_train {
+            // rails beneath must be placed already
+            // otherwise it supposedly creates but doesn't show visually at least
+            stop_block.place_train();
+        }
     }
 }
 
@@ -124,7 +134,7 @@ impl FacBlkRailStation {
     fn place_electric_initial(
         origin: &VPoint,
         base_direction: &FacDirectionQuarter,
-        ouput: &mut FacItemOutput,
+        ouput: &FacItemOutput,
     ) {
         let electric_start_pos = origin.move_direction(base_direction.rotate_once(), 2);
         ouput.write(BlueprintItem::new(
@@ -136,7 +146,7 @@ impl FacBlkRailStation {
     fn place_electric_connect(
         origin: &VPoint,
         base_direction: &FacDirectionQuarter,
-        ouput: &mut FacItemOutput,
+        ouput: &FacItemOutput,
     ) {
         let electric_start_pos = origin
             .move_direction(base_direction.rotate_once(), 4)
@@ -154,18 +164,14 @@ struct FacBlkRailStop {
     stop_rail_pos: VPoint,
     fill_x_direction: FacDirectionQuarter,
     rotation: bool,
+    output: Rc<FacItemOutput>,
 }
 
 impl FacBlkRailStop {
-    fn place_side_inserters(
-        &self,
-        inserter: &FacEntInserterType,
-        is_input: bool,
-        output: &mut FacItemOutput,
-    ) {
-        let output = &mut output.subcontext_handle("Inserters".into());
+    fn place_side_inserters(&mut self, inserter: &FacEntInserterType, is_input: bool) {
+        let _ = self.output.context_handle("Inserter".into());
         for car in 0..self.wagons {
-            let output = &mut output.subcontext_handle(format!("Car{}", car));
+            let _ = self.output.subcontext_handle(format!("Car{}", car));
             let car_x_offset = self.get_wagon_x_offset(car);
 
             for exit in 0..INSERTERS_PER_CAR {
@@ -173,7 +179,8 @@ impl FacBlkRailStop {
                     (true, FacDirectionQuarter::South),
                     (false, FacDirectionQuarter::North),
                 ] {
-                    let output = &mut output
+                    let _ = self
+                        .output
                         .subcontext_handle(if negative { "Bottom" } else { "Top" }.into());
                     let direction = if is_input {
                         direction.rotate_flip()
@@ -187,7 +194,7 @@ impl FacBlkRailStop {
                             /*pre-pole*/ 1 + car_x_offset + exit,
                         )
                         .move_y(centered_y_offset(negative, 1));
-                    output.write(BlueprintItem::new(
+                    self.output.write(BlueprintItem::new(
                         FacEntInserter::new(inserter.clone(), direction).into_boxed(),
                         start,
                     ));
@@ -196,7 +203,7 @@ impl FacBlkRailStop {
         }
     }
 
-    fn place_side_inserter_electrics(&self, output: &mut FacItemOutput) {
+    fn place_side_inserter_electrics(&self) {
         // lamps and poles on start and end
         for car in 0..(self.wagons + 1) {
             let car_x_offset = self.get_wagon_x_offset(car);
@@ -205,18 +212,18 @@ impl FacBlkRailStop {
                 .stop_rail_pos
                 .move_direction(&self.fill_x_direction, car_x_offset);
 
-            output.write(BlueprintItem::new(
-                FacEntLamp::new().into_boxed(),
-                start.move_y(centered_y_offset(!self.rotation, 2)),
-            ));
-            output.write(BlueprintItem::new(
+            // output.write(BlueprintItem::new(
+            //     FacEntLamp::new().into_boxed(),
+            //     start.move_y(centered_y_offset(!self.rotation, 2)),
+            // ));
+            self.output.write(BlueprintItem::new(
                 FacEntElectricMini::new(FacEntElectricMiniType::Medium).into_boxed(),
                 start.move_y(centered_y_offset(!self.rotation, 1)),
             ));
         }
     }
 
-    fn place_side_chests(&self, output: &mut FacItemOutput, chest_type: &FacEntChestType) {
+    fn place_side_chests(&self, chest_type: &FacEntChestType) {
         for car in 0..self.wagons {
             let car_x_offset = self.get_wagon_x_offset(car);
 
@@ -229,7 +236,7 @@ impl FacBlkRailStop {
                             /*pre-pole*/ 1 + car_x_offset + exit,
                         )
                         .move_y(centered_y_offset(negative, 2));
-                    output.write(BlueprintItem::new(
+                    self.output.write(BlueprintItem::new(
                         FacEntChest::new(chest_type.clone()).into_boxed(),
                         start,
                     ));
@@ -238,16 +245,16 @@ impl FacBlkRailStop {
         }
     }
 
-    fn place_train_stop(&self, output: &mut FacItemOutput, station_name: String) {
+    fn place_train_stop(&self, station_name: String) {
         // wtf? Why does this not work? centered_y_offset(self.rotation, 2)
         let y_offset = if self.rotation { -2 } else { 2 };
-        output.write(BlueprintItem::new(
+        self.output.write(BlueprintItem::new(
             FacEntTrainStop::new(self.fill_x_direction.rotate_flip(), station_name).into_boxed(),
             self.stop_rail_pos.move_y(y_offset),
         ));
     }
 
-    fn place_rail_signals(&self, output: &mut FacItemOutput) {
+    fn place_rail_signals(&self) {
         for car in 0..self.wagons {
             let car_x_offset = self.get_wagon_x_offset(car);
 
@@ -258,14 +265,14 @@ impl FacBlkRailStop {
                     /*pre-pole*/ 1 + car_x_offset + INSERTERS_PER_CAR,
                 )
                 .move_y(centered_y_offset(self.rotation, 1));
-            output.write(BlueprintItem::new(
+            self.output.write(BlueprintItem::new(
                 FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction.clone())
                     .into_boxed(),
                 start,
             ));
         }
 
-        output.write(BlueprintItem::new(
+        self.output.write(BlueprintItem::new(
             FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction.clone())
                 .into_boxed(),
             self.stop_rail_pos
@@ -274,9 +281,32 @@ impl FacBlkRailStop {
         ));
     }
 
+    fn place_train(&self) {
+        let mut rolling_counter = 0;
+
+        for i in 0..(self.front_engines + self.wagons) {
+            rolling_counter += 1;
+            let rolling_calc = (7 * rolling_counter) + 3;
+            info!(
+                "rolling total {} origin {:?}",
+                rolling_calc, self.stop_rail_pos
+            );
+            let entity: Box<dyn FacEntity> = if i > self.wagons {
+                FacEntLocomotive::new().into_boxed()
+            } else {
+                FacEntWagon::new().into_boxed()
+            };
+            self.output.write(BlueprintItem::new(
+                entity,
+                self.stop_rail_pos
+                    .move_direction(&self.fill_x_direction, rolling_calc),
+            ));
+        }
+    }
+
     fn get_wagon_x_offset(&self, wagon: usize) -> usize {
         let engine_first_offset = 6;
-        let engine_rest_offset = (self.front_engines - 1) * 7;
+        let engine_rest_offset = self.front_engines.saturating_sub(1) * 7;
         let wagon_offset = wagon * 7;
         engine_first_offset + engine_rest_offset + wagon_offset
     }

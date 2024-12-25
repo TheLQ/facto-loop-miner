@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     blueprint::output::FacItemOutput,
     common::vpoint::VPoint,
@@ -23,6 +25,7 @@ pub struct FacBlkRailLoop {
     chest_type: Option<FacEntChestType>,
     inserter_type: FacEntInserterType,
     is_start_input: bool,
+    output: Rc<FacItemOutput>,
 }
 
 impl FacBlkRailLoop {
@@ -34,8 +37,9 @@ impl FacBlkRailLoop {
             chest_type: props.chest_type,
             inserter_type: props.inserter_type,
             origin: props.origin,
-            hope: RailHopeDual::new(props.origin, props.origin_direction),
+            hope: RailHopeDual::new(props.origin, props.origin_direction, props.output.clone()),
             is_start_input: props.is_start_input,
+            output: props.output,
         }
     }
 
@@ -47,7 +51,10 @@ impl FacBlkRailLoop {
         self.hope.add_turn90(clockwise);
     }
 
-    fn add_start(&mut self, output: &mut FacItemOutput) {
+    fn add_start(&mut self) {
+        let _ = &mut self
+            .output
+            .context_handle(format!("Loop-{}", self.name_prefix));
         let is_input = self.is_start_input;
         let station = FacBlkRailStation {
             name: station_input_to_name(is_input, &self.name_prefix),
@@ -58,6 +65,8 @@ impl FacBlkRailLoop {
             is_east: true,
             is_up: true,
             is_input,
+            is_create_train: is_input,
+            output: self.output.clone(),
         };
 
         let mut origin = self.origin;
@@ -72,10 +81,13 @@ impl FacBlkRailLoop {
         // RailHope places rail here
         origin = origin.move_x(2);
 
-        station.generate(origin, output)
+        station.generate(origin)
     }
 
-    fn add_end(&mut self, output: &mut FacItemOutput) {
+    fn add_end(&mut self) {
+        let _ = &mut self
+            .output
+            .context_handle(format!("Loop-{}", self.name_prefix));
         // self.is_end_set = true;
         let is_input = !self.is_start_input;
         let station = FacBlkRailStation {
@@ -87,6 +99,8 @@ impl FacBlkRailLoop {
             is_east: true,
             is_up: true,
             is_input,
+            is_create_train: is_input,
+            output: self.output.clone(),
         };
 
         let mut origin = self.hope.next_buildable_point();
@@ -96,15 +110,12 @@ impl FacBlkRailLoop {
             }
             dir => panic!("unsupported dir {}", dir),
         }
-        station.generate(origin, output)
+        station.generate(origin)
     }
 
-    pub fn to_fac(mut self, output: &mut FacItemOutput) {
-        let output = &mut output.context_handle(format!("Loop-{}", self.name_prefix));
-        self.add_start(output);
-        self.add_end(output);
-
-        self.hope.to_fac(output)
+    pub fn add_base_start_and_end(&mut self) {
+        self.add_start();
+        self.add_end();
     }
 }
 
@@ -125,4 +136,5 @@ pub struct FacBlkRailLoopProps {
     pub chest_type: Option<FacEntChestType>,
     pub inserter_type: FacEntInserterType,
     pub is_start_input: bool,
+    pub output: Rc<FacItemOutput>,
 }
