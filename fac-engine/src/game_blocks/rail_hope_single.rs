@@ -121,7 +121,11 @@ impl RailHopeAppender for RailHopeSingle {
         (signs and axis depend on direction)
 
         Compass rotations have no apparent pattern but stable in all turn directions
-        (eg. curved rail from North to NorthWest in Factorio is... curved-rail North?)
+        "Clockwise" is 1 > -2 > -1
+        "Counter-Clockwise" is 0 > 1 > 2
+
+        Directions appear arbitraty
+        eg. curved rail from North to NorthWest in Factorio is... curved-rail North?
         */
         let mut rails = Vec::new();
 
