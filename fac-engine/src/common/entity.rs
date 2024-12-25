@@ -113,7 +113,11 @@ pub trait FacArea {
 
     fn rectangle_size(&self) -> Size;
 
-    fn to_fac_position(&self, position: &VPoint) -> FacBpPosition;
+    fn to_fac_position(&self, position: &VPoint) -> FacBpPosition {
+        let size = self.rectangle_size();
+        position
+            .to_fac_with_offset_rectangle(*size.width() as f32 / 2.0, *size.height() as f32 / 2.0)
+    }
 }
 
 pub trait SquareArea {
@@ -134,10 +138,6 @@ impl<T: SquareArea> FacArea for T {
 
     fn rectangle_size(&self) -> Size {
         Size::square(T::area_diameter())
-    }
-
-    fn to_fac_position(&self, position: &VPoint) -> FacBpPosition {
-        position.to_fac_with_offset(T::area_diameter() as f32 / 2.0)
     }
 }
 

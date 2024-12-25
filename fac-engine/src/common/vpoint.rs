@@ -76,8 +76,12 @@ impl VPoint {
     }
 
     /// Factorio export. Offset is half the entity width
-    pub fn to_fac_with_offset(&self, offset: f32) -> FacBpPosition {
-        FacBpPosition::new(self.x as f32 + offset, self.y as f32 + offset)
+    pub fn to_fac_with_offset_rectangle(&self, offset_x: f32, offset_y: f32) -> FacBpPosition {
+        FacBpPosition::new(self.x as f32 + offset_x, self.y as f32 + offset_y)
+    }
+
+    pub fn to_fac_exact(&self) -> FacBpPosition {
+        FacBpPosition::new(self.x as f32, self.y as f32)
     }
 
     // pub fn to_cv_point(&self) -> Point {

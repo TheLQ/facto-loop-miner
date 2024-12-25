@@ -1,10 +1,6 @@
-use crate::{
-    blueprint::bpfac::position::FacBpPosition,
-    common::{
-        entity::{FacArea, FacEntity, Size},
-        names::FacEntityName,
-        vpoint::VPoint,
-    },
+use crate::common::{
+    entity::{FacArea, FacEntity, Size},
+    names::FacEntityName,
 };
 
 use super::{
@@ -34,14 +30,6 @@ impl FacArea for FacEntBeltSplit {
             FacDirectionQuarter::North | FacDirectionQuarter::South => Size::rectangle(2, 1),
             FacDirectionQuarter::East | FacDirectionQuarter::West => Size::rectangle(1, 2),
         }
-    }
-
-    fn to_fac_position(&self, position: &VPoint) -> FacBpPosition {
-        match self.direction {
-            FacDirectionQuarter::North | FacDirectionQuarter::South => position.move_x(1),
-            FacDirectionQuarter::East | FacDirectionQuarter::West => position.move_y(1),
-        }
-        .to_fac_with_offset(0.0)
     }
 }
 
