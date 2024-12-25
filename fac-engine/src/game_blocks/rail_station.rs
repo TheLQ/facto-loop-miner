@@ -36,6 +36,7 @@ pub struct FacBlkRailStation {
 
 impl FacBlock for FacBlkRailStation {
     fn generate(&self, origin: VPoint, output: &mut FacItemOutput) {
+        let output = &mut output.context_handle(format!("Station-{}", self.name));
         let base_direction;
         let fill_x_direction;
         let origin_after_straight;
@@ -162,7 +163,9 @@ impl FacBlkRailStop {
         is_input: bool,
         output: &mut FacItemOutput,
     ) {
+        let output = &mut output.subcontext_handle("Inserters".into());
         for car in 0..self.wagons {
+            let output = &mut output.subcontext_handle(format!("Car{}", car));
             let car_x_offset = self.get_wagon_x_offset(car);
 
             for exit in 0..INSERTERS_PER_CAR {
@@ -170,6 +173,8 @@ impl FacBlkRailStop {
                     (true, FacDirectionQuarter::South),
                     (false, FacDirectionQuarter::North),
                 ] {
+                    let output = &mut output
+                        .subcontext_handle(if negative { "Bottom" } else { "Top" }.into());
                     let direction = if is_input {
                         direction.rotate_flip()
                     } else {

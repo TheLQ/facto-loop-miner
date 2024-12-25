@@ -2,7 +2,10 @@ use itertools::Itertools;
 use tracing::debug;
 
 use crate::{
-    blueprint::bpfac::{FacBpInteger, entity::FacBpEntity, position::FacBpPosition},
+    blueprint::{
+        bpfac::{FacBpInteger, entity::FacBpEntity, position::FacBpPosition},
+        output::FacItemOutput,
+    },
     common::names::FacEntityName,
     game_entities::{
         belt_under::FacEntBeltUnderType, direction::FacDirectionEighth, module::FacModule,
@@ -25,24 +28,25 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
         &self,
         entity_number: usize,
         position: &VPoint,
-        contexts: &Vec<String>,
+        output: &FacItemOutput,
     ) -> FacBpEntity {
-        self.to_fac(entity_number.try_into().unwrap(), position, contexts)
+        self.to_fac(entity_number.try_into().unwrap(), position, output)
     }
 
     fn to_fac(
         &self,
         entity_number: FacBpInteger,
         position: &VPoint,
-        contexts: &Vec<String>,
+        output: &FacItemOutput,
     ) -> FacBpEntity {
         let facpos = self.to_fac_position(position);
         debug!(
-            "blueprint pos {:6} facpos {:10} {:?} [{}]",
+            "blueprint pos {:6} facpos {:10} {:65} {contexts:34} {subcontexts}",
             position.display(),
             facpos.display(),
-            self,
-            contexts.iter().join("/")
+            format!("{:?}", self),
+            contexts = output.contexts.iter().join("/"),
+            subcontexts = output.subcontexts.iter().join("/"),
         );
         FacBpEntity {
             entity_number,

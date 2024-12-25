@@ -297,6 +297,7 @@ impl RailHopeAppender for RailHopeSingle {
     }
 
     fn to_fac(&self, output: &mut FacItemOutput) {
+        let output = &mut output.context_handle("Rail".into());
         for link in &self.links {
             link.to_fac(output);
         }
@@ -354,9 +355,7 @@ fn neg_if_false(flag: bool, value: i32) -> i32 {
 mod test {
     use crate::{
         blueprint::{
-            bpfac::entity::FacBpEntity,
-            contents::BlueprintContents,
-            output::FacItemOutput,
+            bpfac::entity::FacBpEntity, contents::BlueprintContents, output::FacItemOutput,
         },
         common::vpoint::VPoint,
         game_blocks::rail_hope::RailHopeAppender,

@@ -258,7 +258,7 @@ fn make_rail_loop(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     ));
 
     let mut rail_loop = FacBlkRailLoop::new(FacBlkRailLoopProps {
-        name_prefix: "test".into(),
+        name_prefix: "Basic".into(),
         wagons: 2,
         front_engines: 2,
         origin,

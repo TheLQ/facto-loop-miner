@@ -1,6 +1,6 @@
 use crate::common::{entity::FacEntity, vpoint::VPoint};
 
-use super::bpfac::entity::FacBpEntity;
+use super::{bpfac::entity::FacBpEntity, output::FacItemOutput};
 
 pub struct BlueprintItem {
     entity: Box<dyn FacEntity>,
@@ -21,7 +21,7 @@ impl BlueprintItem {
         &self.position
     }
 
-    pub fn to_blueprint(&self, contexts: &Vec<String>) -> FacBpEntity {
-        self.entity().to_fac(0, self.position(), contexts)
+    pub fn to_blueprint(&self, output: &FacItemOutput) -> FacBpEntity {
+        self.entity().to_fac(0, self.position(), output)
     }
 }

@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 use crate::admiral::{
     executor::{LuaCompiler, client::AdmiralClient},
     lua_command::LuaCommand,
@@ -12,7 +14,8 @@ use super::{
 pub struct FacItemOutput<'c> {
     otype: FacItemOutputType<'c>,
     dedupe: Option<Vec<FacBpPosition>>,
-    contexts: Vec<String>,
+    pub contexts: Vec<String>,
+    pub subcontexts: Vec<String>,
 }
 
 impl<'c> FacItemOutput<'c> {
@@ -24,6 +27,7 @@ impl<'c> FacItemOutput<'c> {
             },
             dedupe: None,
             contexts: Vec::new(),
+            subcontexts: Vec::new(),
         }
     }
 
@@ -35,6 +39,7 @@ impl<'c> FacItemOutput<'c> {
             },
             dedupe: Some(Vec::new()),
             contexts: Vec::new(),
+            subcontexts: Vec::new(),
         }
     }
 
@@ -43,11 +48,12 @@ impl<'c> FacItemOutput<'c> {
             otype: FacItemOutputType::Blueprint { blueprint },
             dedupe: None,
             contexts: Vec::new(),
+            subcontexts: Vec::new(),
         }
     }
 
     pub fn write(&mut self, item: BlueprintItem) {
-        let blueprint = item.to_blueprint(&mut self.contexts);
+        let blueprint = item.to_blueprint(&self);
         if let Some(dedupe) = &mut self.dedupe {
             let bppos = &blueprint.position;
             if dedupe.contains(bppos) {
@@ -60,9 +66,21 @@ impl<'c> FacItemOutput<'c> {
         self.otype.write(item, blueprint)
     }
 
-    // pub fn context_handle(&mut self, new_context: String) -> ContextHandle {
-    //     ContextHandle::new_context(&mut self.contexts, new_context)
-    // }
+    pub fn context_handle<'s>(&'s mut self, new_context: String) -> OutputContextHandle<'s, 'c> {
+        self.contexts.push(new_context);
+        OutputContextHandle {
+            output: self,
+            is_subcontext: false,
+        }
+    }
+
+    pub fn subcontext_handle<'s>(&'s mut self, new_context: String) -> OutputContextHandle<'s, 'c> {
+        self.subcontexts.push(new_context);
+        OutputContextHandle {
+            output: self,
+            is_subcontext: true,
+        }
+    }
 }
 
 pub enum FacItemOutputType<'c> {
@@ -97,19 +115,34 @@ impl FacItemOutputType<'_> {
     }
 }
 
-// pub struct ContextHandle<'c> {
-//     contexts: &'c mut Vec<String>,
-// }
+// Keeps the context alive for access during logging
+pub struct OutputContextHandle<'o, 'c> {
+    output: &'o mut FacItemOutput<'c>,
+    is_subcontext: bool,
+}
 
-// impl<'c> ContextHandle<'c> {
-//     fn new_context(contexts: &'c mut Vec<String>, name: String) -> Self {
-//         contexts.push(name);
-//         Self { contexts }
-//     }
-// }
+impl Drop for OutputContextHandle<'_, '_> {
+    fn drop(&mut self) {
+        let pruned = if self.is_subcontext {
+            &mut self.subcontexts
+        } else {
+            &mut self.output.contexts
+        };
+        let _context = pruned.pop().unwrap();
+        // println!("drop context {}", _context)
+    }
+}
 
-// impl Drop for ContextHandle<'_> {
-//     fn drop(&mut self) {
-//         self.contexts.pop().unwrap();
-//     }
-// }
+impl<'c> Deref for OutputContextHandle<'_, 'c> {
+    type Target = FacItemOutput<'c>;
+
+    fn deref(&self) -> &Self::Target {
+        self.output
+    }
+}
+
+impl<'c> DerefMut for OutputContextHandle<'_, 'c> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.output
+    }
+}

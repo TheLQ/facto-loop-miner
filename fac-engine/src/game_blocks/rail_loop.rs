@@ -100,6 +100,7 @@ impl FacBlkRailLoop {
     }
 
     pub fn to_fac(mut self, output: &mut FacItemOutput) {
+        let output = &mut output.context_handle(format!("Loop-{}", self.name_prefix));
         self.add_start(output);
         self.add_end(output);
 

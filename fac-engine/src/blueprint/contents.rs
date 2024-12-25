@@ -27,7 +27,8 @@ impl BlueprintContents {
             .map(|i| {
                 let entity_number = counter;
                 counter += 1;
-                i.entity().to_fac(entity_number, i.position(), &Vec::new())
+                i.entity()
+                    .to_fac(entity_number, i.position(), &Vec::new(), &Vec::new())
             })
             .collect()
     }

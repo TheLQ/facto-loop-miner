@@ -93,6 +93,7 @@ impl RailHopeAppender for RailHopeDual {
     }
 
     fn to_fac(&self, output: &mut FacItemOutput) {
+        let output = &mut output.context_handle("DualRail".into());
         for hope in &self.hopes {
             hope.to_fac(output);
         }
