@@ -2,6 +2,7 @@ pub mod blueprint;
 pub mod entity;
 pub mod icons;
 pub mod position;
+pub mod schedule;
 pub mod signal_id;
 
 pub type FacBpInteger = u32;

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{entity::FacBpEntity, icons::FacBpIcon};
+use super::{entity::FacBpEntity, icons::FacBpIcon, schedule::FacBpSchedule};
 
 #[derive(Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -9,6 +9,7 @@ pub struct FacBpBlueprint {
     pub entities: Vec<FacBpEntity>,
     pub item: String,
     pub version: usize,
+    pub schedules: Vec<FacBpSchedule>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq)]

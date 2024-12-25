@@ -30,7 +30,7 @@ impl FacArea for FacEntRailCurved {
 
     fn to_fac_position(&self, position: &VPoint) -> FacBpPosition {
         // position is exact because curved rail is complicated
-        position.to_fac_with_offset(0.0)
+        position.to_fac_exact()
     }
 }
 
