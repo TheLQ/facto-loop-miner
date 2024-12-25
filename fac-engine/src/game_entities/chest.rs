@@ -15,6 +15,7 @@ pub enum FacEntChestType {
     Storage,
     Buffer,
     Requestor,
+    Infinity,
 }
 
 #[derive(Debug, Clone)]

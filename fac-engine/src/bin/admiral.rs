@@ -1,6 +1,7 @@
 use exhaustive::Exhaustive;
 use facto_loop_miner_common::log_init;
 use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
+use facto_loop_miner_fac_engine::blueprint::bpitem::BlueprintItem;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
 use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
 use facto_loop_miner_fac_engine::game_blocks::belt_bettel::FacBlkBettelBelt;
@@ -10,6 +11,7 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
 use facto_loop_miner_fac_engine::game_blocks::rail_loop::{FacBlkRailLoop, FacBlkRailLoopProps};
 use facto_loop_miner_fac_engine::game_blocks::rail_station::FacBlkRailStation;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
+use facto_loop_miner_fac_engine::game_entities::infinity_power::FacEntInfinityPower;
 use facto_loop_miner_fac_engine::game_entities::module::FacModule;
 use facto_loop_miner_fac_engine::{
     admiral::{
@@ -269,6 +271,18 @@ fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
 
 fn make_rail_loop(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     execute_destroy(admiral)?;
+
+    let origin = VPoint::zero();
+
+    admiral.execute_checked_command(
+        BlueprintItem::new(
+            FacEntInfinityPower::new().into_boxed(),
+            origin.move_xy(4, 2),
+        )
+        .to_blueprint()
+        .to_lua()
+        .into_boxed(),
+    )?;
 
     let mut rail_loop = FacBlkRailLoop::new(FacBlkRailLoopProps {
         wagons: 2,

@@ -61,6 +61,7 @@ impl FacEntityName {
                 FacEntChestType::Storage => "logistic-chest-storage",
                 FacEntChestType::Buffer => "logistic-chest-buffer",
                 FacEntChestType::Requestor => "logistic-chest-requestor",
+                FacEntChestType::Infinity => "infinity-chest",
             }
             .into(),
             Self::ElectricMini(etype) => match etype {
