@@ -262,6 +262,7 @@ fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         // is_east: false,
         is_up: true,
         // is_up: false,
+        is_input: true,
     };
     for entity in station.generate(VPOINT_ZERO) {
         admiral.execute_checked_command(entity.to_blueprint().to_lua().into_boxed())?;
@@ -291,6 +292,7 @@ fn make_rail_loop(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
         origin_direction: FacDirectionQuarter::West,
         chest_type: Some(FacEntChestType::Infinity),
         inserter_type: FacEntInserterType::Stack,
+        is_start_input: true,
     });
     rail_loop.add_turn90(false);
     rail_loop.add_straight();

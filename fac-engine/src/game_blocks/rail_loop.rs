@@ -22,6 +22,7 @@ pub struct FacBlkRailLoop {
     // is_end_set: bool,
     chest_type: Option<FacEntChestType>,
     inserter_type: FacEntInserterType,
+    is_start_input: bool,
 }
 
 impl FacBlkRailLoop {
@@ -31,10 +32,10 @@ impl FacBlkRailLoop {
             front_engines: props.front_engines,
             chest_type: props.chest_type,
             inserter_type: props.inserter_type,
-            origin: props.origin.clone(),
+            origin: props.origin,
             hope: RailHopeDual::new(props.origin, props.origin_direction),
             bpitems: Vec::new(),
-            // is_end_set: false,
+            is_start_input: props.is_start_input,
         }
     }
 
@@ -54,6 +55,7 @@ impl FacBlkRailLoop {
             inserter: self.inserter_type.clone(),
             is_east: true,
             is_up: true,
+            is_input: self.is_start_input,
         };
 
         let mut origin = self.origin;
@@ -80,6 +82,7 @@ impl FacBlkRailLoop {
             inserter: self.inserter_type.clone(),
             is_east: true,
             is_up: true,
+            is_input: !self.is_start_input,
         };
 
         let mut origin = self.hope.next_buildable_point();
@@ -109,4 +112,5 @@ pub struct FacBlkRailLoopProps {
     pub origin_direction: FacDirectionQuarter,
     pub chest_type: Option<FacEntChestType>,
     pub inserter_type: FacEntInserterType,
+    pub is_start_input: bool,
 }

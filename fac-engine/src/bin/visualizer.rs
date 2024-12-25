@@ -75,8 +75,10 @@ fn basic_build_gen(bp: &mut BlueprintContents) {
         wagons: 3,
         front_engines: 2,
         chests: Some(FacEntChestType::Passive),
+        inserter: FacEntInserterType::Basic,
         is_east: true,
         is_up: true,
+        is_input: true,
     };
     for entity in station.generate(VPoint::new(5, 5)) {
         bp.add_entity_each(entity);

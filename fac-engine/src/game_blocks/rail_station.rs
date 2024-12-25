@@ -24,6 +24,7 @@ pub enum RailStationSide {}
 
 /// Rail onload/offload station
 pub struct FacBlkRailStation {
+    pub is_input: bool,
     pub wagons: usize,
     pub front_engines: usize,
     pub chests: Option<FacEntChestType>,
@@ -105,7 +106,7 @@ impl FacBlock for FacBlkRailStation {
         };
         stop_block.place_train_stop(&mut res);
         stop_block.place_side_inserter_electrics(&mut res);
-        stop_block.place_side_inserters(&self.inserter, &mut res);
+        stop_block.place_side_inserters(&self.inserter, self.is_input, &mut res);
         stop_block.place_rail_signals(&mut res);
         if let Some(chests) = &self.chests {
             stop_block.place_side_chests(&mut res, chests);
@@ -158,7 +159,12 @@ struct FacBlkRailStop {
 }
 
 impl FacBlkRailStop {
-    fn place_side_inserters(&self, inserter: &FacEntInserterType, res: &mut Vec<BlueprintItem>) {
+    fn place_side_inserters(
+        &self,
+        inserter: &FacEntInserterType,
+        is_input: bool,
+        res: &mut Vec<BlueprintItem>,
+    ) {
         for car in 0..self.wagons {
             let car_x_offset = self.get_wagon_x_offset(car);
 
@@ -167,6 +173,11 @@ impl FacBlkRailStop {
                     (true, FacDirectionQuarter::South),
                     (false, FacDirectionQuarter::North),
                 ] {
+                    let direction = if is_input {
+                        direction.rotate_flip()
+                    } else {
+                        direction
+                    };
                     let start = self
                         .stop_rail_pos
                         .move_direction(
@@ -256,7 +267,7 @@ impl FacBlkRailStop {
             FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction.clone())
                 .into_boxed(),
             self.stop_rail_pos
-                .move_direction(&self.fill_x_direction.rotate_flip(), 2)
+                .move_direction(self.fill_x_direction.rotate_flip(), 2)
                 .move_y(centered_y_offset(self.rotation, 1)),
         ));
     }
