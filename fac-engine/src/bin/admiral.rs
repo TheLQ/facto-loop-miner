@@ -36,7 +36,7 @@ fn main() {
 
     if let Err(e) = inner_main() {
         let msg = pretty_panic_admiral(e);
-        panic!("DEAD: {}", msg)
+        panic!("⛔⛔⛔ DEAD: {}", msg)
     }
 }
 

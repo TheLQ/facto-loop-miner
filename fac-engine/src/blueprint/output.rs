@@ -105,7 +105,7 @@ impl FacItemOutputType<'_> {
                 // Vec::push() does not normally fail
                 // For API sanity, do not make every FacBlk need to pass up the error
                 if let Err(e) = res {
-                    panic!("write failed {}", e);
+                    panic!("⛔⛔⛔ Write failed {}", e);
                 }
             }
             Self::Blueprint {
