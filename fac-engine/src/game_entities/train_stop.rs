@@ -11,6 +11,7 @@ use super::direction::{FacDirectionEighth, FacDirectionQuarter};
 #[derive(Debug)]
 pub struct FacEntTrainStop {
     direction: FacDirectionQuarter,
+    station_name: String,
 }
 
 impl FacEntity for FacEntTrainStop {
@@ -18,6 +19,10 @@ impl FacEntity for FacEntTrainStop {
 
     fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
         Some(self.direction.to_direction_eighth())
+    }
+
+    fn to_fac_station(&self) -> Option<String> {
+        Some(self.station_name.clone())
     }
 }
 
@@ -28,7 +33,10 @@ impl SquareArea for FacEntTrainStop {
 }
 
 impl FacEntTrainStop {
-    pub fn new(direction: FacDirectionQuarter) -> Self {
-        Self { direction }
+    pub fn new(direction: FacDirectionQuarter, station_name: String) -> Self {
+        Self {
+            station_name,
+            direction,
+        }
     }
 }

@@ -13,6 +13,7 @@ use super::{
 
 /// Thousands of lines of Rust all to place this.
 pub struct FacBlkRailLoop {
+    name_prefix: String,
     wagons: usize,
     front_engines: usize,
     hope: RailHopeDual,
@@ -27,6 +28,7 @@ pub struct FacBlkRailLoop {
 impl FacBlkRailLoop {
     pub fn new(props: FacBlkRailLoopProps) -> Self {
         Self {
+            name_prefix: props.name_prefix,
             wagons: props.wagons,
             front_engines: props.front_engines,
             chest_type: props.chest_type,
@@ -46,14 +48,16 @@ impl FacBlkRailLoop {
     }
 
     fn add_start(&mut self, output: &mut FacItemOutput) {
+        let is_input = self.is_start_input;
         let station = FacBlkRailStation {
+            name: station_input_to_name(is_input, &self.name_prefix),
             wagons: self.wagons,
             front_engines: self.front_engines,
             chests: self.chest_type.clone(),
             inserter: self.inserter_type.clone(),
             is_east: true,
             is_up: true,
-            is_input: self.is_start_input,
+            is_input,
         };
 
         let mut origin = self.origin;
@@ -73,14 +77,16 @@ impl FacBlkRailLoop {
 
     fn add_end(&mut self, output: &mut FacItemOutput) {
         // self.is_end_set = true;
+        let is_input = !self.is_start_input;
         let station = FacBlkRailStation {
+            name: station_input_to_name(is_input, &self.name_prefix),
             wagons: self.wagons,
             front_engines: self.front_engines,
             chests: self.chest_type.clone(),
             inserter: self.inserter_type.clone(),
             is_east: true,
             is_up: true,
-            is_input: !self.is_start_input,
+            is_input,
         };
 
         let mut origin = self.hope.next_buildable_point();
@@ -101,7 +107,16 @@ impl FacBlkRailLoop {
     }
 }
 
+fn station_input_to_name(is_input: bool, prefix: &str) -> String {
+    if is_input {
+        format!("{}-Source", prefix)
+    } else {
+        format!("{}-Drain", prefix)
+    }
+}
+
 pub struct FacBlkRailLoopProps {
+    pub name_prefix: String,
     pub wagons: usize,
     pub front_engines: usize,
     pub origin: VPoint,

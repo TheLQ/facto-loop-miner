@@ -74,6 +74,7 @@ fn basic_build_bp(output: &mut FacItemOutput) {
 
 fn basic_build_gen(output: &mut FacItemOutput) {
     let station = FacBlkRailStation {
+        name: "test".into(),
         wagons: 3,
         front_engines: 2,
         chests: Some(FacEntChestType::Passive),

@@ -24,13 +24,14 @@ pub enum RailStationSide {}
 
 /// Rail onload/offload station
 pub struct FacBlkRailStation {
-    pub is_input: bool,
+    pub name: String,
     pub wagons: usize,
     pub front_engines: usize,
     pub chests: Option<FacEntChestType>,
     pub inserter: FacEntInserterType,
     pub is_east: bool,
     pub is_up: bool,
+    pub is_input: bool,
 }
 
 impl FacBlock for FacBlkRailStation {
@@ -102,7 +103,7 @@ impl FacBlock for FacBlkRailStation {
             fill_x_direction,
             rotation,
         };
-        stop_block.place_train_stop(output);
+        stop_block.place_train_stop(output, self.name.clone());
         stop_block.place_side_inserter_electrics(output);
         stop_block.place_side_inserters(&self.inserter, self.is_input, output);
         stop_block.place_rail_signals(output);
@@ -232,11 +233,11 @@ impl FacBlkRailStop {
         }
     }
 
-    fn place_train_stop(&self, output: &mut FacItemOutput) {
+    fn place_train_stop(&self, output: &mut FacItemOutput, station_name: String) {
         // wtf? Why does this not work? centered_y_offset(self.rotation, 2)
         let y_offset = if self.rotation { -2 } else { 2 };
         output.write(BlueprintItem::new(
-            FacEntTrainStop::new(self.fill_x_direction.rotate_flip()).into_boxed(),
+            FacEntTrainStop::new(self.fill_x_direction.rotate_flip(), station_name).into_boxed(),
             self.stop_rail_pos.move_y(y_offset),
         ));
     }

@@ -50,6 +50,12 @@ impl FacBpEntity {
                 lua: v.to_fac(),
             });
         }
+        if let Some(v) = &self.station {
+            create.with_param(CreateParam::Lua {
+                name: "station",
+                lua: v.into(),
+            });
+        }
         // TODO
         if let Some(v) = &self.items {
             for module in v {

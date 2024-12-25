@@ -228,6 +228,7 @@ fn make_rail_station(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     let mut output = FacItemOutput::new_admiral(admiral);
 
     let station = FacBlkRailStation {
+        name: "test".into(),
         wagons: 3,
         front_engines: 2,
         chests: Some(FacEntChestType::Steel),
@@ -254,6 +255,7 @@ fn make_rail_loop(admiral: &mut AdmiralClient) -> AdmiralResult<()> {
     ));
 
     let mut rail_loop = FacBlkRailLoop::new(FacBlkRailLoopProps {
+        name_prefix: "test".into(),
         wagons: 2,
         front_engines: 2,
         origin,

@@ -41,6 +41,7 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
             recipe: self.to_fac_recipe(),
             items: self.to_fac_items(),
             utype: self.to_fac_belt_under_type(),
+            station: self.to_fac_station(),
         }
     }
 
@@ -57,6 +58,10 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
     }
 
     fn to_fac_belt_under_type(&self) -> Option<FacEntBeltUnderType> {
+        None
+    }
+
+    fn to_fac_station(&self) -> Option<String> {
         None
     }
 }
