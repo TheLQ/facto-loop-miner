@@ -354,9 +354,7 @@ fn neg_if_false(flag: bool, value: i32) -> i32 {
 #[cfg(test)]
 mod test {
     use crate::{
-        blueprint::{
-            bpfac::entity::FacBpEntity, contents::BlueprintContents, output::FacItemOutput,
-        },
+        blueprint::{contents::BlueprintContents, output::FacItemOutput},
         common::vpoint::VPoint,
         game_blocks::rail_hope::RailHopeAppender,
         game_entities::direction::FacDirectionQuarter,
@@ -378,16 +376,7 @@ mod test {
         let mut hope_short_bp = BlueprintContents::new();
         hope_short.to_fac(&mut FacItemOutput::new_blueprint(&mut hope_short_bp));
 
-        assert_eq!(
-            hope_long_bp
-                .to_fac()
-                .into_iter()
-                .collect::<Vec<FacBpEntity>>(),
-            hope_short_bp
-                .to_fac()
-                .into_iter()
-                .collect::<Vec<FacBpEntity>>(),
-        );
+        assert_eq!(hope_long_bp.fac_entities(), hope_short_bp.fac_entities(),);
 
         assert_eq!(hope_long.current_next_pos(), hope_short.current_next_pos());
     }

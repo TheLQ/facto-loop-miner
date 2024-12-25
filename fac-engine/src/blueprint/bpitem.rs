@@ -22,6 +22,7 @@ impl BlueprintItem {
     }
 
     pub fn to_blueprint(&self, output: &FacItemOutput) -> FacBpEntity {
-        self.entity().to_fac(0, self.position(), output)
+        self.entity()
+            .to_blueprint(0, self.position(), output.log_info())
     }
 }

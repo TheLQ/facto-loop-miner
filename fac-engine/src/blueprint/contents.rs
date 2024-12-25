@@ -1,35 +1,28 @@
-use super::bpitem::BlueprintItem;
+use super::{bpfac::entity::FacBpEntity, bpitem::BlueprintItem};
 
 pub struct BlueprintContents {
-    entities: Vec<BlueprintItem>,
+    items: Vec<BlueprintItem>,
+    fac_entities: Vec<FacBpEntity>,
 }
 
 impl BlueprintContents {
     pub fn new() -> Self {
         Self {
-            entities: Vec::new(),
+            items: Vec::new(),
+            fac_entities: Vec::new(),
         }
     }
 
-    pub fn entities(&self) -> &[BlueprintItem] {
-        &self.entities
+    pub fn items(&self) -> &[BlueprintItem] {
+        &self.items
     }
 
-    pub fn add_entity_each(&mut self, bpitem: BlueprintItem) {
-        self.entities.push(bpitem);
+    pub fn fac_entities(&self) -> &[FacBpEntity] {
+        &self.fac_entities
     }
 
-    #[cfg(test)]
-    pub fn to_fac(&self) -> Vec<super::bpfac::entity::FacBpEntity> {
-        let mut counter = 0;
-        self.entities
-            .iter()
-            .map(|i| {
-                let entity_number = counter;
-                counter += 1;
-                i.entity()
-                    .to_fac(entity_number, i.position(), &Vec::new(), &Vec::new())
-            })
-            .collect()
+    pub fn add(&mut self, item: BlueprintItem, fac_entity: FacBpEntity) {
+        self.items.push(item);
+        self.fac_entities.push(fac_entity);
     }
 }

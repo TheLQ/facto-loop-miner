@@ -14,8 +14,7 @@ use super::{
 pub struct FacItemOutput<'c> {
     otype: FacItemOutputType<'c>,
     dedupe: Option<Vec<FacBpPosition>>,
-    pub contexts: Vec<String>,
-    pub subcontexts: Vec<String>,
+    log_info: FacItemOutputLogInfo,
 }
 
 impl<'c> FacItemOutput<'c> {
@@ -26,8 +25,7 @@ impl<'c> FacItemOutput<'c> {
                 // all_items: Vec::new(),
             },
             dedupe: None,
-            contexts: Vec::new(),
-            subcontexts: Vec::new(),
+            log_info: FacItemOutputLogInfo::new(),
         }
     }
 
@@ -38,8 +36,7 @@ impl<'c> FacItemOutput<'c> {
                 // all_items: Vec::new(),
             },
             dedupe: Some(Vec::new()),
-            contexts: Vec::new(),
-            subcontexts: Vec::new(),
+            log_info: FacItemOutputLogInfo::new(),
         }
     }
 
@@ -47,8 +44,7 @@ impl<'c> FacItemOutput<'c> {
         Self {
             otype: FacItemOutputType::Blueprint { blueprint },
             dedupe: None,
-            contexts: Vec::new(),
-            subcontexts: Vec::new(),
+            log_info: FacItemOutputLogInfo::new(),
         }
     }
 
@@ -67,7 +63,7 @@ impl<'c> FacItemOutput<'c> {
     }
 
     pub fn context_handle<'s>(&'s mut self, new_context: String) -> OutputContextHandle<'s, 'c> {
-        self.contexts.push(new_context);
+        self.log_info.contexts.push(new_context);
         OutputContextHandle {
             output: self,
             is_subcontext: false,
@@ -75,11 +71,15 @@ impl<'c> FacItemOutput<'c> {
     }
 
     pub fn subcontext_handle<'s>(&'s mut self, new_context: String) -> OutputContextHandle<'s, 'c> {
-        self.subcontexts.push(new_context);
+        self.log_info.subcontexts.push(new_context);
         OutputContextHandle {
             output: self,
             is_subcontext: true,
         }
+    }
+
+    pub fn log_info(&self) -> &FacItemOutputLogInfo {
+        &self.log_info
     }
 }
 
@@ -108,9 +108,25 @@ impl FacItemOutputType<'_> {
                     panic!("write failed {}", e);
                 }
             }
-            Self::Blueprint { blueprint: bp } => {
-                bp.add_entity_each(item);
+            Self::Blueprint {
+                blueprint: blueprint_contents,
+            } => {
+                blueprint_contents.add(item, blueprint);
             }
+        }
+    }
+}
+
+pub struct FacItemOutputLogInfo {
+    pub contexts: Vec<String>,
+    pub subcontexts: Vec<String>,
+}
+
+impl FacItemOutputLogInfo {
+    pub const fn new() -> Self {
+        Self {
+            contexts: Vec::new(),
+            subcontexts: Vec::new(),
         }
     }
 }
@@ -124,9 +140,9 @@ pub struct OutputContextHandle<'o, 'c> {
 impl Drop for OutputContextHandle<'_, '_> {
     fn drop(&mut self) {
         let pruned = if self.is_subcontext {
-            &mut self.subcontexts
+            &mut self.log_info.subcontexts
         } else {
-            &mut self.output.contexts
+            &mut self.log_info.contexts
         };
         let _context = pruned.pop().unwrap();
         // println!("drop context {}", _context)

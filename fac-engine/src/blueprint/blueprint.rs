@@ -1,4 +1,4 @@
-use super::{bpitem::BlueprintItem, contents::BlueprintContents};
+use super::contents::BlueprintContents;
 
 pub struct Blueprint {
     contents: BlueprintContents,
@@ -15,22 +15,5 @@ impl Blueprint {
 
     pub fn contents_mut(&mut self) -> &mut BlueprintContents {
         &mut self.contents
-    }
-
-    pub fn inner_entities(&self) -> &[BlueprintItem] {
-        self.contents.entities()
-    }
-
-    #[cfg(test)] // no log context
-    pub fn to_fac(&self) -> super::bpfac::blueprint::FacBpBlueprintWrapper {
-        use super::bpfac::blueprint::{FacBpBlueprint, FacBpBlueprintWrapper};
-        FacBpBlueprintWrapper {
-            blueprint: FacBpBlueprint {
-                icons: Vec::new(),
-                entities: self.contents.to_fac(),
-                item: "blueprint".into(),
-                version: 0,
-            },
-        }
     }
 }

@@ -16,7 +16,7 @@ const STYLE: &str = r#"
 pub fn visualize_blueprint(blueprint: &BlueprintContents) {
     let mut output = STYLE.to_string();
     output.push_str("<div>\n");
-    for bpitem in blueprint.entities() {
+    for bpitem in blueprint.items() {
         let entity = bpitem.entity();
         let size = entity.rectangle_size();
         let name = entity.name();

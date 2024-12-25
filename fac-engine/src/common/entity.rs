@@ -4,7 +4,7 @@ use tracing::debug;
 use crate::{
     blueprint::{
         bpfac::{FacBpInteger, entity::FacBpEntity, position::FacBpPosition},
-        output::FacItemOutput,
+        output::FacItemOutputLogInfo,
     },
     common::names::FacEntityName,
     game_entities::{
@@ -24,20 +24,20 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
         Box::new(self)
     }
 
-    fn to_fac_usize(
-        &self,
-        entity_number: usize,
-        position: &VPoint,
-        output: &FacItemOutput,
-    ) -> FacBpEntity {
-        self.to_fac(entity_number.try_into().unwrap(), position, output)
-    }
+    // fn to_blueprint_usize(
+    //     &self,
+    //     entity_number: usize,
+    //     position: &VPoint,
+    //     output: &FacItemOutput,
+    // ) -> FacBpEntity {
+    //     self.to_blueprint(entity_number.try_into().unwrap(), position, output)
+    // }
 
-    fn to_fac(
+    fn to_blueprint(
         &self,
         entity_number: FacBpInteger,
         position: &VPoint,
-        output: &FacItemOutput,
+        log_info: &FacItemOutputLogInfo,
     ) -> FacBpEntity {
         let facpos = self.to_fac_position(position);
         debug!(
@@ -45,8 +45,8 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
             position.display(),
             facpos.display(),
             format!("{:?}", self),
-            contexts = output.contexts.iter().join("/"),
-            subcontexts = output.subcontexts.iter().join("/"),
+            contexts = log_info.contexts.iter().join("/"),
+            subcontexts = log_info.subcontexts.iter().join("/"),
         );
         FacBpEntity {
             entity_number,
