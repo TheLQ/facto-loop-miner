@@ -17,14 +17,20 @@ pub struct FacItemOutput<'c> {
 impl<'c> FacItemOutput<'c> {
     pub fn new_admiral(client: &'c mut AdmiralClient) -> Self {
         Self {
-            otype: FacItemOutputType::AdmiralClient { client },
+            otype: FacItemOutputType::AdmiralClient {
+                client,
+                // all_items: Vec::new(),
+            },
             dedupe: None,
         }
     }
 
     pub fn new_admiral_dedupe(client: &'c mut AdmiralClient) -> Self {
         Self {
-            otype: FacItemOutputType::AdmiralClient { client },
+            otype: FacItemOutputType::AdmiralClient {
+                client,
+                // all_items: Vec::new(),
+            },
             dedupe: Some(Vec::new()),
         }
     }
@@ -54,6 +60,8 @@ impl<'c> FacItemOutput<'c> {
 pub enum FacItemOutputType<'c> {
     AdmiralClient {
         client: &'c mut AdmiralClient,
+        // TODO: Might be slow with full map generates?
+        // all_items: Vec<BlueprintItem>,
     },
     Blueprint {
         blueprint: &'c mut BlueprintContents,
@@ -63,8 +71,11 @@ pub enum FacItemOutputType<'c> {
 impl FacItemOutputType<'_> {
     pub fn write(&mut self, item: BlueprintItem, blueprint: FacBpEntity) {
         match self {
-            Self::AdmiralClient { client } => {
+            Self::AdmiralClient {
+                client, /* , all_items */
+            } => {
                 let res = client.execute_checked_command(blueprint.to_lua().into_boxed());
+                // all_items.push(item);
                 // Vec::push() does not normally fail
                 // For API sanity, do not make every FacBlk need to pass up the error
                 if let Err(e) = res {
