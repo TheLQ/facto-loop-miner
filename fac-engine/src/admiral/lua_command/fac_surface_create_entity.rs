@@ -1,5 +1,6 @@
 use crate::admiral::lua_command::{DEFAULT_FORCE_VAR, LuaCommand};
 use crate::blueprint::bpfac::position::FacBpPosition;
+use crate::common::vpoint::C_BLOCK_LINE;
 use crate::game_entities::direction::FacDirectionEighth;
 use crate::game_entities::module::FacModule;
 use itertools::Itertools;
@@ -32,6 +33,7 @@ impl LuaCommand for FacSurfaceCreateEntity {
         let name = &self.name;
         let x = self.position.x;
         let y = self.position.y;
+        let nice_pos = self.position.display();
 
         if DEBUG_PRE_COLLISION {
             let direction = self.params.iter().find_map(|v| match v {
@@ -49,7 +51,7 @@ impl LuaCommand for FacSurfaceCreateEntity {
                 format!(
                     r#"
                     if game.surfaces[1].entity_prototype_collides("{name}", {{ {x}, {y} }}, false, {direction_param}) then
-                        rcon.print("[Admiral] Collision {name} {x}x{y}")           
+                        rcon.print("[Admiral] Collision {name} {nice_pos}")           
                     end 
                     "#
                 )
@@ -82,9 +84,9 @@ impl LuaCommand for FacSurfaceCreateEntity {
         if DEBUG_POSITION_EXPECTED {
             lua.push(format!(
                 r#"if admiral_create == nil then
-                    rcon.print("[Admiral] Inserted {name} at {x}x{y} but was nil")
+                    rcon.print("[Admiral] Inserted {name} at {nice_pos} but was nil")
                 elseif admiral_create.position.x ~= {x} or admiral_create.position.y ~= {y} then
-                    rcon.print("[Admiral] Inserted {name} at {x}x{y} but was placed at " .. admiral_create.position.x .. "x" .. admiral_create.position.y)
+                    rcon.print("[Admiral] Inserted {name} at {nice_pos} but was placed at " .. admiral_create.position.x .. "{C_BLOCK_LINE}" .. admiral_create.position.y)
                 end"#
             ).trim().replace('\n', ""));
         }
