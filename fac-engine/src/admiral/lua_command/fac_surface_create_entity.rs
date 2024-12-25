@@ -103,38 +103,6 @@ impl FacSurfaceCreateEntity {
         }
     }
 
-    pub fn new_params(name: &str, position: FacBpPosition, params: Vec<CreateParam>) -> Self {
-        FacSurfaceCreateEntity {
-            name: name.to_string(),
-            position,
-            params,
-            commands: Vec::new(),
-        }
-    }
-
-    pub fn new_commands(name: &str, position: FacBpPosition, commands: Vec<String>) -> Self {
-        FacSurfaceCreateEntity {
-            name: name.to_string(),
-            position,
-            params: Vec::new(),
-            commands,
-        }
-    }
-
-    pub fn new_params_commands(
-        name: &str,
-        position: FacBpPosition,
-        params: Vec<CreateParam>,
-        commands: Vec<String>,
-    ) -> Self {
-        FacSurfaceCreateEntity {
-            name: name.to_string(),
-            position,
-            params,
-            commands,
-        }
-    }
-
     pub fn with_param(&mut self, param: CreateParam) {
         self.params.push(param);
     }
@@ -154,12 +122,11 @@ impl FacSurfaceCreateEntity {
 #[derive(Debug)]
 pub enum CreateParam {
     DirectionFacto(FacDirectionEighth),
-    Recipe(String),
-    Type(String),
+    Lua { name: &'static str, lua: String },
 }
 
 impl CreateParam {
-    pub fn to_param(&self) -> (&'static str, String) {
+    pub fn to_param(&self) -> (&str, String) {
         match self {
             CreateParam::DirectionFacto(direction) => {
                 let direction: &str = direction.as_ref();
@@ -168,8 +135,7 @@ impl CreateParam {
                     format!("defines.direction.{}", direction.to_lowercase()),
                 )
             }
-            CreateParam::Recipe(name) => ("recipe", wrap_quotes(name)),
-            CreateParam::Type(name) => ("type", wrap_quotes(name)),
+            CreateParam::Lua { name, lua } => (name, wrap_quotes(lua)),
         }
     }
 }

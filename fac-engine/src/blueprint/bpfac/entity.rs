@@ -27,6 +27,8 @@ pub struct FacBpEntity {
     pub items: Option<Vec<FacModule>>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "type")]
     pub utype: Option<FacEntBeltUnderType>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub station: Option<String>,
 }
 
 impl FacBpEntity {
@@ -37,10 +39,16 @@ impl FacBpEntity {
             create.with_param(CreateParam::DirectionFacto(v.clone()));
         }
         if let Some(v) = &self.recipe {
-            create.with_param(CreateParam::Recipe(v.clone()));
+            create.with_param(CreateParam::Lua {
+                name: "recipe",
+                lua: v.into(),
+            });
         }
         if let Some(v) = &self.utype {
-            create.with_param(CreateParam::Type(v.to_fac()));
+            create.with_param(CreateParam::Lua {
+                name: "type",
+                lua: v.to_fac(),
+            });
         }
         // TODO
         if let Some(v) = &self.items {
