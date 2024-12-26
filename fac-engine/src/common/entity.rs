@@ -9,6 +9,7 @@ use crate::{
     common::{
         ascii_color::{Color, ascii_color},
         names::FacEntityName,
+        vpoint::C_BLOCK_LINE,
     },
     game_entities::{
         belt_under::FacEntBeltUnderType, direction::FacDirectionEighth, module::FacModule,
@@ -44,10 +45,15 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
     ) -> FacBpEntity {
         let facpos = self.to_fac_position(position);
         let contexts = ascii_color(
-            context_map[ContextLevel::Block].iter().join("/"),
+            context_map[ContextLevel::Block]
+                .iter()
+                .join(&format!(" {C_BLOCK_LINE} ")),
             Color::Green,
         );
-        let subcontexts = context_map[ContextLevel::Micro].iter().join(" ! ");
+        let subcontexts = ascii_color(
+            context_map[ContextLevel::Micro].iter().join(" ! "),
+            Color::Purple,
+        );
         debug!(
             "blueprint pos {:6} facpos {:10} {:65} {contexts:34} {subcontexts}",
             position.display(),

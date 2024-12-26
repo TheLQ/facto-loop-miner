@@ -23,12 +23,17 @@ pub fn ascii_color(string: impl AsRef<str>, color: Color) -> String {
 
 pub enum Color {
     Green,
+    Purple,
 }
 
 impl Color {
     fn escape_code(&self) -> String {
         match &self {
             Self::Green => "32".into(),
+            Self::Purple => "95".into(),
         }
     }
 }
+
+pub const EMOJI_BROWN: &str = "\u{1F3FB}"; // 🏽
+pub const EMOJI_POINT: &str = "\u{1F449}"; // 👉

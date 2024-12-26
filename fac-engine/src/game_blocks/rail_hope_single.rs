@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use tracing::warn;
+use tracing::{trace, warn};
 
 use crate::blueprint::bpitem::BlueprintItem;
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
@@ -69,7 +69,7 @@ impl RailHopeSingle {
         direction: FacDirectionQuarter,
         length: usize,
     ) {
-        warn!("writing direction {}", direction);
+        trace!("writing direction {}", direction);
         for i in 0..length {
             self.write_link_rail(RailHopeLinkRail {
                 position: origin.move_direction(&direction, i * RAIL_STRAIGHT_DIAMETER),
@@ -110,6 +110,9 @@ impl RailHopeSingle {
 
 impl<'o> RailHopeAppender for RailHopeSingle {
     fn add_straight(&mut self, length: usize) {
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Micro, format!("👉Straight-{}", length));
         self.add_straight_line_raw(
             self.current_next_pos(),
             self.current_direction().clone(),
@@ -118,11 +121,6 @@ impl<'o> RailHopeAppender for RailHopeSingle {
     }
 
     fn add_turn90(&mut self, clockwise: bool) {
-        let _ = &mut self.output.context_handle(
-            ContextLevel::Block,
-            format!("Turn90-{}", if clockwise { "clw" } else { "ccw" }),
-        );
-        // warn!("turn 90 start---- clockwise {}", clockwise);
         /*
         Factorio 1 Rails are really complicated
         This is version 3544579 💎
@@ -140,8 +138,13 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         Directions appear arbitraty
         eg. curved rail from North to NorthWest in Factorio is... curved-rail North?
         */
+        let _ = &mut self.output.context_handle(
+            ContextLevel::Micro,
+            format!("👉Turn90-{}", if clockwise { "clw" } else { "ccw" }),
+        );
+
         let cur_direction = self.current_direction().clone();
-        warn!("cur direction {}", cur_direction);
+        trace!("cur direction {}", cur_direction);
         // 1,1 to cancel RailStraight's to_fac offset
         let origin_fac = self.current_next_pos() + VPOINT_ONE;
 
@@ -160,7 +163,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             direction: first_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
         });
-        warn!("first curve {:?}", first_curve_direction);
+        trace!("first curve {:?}", first_curve_direction);
 
         // middle
         let middle_straight_pos = first_curve_pos
@@ -171,7 +174,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         } else {
             first_curve_direction.rotate_once()
         };
-        warn!("middle straight {:?}", middle_straight_direction);
+        trace!("middle straight {:?}", middle_straight_direction);
         self.write_link_rail(RailHopeLinkRail {
             // -1,-1 to cancel RailStraight's to_fac offset
             position: middle_straight_pos - VPOINT_ONE,
@@ -188,7 +191,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         } else {
             middle_straight_direction.rotate_once().rotate_once()
         };
-        warn!("last curve {:?}", middle_straight_direction);
+        trace!("last curve {:?}", middle_straight_direction);
         self.write_link_rail(RailHopeLinkRail {
             position: last_curve_pos,
             direction: last_curve_direction.clone(),
@@ -201,7 +204,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         } else {
             cur_direction.rotate_opposite()
         };
-        warn!(
+        trace!(
             "from start direction {} to end direction {}",
             cur_direction, link_direction
         );
@@ -225,6 +228,10 @@ impl<'o> RailHopeAppender for RailHopeSingle {
 
         Between 2x pairs, the middle 2 rails are on the same Y axis
         */
+        let _ = &mut self.output.context_handle(
+            ContextLevel::Micro,
+            format!("👉Shift45-{}", if clockwise { "clw" } else { "ccw" }),
+        );
 
         let cur_direction = self.current_direction().clone();
         // 1,1 to cancel RailStraight's to_fac offset
@@ -321,7 +328,7 @@ impl RailHopeLink {
                 } else {
                     self.link_direction.rotate_once()
                 };
-                warn!("unrotated {}", unrotated);
+                trace!("unrotated {}", unrotated);
                 self.start_pos
                     .move_direction(&unrotated, 10)
                     .move_direction_sideways(&unrotated, neg_if_false(*clockwise, 12))

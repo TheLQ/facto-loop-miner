@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
 use crate::blueprint::bpitem::BlueprintItem;
-use crate::blueprint::output::FacItemOutput;
+use crate::blueprint::output::{ContextLevel, FacItemOutput};
+use crate::common::ascii_color::{EMOJI_BROWN, EMOJI_POINT};
 use crate::common::entity::FacEntity;
 use crate::common::vpoint::VPoint;
 use crate::game_blocks::rail_hope::RailHopeAppender;
@@ -39,8 +40,17 @@ impl RailHopeDual {
     }
 
     pub fn add_straight_section(&mut self) {
-        self.add_electric_next();
-        for rail in &mut self.hopes {
+        {
+            let _ = &mut self
+                .output
+                .context_handle(ContextLevel::Micro, format!("👐Dual-Ruby"));
+            self.add_electric_next();
+        }
+
+        for (i, rail) in &mut self.hopes.iter_mut().enumerate() {
+            let _ = &mut self
+                .output
+                .context_handle(ContextLevel::Micro, format!("👐Dual-{}", i));
             rail.add_straight(15);
         }
     }
@@ -80,6 +90,9 @@ impl RailHopeAppender for RailHopeDual {
     }
 
     fn add_turn90(&mut self, clockwise: bool) {
+        // let _ = &mut self
+        //     .output
+        //     .context_handle(ContextLevel::Micro, "👐Dual-Turn".into());
         self.add_electric_next();
         if clockwise {
             self.hopes[1].add_straight(2);

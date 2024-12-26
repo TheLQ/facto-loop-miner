@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    blueprint::output::{ContextLevel, FacItemOutput},
+    blueprint::output::{ContextLevel, FacItemOutput, OutputContextHandle},
     common::vpoint::VPoint,
     game_entities::{
         chest::FacEntChestType, direction::FacDirectionQuarter, inserter::FacEntInserterType,
@@ -44,17 +44,22 @@ impl FacBlkRailLoop {
     }
 
     pub fn add_straight(&mut self) {
+        let _ = &mut self.output.context_handle(
+            ContextLevel::Block,
+            format!("Loop-{}-Section", self.name_prefix),
+        );
         self.hope.add_straight_section();
     }
 
     pub fn add_turn90(&mut self, clockwise: bool) {
+        let _ = &mut self.output.context_handle(
+            ContextLevel::Block,
+            format!("Loop-{}-Turn90", self.name_prefix),
+        );
         self.hope.add_turn90(clockwise);
     }
 
     fn add_start(&mut self) {
-        let _ = &mut self
-            .output
-            .context_handle(ContextLevel::Block, format!("Loop-{}", self.name_prefix));
         let is_input = self.is_start_input;
         let station = FacBlkRailStation {
             name: station_input_to_name(is_input, &self.name_prefix),
@@ -85,10 +90,6 @@ impl FacBlkRailLoop {
     }
 
     fn add_end(&mut self) {
-        let _ = &mut self
-            .output
-            .context_handle(ContextLevel::Block, format!("Loop-{}", self.name_prefix));
-
         // self.is_end_set = true;
         let is_input = !self.is_start_input;
         let station = FacBlkRailStation {
@@ -115,6 +116,9 @@ impl FacBlkRailLoop {
     }
 
     pub fn add_base_start_and_end(&mut self) {
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Block, format!("Loop-{}", self.name_prefix));
         self.add_start();
         self.add_end();
     }

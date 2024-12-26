@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use tracing::{info, warn};
+use tracing::{info, trace, warn};
 
 use crate::{
     blueprint::{
@@ -85,7 +85,13 @@ impl FacBlock for FacBlkRailStation {
         Self::place_electric_initial(&origin, &base_direction, &self.output);
 
         let mut hope = RailHopeSingle::new(origin, base_direction.clone(), self.output.clone());
-        hope.add_shift45(rotation, 6);
+
+        {
+            let _ = &mut self
+                .output
+                .context_handle(ContextLevel::Micro, "TurnUp".into());
+            hope.add_shift45(rotation, 6);
+        }
 
         Self::place_electric_connect(&hope.current_next_pos(), &base_direction, &self.output);
 
@@ -93,14 +99,20 @@ impl FacBlock for FacBlkRailStation {
         let base_straight: usize =
             (RAILS_PER_CART * (self.wagons + self.front_engines) as f32).ceil() as usize;
 
-        if !origin_after_straight {
-            hope.add_straight(base_straight);
-        }
-        let station_origin = hope.current_next_pos();
-        warn!("origin {:?}", station_origin);
-        if origin_after_straight {
-            hope.add_straight(base_straight);
-        }
+        let station_origin = {
+            let _ = &mut self
+                .output
+                .context_handle(ContextLevel::Micro, "StopRail".into());
+            if !origin_after_straight {
+                hope.add_straight(base_straight);
+            }
+            let res = hope.current_next_pos();
+            // warn!("origin {:?}", station_origin);
+            if origin_after_straight {
+                hope.add_straight(base_straight);
+            }
+            res
+        };
 
         let stop_rail_pos = station_origin.move_direction(
             fill_x_direction.rotate_flip(),
@@ -123,9 +135,24 @@ impl FacBlock for FacBlkRailStation {
             stop_block.place_side_chests(chests);
         }
 
-        hope.add_turn90(!rotation);
-        hope.add_turn90(!rotation);
-        hope.add_straight(base_straight + /*opposite of 45*/13);
+        {
+            let _ = &mut self
+                .output
+                .context_handle(ContextLevel::Micro, "TurnBack-First".into());
+            hope.add_turn90(!rotation);
+        }
+        {
+            let _ = &mut self
+                .output
+                .context_handle(ContextLevel::Micro, "TurnBack-Last".into());
+            hope.add_turn90(!rotation);
+        }
+        {
+            let _ = &mut self
+                .output
+                .context_handle(ContextLevel::Micro, "StraightBack".into());
+            hope.add_straight(base_straight + /*opposite of 45*/13);
+        }
 
         if self.is_create_train {
             // rails beneath must be placed already
@@ -139,10 +166,11 @@ impl FacBlkRailStation {
     fn place_electric_initial(
         origin: &VPoint,
         base_direction: &FacDirectionQuarter,
-        ouput: &FacItemOutput,
+        output: &FacItemOutput,
     ) {
+        let _ = output.context_handle(ContextLevel::Micro, "🔚Grid-0".into());
         let electric_start_pos = origin.move_direction(base_direction.rotate_once(), 2);
-        ouput.write(BlueprintItem::new(
+        output.write(BlueprintItem::new(
             FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
             electric_start_pos,
         ));
@@ -151,12 +179,13 @@ impl FacBlkRailStation {
     fn place_electric_connect(
         origin: &VPoint,
         base_direction: &FacDirectionQuarter,
-        ouput: &FacItemOutput,
+        output: &FacItemOutput,
     ) {
+        let _ = output.context_handle(ContextLevel::Micro, "🔚Grid-1".into());
         let electric_start_pos = origin
             .move_direction(base_direction.rotate_once(), 4)
             .move_direction(base_direction.rotate_once().rotate_once(), 6);
-        ouput.write(BlueprintItem::new(
+        output.write(BlueprintItem::new(
             FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
             electric_start_pos,
         ));
@@ -174,13 +203,11 @@ struct FacBlkRailStop {
 
 impl FacBlkRailStop {
     fn place_side_inserters(&self, inserter: &FacEntInserterType, is_input: bool) {
-        let _ = &mut self
-            .output
-            .context_handle(ContextLevel::Micro, "Inserter".into());
         for car in 0..self.wagons {
-            let _ = self
+            let _ = &mut self
                 .output
-                .context_handle(ContextLevel::Micro, format!("Car{}", car));
+                .context_handle(ContextLevel::Micro, format!("🔚Car-{}-Inserter", car));
+
             let car_x_offset = self.get_wagon_x_offset(car);
 
             for (negative, direction) in [
@@ -214,6 +241,9 @@ impl FacBlkRailStop {
     }
 
     fn place_side_inserter_electrics(&self) {
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Micro, "🔚Electrics".into());
         // lamps and poles on start and end
         for car in 0..(self.wagons + 1) {
             let car_x_offset = self.get_wagon_x_offset(car);
@@ -236,9 +266,16 @@ impl FacBlkRailStop {
     fn place_side_chests(&self, chest_type: &FacEntChestType) {
         for car in 0..self.wagons {
             let car_x_offset = self.get_wagon_x_offset(car);
+            let _ = &mut self
+                .output
+                .context_handle(ContextLevel::Micro, format!("🔚Car-{car}-Chest"));
 
-            for exit in 0..INSERTERS_PER_CAR {
-                for negative in [true, false] {
+            for negative in [true, false] {
+                for exit in 0..INSERTERS_PER_CAR {
+                    let _ = &mut self.output.context_handle(
+                        ContextLevel::Micro,
+                        if negative { "Top" } else { "Bottom" }.into(),
+                    );
                     let start = self
                         .stop_rail_pos
                         .move_direction(
@@ -256,6 +293,9 @@ impl FacBlkRailStop {
     }
 
     fn place_train_stop(&self, station_name: String) {
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Micro, "🔚Stop".into());
         // wtf? Why does this not work? centered_y_offset(self.rotation, 2)
         let y_offset = if self.rotation { -2 } else { 2 };
         self.output.write(BlueprintItem::new(
@@ -265,6 +305,9 @@ impl FacBlkRailStop {
     }
 
     fn place_rail_signals(&self) {
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Micro, "🔚Signals".into());
         for car in 0..self.wagons {
             let car_x_offset = self.get_wagon_x_offset(car);
 
@@ -292,12 +335,15 @@ impl FacBlkRailStop {
     }
 
     fn place_train(&self) {
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Micro, "🔚Stock".into());
         let mut rolling_counter = 0;
 
         for i in 0..(self.front_engines + self.wagons) {
             rolling_counter += 1;
             let rolling_calc = (7 * rolling_counter) + 3;
-            info!(
+            trace!(
                 "rolling total {} origin {:?}",
                 rolling_calc, self.stop_rail_pos
             );
