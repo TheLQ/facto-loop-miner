@@ -2,7 +2,6 @@ use std::rc::Rc;
 
 use crate::blueprint::bpitem::BlueprintItem;
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
-use crate::common::ascii_color::{EMOJI_BROWN, EMOJI_POINT};
 use crate::common::entity::FacEntity;
 use crate::common::vpoint::VPoint;
 use crate::game_blocks::rail_hope::RailHopeAppender;
@@ -43,7 +42,7 @@ impl RailHopeDual {
         {
             let _ = &mut self
                 .output
-                .context_handle(ContextLevel::Micro, format!("👐Dual-Ruby"));
+                .context_handle(ContextLevel::Micro, format!("👐Ruby"));
             self.add_electric_next();
         }
 

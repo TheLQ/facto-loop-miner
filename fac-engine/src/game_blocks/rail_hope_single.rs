@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use tracing::{trace, warn};
+use tracing::trace;
 
 use crate::blueprint::bpitem::BlueprintItem;
 use crate::blueprint::output::{ContextLevel, FacItemOutput};

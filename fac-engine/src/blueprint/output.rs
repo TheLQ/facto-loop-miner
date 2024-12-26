@@ -1,11 +1,18 @@
 use enum_map::EnumMap;
 use std::{cell::RefCell, rc::Rc, sync::Mutex};
-use tracing::error;
+use tracing::{debug, error};
+use unicode_segmentation::UnicodeSegmentation;
 
-use crate::admiral::{
-    err::AdmiralResult,
-    executor::{ExecuteResponse, LuaCompiler, client::AdmiralClient},
-    lua_command::LuaCommand,
+use crate::{
+    admiral::{
+        err::AdmiralResult,
+        executor::{ExecuteResponse, LuaCompiler, client::AdmiralClient},
+        lua_command::LuaCommand,
+    },
+    common::{
+        ascii_color::{Color, ansi_color, ascii_erase_line, ascii_previous_line},
+        vpoint::C_BLOCK_LINE,
+    },
 };
 
 use super::{
@@ -58,11 +65,41 @@ impl FacItemOutput {
     }
 
     pub fn write(&self, item: BlueprintItem) {
-        let blueprint = item.to_blueprint(&self);
+        let blueprint = item.to_blueprint();
+        let item_debug = format!("{:?}", item.entity());
+        let (contexts, subcontexts, total_with_context) = get_global_context_map(|log_info| {
+            let contexts = ansi_color(
+                log_info.context_map[ContextLevel::Block].join(&format!(" {C_BLOCK_LINE} ")),
+                Color::Green,
+            );
+            let subcontexts = ansi_color(
+                log_info.context_map[ContextLevel::Micro].join(" ! "),
+                Color::Purple,
+            );
+            let key = [item_debug.as_str(), contexts.as_str(), subcontexts.as_str()].concat();
+            if log_info.last_context != key {
+                log_info.last_context = key;
+                log_info.total_with_context = 1;
+                // print!("\n");
+            } else {
+                log_info.total_with_context += 1;
+                print!("{}", ascii_previous_line());
+            };
+            (contexts, subcontexts, log_info.total_with_context)
+        });
+        let subcontexts = pad_grapheme(&subcontexts, 40);
+        const C_FULL_BLOCK: &str = "\u{2588}";
+        let total_progress = C_FULL_BLOCK.repeat(total_with_context);
+        debug!(
+            "{}blueprint pos {:6} facpos {:10} {:65} {contexts:42} {total_with_context:2} {subcontexts} total {total_progress}",
+            ascii_erase_line(),
+            item.position().display(),
+            blueprint.position.display(),
+            item_debug,
+        );
 
         self.otype.write(item, blueprint)
     }
-
     // pub fn any_handle<'o>(&'o mut self) -> OutputContextHandle<'o> {
     //     OutputContextHandle {
     //         output: self,
@@ -78,12 +115,14 @@ impl FacItemOutput {
         let res = OutputContextHandle {
             context_level: context_level.clone(),
         };
-        get_global_context_map(move |map| map[context_level.clone()].push(new_context.clone()));
+        get_global_context_map(move |log_info| {
+            log_info.context_map[context_level.clone()].push(new_context.clone())
+        });
         res
     }
 
-    pub fn log_info(&self) -> ContextMap {
-        get_global_context_map(|map| map.clone())
+    pub fn log_info(&self) -> FacItemOutputLogInfo {
+        get_global_context_map(|log_info| log_info.questitionable_clone())
     }
 
     pub fn admiral_execute_command(
@@ -104,21 +143,32 @@ impl FacItemOutput {
     }
 }
 
+fn pad_grapheme(input: &str, up_to: usize) -> String {
+    let actual_len: usize = input
+        .graphemes(false)
+        .map(|v| if v.len() > 1 { 2 } else { 1 })
+        .sum();
+    let diff = up_to - actual_len;
+    if diff > 0 {
+        format!("{}{:diff$}", input, "")
+    } else {
+        input.to_string()
+    }
+}
+
 #[derive(Clone, enum_map::Enum)]
 pub enum ContextLevel {
     Block,
     Micro,
 }
 
-pub type ContextMap = EnumMap<ContextLevel, Vec<String>>;
-
 /// TODO: lifetime soup with multiple muts is hard. New plan: Global!
 fn get_global_context_map<A, R>(mut action: A) -> R
 where
-    A: FnMut(&mut ContextMap) -> R,
+    A: FnMut(&mut FacItemOutputLogInfo) -> R,
 {
     // thread_local! {
-    static CUR: Mutex<Option<ContextMap>> = Mutex::new(None);
+    static CUR: Mutex<Option<FacItemOutputLogInfo>> = Mutex::new(None);
     // }
 
     // enum_map::enum_map! {
@@ -205,23 +255,22 @@ fn dedupe_position(dedupe: &mut Option<Vec<FacBpPosition>>, blueprint: &FacBpEnt
     }
 }
 
-// pub struct FacItemOutputLogInfo {
-//     pub context_map: EnumMap<ContextLevel, Vec<String>>,
-// }
+#[derive(Default)]
+pub struct FacItemOutputLogInfo {
+    pub context_map: EnumMap<ContextLevel, Vec<String>>,
+    pub last_context: String,
+    pub total_with_context: usize,
+}
 
-// impl FacItemOutputLogInfo {
-//     fn new() -> Self {
-//         Self {
-//             context_map: Default::default(),
-//         }
-//     }
-
-//     fn questitionable_clone(&self) -> Self {
-//         Self {
-//             context_map: self.context_map.clone(),
-//         }
-//     }
-// }
+impl FacItemOutputLogInfo {
+    fn questitionable_clone(&self) -> Self {
+        Self {
+            context_map: self.context_map.clone(),
+            last_context: self.last_context.clone(),
+            total_with_context: self.total_with_context,
+        }
+    }
+}
 
 struct OutputData<T> {
     inner: T,
@@ -236,7 +285,7 @@ pub struct OutputContextHandle {
 
 impl Drop for OutputContextHandle {
     fn drop(&mut self) {
-        get_global_context_map(|map| map[self.context_level.clone()].pop());
+        get_global_context_map(|log_info| log_info.context_map[self.context_level.clone()].pop());
     }
 }
 

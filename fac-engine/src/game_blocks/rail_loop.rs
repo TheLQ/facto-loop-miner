@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    blueprint::output::{ContextLevel, FacItemOutput, OutputContextHandle},
+    blueprint::output::{ContextLevel, FacItemOutput},
     common::vpoint::VPoint,
     game_entities::{
         chest::FacEntChestType, direction::FacDirectionQuarter, inserter::FacEntInserterType,

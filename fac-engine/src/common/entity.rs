@@ -1,16 +1,6 @@
-use itertools::Itertools;
-use tracing::debug;
-
 use crate::{
-    blueprint::{
-        bpfac::{FacBpInteger, entity::FacBpEntity, position::FacBpPosition},
-        output::{ContextLevel, ContextMap},
-    },
-    common::{
-        ascii_color::{Color, ascii_color},
-        names::FacEntityName,
-        vpoint::C_BLOCK_LINE,
-    },
+    blueprint::bpfac::{FacBpInteger, entity::FacBpEntity, position::FacBpPosition},
+    common::names::FacEntityName,
     game_entities::{
         belt_under::FacEntBeltUnderType, direction::FacDirectionEighth, module::FacModule,
     },
@@ -37,33 +27,11 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
     //     self.to_blueprint(entity_number.try_into().unwrap(), position, output)
     // }
 
-    fn to_blueprint(
-        &self,
-        entity_number: FacBpInteger,
-        position: &VPoint,
-        context_map: &ContextMap,
-    ) -> FacBpEntity {
-        let facpos = self.to_fac_position(position);
-        let contexts = ascii_color(
-            context_map[ContextLevel::Block]
-                .iter()
-                .join(&format!(" {C_BLOCK_LINE} ")),
-            Color::Green,
-        );
-        let subcontexts = ascii_color(
-            context_map[ContextLevel::Micro].iter().join(" ! "),
-            Color::Purple,
-        );
-        debug!(
-            "blueprint pos {:6} facpos {:10} {:65} {contexts:34} {subcontexts}",
-            position.display(),
-            facpos.display(),
-            format!("{:?}", self),
-        );
+    fn to_blueprint(&self, entity_number: FacBpInteger, position: &VPoint) -> FacBpEntity {
         FacBpEntity {
             entity_number,
             name: self.name().to_fac_name(),
-            position: facpos,
+            position: self.to_fac_position(position),
             direction: self.to_fac_direction(),
             neighbours: None,
             recipe: self.to_fac_recipe(),

@@ -3,7 +3,7 @@ const FORMAT_START: &str = "[";
 const FORMAT_RESET: &str = "0";
 const FOROMAT_END: &str = "m";
 
-pub fn ascii_color(string: impl AsRef<str>, color: Color) -> String {
+pub fn ansi_color(string: impl AsRef<str>, color: Color) -> String {
     [
         // start format
         C_SHELL_ESCAPE,
@@ -37,3 +37,23 @@ impl Color {
 
 pub const EMOJI_BROWN: &str = "\u{1F3FB}"; // 🏽
 pub const EMOJI_POINT: &str = "\u{1F449}"; // 👉
+
+pub fn ascii_previous_line() -> String {
+    [
+        // previous
+        C_SHELL_ESCAPE,
+        FORMAT_START,
+        "F",
+    ]
+    .concat()
+}
+
+pub fn ascii_erase_line() -> String {
+    [
+        // erase line
+        C_SHELL_ESCAPE,
+        FORMAT_START,
+        "K",
+    ]
+    .concat()
+}
