@@ -3,7 +3,10 @@ use std::rc::Rc;
 use tracing::{info, warn};
 
 use crate::{
-    blueprint::{bpitem::BlueprintItem, output::FacItemOutput},
+    blueprint::{
+        bpitem::BlueprintItem,
+        output::{ContextLevel, FacItemOutput},
+    },
     common::{entity::FacEntity, vpoint::VPoint},
     game_entities::{
         cargo_wagon::FacEntWagon,
@@ -41,7 +44,9 @@ pub struct FacBlkRailStation {
 
 impl FacBlock for FacBlkRailStation {
     fn generate(&self, origin: VPoint) {
-        let _ = &mut self.output.context_handle(format!("Station-{}", self.name));
+        let _ = &mut self
+            .output
+            .context_handle(format!("Station-{}", self.name), self);
         let base_direction;
         let fill_x_direction;
         let origin_after_straight;
@@ -169,9 +174,13 @@ struct FacBlkRailStop {
 
 impl FacBlkRailStop {
     fn place_side_inserters(&self, inserter: &FacEntInserterType, is_input: bool) {
-        let _ = &mut self.output.context_handle("Inserter".into());
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Block, "Inserter".into(), self);
         for car in 0..self.wagons {
-            let _ = self.output.subcontext_handle(format!("Car{}", car));
+            let context =
+                self.output
+                    .context_handle(ContextLevel::Block, format!("Car{}", car), self);
             let car_x_offset = self.get_wagon_x_offset(car);
 
             for (negative, direction) in [
@@ -179,9 +188,11 @@ impl FacBlkRailStop {
                 (false, FacDirectionQuarter::North),
             ] {
                 for exit in 0..INSERTERS_PER_CAR {
-                    let _ = &mut self
-                        .output
-                        .subcontext_handle(if negative { "Bottom" } else { "Top" }.into());
+                    let _ = &mut self.output.context_handle(
+                        ContextLevel::Block,
+                        if negative { "Bottom" } else { "Top" }.into(),
+                        self,
+                    );
                     let direction = if is_input {
                         direction.rotate_flip()
                     } else {
