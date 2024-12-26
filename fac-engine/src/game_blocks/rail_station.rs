@@ -4,6 +4,7 @@ use tracing::trace;
 
 use crate::{
     blueprint::{
+        bpfac::schedule::FacBpSchedule,
         bpitem::BlueprintItem,
         output::{ContextLevel, FacItemOutput},
     },
@@ -37,6 +38,7 @@ pub struct FacBlkRailStation {
     pub inserter: FacEntInserterType,
     pub fuel_inserter: Option<FacEntInserterType>,
     pub fuel_inserter_chest: Option<FacEntChestType>,
+    pub schedule: Option<FacBpSchedule>,
     pub is_east: bool,
     pub is_up: bool,
     pub is_input: bool,
@@ -160,7 +162,7 @@ impl FacBlock for FacBlkRailStation {
         if self.is_create_train {
             // rails beneath must be placed already
             // otherwise it supposedly creates but doesn't show visually at least
-            stop_block.place_train();
+            stop_block.place_train(&self.schedule);
         }
     }
 }
@@ -333,7 +335,7 @@ impl FacBlkRailStop {
         ));
     }
 
-    fn place_train(&self) {
+    fn place_train(&self, schedule: &Option<FacBpSchedule>) {
         let _ = &mut self
             .output
             .context_handle(ContextLevel::Micro, "🔚Stock".into());
@@ -341,7 +343,7 @@ impl FacBlkRailStop {
             let roller_pos = self.get_rolling_point_at_xy(true, roller + 1, 2, 0);
             trace!(" {roller_pos:?} origin {:?}", self.stop_rail_pos);
             let entity: Box<dyn FacEntity> = if roller < self.front_engines {
-                FacEntLocomotive::new().into_boxed()
+                FacEntLocomotive::new_with_schedule(schedule.clone()).into_boxed()
             } else {
                 FacEntWagon::new().into_boxed()
             };

@@ -2,21 +2,72 @@ use serde::{Deserialize, Serialize};
 
 use super::FacBpInteger;
 
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct FacBpSchedule {
-    locomotives: Vec<FacBpInteger>,
-    schedule: Vec<FacBpScheduleData>,
+    pub locomotives: Vec<FacBpInteger>,
+    pub schedule: Vec<FacBpScheduleData>,
 }
 
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct FacBpScheduleData {
-    station: String,
-    wait_conditions: Vec<FacBpScheduleCondition>,
+    pub station: String,
+    pub wait_conditions: Vec<FacBpScheduleWait>,
 }
 
-#[derive(PartialEq, Serialize, Deserialize)]
-pub struct FacBpScheduleCondition {
-    compare_type: String,
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct FacBpScheduleWait {
+    pub compare_type: FacBpLogic,
     #[serde(rename = "type")]
-    ctype: String,
+    pub ctype: FacBpWaitType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<FacBpCircuitCondition>,
+}
+
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct FacBpCircuitCondition {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub constant: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comparator: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_signal: Option<FacBpSignalId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub second_signal: Option<FacBpSignalId>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct FacBpSignalId {
+    #[serde(rename = "type")]
+    pub stype: FacBpSignalIdType,
+    pub name: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FacBpSignalIdType {
+    Item,
+    Fluid,
+    Virual,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FacBpLogic {
+    And,
+    Or,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FacBpWaitType {
+    Time,
+    Full,
+    Empty,
+    ItemCount,
+    Circuit,
+    Inactivity,
+    RobotsInactive,
+    FluidCount,
+    PassenterPresent,
+    PassengerNotPresent,
 }

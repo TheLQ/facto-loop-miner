@@ -7,7 +7,9 @@ use crate::{
     },
 };
 
-use super::{FacBpInteger, infinity::FacBpInfinitySettings, position::FacBpPosition};
+use super::{
+    FacBpInteger, infinity::FacBpInfinitySettings, position::FacBpPosition, schedule::FacBpSchedule,
+};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -31,6 +33,8 @@ pub struct FacBpEntity {
     pub station: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub infinity_settings: Option<FacBpInfinitySettings>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schedule: Option<FacBpSchedule>,
 }
 
 impl FacBpEntity {
@@ -64,6 +68,10 @@ impl FacBpEntity {
                 create.with_command_module(module);
             }
         }
+        if let Some(v) = &self.infinity_settings {
+            create.with_command_infinity_settings(v);
+        }
+
         if let Some(v) = &self.infinity_settings {
             create.with_command_infinity_settings(v);
         }

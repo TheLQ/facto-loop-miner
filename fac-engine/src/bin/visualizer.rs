@@ -82,6 +82,7 @@ fn basic_build_gen(output: Rc<FacItemOutput>) {
         inserter: FacEntInserterType::Basic,
         fuel_inserter: None,
         fuel_inserter_chest: None,
+        schedule: None,
         is_east: true,
         is_up: true,
         is_input: true,

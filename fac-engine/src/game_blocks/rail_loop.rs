@@ -2,7 +2,13 @@ use std::rc::Rc;
 
 use crate::{
     blueprint::{
-        bpfac::infinity::{FacBpFilter, FacBpInfinitySettings},
+        bpfac::{
+            infinity::{FacBpFilter, FacBpInfinitySettings},
+            schedule::{
+                FacBpCircuitCondition, FacBpLogic, FacBpSchedule, FacBpScheduleData,
+                FacBpScheduleWait, FacBpSignalId, FacBpSignalIdType, FacBpWaitType,
+            },
+        },
         output::{ContextLevel, FacItemOutput},
     },
     common::vpoint::VPoint,
@@ -81,7 +87,7 @@ impl FacBlkRailLoop {
         let is_input = self.is_start_input;
 
         let station = FacBlkRailStation {
-            name: station_input_to_name(is_input, &self.name_prefix),
+            name: self.station_input_to_name(is_input),
             wagons: self.wagons,
             front_engines: self.front_engines,
             chests: self.chest_type(is_input),
@@ -95,6 +101,7 @@ impl FacBlkRailLoop {
             is_up: true,
             is_input,
             is_create_train: is_input,
+            schedule: Some(self.new_schedule()),
             output: self.output.clone(),
         };
 
@@ -117,13 +124,14 @@ impl FacBlkRailLoop {
         // self.is_end_set = true;
         let is_input = !self.is_start_input;
         let station = FacBlkRailStation {
-            name: station_input_to_name(is_input, &self.name_prefix),
+            name: self.station_input_to_name(is_input),
             wagons: self.wagons,
             front_engines: self.front_engines,
             chests: self.chest_type(is_input),
             inserter: self.inserter_type.clone(),
             fuel_inserter: None,
             fuel_inserter_chest: None,
+            schedule: None,
             is_east: true,
             is_up: true,
             is_input,
@@ -156,13 +164,56 @@ impl FacBlkRailLoop {
         self.add_start();
         self.add_end();
     }
-}
 
-fn station_input_to_name(is_input: bool, prefix: &str) -> String {
-    if is_input {
-        format!("{}-Source", prefix)
-    } else {
-        format!("{}-Drain", prefix)
+    fn new_schedule(&self) -> FacBpSchedule {
+        FacBpSchedule {
+            locomotives: Vec::new(),
+            schedule: [
+                FacBpScheduleData {
+                    station: self.station_input_to_name(true),
+                    wait_conditions: [
+                        FacBpScheduleWait {
+                            compare_type: FacBpLogic::Or,
+                            ctype: FacBpWaitType::ItemCount,
+                            condition: Some(FacBpCircuitCondition {
+                                comparator: Some("<".into()),
+                                first_signal: Some(FacBpSignalId {
+                                    stype: FacBpSignalIdType::Item,
+                                    // TODO
+                                    name: "heavy-oil-barrel".into(),
+                                }),
+                                second_signal: None,
+                                constant: Some(800),
+                            }),
+                        },
+                        FacBpScheduleWait {
+                            compare_type: FacBpLogic::Or,
+                            ctype: FacBpWaitType::Empty,
+                            condition: None,
+                        },
+                    ]
+                    .into(),
+                },
+                FacBpScheduleData {
+                    station: self.station_input_to_name(true),
+                    wait_conditions: [FacBpScheduleWait {
+                        compare_type: FacBpLogic::Or,
+                        ctype: FacBpWaitType::Full,
+                        condition: None,
+                    }]
+                    .into(),
+                },
+            ]
+            .into(),
+        }
+    }
+
+    fn station_input_to_name(&self, is_input: bool) -> String {
+        if is_input {
+            format!("{}-Source", self.name_prefix)
+        } else {
+            format!("{}-Drain", self.name_prefix)
+        }
     }
 }
 

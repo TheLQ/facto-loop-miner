@@ -1,6 +1,7 @@
 use crate::{
     blueprint::bpfac::{
-        FacBpInteger, entity::FacBpEntity, infinity::FacBpInfinitySettings, position::FacBpPosition,
+        FacBpInteger, entity::FacBpEntity, infinity::FacBpInfinitySettings,
+        position::FacBpPosition, schedule::FacBpSchedule,
     },
     common::names::FacEntityName,
     game_entities::{
@@ -41,6 +42,7 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
             utype: self.to_fac_belt_under_type(),
             station: self.to_fac_station(),
             infinity_settings: self.to_fac_infinity_settings(),
+            schedule: self.to_fac_schedule(),
         }
     }
 
@@ -65,6 +67,10 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
     }
 
     fn to_fac_infinity_settings(&self) -> Option<FacBpInfinitySettings> {
+        None
+    }
+
+    fn to_fac_schedule(&self) -> Option<FacBpSchedule> {
         None
     }
 }

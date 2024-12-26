@@ -3,6 +3,10 @@ use std::rc::Rc;
 use exhaustive::Exhaustive;
 use facto_loop_miner_common::log_init;
 use facto_loop_miner_fac_engine::blueprint::bpfac::infinity::{FacBpFilter, FacBpInfinitySettings};
+use facto_loop_miner_fac_engine::blueprint::bpfac::schedule::{
+    FacBpCircuitCondition, FacBpLogic, FacBpSchedule, FacBpScheduleData, FacBpScheduleWait,
+    FacBpSignalId, FacBpSignalIdType, FacBpWaitType,
+};
 use facto_loop_miner_fac_engine::blueprint::bpitem::BlueprintItem;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
@@ -234,6 +238,45 @@ fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         // is_up: false,
         is_input: true,
         is_create_train: true,
+        schedule: Some(FacBpSchedule {
+            locomotives: Vec::new(),
+            schedule: [
+                FacBpScheduleData {
+                    station: "SomeTestStart".into(),
+                    wait_conditions: [
+                        FacBpScheduleWait {
+                            compare_type: FacBpLogic::Or,
+                            ctype: FacBpWaitType::ItemCount,
+                            condition: Some(FacBpCircuitCondition {
+                                comparator: Some("<".into()),
+                                first_signal: Some(FacBpSignalId {
+                                    stype: FacBpSignalIdType::Item,
+                                    name: "heavy-oil-barrel".into(),
+                                }),
+                                second_signal: None,
+                                constant: Some(800),
+                            }),
+                        },
+                        FacBpScheduleWait {
+                            compare_type: FacBpLogic::Or,
+                            ctype: FacBpWaitType::Empty,
+                            condition: None,
+                        },
+                    ]
+                    .into(),
+                },
+                FacBpScheduleData {
+                    station: "SomeTestEnd".into(),
+                    wait_conditions: [FacBpScheduleWait {
+                        compare_type: FacBpLogic::Or,
+                        ctype: FacBpWaitType::Full,
+                        condition: None,
+                    }]
+                    .into(),
+                },
+            ]
+            .into(),
+        }),
         output,
     };
     station.generate(VPOINT_ZERO);
