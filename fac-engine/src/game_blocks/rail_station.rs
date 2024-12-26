@@ -342,12 +342,12 @@ impl FacBlkRailStop {
 
         for i in 0..(self.front_engines + self.wagons) {
             rolling_counter += 1;
-            let rolling_calc = (7 * rolling_counter) + 3;
+            let rolling_calc = (7 * rolling_counter) + 2;
             trace!(
                 "rolling total {} origin {:?}",
                 rolling_calc, self.stop_rail_pos
             );
-            let entity: Box<dyn FacEntity> = if i > self.wagons {
+            let entity: Box<dyn FacEntity> = if i < self.front_engines {
                 FacEntLocomotive::new().into_boxed()
             } else {
                 FacEntWagon::new().into_boxed()
