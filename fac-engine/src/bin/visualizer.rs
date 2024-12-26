@@ -80,6 +80,8 @@ fn basic_build_gen(output: Rc<FacItemOutput>) {
         front_engines: 2,
         chests: Some(FacEntChestType::Passive),
         inserter: FacEntInserterType::Basic,
+        fuel_inserter: None,
+        fuel_inserter_chest: None,
         is_east: true,
         is_up: true,
         is_input: true,

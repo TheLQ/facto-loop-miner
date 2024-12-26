@@ -221,11 +221,13 @@ fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
 
     let station = FacBlkRailStation {
         name: "test".into(),
-        wagons: 4,
-        front_engines: 0,
-        // chests: Some(FacEntChestType::Steel),
-        chests: None,
+        wagons: 2,
+        front_engines: 2,
+        chests: Some(FacEntChestType::Steel),
+        // chests: None,
         inserter: FacEntInserterType::Basic,
+        fuel_inserter: Some(FacEntInserterType::Basic),
+        fuel_inserter_chest: Some(FacEntChestType::Steel),
         is_east: true,
         // is_east: false,
         is_up: true,
@@ -255,25 +257,13 @@ fn make_rail_loop(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         origin_direction: FacDirectionQuarter::West,
         chest_input: Some(FacEntChestType::Infinity(FacBpInfinitySettings {
             remove_unfiltered_items: false,
-            filters: vec![FacBpFilter {
-                count: 22,
-                mode: "at-least".into(),
-                name: "iron-stick".into(),
-            }],
+            filters: vec![FacBpFilter::new_for_item("iron-stick")],
         })),
         chest_output: Some(FacEntChestType::Infinity(FacBpInfinitySettings {
             remove_unfiltered_items: true,
             filters: vec![
-                FacBpFilter {
-                    count: 22,
-                    mode: "at-least".into(),
-                    name: "iron-stick".into(),
-                },
-                FacBpFilter {
-                    count: 22,
-                    mode: "at-least".into(),
-                    name: "iron-ore".into(),
-                },
+                FacBpFilter::new_for_item("iron-stick"),
+                FacBpFilter::new_for_item("iron-ore"),
             ],
         })),
         inserter_type: FacEntInserterType::Stack,

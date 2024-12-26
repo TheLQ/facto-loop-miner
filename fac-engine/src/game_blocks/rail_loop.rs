@@ -1,7 +1,10 @@
 use std::rc::Rc;
 
 use crate::{
-    blueprint::output::{ContextLevel, FacItemOutput},
+    blueprint::{
+        bpfac::infinity::{FacBpFilter, FacBpInfinitySettings},
+        output::{ContextLevel, FacItemOutput},
+    },
     common::vpoint::VPoint,
     game_entities::{
         chest::FacEntChestType, direction::FacDirectionQuarter, inserter::FacEntInserterType,
@@ -83,6 +86,11 @@ impl FacBlkRailLoop {
             front_engines: self.front_engines,
             chests: self.chest_type(is_input),
             inserter: self.inserter_type.clone(),
+            fuel_inserter: Some(FacEntInserterType::Basic),
+            fuel_inserter_chest: Some(FacEntChestType::Infinity(FacBpInfinitySettings {
+                filters: [FacBpFilter::new_for_item("nuclear-fuel")].to_vec(),
+                remove_unfiltered_items: true,
+            })),
             is_east: true,
             is_up: true,
             is_input,
@@ -114,6 +122,8 @@ impl FacBlkRailLoop {
             front_engines: self.front_engines,
             chests: self.chest_type(is_input),
             inserter: self.inserter_type.clone(),
+            fuel_inserter: None,
+            fuel_inserter_chest: None,
             is_east: true,
             is_up: true,
             is_input,

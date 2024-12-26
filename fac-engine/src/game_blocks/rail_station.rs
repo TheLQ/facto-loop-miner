@@ -35,6 +35,8 @@ pub struct FacBlkRailStation {
     pub front_engines: usize,
     pub chests: Option<FacEntChestType>,
     pub inserter: FacEntInserterType,
+    pub fuel_inserter: Option<FacEntInserterType>,
+    pub fuel_inserter_chest: Option<FacEntChestType>,
     pub is_east: bool,
     pub is_up: bool,
     pub is_input: bool,
@@ -128,12 +130,13 @@ impl FacBlock for FacBlkRailStation {
             output: self.output.clone(),
         };
         stop_block.place_train_stop(self.name.clone());
-        stop_block.place_side_inserter_electrics();
+        stop_block.place_side_electrics();
         stop_block.place_side_inserters(&self.inserter, self.is_input);
         stop_block.place_rail_signals();
         if let Some(chests) = &self.chests {
             stop_block.place_side_chests(chests);
         }
+        stop_block.place_fuel(&self.fuel_inserter, &self.fuel_inserter_chest);
 
         {
             let _ = &mut self
@@ -240,17 +243,13 @@ impl FacBlkRailStop {
         }
     }
 
-    fn place_side_inserter_electrics(&self) {
+    fn place_side_electrics(&self) {
         let _ = &mut self
             .output
             .context_handle(ContextLevel::Micro, "🔚Electrics".into());
         // lamps and poles on start and end
-        for car in 0..(self.wagons + 1) {
-            let car_x_offset = self.get_wagon_x_offset(car);
-
-            let start = self
-                .stop_rail_pos
-                .move_direction(&self.fill_x_direction, car_x_offset);
+        for roller in 0..(self.wagons + self.front_engines + 1) {
+            let electric_pos = self.get_rolling_point_at_xy(false, roller, -1, 1);
 
             // output.write(BlueprintItem::new(
             //     FacEntLamp::new().into_boxed(),
@@ -258,7 +257,7 @@ impl FacBlkRailStop {
             // ));
             self.output.write(BlueprintItem::new(
                 FacEntElectricMini::new(FacEntElectricMiniType::Medium).into_boxed(),
-                start.move_y(centered_y_offset(!self.rotation, 1)),
+                electric_pos,
             ));
         }
     }
@@ -338,27 +337,71 @@ impl FacBlkRailStop {
         let _ = &mut self
             .output
             .context_handle(ContextLevel::Micro, "🔚Stock".into());
-        let mut rolling_counter = 0;
-
-        for i in 0..(self.front_engines + self.wagons) {
-            rolling_counter += 1;
-            let rolling_calc = (7 * rolling_counter) + 2;
-            trace!(
-                "rolling total {} origin {:?}",
-                rolling_calc, self.stop_rail_pos
-            );
-            let entity: Box<dyn FacEntity> = if i < self.front_engines {
+        for roller in 0..(self.front_engines + self.wagons) {
+            let roller_pos = self.get_rolling_point_at_xy(true, roller + 1, 2, 0);
+            trace!(" {roller_pos:?} origin {:?}", self.stop_rail_pos);
+            let entity: Box<dyn FacEntity> = if roller < self.front_engines {
                 FacEntLocomotive::new().into_boxed()
             } else {
                 FacEntWagon::new().into_boxed()
             };
+
+            self.output.write(BlueprintItem::new(entity, roller_pos));
+        }
+    }
+
+    fn place_fuel(
+        &self,
+        fuel_inserter: &Option<FacEntInserterType>,
+        fuel_inserter_chest: &Option<FacEntChestType>,
+    ) {
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Micro, "🔚Fuel".into());
+
+        let (fuel_inserter, fuel_inserter_chest) = match (fuel_inserter, fuel_inserter_chest) {
+            (Some(fuel_inserter), Some(fuel_inserter_chest)) => {
+                (fuel_inserter, fuel_inserter_chest)
+            }
+            (None, None) => return,
+            _ => panic!("imbalance"),
+        };
+
+        for roller in 0..self.front_engines {
+            let inserter_direction = FacDirectionQuarter::South;
+            let inserter_direction = if self.rotation {
+                inserter_direction.rotate_flip()
+            } else {
+                inserter_direction
+            };
             self.output.write(BlueprintItem::new(
-                entity,
-                self.stop_rail_pos
-                    .move_direction(&self.fill_x_direction, rolling_calc),
+                FacEntInserter::new(fuel_inserter.clone(), inserter_direction).into_boxed(),
+                self.get_rolling_point_at_xy(true, roller, 1, 2),
+            ));
+            self.output.write(BlueprintItem::new(
+                FacEntChest::new(fuel_inserter_chest.clone()).into_boxed(),
+                self.get_rolling_point_at_xy(true, roller, 1, 3),
             ));
         }
     }
+
+    fn get_rolling_point_at_xy(
+        &self,
+        is_inside: bool,
+        roller: usize,
+        offset_x: i32,
+        offset_y: i32,
+    ) -> VPoint {
+        let neg = if is_inside { -1 } else { 1 };
+        self.stop_rail_pos
+            .move_direction_i32(&self.fill_x_direction, (7 * roller as i32) + offset_x)
+            .move_direction_i32(&self.fill_x_direction.rotate_once(), neg * offset_y)
+    }
+
+    // fn get_wagon_point_at_xy(&self, roller: usize, offset_x: i32, offset_y: i32) -> VPoint {
+    //     // assert!(roller < self.front_engines, )
+    //     self.get_rolling_point_at_xy(roller + self.front_engines, offset_x, offset_y)
+    // }
 
     fn get_wagon_x_offset(&self, wagon: usize) -> usize {
         let engine_first_offset = 6;

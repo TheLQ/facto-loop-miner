@@ -175,18 +175,26 @@ impl VPoint {
         self.move_xy(x_steps as i32, y_steps as i32)
     }
 
+    pub fn move_direction_i32(
+        &self,
+        direction: impl Borrow<FacDirectionQuarter>,
+        steps: i32,
+    ) -> Self {
+        // cardinal directions are "north == up == -1" not "north == +1"
+        match direction.borrow() {
+            FacDirectionQuarter::North => self.move_y(-steps),
+            FacDirectionQuarter::South => self.move_y(steps),
+            FacDirectionQuarter::East => self.move_x(steps),
+            FacDirectionQuarter::West => self.move_x(-steps),
+        }
+    }
+
     pub fn move_direction(
         &self,
         direction: impl Borrow<FacDirectionQuarter>,
         steps: usize,
     ) -> Self {
-        // cardinal directions are "north == up == -1" not "north == +1"
-        match direction.borrow() {
-            FacDirectionQuarter::North => self.move_y(-(steps as i32)),
-            FacDirectionQuarter::South => self.move_y_usize(steps),
-            FacDirectionQuarter::East => self.move_x_usize(steps),
-            FacDirectionQuarter::West => self.move_x(-(steps as i32)),
-        }
+        self.move_direction_i32(direction, steps as i32)
     }
 
     pub fn move_direction_sideways(

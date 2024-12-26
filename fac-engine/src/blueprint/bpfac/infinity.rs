@@ -14,3 +14,13 @@ pub struct FacBpFilter {
     pub count: FacBpInteger,
     pub mode: String,
 }
+
+impl FacBpFilter {
+    pub fn new_for_item(name: impl ToString) -> Self {
+        Self {
+            count: 22,
+            mode: "at-least".into(),
+            name: name.to_string(),
+        }
+    }
+}
