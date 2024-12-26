@@ -733,6 +733,7 @@ dependencies = [
  "rcon-client",
  "regex",
  "serde",
+ "serde-lua-table",
  "serde_json",
  "serde_repr",
  "serde_with",
@@ -1841,6 +1842,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b9781016e935a97e8beecf0c933758c97a5520d32930e460142b4cd80c6338e"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-lua-table"
+version = "0.1.2"
+source = "git+https://github.com/Nerixyz/serde-lua-table.git?tag=v0.1.2#4f3418164fa892cc70129fdfae04f6204e718a4c"
+dependencies = [
+ "itoa",
+ "ryu",
+ "serde",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

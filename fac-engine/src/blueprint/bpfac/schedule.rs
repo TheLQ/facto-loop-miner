@@ -5,7 +5,7 @@ use super::FacBpInteger;
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct FacBpSchedule {
     pub locomotives: Vec<FacBpInteger>,
-    pub schedule: Vec<FacBpScheduleData>,
+    pub schdata: Vec<FacBpScheduleData>,
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]

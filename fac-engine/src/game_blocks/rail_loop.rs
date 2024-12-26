@@ -168,7 +168,7 @@ impl FacBlkRailLoop {
     fn new_schedule(&self) -> FacBpSchedule {
         FacBpSchedule {
             locomotives: Vec::new(),
-            schedule: [
+            schdata: [
                 FacBpScheduleData {
                     station: self.station_input_to_name(true),
                     wait_conditions: [
@@ -176,7 +176,7 @@ impl FacBlkRailLoop {
                             compare_type: FacBpLogic::Or,
                             ctype: FacBpWaitType::ItemCount,
                             condition: Some(FacBpCircuitCondition {
-                                comparator: Some("<".into()),
+                                comparator: Some(">".into()),
                                 first_signal: Some(FacBpSignalId {
                                     stype: FacBpSignalIdType::Item,
                                     // TODO
@@ -188,17 +188,17 @@ impl FacBlkRailLoop {
                         },
                         FacBpScheduleWait {
                             compare_type: FacBpLogic::Or,
-                            ctype: FacBpWaitType::Empty,
+                            ctype: FacBpWaitType::Full,
                             condition: None,
                         },
                     ]
                     .into(),
                 },
                 FacBpScheduleData {
-                    station: self.station_input_to_name(true),
+                    station: self.station_input_to_name(!true),
                     wait_conditions: [FacBpScheduleWait {
                         compare_type: FacBpLogic::Or,
-                        ctype: FacBpWaitType::Full,
+                        ctype: FacBpWaitType::Empty,
                         condition: None,
                     }]
                     .into(),

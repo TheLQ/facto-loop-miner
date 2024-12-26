@@ -72,8 +72,8 @@ impl FacBpEntity {
             create.with_command_infinity_settings(v);
         }
 
-        if let Some(v) = &self.infinity_settings {
-            create.with_command_infinity_settings(v);
+        if let Some(v) = &self.schedule {
+            create.with_command_schedule(v);
         }
 
         create

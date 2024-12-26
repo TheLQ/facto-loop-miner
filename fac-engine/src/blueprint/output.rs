@@ -3,6 +3,8 @@ use std::{cell::RefCell, rc::Rc, sync::Mutex};
 use tracing::{debug, error};
 use unicode_segmentation::UnicodeSegmentation;
 
+const FLAG_ENABLE_LINE_REWRITE: bool = false;
+
 use crate::{
     admiral::{
         err::AdmiralResult,
@@ -83,7 +85,9 @@ impl FacItemOutput {
                 // print!("\n");
             } else {
                 log_info.total_with_context += 1;
-                print!("{}", ascii_previous_line());
+                if FLAG_ENABLE_LINE_REWRITE {
+                    print!("{}", ascii_previous_line());
+                }
             };
             (contexts, subcontexts, log_info.total_with_context)
         });

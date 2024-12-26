@@ -240,7 +240,7 @@ fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         is_create_train: true,
         schedule: Some(FacBpSchedule {
             locomotives: Vec::new(),
-            schedule: [
+            schdata: [
                 FacBpScheduleData {
                     station: "SomeTestStart".into(),
                     wait_conditions: [

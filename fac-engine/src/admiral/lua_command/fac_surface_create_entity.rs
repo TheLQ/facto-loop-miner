@@ -1,6 +1,7 @@
 use crate::admiral::lua_command::{DEFAULT_FORCE_VAR, LuaCommand};
 use crate::blueprint::bpfac::infinity::{FacBpFilter, FacBpInfinitySettings};
 use crate::blueprint::bpfac::position::FacBpPosition;
+use crate::blueprint::bpfac::schedule::FacBpSchedule;
 use crate::common::vpoint::C_BLOCK_LINE;
 use crate::game_entities::direction::FacDirectionEighth;
 use crate::game_entities::module::FacModule;
@@ -151,6 +152,16 @@ impl FacSurfaceCreateEntity {
                 .to_string();
             self.with_command(text)
         }
+    }
+
+    pub fn with_command_schedule(&mut self, schedule: &FacBpSchedule) {
+        let lua_sched = serde_lua_table::to_string(&schedule.schdata).unwrap();
+        // self.with_command(format!("admiral_create.train.schedule  = {{ }}"));
+        self.with_command(format!(
+            "admiral_create.train.schedule  = {{ current = 1, records = {lua_sched} }}"
+        ));
+        // TODO: Doesn't work, must be seperate command
+        self.with_command(format!("admiral_create.train.manual_mode = false"));
     }
 }
 
