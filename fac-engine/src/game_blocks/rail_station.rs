@@ -46,7 +46,7 @@ impl FacBlock for FacBlkRailStation {
     fn generate(&self, origin: VPoint) {
         let _ = &mut self
             .output
-            .context_handle(format!("Station-{}", self.name), self);
+            .context_handle(ContextLevel::Block, format!("Station-{}", self.name));
         let base_direction;
         let fill_x_direction;
         let origin_after_straight;
@@ -176,11 +176,11 @@ impl FacBlkRailStop {
     fn place_side_inserters(&self, inserter: &FacEntInserterType, is_input: bool) {
         let _ = &mut self
             .output
-            .context_handle(ContextLevel::Block, "Inserter".into(), self);
+            .context_handle(ContextLevel::Micro, "Inserter".into());
         for car in 0..self.wagons {
-            let context =
-                self.output
-                    .context_handle(ContextLevel::Block, format!("Car{}", car), self);
+            let _ = self
+                .output
+                .context_handle(ContextLevel::Micro, format!("Car{}", car));
             let car_x_offset = self.get_wagon_x_offset(car);
 
             for (negative, direction) in [
@@ -189,9 +189,8 @@ impl FacBlkRailStop {
             ] {
                 for exit in 0..INSERTERS_PER_CAR {
                     let _ = &mut self.output.context_handle(
-                        ContextLevel::Block,
+                        ContextLevel::Micro,
                         if negative { "Bottom" } else { "Top" }.into(),
-                        self,
                     );
                     let direction = if is_input {
                         direction.rotate_flip()

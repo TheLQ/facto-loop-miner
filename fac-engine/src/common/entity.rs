@@ -4,7 +4,7 @@ use tracing::debug;
 use crate::{
     blueprint::{
         bpfac::{FacBpInteger, entity::FacBpEntity, position::FacBpPosition},
-        output::{ContextLevel, FacItemOutputLogInfo},
+        output::{ContextLevel, ContextMap},
     },
     common::{
         ascii_color::{Color, ascii_color},
@@ -40,14 +40,14 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
         &self,
         entity_number: FacBpInteger,
         position: &VPoint,
-        log_info: &FacItemOutputLogInfo,
+        context_map: &ContextMap,
     ) -> FacBpEntity {
         let facpos = self.to_fac_position(position);
         let contexts = ascii_color(
-            log_info.context_map[ContextLevel::Block].iter().join("/"),
+            context_map[ContextLevel::Block].iter().join("/"),
             Color::Green,
         );
-        let subcontexts = log_info.context_map[ContextLevel::Micro].iter().join(" ! ");
+        let subcontexts = context_map[ContextLevel::Micro].iter().join(" ! ");
         debug!(
             "blueprint pos {:6} facpos {:10} {:65} {contexts:34} {subcontexts}",
             position.display(),

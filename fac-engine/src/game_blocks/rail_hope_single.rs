@@ -118,12 +118,10 @@ impl<'o> RailHopeAppender for RailHopeSingle {
     }
 
     fn add_turn90(&mut self, clockwise: bool) {
-        let mut wrapper = &mut self.output.context_handle(
+        let _ = &mut self.output.context_handle(
             ContextLevel::Block,
             format!("Turn90-{}", if clockwise { "clw" } else { "ccw" }),
-            self,
         );
-        let mut new_self = &mut wrapper.wrapped_self;
         // warn!("turn 90 start---- clockwise {}", clockwise);
         /*
         Factorio 1 Rails are really complicated
@@ -157,7 +155,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         } else {
             first_curve_direction
         };
-        Self::write_link_rail(new_self, RailHopeLinkRail {
+        self.write_link_rail(RailHopeLinkRail {
             position: first_curve_pos,
             direction: first_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
@@ -174,7 +172,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             first_curve_direction.rotate_once()
         };
         warn!("middle straight {:?}", middle_straight_direction);
-        Self::write_link_rail(new_self, RailHopeLinkRail {
+        self.write_link_rail(RailHopeLinkRail {
             // -1,-1 to cancel RailStraight's to_fac offset
             position: middle_straight_pos - VPOINT_ONE,
             direction: middle_straight_direction.clone(),
@@ -191,7 +189,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             middle_straight_direction.rotate_once().rotate_once()
         };
         warn!("last curve {:?}", middle_straight_direction);
-        Self::write_link_rail(new_self, RailHopeLinkRail {
+        self.write_link_rail(RailHopeLinkRail {
             position: last_curve_pos,
             direction: last_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
@@ -207,7 +205,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             "from start direction {} to end direction {}",
             cur_direction, link_direction
         );
-        new_self.links.push(RailHopeLink {
+        self.links.push(RailHopeLink {
             start_pos: self.current_next_pos(),
             link_direction,
             rtype: RailHopeLinkType::Turn90 { clockwise },

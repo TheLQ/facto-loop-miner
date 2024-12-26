@@ -52,11 +52,9 @@ impl FacBlkRailLoop {
     }
 
     fn add_start(&mut self) {
-        let _ = &mut self.output.context_handle(
-            ContextLevel::Block,
-            format!("Loop-{}", self.name_prefix),
-            self,
-        );
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Block, format!("Loop-{}", self.name_prefix));
         let is_input = self.is_start_input;
         let station = FacBlkRailStation {
             name: station_input_to_name(is_input, &self.name_prefix),
@@ -87,15 +85,14 @@ impl FacBlkRailLoop {
     }
 
     fn add_end(&mut self) {
-        let handle = &mut self
+        let _ = &mut self
             .output
-            .context_handle(format!("Loop-{}", self.name_prefix), self);
-        let new_self = &handle.wrapped_self;
+            .context_handle(ContextLevel::Block, format!("Loop-{}", self.name_prefix));
 
         // self.is_end_set = true;
-        let is_input = !new_self.is_start_input;
+        let is_input = !self.is_start_input;
         let station = FacBlkRailStation {
-            name: station_input_to_name(is_input, &new_self.name_prefix),
+            name: station_input_to_name(is_input, &self.name_prefix),
             wagons: self.wagons,
             front_engines: self.front_engines,
             chests: self.chest_type.clone(),

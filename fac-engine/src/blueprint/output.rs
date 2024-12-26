@@ -1,9 +1,5 @@
 use enum_map::EnumMap;
-use std::{
-    cell::RefCell,
-    ops::{Deref, DerefMut},
-    rc::Rc,
-};
+use std::{cell::RefCell, rc::Rc, sync::Mutex};
 use tracing::error;
 
 use crate::admiral::{
@@ -36,7 +32,7 @@ impl FacItemOutput {
             otype: FacItemOutputType::AdmiralClient(RefCell::new(OutputData {
                 inner: client,
                 dedupe: None,
-                log_info: FacItemOutputLogInfo::new(),
+                // log_info: FacItemOutputLogInfo::new(),
             })),
         }
     }
@@ -46,7 +42,7 @@ impl FacItemOutput {
             otype: FacItemOutputType::AdmiralClient(RefCell::new(OutputData {
                 inner: client,
                 dedupe: Some(Vec::new()),
-                log_info: FacItemOutputLogInfo::new(),
+                // log_info: FacItemOutputLogInfo::new(),
             })),
         }
     }
@@ -56,7 +52,7 @@ impl FacItemOutput {
             otype: FacItemOutputType::Blueprint(RefCell::new(OutputData {
                 inner: BlueprintContents::new(),
                 dedupe: None,
-                log_info: FacItemOutputLogInfo::new(),
+                // log_info: FacItemOutputLogInfo::new(),
             })),
         }
     }
@@ -74,22 +70,20 @@ impl FacItemOutput {
     //     }
     // }
 
-    pub fn context_handle<'o, 's, W>(
-        &'o self,
+    pub fn context_handle(
+        &self,
         context_level: ContextLevel,
         new_context: String,
-        wrapped_self: &'s W,
-    ) -> OutputContextHandle<'o, 's, W> {
-        self.otype.push_context(context_level.clone(), new_context);
-        OutputContextHandle {
-            output: self,
-            context_level,
-            wrapped_self,
-        }
+    ) -> OutputContextHandle {
+        let res = OutputContextHandle {
+            context_level: context_level.clone(),
+        };
+        get_global_context_map(move |map| map[context_level.clone()].push(new_context.clone()));
+        res
     }
 
-    pub fn log_info(&self) -> FacItemOutputLogInfo {
-        self.otype.get_context()
+    pub fn log_info(&self) -> ContextMap {
+        get_global_context_map(|map| map.clone())
     }
 
     pub fn admiral_execute_command(
@@ -114,6 +108,27 @@ impl FacItemOutput {
 pub enum ContextLevel {
     Block,
     Micro,
+}
+
+pub type ContextMap = EnumMap<ContextLevel, Vec<String>>;
+
+/// TODO: lifetime soup with multiple muts is hard. New plan: Global!
+fn get_global_context_map<A, R>(mut action: A) -> R
+where
+    A: FnMut(&mut ContextMap) -> R,
+{
+    // thread_local! {
+    static CUR: Mutex<Option<ContextMap>> = Mutex::new(None);
+    // }
+
+    // enum_map::enum_map! {
+    // ContextLevel::Block => Vec::new(),
+    // ContextLevel::Micro => Vec::new(),
+    // }
+
+    let mut lock = CUR.lock().unwrap();
+    let map = lock.get_or_insert_default();
+    action(map)
 }
 
 enum FacItemOutputType {
@@ -143,33 +158,33 @@ impl FacItemOutputType {
         }
     }
 
-    fn push_context(&self, context_level: ContextLevel, new_context: String) {
-        match self {
-            Self::AdmiralClient(cell) => {
-                cell.borrow_mut().log_info.context_map[context_level].push(new_context)
-            }
-            Self::Blueprint(cell) => {
-                cell.borrow_mut().log_info.context_map[context_level].push(new_context)
-            }
-        }
-    }
+    // fn push_context(&self, context_level: ContextLevel, new_context: String) {
+    //     match self {
+    //         Self::AdmiralClient(cell) => {
+    //             cell.borrow_mut().log_info.context_map[context_level].push(new_context)
+    //         }
+    //         Self::Blueprint(cell) => {
+    //             cell.borrow_mut().log_info.context_map[context_level].push(new_context)
+    //         }
+    //     }
+    // }
 
-    fn pop_context(&self, context_level: ContextLevel) {
-        match self {
-            Self::AdmiralClient(cell) => {
-                cell.borrow_mut().log_info.context_map[context_level].pop()
-            }
-            Self::Blueprint(cell) => cell.borrow_mut().log_info.context_map[context_level].pop(),
-        }
-        .unwrap();
-    }
+    // fn pop_context(&self, context_level: ContextLevel) {
+    //     match self {
+    //         Self::AdmiralClient(cell) => {
+    //             cell.borrow_mut().log_info.context_map[context_level].pop()
+    //         }
+    //         Self::Blueprint(cell) => cell.borrow_mut().log_info.context_map[context_level].pop(),
+    //     }
+    //     .unwrap();
+    // }
 
-    fn get_context(&self) -> FacItemOutputLogInfo {
-        match self {
-            Self::AdmiralClient(cell) => cell.borrow().log_info.questitionable_clone(),
-            Self::Blueprint(cell) => cell.borrow().log_info.questitionable_clone(),
-        }
-    }
+    // fn get_context(&self) -> FacItemOutputLogInfo {
+    //     match self {
+    //         Self::AdmiralClient(cell) => cell.borrow().log_info.questitionable_clone(),
+    //         Self::Blueprint(cell) => cell.borrow().log_info.questitionable_clone(),
+    //     }
+    // }
 
     fn admiral_execute_command(&self, lua: Box<dyn LuaCommand>) -> AdmiralResult<ExecuteResponse> {
         match self {
@@ -190,47 +205,45 @@ fn dedupe_position(dedupe: &mut Option<Vec<FacBpPosition>>, blueprint: &FacBpEnt
     }
 }
 
-pub struct FacItemOutputLogInfo {
-    pub context_map: EnumMap<ContextLevel, Vec<String>>,
-}
+// pub struct FacItemOutputLogInfo {
+//     pub context_map: EnumMap<ContextLevel, Vec<String>>,
+// }
 
-impl FacItemOutputLogInfo {
-    fn new() -> Self {
-        Self {
-            context_map: Default::default(),
-        }
-    }
+// impl FacItemOutputLogInfo {
+//     fn new() -> Self {
+//         Self {
+//             context_map: Default::default(),
+//         }
+//     }
 
-    fn questitionable_clone(&self) -> Self {
-        Self {
-            context_map: self.context_map.clone(),
-        }
-    }
-}
+//     fn questitionable_clone(&self) -> Self {
+//         Self {
+//             context_map: self.context_map.clone(),
+//         }
+//     }
+// }
 
 struct OutputData<T> {
     inner: T,
     dedupe: Option<Vec<FacBpPosition>>,
-    log_info: FacItemOutputLogInfo,
+    // log_info: FacItemOutputLogInfo,
 }
 
 // Keeps the context alive for access during logging
-pub struct OutputContextHandle<'o, 's, W> {
-    output: &'o FacItemOutput,
-    pub wrapped_self: &'s W,
+pub struct OutputContextHandle {
     context_level: ContextLevel,
 }
 
-impl<'o, 's, W> Drop for OutputContextHandle<'o, 's, W> {
+impl Drop for OutputContextHandle {
     fn drop(&mut self) {
-        self.output.otype.pop_context(self.context_level.clone())
+        get_global_context_map(|map| map[self.context_level.clone()].pop());
     }
 }
 
-impl<'o, 's, W> Deref for OutputContextHandle<'o, 's, W> {
-    type Target = FacItemOutput;
+// impl Deref for OutputContextHandle {
+//     type Target = FacItemOutput;
 
-    fn deref(&self) -> &Self::Target {
-        self.output
-    }
-}
+//     fn deref(&self) -> &Self::Target {
+//         self.output
+//     }
+// }
