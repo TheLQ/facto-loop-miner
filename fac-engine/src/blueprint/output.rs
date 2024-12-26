@@ -42,10 +42,10 @@ impl FacItemOutput {
         }
     }
 
-    pub fn new_blueprint(contents: BlueprintContents) -> Self {
+    pub fn new_blueprint() -> Self {
         Self {
             otype: FacItemOutputType::Blueprint(RefCell::new(OutputData {
-                inner: contents,
+                inner: BlueprintContents::new(),
                 dedupe: None,
                 log_info: FacItemOutputLogInfo::new(),
             })),
@@ -90,6 +90,16 @@ impl FacItemOutput {
         lua: Box<dyn LuaCommand>,
     ) -> AdmiralResult<ExecuteResponse> {
         self.otype.admiral_execute_command(lua)
+    }
+
+    pub fn into_blueprint_contents(self) -> BlueprintContents {
+        match self.otype {
+            FacItemOutputType::Blueprint(inner) => {
+                let output_data = inner.into_inner();
+                output_data.inner
+            }
+            FacItemOutputType::AdmiralClient(_) => panic!("not a blueprint"),
+        }
     }
 }
 

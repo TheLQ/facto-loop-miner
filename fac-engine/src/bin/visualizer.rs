@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use facto_loop_miner_common::log_init;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
@@ -30,22 +32,21 @@ use facto_loop_miner_fac_engine::{
 fn main() {
     log_init(None);
 
-    let mut bp_contents = BlueprintContents::new();
-    let mut output = FacItemOutput::new_blueprint(&mut bp_contents);
+    let output = FacItemOutput::new_blueprint().into_rc();
 
     match 8 {
-        1 => basic_build_bp(&mut output),
-        2 => basic_build_gen(&mut output),
-        3 => basic_build_terapower(&mut output),
-        4 => basic_build_beacon_farm(&mut output),
-        5 => basic_build_robo_farm(&mut output),
-        6 => basic_build_assembler_thru(&mut output),
-        7 => basic_build_rail_hope_single(&mut output),
-        8 => basic_build_rail_hope_dual(&mut output),
+        1 => basic_build_bp(output.clone()),
+        2 => basic_build_gen(output.clone()),
+        3 => basic_build_terapower(output.clone()),
+        4 => basic_build_beacon_farm(output.clone()),
+        5 => basic_build_robo_farm(output.clone()),
+        6 => basic_build_assembler_thru(output.clone()),
+        7 => basic_build_rail_hope_single(output.clone()),
+        8 => basic_build_rail_hope_dual(output.clone()),
         _ => panic!("asdf"),
     }
 
-    visualize_blueprint(&bp_contents);
+    visualize_blueprint(&Rc::into_inner(output).unwrap().into_blueprint_contents());
 
     // let res: Vec<FacSurfaceCreateEntity> = bp_contents
     //     .entities()
@@ -60,7 +61,7 @@ fn main() {
     // println!("bp {}", res);
 }
 
-fn basic_build_bp(output: &mut FacItemOutput) {
+fn basic_build_bp(output: Rc<FacItemOutput>) {
     {
         let entity = FacEntAssembler::new_basic(FacTier::Tier1, "something".into());
         output.write(BlueprintItem::new(entity.into_boxed(), VPoint::new(1, 1)));
@@ -72,7 +73,7 @@ fn basic_build_bp(output: &mut FacItemOutput) {
     }
 }
 
-fn basic_build_gen(output: &mut FacItemOutput) {
+fn basic_build_gen(output: Rc<FacItemOutput>) {
     let station = FacBlkRailStation {
         name: "test".into(),
         wagons: 3,
@@ -83,16 +84,17 @@ fn basic_build_gen(output: &mut FacItemOutput) {
         is_up: true,
         is_input: true,
         is_create_train: true,
+        output,
     };
-    station.generate(VPoint::new(5, 5), output)
+    station.generate(VPoint::new(5, 5))
 }
 
-fn basic_build_terapower(output: &mut FacItemOutput) {
-    let station = FacBlkTerapower::new(3, 2);
-    station.generate(VPoint::new(5, 5), output);
+fn basic_build_terapower(output: Rc<FacItemOutput>) {
+    let station = FacBlkTerapower::new(3, 2, output);
+    station.generate(VPoint::new(5, 5));
 }
 
-fn basic_build_beacon_farm(output: &mut FacItemOutput) {
+fn basic_build_beacon_farm(output: Rc<FacItemOutput>) {
     let station = FacBlkBeaconFarm {
         inner_cell_size: 2,
         width: 3,
@@ -131,37 +133,41 @@ fn basic_build_beacon_farm(output: &mut FacItemOutput) {
                 None,
             ],
             is_big_power: true,
+            output: output.clone(),
         }),
+        output,
     };
-    station.generate(VPoint::new(5, 5), output)
+    station.generate(VPoint::new(5, 5))
 }
 
-fn basic_build_robo_farm(output: &mut FacItemOutput) {
+fn basic_build_robo_farm(output: Rc<FacItemOutput>) {
     let farm = FacBlkRobofarm {
         width: 3,
         height: 3,
         is_row_depth_full: true,
+        output,
     };
-    farm.generate(VPoint::new(5, 5), output)
+    farm.generate(VPoint::new(5, 5))
 }
 
-fn basic_build_assembler_thru(output: &mut FacItemOutput) {
+fn basic_build_assembler_thru(output: Rc<FacItemOutput>) {
     let farm = FacBlkAssemblerThru {
         assembler: FacEntAssembler::new(FacTier::Tier1, "copper-wire".into(), Default::default()),
         belt_type: FacEntBeltType::Fast,
         inserter_type: FacEntInserterType::Fast,
         width: 2,
         height: 3,
+        output,
     };
-    farm.generate(VPoint::new(5, 5), output)
+    farm.generate(VPoint::new(5, 5))
 }
 
-fn basic_build_rail_hope_single(output: &mut FacItemOutput) {
-    let farm = RailHopeSingle::new(VPoint::new(5, 5), FacDirectionQuarter::East);
-    farm.to_fac(output);
+fn basic_build_rail_hope_single(output: Rc<FacItemOutput>) {
+    let mut farm = RailHopeSingle::new(VPoint::new(6, 6), FacDirectionQuarter::East, output);
+    farm.add_straight(5);
 }
 
-fn basic_build_rail_hope_dual(output: &mut FacItemOutput) {
-    let farm = RailHopeDual::new(VPoint::new(5, 5), FacDirectionQuarter::East);
-    farm.to_fac(output);
+fn basic_build_rail_hope_dual(output: Rc<FacItemOutput>) {
+    let mut farm = RailHopeDual::new(VPoint::new(6, 6), FacDirectionQuarter::East, output);
+    farm.add_straight_section();
 }
