@@ -369,20 +369,37 @@ mod test {
 
     #[test]
     fn test_straight_chain() {
-        let hope_long_output = FacItemOutput::new_blueprint(BlueprintContents::new()).into_rc();
-        let mut hope_long =
-            RailHopeSingle::new(VPoint::zero(), FacDirectionQuarter::North, hope_long_output);
-        hope_long.add_straight(2);
-        hope_long.add_straight(3);
-        hope_long.add_straight(6);
+        let hope_long_output = FacItemOutput::new_blueprint().into_rc();
+        let hope_long_next_pos = {
+            let mut hope_long = RailHopeSingle::new(
+                VPoint::zero(),
+                FacDirectionQuarter::North,
+                hope_long_output.clone(),
+            );
+            hope_long.add_straight(2);
+            hope_long.add_straight(3);
+            hope_long.add_straight(6);
 
-        let mut hope_short = RailHopeSingle::new(VPoint::zero(), FacDirectionQuarter::North);
-        hope_short.add_straight(11);
-        let mut hope_short_bp = BlueprintContents::new();
-        hope_short.to_fac(&mut FacItemOutput::new_blueprint(&mut hope_short_bp));
+            hope_long.current_next_pos()
+        };
+
+        let hope_long_bp = hope_long_output.consume_rc().into_blueprint_contents();
+
+        let hope_short_output = FacItemOutput::new_blueprint().into_rc();
+        let hope_short_next_pos = {
+            let mut hope_short = RailHopeSingle::new(
+                VPoint::zero(),
+                FacDirectionQuarter::North,
+                hope_short_output.clone(),
+            );
+            hope_short.add_straight(11);
+
+            hope_short.current_next_pos()
+        };
+
+        let hope_short_bp = hope_short_output.consume_rc().into_blueprint_contents();
 
         assert_eq!(hope_long_bp.fac_entities(), hope_short_bp.fac_entities(),);
-
-        assert_eq!(hope_long.current_next_pos(), hope_short.current_next_pos());
+        assert_eq!(hope_long_next_pos, hope_short_next_pos);
     }
 }

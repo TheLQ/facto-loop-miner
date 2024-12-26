@@ -46,7 +46,7 @@ fn main() {
         _ => panic!("asdf"),
     }
 
-    visualize_blueprint(&Rc::into_inner(output).unwrap().into_blueprint_contents());
+    visualize_blueprint(&output.consume_rc().into_blueprint_contents());
 
     // let res: Vec<FacSurfaceCreateEntity> = bp_contents
     //     .entities()

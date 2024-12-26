@@ -9,6 +9,7 @@ pub struct FacBpBlueprint {
     pub entities: Vec<FacBpEntity>,
     pub item: String,
     pub version: usize,
+    #[serde(default)]
     pub schedules: Vec<FacBpSchedule>,
 }
 

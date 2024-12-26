@@ -22,6 +22,10 @@ impl FacItemOutput {
         Rc::new(self)
     }
 
+    pub fn consume_rc(self: Rc<Self>) -> Self {
+        Rc::into_inner(self).unwrap()
+    }
+
     pub fn new_admiral(client: AdmiralClient) -> Self {
         Self {
             otype: FacItemOutputType::AdmiralClient(RefCell::new(OutputData {
