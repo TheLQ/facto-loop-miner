@@ -7,7 +7,7 @@ use crate::{
     },
 };
 
-use super::{FacBpInteger, position::FacBpPosition};
+use super::{FacBpInteger, infinity::FacBpInfinitySettings, position::FacBpPosition};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -29,6 +29,8 @@ pub struct FacBpEntity {
     pub utype: Option<FacEntBeltUnderType>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub station: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub infinity_settings: Option<FacBpInfinitySettings>,
 }
 
 impl FacBpEntity {
@@ -61,6 +63,9 @@ impl FacBpEntity {
             for module in v {
                 create.with_command_module(module);
             }
+        }
+        if let Some(v) = &self.infinity_settings {
+            create.with_command_infinity_settings(v);
         }
 
         create

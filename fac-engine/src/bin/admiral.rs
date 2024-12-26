@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use exhaustive::Exhaustive;
 use facto_loop_miner_common::log_init;
+use facto_loop_miner_fac_engine::blueprint::bpfac::infinity::{FacBpFilter, FacBpInfinitySettings};
 use facto_loop_miner_fac_engine::blueprint::bpitem::BlueprintItem;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
@@ -35,6 +36,7 @@ use tracing::Level;
 
 fn main() {
     log_init(Some(Level::DEBUG));
+    // log_init(Some(Level::TRACE));
 
     if let Err(e) = inner_main() {
         let msg = pretty_panic_admiral(e);
@@ -48,7 +50,7 @@ fn inner_main() -> AdmiralResult<()> {
 
     let output = FacItemOutput::new_admiral(client).into_rc();
 
-    match 8 {
+    match 9 {
         1 => make_basic(output)?,
         2 => make_assembler_thru(output)?,
         3 => make_belt_bettel(output)?,
@@ -245,14 +247,20 @@ fn make_rail_loop(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         FacEntInfinityPower::new().into_boxed(),
         origin.move_xy(4, 2),
     ));
-
     let mut rail_loop = FacBlkRailLoop::new(FacBlkRailLoopProps {
         name_prefix: "Basic".into(),
         wagons: 3,
         front_engines: 2,
         origin,
         origin_direction: FacDirectionQuarter::West,
-        chest_type: Some(FacEntChestType::Infinity),
+        chest_type: Some(FacEntChestType::Infinity(FacBpInfinitySettings {
+            remove_unfiltered_items: true,
+            filters: vec![FacBpFilter {
+                count: 22,
+                mode: "at-least".into(),
+                name: "iron-stick".into(),
+            }],
+        })),
         inserter_type: FacEntInserterType::Stack,
         is_start_input: true,
         output: output.clone(),

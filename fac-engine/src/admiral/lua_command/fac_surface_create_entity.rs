@@ -1,13 +1,15 @@
 use crate::admiral::lua_command::{DEFAULT_FORCE_VAR, LuaCommand};
+use crate::blueprint::bpfac::infinity::{FacBpFilter, FacBpInfinitySettings};
 use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::common::vpoint::C_BLOCK_LINE;
 use crate::game_entities::direction::FacDirectionEighth;
 use crate::game_entities::module::FacModule;
 use itertools::Itertools;
+use regex::Regex;
 use std::convert::AsRef;
 
 pub const DEBUG_PRE_COLLISION: bool = false;
-pub const DEBUG_POSITION_EXPECTED: bool = false;
+pub const DEBUG_POSITION_EXPECTED: bool = true;
 
 #[derive(Debug)]
 pub struct FacSurfaceCreateEntity {
@@ -109,7 +111,7 @@ impl FacSurfaceCreateEntity {
         self.params.push(param);
     }
 
-    pub fn with_command(&mut self, command: String) {
+    fn with_command(&mut self, command: String) {
         self.commands.push(command);
     }
 
@@ -118,6 +120,37 @@ impl FacSurfaceCreateEntity {
             "admiral_create.get_module_inventory().insert(\"{}\")",
             module.to_fac_name()
         ));
+    }
+
+    pub fn with_command_infinity_settings(
+        &mut self,
+        FacBpInfinitySettings {
+            remove_unfiltered_items,
+            filters,
+        }: &FacBpInfinitySettings,
+    ) {
+        self.with_command(format!(
+            "admiral_create.remove_unfiltered_items = {remove_unfiltered_items}"
+        ));
+        self.with_command(format!(
+            "admiral_create.infinity_container_filters  = {{ }}"
+        ));
+        for (i, FacBpFilter { name, count, mode }) in filters.iter().enumerate() {
+            let lua_index = i + 1;
+            let text = format!(
+                "admiral_create.set_infinity_container_filter({lua_index}, {{
+                    name = \"{name}\",
+                    count = {count},
+                    mode = \"{mode}\",
+                }} )"
+            )
+            .replace("\n", " ");
+            let text = Regex::new(r"\s+")
+                .unwrap()
+                .replace_all(&text, " ")
+                .to_string();
+            self.with_command(text)
+        }
     }
 }
 

@@ -1,5 +1,7 @@
 use crate::{
-    blueprint::bpfac::{FacBpInteger, entity::FacBpEntity, position::FacBpPosition},
+    blueprint::bpfac::{
+        FacBpInteger, entity::FacBpEntity, infinity::FacBpInfinitySettings, position::FacBpPosition,
+    },
     common::names::FacEntityName,
     game_entities::{
         belt_under::FacEntBeltUnderType, direction::FacDirectionEighth, module::FacModule,
@@ -38,6 +40,7 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
             items: self.to_fac_items(),
             utype: self.to_fac_belt_under_type(),
             station: self.to_fac_station(),
+            infinity_settings: self.to_fac_infinity_settings(),
         }
     }
 
@@ -58,6 +61,10 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
     }
 
     fn to_fac_station(&self) -> Option<String> {
+        None
+    }
+
+    fn to_fac_infinity_settings(&self) -> Option<FacBpInfinitySettings> {
         None
     }
 }
