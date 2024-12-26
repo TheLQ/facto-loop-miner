@@ -62,12 +62,12 @@ impl FacItemOutput {
         self.otype.write(item, blueprint)
     }
 
-    pub fn any_handle<'o>(&'o mut self) -> OutputContextHandle<'o> {
-        OutputContextHandle {
-            output: self,
-            htype: OutputContextHandleType::Empty,
-        }
-    }
+    // pub fn any_handle<'o>(&'o mut self) -> OutputContextHandle<'o> {
+    //     OutputContextHandle {
+    //         output: self,
+    //         htype: OutputContextHandleType::Empty,
+    //     }
+    // }
 
     pub fn context_handle<'o>(&'o self, new_context: String) -> OutputContextHandle<'o> {
         self.otype.push_context(new_context);
@@ -206,7 +206,7 @@ impl FacItemOutputLogInfo {
     fn questitionable_clone(&self) -> Self {
         Self {
             contexts: self.contexts.clone(),
-            subcontexts: self.contexts.clone(),
+            subcontexts: self.subcontexts.clone(),
         }
     }
 }
@@ -222,23 +222,15 @@ pub struct OutputContextHandle<'o> {
     output: &'o FacItemOutput,
     htype: OutputContextHandleType,
 }
-impl<'o> OutputContextHandle<'o> {
-    fn new_context(&'o mut self, htype: OutputContextHandleType) -> Self {
-        Self {
-            output: self.output,
-            htype,
-        }
-    }
-}
 
 impl<'o> Drop for OutputContextHandle<'o> {
     fn drop(&mut self) {
         match self.htype {
             OutputContextHandleType::Context => self.output.otype.pop_context(),
             OutputContextHandleType::Subcontext => self.output.otype.pop_subcontext(),
-            OutputContextHandleType::Empty => {
-                // nothing
-            }
+            // OutputContextHandleType::Empty => {
+            //     // nothing
+            // }
         }
     }
 }
@@ -254,5 +246,5 @@ impl<'o> Deref for OutputContextHandle<'o> {
 enum OutputContextHandleType {
     Context,
     Subcontext,
-    Empty,
+    // Empty,
 }

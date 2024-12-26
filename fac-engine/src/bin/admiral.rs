@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 use std::rc::Rc;
 
 use exhaustive::Exhaustive;
@@ -19,7 +18,7 @@ use facto_loop_miner_fac_engine::game_entities::module::FacModule;
 use facto_loop_miner_fac_engine::{
     admiral::{
         err::{AdmiralResult, pretty_panic_admiral},
-        executor::{LuaCompiler, client::AdmiralClient},
+        executor::client::AdmiralClient,
         lua_command::{LuaCommand, fac_destroy::FacDestroy},
     },
     common::{entity::FacEntity, vpoint::VPoint},
@@ -47,7 +46,7 @@ fn inner_main() -> AdmiralResult<()> {
     let mut client = AdmiralClient::new()?;
     client.auth()?;
 
-    let mut output = FacItemOutput::new_admiral(client).into_rc();
+    let output = FacItemOutput::new_admiral(client).into_rc();
 
     match 8 {
         1 => make_basic(output)?,

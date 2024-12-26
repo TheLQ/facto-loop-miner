@@ -1,17 +1,19 @@
 use std::rc::Rc;
 
+use crate::blueprint::bpitem::BlueprintItem;
 use crate::blueprint::output::FacItemOutput;
+use crate::common::entity::FacEntity;
 use crate::common::vpoint::VPoint;
 use crate::game_blocks::rail_hope::RailHopeAppender;
 use crate::game_blocks::rail_hope_single::RailHopeSingle;
 use crate::game_entities::direction::FacDirectionQuarter;
+use crate::game_entities::electric_large::{FacEntElectricLarge, FacEntElectricLargeType};
+use crate::game_entities::lamp::FacEntLamp;
 use crate::game_entities::rail::RAIL_STRAIGHT_DIAMETER;
 
 // Side-by-side rail
 pub struct RailHopeDual {
     hopes: [RailHopeSingle; 2],
-    electric_larges: Vec<VPoint>,
-    lamps: Vec<VPoint>,
     output: Rc<FacItemOutput>,
 }
 
@@ -33,8 +35,6 @@ impl RailHopeDual {
                 RailHopeSingle::new(origin, origin_direction.clone(), output.clone()),
                 RailHopeSingle::new(next_origin, origin_direction, output.clone()),
             ],
-            electric_larges: Vec::new(),
-            lamps: Vec::new(),
         }
     }
 
@@ -53,10 +53,14 @@ impl RailHopeDual {
         let electric_large_pos = self.hopes[0]
             .current_next_pos()
             .move_direction_sideways(cur_direction, -2);
-        self.electric_larges.push(electric_large_pos);
+        self.output.write(BlueprintItem::new(
+            FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
+            electric_large_pos,
+        ));
 
         let lamp_pos = electric_large_pos.move_direction(cur_direction, 1);
-        self.lamps.push(lamp_pos);
+        self.output
+            .write(BlueprintItem::new(FacEntLamp::new().into_boxed(), lamp_pos));
     }
 
     pub(crate) fn next_buildable_point(&self) -> VPoint {
@@ -97,23 +101,4 @@ impl RailHopeAppender for RailHopeDual {
     fn add_shift45(&mut self, _clockwise: bool, _length: usize) {
         unimplemented!()
     }
-
-    // fn to_fac(&self) {
-    //     let output = &mut output.context_handle("DualRail".into());
-    //     for hope in &self.hopes {
-    //         hope.to_fac(output);
-    //     }
-    //     for position in &self.electric_larges {
-    //         output.write(BlueprintItem::new(
-    //             FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
-    //             *position,
-    //         ));
-    //     }
-    //     for position in &self.electric_larges {
-    //         output.write(BlueprintItem::new(
-    //             FacEntLamp::new().into_boxed(),
-    //             *position,
-    //         ));
-    //     }
-    // }
 }

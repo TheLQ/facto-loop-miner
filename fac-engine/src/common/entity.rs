@@ -40,13 +40,13 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
         log_info: &FacItemOutputLogInfo,
     ) -> FacBpEntity {
         let facpos = self.to_fac_position(position);
+        let contexts = log_info.contexts.iter().join("/");
+        let subcontexts = log_info.subcontexts.iter().join(" ! ");
         debug!(
             "blueprint pos {:6} facpos {:10} {:65} {contexts:34} {subcontexts}",
             position.display(),
             facpos.display(),
             format!("{:?}", self),
-            contexts = log_info.contexts.iter().join("/"),
-            subcontexts = log_info.subcontexts.iter().join("/"),
         );
         FacBpEntity {
             entity_number,

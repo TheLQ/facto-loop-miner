@@ -112,7 +112,7 @@ impl FacBlock for FacBlkRailStation {
         };
         stop_block.place_train_stop(self.name.clone());
         stop_block.place_side_inserter_electrics();
-        // stop_block.place_side_inserters(&self.inserter, self.is_input);
+        stop_block.place_side_inserters(&self.inserter, self.is_input);
         stop_block.place_rail_signals();
         if let Some(chests) = &self.chests {
             stop_block.place_side_chests(chests);
@@ -168,8 +168,8 @@ struct FacBlkRailStop {
 }
 
 impl FacBlkRailStop {
-    fn place_side_inserters(&mut self, inserter: &FacEntInserterType, is_input: bool) {
-        let _ = self.output.context_handle("Inserter".into());
+    fn place_side_inserters(&self, inserter: &FacEntInserterType, is_input: bool) {
+        let _ = &mut self.output.context_handle("Inserter".into());
         for car in 0..self.wagons {
             let _ = self.output.subcontext_handle(format!("Car{}", car));
             let car_x_offset = self.get_wagon_x_offset(car);
@@ -179,7 +179,7 @@ impl FacBlkRailStop {
                     (true, FacDirectionQuarter::South),
                     (false, FacDirectionQuarter::North),
                 ] {
-                    let _ = self
+                    let _ = &mut self
                         .output
                         .subcontext_handle(if negative { "Bottom" } else { "Top" }.into());
                     let direction = if is_input {

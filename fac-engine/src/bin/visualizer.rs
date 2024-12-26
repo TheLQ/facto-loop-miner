@@ -7,7 +7,7 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::{
-    blueprint::{bpitem::BlueprintItem, contents::BlueprintContents},
+    blueprint::bpitem::BlueprintItem,
     common::{entity::FacEntity, vpoint::VPoint},
     game_blocks::{
         assembler_cell::{FacBlkAssemblerCell, FacBlkAssemblerCellEntry},

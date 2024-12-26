@@ -71,7 +71,7 @@ impl RailHopeSingle {
     ) {
         warn!("writing direction {}", direction);
         for i in 0..length {
-            self.write_link(RailHopeLinkRail {
+            self.write_link_rail(RailHopeLinkRail {
                 position: origin.move_direction(&direction, i * RAIL_STRAIGHT_DIAMETER),
                 direction: direction.to_direction_eighth(),
                 rtype: FacEntRailType::Straight,
@@ -103,7 +103,7 @@ impl RailHopeSingle {
             .unwrap_or(self.origin)
     }
 
-    fn write_link(&mut self, link: RailHopeLinkRail) {
+    fn write_link_rail(&mut self, link: RailHopeLinkRail) {
         link.to_fac(&self.output);
     }
 }
@@ -154,7 +154,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         } else {
             first_curve_direction
         };
-        self.write_link(RailHopeLinkRail {
+        self.write_link_rail(RailHopeLinkRail {
             position: first_curve_pos,
             direction: first_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
@@ -171,7 +171,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             first_curve_direction.rotate_once()
         };
         warn!("middle straight {:?}", middle_straight_direction);
-        self.write_link(RailHopeLinkRail {
+        self.write_link_rail(RailHopeLinkRail {
             // -1,-1 to cancel RailStraight's to_fac offset
             position: middle_straight_pos - VPOINT_ONE,
             direction: middle_straight_direction.clone(),
@@ -188,7 +188,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             middle_straight_direction.rotate_once().rotate_once()
         };
         warn!("last curve {:?}", middle_straight_direction);
-        self.write_link(RailHopeLinkRail {
+        self.write_link_rail(RailHopeLinkRail {
             position: last_curve_pos,
             direction: last_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
@@ -224,7 +224,6 @@ impl<'o> RailHopeAppender for RailHopeSingle {
 
         Between 2x pairs, the middle 2 rails are on the same Y axis
         */
-        let mut rails = Vec::new();
 
         let cur_direction = self.current_direction().clone();
         // 1,1 to cancel RailStraight's to_fac offset
@@ -240,7 +239,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         } else {
             first_curve_direction
         };
-        rails.push(RailHopeLinkRail {
+        self.write_link_rail(RailHopeLinkRail {
             position: first_curve_pos,
             direction: first_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
@@ -261,14 +260,14 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         let mut last_b_pos = middle_straight_pos
             .move_direction_sideways(&cur_direction, neg_if_false(clockwise, -2));
         for _ in 0..length {
-            self.write_link(RailHopeLinkRail {
+            self.write_link_rail(RailHopeLinkRail {
                 // -1,-1 to cancel RailStraight's to_fac offset
                 position: next_a_pos - VPOINT_ONE,
                 direction: middle_a_direction.clone(),
                 rtype: FacEntRailType::Straight,
             });
             last_b_pos = next_a_pos.move_direction(&cur_direction, 2);
-            self.write_link(RailHopeLinkRail {
+            self.write_link_rail(RailHopeLinkRail {
                 // -1,-1 to cancel RailStraight's to_fac offset
                 position: last_b_pos - VPOINT_ONE,
                 direction: middle_b_direction.clone(),
@@ -295,7 +294,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
                 .rotate_opposite()
                 .rotate_opposite()
         };
-        rails.push(RailHopeLinkRail {
+        self.write_link_rail(RailHopeLinkRail {
             position: last_curve_pos,
             direction: last_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
@@ -359,10 +358,8 @@ fn neg_if_false(flag: bool, value: i32) -> i32 {
 #[cfg(test)]
 mod test {
     use crate::{
-        blueprint::{contents::BlueprintContents, output::FacItemOutput},
-        common::vpoint::VPoint,
-        game_blocks::rail_hope::RailHopeAppender,
-        game_entities::direction::FacDirectionQuarter,
+        blueprint::output::FacItemOutput, common::vpoint::VPoint,
+        game_blocks::rail_hope::RailHopeAppender, game_entities::direction::FacDirectionQuarter,
     };
 
     use super::RailHopeSingle;
