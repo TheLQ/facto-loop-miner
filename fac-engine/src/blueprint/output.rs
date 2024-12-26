@@ -11,10 +11,8 @@ use crate::{
         executor::{ExecuteResponse, LuaCompiler, client::AdmiralClient},
         lua_command::LuaCommand,
     },
-    common::{
-        ascii_color::{Color, ansi_color, ascii_erase_line, ascii_previous_line},
-        vpoint::C_BLOCK_LINE,
-    },
+    common::vpoint::C_BLOCK_LINE,
+    util::ascii_color::{Color, ansi_color, ascii_erase_line, ascii_previous_line},
 };
 
 use super::{
