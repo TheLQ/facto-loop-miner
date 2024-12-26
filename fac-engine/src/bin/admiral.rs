@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use exhaustive::Exhaustive;
 use facto_loop_miner_common::log_init;
+use facto_loop_miner_fac_engine::admiral::lua_command::train_boot::train_boot;
 use facto_loop_miner_fac_engine::blueprint::bpfac::infinity::{FacBpFilter, FacBpInfinitySettings};
 use facto_loop_miner_fac_engine::blueprint::bpfac::schedule::{
     FacBpCircuitCondition, FacBpLogic, FacBpSchedule, FacBpScheduleData, FacBpScheduleWait,
@@ -10,6 +11,7 @@ use facto_loop_miner_fac_engine::blueprint::bpfac::schedule::{
 use facto_loop_miner_fac_engine::blueprint::bpitem::BlueprintItem;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
+use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
 use facto_loop_miner_fac_engine::game_blocks::belt_bettel::FacBlkBettelBelt;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
@@ -317,6 +319,14 @@ fn make_rail_loop(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     rail_loop.add_straight();
     rail_loop.add_turn90(false);
     rail_loop.add_base_start_and_end();
+
+    output.admiral_execute_command(
+        train_boot(VArea::from_arbitrary_points_pair(
+            VPoint::new(-90, -90),
+            VPoint::new(90, 90),
+        ))
+        .into_boxed(),
+    )?;
 
     Ok(())
 }

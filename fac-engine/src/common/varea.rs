@@ -92,6 +92,15 @@ impl VArea {
         self.start.y() + self.height as i32
     }
 
+    pub fn desugar(&self) -> (i32, i32, i32, i32) {
+        (
+            self.start.x(),
+            self.end_x_exclusive(),
+            self.start.y(),
+            self.end_y_exclusive(),
+        )
+    }
+
     pub fn point_bottom_left(&self) -> VPoint {
         VPoint::new(self.end_x_exclusive(), self.end_y_exclusive())
     }
