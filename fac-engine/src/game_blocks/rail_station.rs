@@ -174,18 +174,18 @@ impl FacBlkRailStop {
             let _ = self.output.subcontext_handle(format!("Car{}", car));
             let car_x_offset = self.get_wagon_x_offset(car);
 
-            for exit in 0..INSERTERS_PER_CAR {
-                for (negative, direction) in [
-                    (true, FacDirectionQuarter::South),
-                    (false, FacDirectionQuarter::North),
-                ] {
+            for (negative, direction) in [
+                (true, FacDirectionQuarter::South),
+                (false, FacDirectionQuarter::North),
+            ] {
+                for exit in 0..INSERTERS_PER_CAR {
                     let _ = &mut self
                         .output
                         .subcontext_handle(if negative { "Bottom" } else { "Top" }.into());
                     let direction = if is_input {
                         direction.rotate_flip()
                     } else {
-                        direction
+                        direction.clone()
                     };
                     let start = self
                         .stop_rail_pos

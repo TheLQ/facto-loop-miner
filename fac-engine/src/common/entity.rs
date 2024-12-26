@@ -6,7 +6,10 @@ use crate::{
         bpfac::{FacBpInteger, entity::FacBpEntity, position::FacBpPosition},
         output::FacItemOutputLogInfo,
     },
-    common::names::FacEntityName,
+    common::{
+        ascii_color::{Color, ascii_color},
+        names::FacEntityName,
+    },
     game_entities::{
         belt_under::FacEntBeltUnderType, direction::FacDirectionEighth, module::FacModule,
     },
@@ -40,7 +43,7 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
         log_info: &FacItemOutputLogInfo,
     ) -> FacBpEntity {
         let facpos = self.to_fac_position(position);
-        let contexts = log_info.contexts.iter().join("/");
+        let contexts = ascii_color(log_info.contexts.iter().join("/"), Color::Green);
         let subcontexts = log_info.subcontexts.iter().join(" ! ");
         debug!(
             "blueprint pos {:6} facpos {:10} {:65} {contexts:34} {subcontexts}",

@@ -1,3 +1,4 @@
+pub mod ascii_color;
 pub mod cvpoint;
 pub mod entity;
 pub mod entity_macro;
