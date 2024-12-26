@@ -22,24 +22,39 @@ pub struct FacBlkRailLoop {
     origin: VPoint,
     // is_start_set: bool,
     // is_end_set: bool,
-    chest_type: Option<FacEntChestType>,
+    chest_input: Option<FacEntChestType>,
+    chest_output: Option<FacEntChestType>,
     inserter_type: FacEntInserterType,
     is_start_input: bool,
     output: Rc<FacItemOutput>,
 }
 
 impl FacBlkRailLoop {
-    pub fn new(props: FacBlkRailLoopProps) -> Self {
+    pub fn new(
+        FacBlkRailLoopProps {
+            name_prefix,
+            wagons,
+            front_engines,
+            chest_input,
+            chest_output,
+            inserter_type,
+            origin,
+            origin_direction,
+            is_start_input,
+            output,
+        }: FacBlkRailLoopProps,
+    ) -> Self {
         Self {
-            name_prefix: props.name_prefix,
-            wagons: props.wagons,
-            front_engines: props.front_engines,
-            chest_type: props.chest_type,
-            inserter_type: props.inserter_type,
-            origin: props.origin,
-            hope: RailHopeDual::new(props.origin, props.origin_direction, props.output.clone()),
-            is_start_input: props.is_start_input,
-            output: props.output,
+            hope: RailHopeDual::new(origin, origin_direction, output.clone()),
+            name_prefix,
+            wagons,
+            front_engines,
+            chest_input,
+            chest_output,
+            inserter_type,
+            origin,
+            is_start_input,
+            output,
         }
     }
 
@@ -61,11 +76,12 @@ impl FacBlkRailLoop {
 
     fn add_start(&mut self) {
         let is_input = self.is_start_input;
+
         let station = FacBlkRailStation {
             name: station_input_to_name(is_input, &self.name_prefix),
             wagons: self.wagons,
             front_engines: self.front_engines,
-            chests: self.chest_type.clone(),
+            chests: self.chest_type(is_input),
             inserter: self.inserter_type.clone(),
             is_east: true,
             is_up: true,
@@ -96,7 +112,7 @@ impl FacBlkRailLoop {
             name: station_input_to_name(is_input, &self.name_prefix),
             wagons: self.wagons,
             front_engines: self.front_engines,
-            chests: self.chest_type.clone(),
+            chests: self.chest_type(is_input),
             inserter: self.inserter_type.clone(),
             is_east: true,
             is_up: true,
@@ -113,6 +129,14 @@ impl FacBlkRailLoop {
             dir => panic!("unsupported dir {}", dir),
         }
         station.generate(origin)
+    }
+
+    fn chest_type(&self, is_input: bool) -> Option<FacEntChestType> {
+        if is_input {
+            self.chest_input.clone()
+        } else {
+            self.chest_output.clone()
+        }
     }
 
     pub fn add_base_start_and_end(&mut self) {
@@ -138,7 +162,8 @@ pub struct FacBlkRailLoopProps {
     pub front_engines: usize,
     pub origin: VPoint,
     pub origin_direction: FacDirectionQuarter,
-    pub chest_type: Option<FacEntChestType>,
+    pub chest_input: Option<FacEntChestType>,
+    pub chest_output: Option<FacEntChestType>,
     pub inserter_type: FacEntInserterType,
     pub is_start_input: bool,
     pub output: Rc<FacItemOutput>,

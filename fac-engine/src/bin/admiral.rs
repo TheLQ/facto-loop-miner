@@ -253,13 +253,28 @@ fn make_rail_loop(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         front_engines: 2,
         origin,
         origin_direction: FacDirectionQuarter::West,
-        chest_type: Some(FacEntChestType::Infinity(FacBpInfinitySettings {
-            remove_unfiltered_items: true,
+        chest_input: Some(FacEntChestType::Infinity(FacBpInfinitySettings {
+            remove_unfiltered_items: false,
             filters: vec![FacBpFilter {
                 count: 22,
                 mode: "at-least".into(),
                 name: "iron-stick".into(),
             }],
+        })),
+        chest_output: Some(FacEntChestType::Infinity(FacBpInfinitySettings {
+            remove_unfiltered_items: true,
+            filters: vec![
+                FacBpFilter {
+                    count: 22,
+                    mode: "at-least".into(),
+                    name: "iron-stick".into(),
+                },
+                FacBpFilter {
+                    count: 22,
+                    mode: "at-least".into(),
+                    name: "iron-ore".into(),
+                },
+            ],
         })),
         inserter_type: FacEntInserterType::Stack,
         is_start_input: true,
