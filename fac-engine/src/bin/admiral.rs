@@ -12,14 +12,14 @@ use facto_loop_miner_fac_engine::blueprint::bpitem::BlueprintItem;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
+use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_TEN, VPOINT_ZERO};
 use facto_loop_miner_fac_engine::game_blocks::belt_bettel::FacBlkBettelBelt;
 use facto_loop_miner_fac_engine::game_blocks::belt_train_unload::FacBlkBeltTrainUnload;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
 use facto_loop_miner_fac_engine::game_blocks::rail_loop::{FacBlkRailLoop, FacBlkRailLoopProps};
-use facto_loop_miner_fac_engine::game_blocks::rail_station::FacBlkRailStation;
+use facto_loop_miner_fac_engine::game_blocks::rail_station::{FacBlkRailStation, FacExtDelivery};
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::game_entities::infinity_power::FacEntInfinityPower;
 use facto_loop_miner_fac_engine::game_entities::module::FacModule;
@@ -56,7 +56,7 @@ fn inner_main() -> AdmiralResult<()> {
 
     let output = FacItemOutput::new_admiral(client).into_rc();
 
-    match 10 {
+    match 3 {
         1 => make_basic(output)?,
         2 => make_assembler_thru(output)?,
         3 => make_belt_bettel(output)?,
@@ -78,7 +78,7 @@ fn make_basic(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
 
     output.write(BlueprintItem::new(
         FacEntChest::new(FacEntChestType::Active).into_boxed(),
-        VPoint::zero(),
+        VPOINT_ZERO,
     ));
 
     Ok(())
@@ -107,16 +107,30 @@ fn make_assembler_thru(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
 fn make_belt_bettel(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     execute_destroy(output.clone())?;
 
+    let direction = FacDirectionQuarter::North;
+
+    let mut belt =
+        FacBlkBettelBelt::new(FacEntBeltType::Basic, VPOINT_TEN, direction, output.clone());
+    // belt.add_straight(5);
+    // belt.add_turn90(false);
+    // belt.add_straight_underground(5);
+    // belt.add_turn90(true);
+    belt.add_straight(1);
+    belt.add_split(true);
+    belt.add_straight(1);
+
     let mut belt = FacBlkBettelBelt::new(
         FacEntBeltType::Basic,
-        VPoint::new(5, 5),
-        FacDirectionQuarter::South,
+        VPOINT_TEN.move_x(10),
+        direction,
         output.clone(),
     );
+    // belt.add_straight(5);
+    // belt.add_turn90(false);
+    // belt.add_straight_underground(5);
+    // belt.add_turn90(true);
     belt.add_straight(5);
-    belt.add_turn90(false);
-    belt.add_straight_underground(5);
-    belt.add_turn90(true);
+    belt.add_split(false);
     belt.add_straight(5);
 
     Ok(())
@@ -135,7 +149,7 @@ fn make_belt_bettel_train_unload(output: Rc<FacItemOutput>) -> AdmiralResult<()>
         turn_clockwise: true,
         origin_direction: FacDirectionQuarter::East,
     };
-    block.generate(VPoint::zero());
+    block.generate(VPOINT_ZERO);
 
     Ok(())
 }
@@ -143,7 +157,7 @@ fn make_belt_bettel_train_unload(output: Rc<FacItemOutput>) -> AdmiralResult<()>
 fn make_rail_spiral_90(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     execute_destroy(output.clone())?;
 
-    let origin: VPoint = VPoint::zero();
+    let origin: VPoint = VPOINT_ZERO;
     for clockwise in [
         true,  //
         false, //
@@ -172,7 +186,7 @@ fn make_rail_spiral_90(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
 fn make_rail_shift_45(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     execute_destroy(output.clone())?;
 
-    let origin = VPoint::zero();
+    let origin = VPOINT_ZERO;
     for clockwise in [false /*, false*/] {
         let hope1 = RailHopeSingle::new(origin, FacDirectionQuarter::North, output.clone());
         let hope2 = RailHopeSingle::new(origin, FacDirectionQuarter::South, output.clone());
@@ -198,7 +212,7 @@ fn make_rail_dual_turning(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
             FacDirectionQuarter::South,
             FacDirectionQuarter::West,
         ] {
-            let mut hope = RailHopeDual::new(VPoint::zero(), direction, output.clone());
+            let mut hope = RailHopeDual::new(VPOINT_ZERO, direction, output.clone());
             hope.add_straight(5);
             hope.add_turn90(clockwise);
             hope.add_straight(5);
@@ -218,7 +232,7 @@ fn make_rail_dual_powered(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         // FacDirectionQuarter::South,
         // FacDirectionQuarter::West,
     ] {
-        let origin = VPoint::zero().move_direction(&direction, 6);
+        let origin = VPOINT_ZERO.move_direction_usz(&direction, 6);
 
         let mut hope = RailHopeDual::new(origin, direction, output.clone());
         hope.add_straight_section();
@@ -248,7 +262,8 @@ fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         name: "test".into(),
         wagons: 2,
         front_engines: 2,
-        chests: Some(FacEntChestType::Steel),
+        delivery: FacExtDelivery::Belt(FacEntBeltType::Basic),
+        // chests: Some(FacEntChestType::Steel),
         // chests: None,
         inserter: FacEntInserterType::Basic,
         fuel_inserter: Some(FacEntInserterType::Basic),
@@ -307,7 +322,7 @@ fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
 fn make_rail_loop(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     execute_destroy(output.clone())?;
 
-    let origin = VPoint::zero();
+    let origin = VPOINT_ZERO;
 
     output.write(BlueprintItem::new(
         FacEntInfinityPower::new().into_boxed(),
@@ -319,11 +334,11 @@ fn make_rail_loop(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         front_engines: 2,
         origin,
         origin_direction: FacDirectionQuarter::West,
-        chest_input: Some(FacEntChestType::Infinity(FacBpInfinitySettings {
+        delivery_input: FacExtDelivery::Chest(FacEntChestType::Infinity(FacBpInfinitySettings {
             remove_unfiltered_items: false,
             filters: vec![FacBpFilter::new_for_item("iron-stick")],
         })),
-        chest_output: Some(FacEntChestType::Infinity(FacBpInfinitySettings {
+        delivery_output: FacExtDelivery::Chest(FacEntChestType::Infinity(FacBpInfinitySettings {
             remove_unfiltered_items: true,
             filters: vec![
                 FacBpFilter::new_for_item("iron-stick"),

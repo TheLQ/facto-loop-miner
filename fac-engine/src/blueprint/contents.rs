@@ -25,4 +25,8 @@ impl BlueprintContents {
         self.items.push(item);
         self.fac_entities.push(fac_entity);
     }
+
+    pub fn consume(self) -> (Vec<BlueprintItem>, Vec<FacBpEntity>) {
+        (self.items, self.fac_entities)
+    }
 }

@@ -5,6 +5,7 @@ use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
+use facto_loop_miner_fac_engine::game_blocks::rail_station::FacExtDelivery;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::{
     blueprint::bpitem::BlueprintItem,
@@ -78,7 +79,7 @@ fn basic_build_gen(output: Rc<FacItemOutput>) {
         name: "test".into(),
         wagons: 3,
         front_engines: 2,
-        chests: Some(FacEntChestType::Passive),
+        delivery: FacExtDelivery::Chest(FacEntChestType::Passive),
         inserter: FacEntInserterType::Basic,
         fuel_inserter: None,
         fuel_inserter_chest: None,

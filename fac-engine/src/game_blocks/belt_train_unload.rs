@@ -30,7 +30,7 @@ impl FacBlock for FacBlkBeltTrainUnload {
         const WAGON_SIZE: usize = 7;
 
         for wagon in 0..self.wagons {
-            let origin = origin.move_direction_sideways_usize(self.origin_direction, wagon * 7);
+            let origin = origin.move_direction_sideways_usz(self.origin_direction, wagon * 7);
             for output_belt in 0..DUALS_PER_WAGON {
                 let _ = &mut self.output.context_handle(
                     ContextLevel::Micro,
@@ -63,7 +63,7 @@ impl FacBlock for FacBlkBeltTrainUnload {
                 };
 
                 let one_belt_origin =
-                    origin.move_direction_sideways_usize(self.origin_direction, 2 * output_belt);
+                    origin.move_direction_sideways_usz(self.origin_direction, 2 * output_belt);
                 trace!(
                     "one_belt from origin {} to {}",
                     origin.display(),
@@ -105,7 +105,7 @@ impl FacBlkBeltTrainUnload {
             ),
             FacBlkBettelBelt::new(
                 self.belt_type.clone(),
-                origin.move_direction_sideways(self.origin_direction, 1),
+                origin.move_direction_sideways_int(self.origin_direction, 1),
                 self.origin_direction,
                 self.output.clone(),
             ),

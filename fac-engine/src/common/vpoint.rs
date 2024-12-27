@@ -5,7 +5,10 @@ use crate::util::ansi::C_BLOCK_LINE;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::borrow::Borrow;
+use std::fmt::{Debug, Display};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
+
+use super::entity::FacEntity;
 
 /// Core XY Point. Entity origin is top left, not Factorio's center
 #[derive(
@@ -19,6 +22,7 @@ pub struct VPoint {
 pub const VPOINT_ZERO: VPoint = VPoint { x: 0, y: 0 };
 pub const VPOINT_ONE: VPoint = VPoint { x: 1, y: 1 };
 pub const VPOINT_EIGHT: VPoint = VPoint { x: 8, y: 8 };
+pub const VPOINT_TEN: VPoint = VPoint { x: 10, y: 10 };
 
 impl VPoint {
     pub fn x(&self) -> i32 {
@@ -38,10 +42,6 @@ impl VPoint {
             x: x.try_into().unwrap(),
             y: y.try_into().unwrap(),
         }
-    }
-
-    pub fn zero() -> Self {
-        VPOINT_ZERO
     }
 
     // pub fn from_cv_point(point: Point) -> Self {
@@ -174,12 +174,13 @@ impl VPoint {
         self.move_xy(x_steps as i32, y_steps as i32)
     }
 
-    pub fn move_direction_i32(
+    pub fn move_direction_int(
         &self,
         direction: impl Borrow<FacDirectionQuarter>,
         steps: i32,
     ) -> Self {
         // cardinal directions are "north == up == -1" not "north == +1"
+        println!("move {}", steps);
         match direction.borrow() {
             FacDirectionQuarter::North => self.move_y(-steps),
             FacDirectionQuarter::South => self.move_y(steps),
@@ -188,15 +189,45 @@ impl VPoint {
         }
     }
 
-    pub fn move_direction(
+    pub fn move_direction_half(&self, direction: impl Borrow<FacDirectionQuarter>) -> Self {
+        match direction.borrow() {
+            FacDirectionQuarter::North => {
+                self.move_y(-((self.y() as f32 + 0.5).floor() as i32 - self.y()))
+            }
+            FacDirectionQuarter::South => {
+                self.move_y((self.y() as f32 + 0.5).floor() as i32 - self.y())
+            }
+            FacDirectionQuarter::East => {
+                self.move_x((self.x() as f32 + 0.5).floor() as i32 - self.x())
+            }
+            FacDirectionQuarter::West => {
+                self.move_x(-((self.x() as f32 + 0.5).floor() as i32 - self.x()))
+            }
+        }
+    }
+
+    pub fn move_direction_usz(
         &self,
         direction: impl Borrow<FacDirectionQuarter>,
         steps: usize,
     ) -> Self {
-        self.move_direction_i32(direction, steps as i32)
+        self.move_direction_int(direction, steps as i32)
     }
 
-    pub fn move_direction_sideways(
+    pub fn move_direction_if_usz(
+        &self,
+        direction: impl Borrow<FacDirectionQuarter>,
+        steps: usize,
+        enabled: bool,
+    ) -> Self {
+        if enabled {
+            self.move_direction_int(direction, steps as i32)
+        } else {
+            *self
+        }
+    }
+
+    pub fn move_direction_sideways_int(
         &self,
         direction: impl Borrow<FacDirectionQuarter>,
         steps: i32,
@@ -210,13 +241,44 @@ impl VPoint {
         }
     }
 
-    pub fn move_direction_sideways_usize(
+    pub fn move_direction_sideways_usz(
         &self,
         direction: impl Borrow<FacDirectionQuarter>,
         steps: usize,
     ) -> Self {
-        self.move_direction_sideways(direction, steps as i32)
+        self.move_direction_sideways_int(direction, steps as i32)
     }
+
+    pub fn move_between_entity_centers(
+        &self,
+        first: &Box<dyn FacEntity>,
+        last: &Box<dyn FacEntity>,
+        float_x: f32,
+        float_y: f32,
+    ) -> Self {
+        let first_facpos = first.to_fac_position(&self);
+        let last_facpos =
+            FacBpPosition::new(first_facpos.x() + float_x, first_facpos.y() + float_y);
+        last.from_fac_position(&last_facpos)
+    }
+
+    // pub fn move_direction_corrected(
+    //     &self,
+    //     direction: impl Borrow<FacDirectionQuarter>,
+    //     steps: usize,
+    // ) -> Self {
+    //     let desired_x = steps as f32 + 1.5;
+    //     let actual_x = self.x as f32;
+
+    //     let comuted_x = (desired_x + actual_x).floor();
+    //     let desired_x_corrected = (comuted_x - actual_x).abs() as usize;
+    //     if steps == desired_x_corrected {
+    //         trace!("corrected same {steps}")
+    //     } else {
+    //         trace!("corrected DIFF {steps} to {desired_x_corrected}")
+    //     }
+    //     self.move_direction_sideways_usz(direction, desired_x_corrected)
+    // }
 
     // pub fn move_xy_u32(&self, x_steps: u32, y_steps: u32) -> Self {
     //     self.move_xy(x_steps as i32, y_steps as i32)
@@ -306,7 +368,7 @@ impl VPoint {
     }
 
     pub fn display(&self) -> String {
-        format!("{}{}{}", self.x(), C_BLOCK_LINE, self.y())
+        display_any_pos(self.x(), self.y())
     }
 }
 
@@ -381,4 +443,11 @@ pub fn must_half_number(point: FacBpPosition) {
         "Point isn't half {:?}",
         point
     );
+}
+
+pub fn display_any_pos(x: impl Display + Debug, y: impl Display + Debug) -> String {
+    // doing de-bug of float always does as 0.0 display.
+    // Without .N wiping out errors of x=24.64532
+    // Neat.
+    format!("{:4?}{}{:4?}", x, C_BLOCK_LINE, y)
 }

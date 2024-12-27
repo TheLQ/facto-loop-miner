@@ -18,8 +18,10 @@ use crate::{
 };
 
 use super::{
-    block::FacBlock, rail_hope::RailHopeAppender, rail_hope_dual::RailHopeDual,
-    rail_station::FacBlkRailStation,
+    block::FacBlock,
+    rail_hope::RailHopeAppender,
+    rail_hope_dual::RailHopeDual,
+    rail_station::{FacBlkRailStation, FacExtDelivery},
 };
 
 /// Thousands of lines of Rust all to place this.
@@ -31,8 +33,8 @@ pub struct FacBlkRailLoop {
     origin: VPoint,
     // is_start_set: bool,
     // is_end_set: bool,
-    chest_input: Option<FacEntChestType>,
-    chest_output: Option<FacEntChestType>,
+    delivery_input: FacExtDelivery,
+    delivery_output: FacExtDelivery,
     inserter_type: FacEntInserterType,
     is_start_input: bool,
     output: Rc<FacItemOutput>,
@@ -44,8 +46,8 @@ impl FacBlkRailLoop {
             name_prefix,
             wagons,
             front_engines,
-            chest_input,
-            chest_output,
+            delivery_input,
+            delivery_output,
             inserter_type,
             origin,
             origin_direction,
@@ -58,8 +60,8 @@ impl FacBlkRailLoop {
             name_prefix,
             wagons,
             front_engines,
-            chest_input,
-            chest_output,
+            delivery_input,
+            delivery_output,
             inserter_type,
             origin,
             is_start_input,
@@ -90,7 +92,11 @@ impl FacBlkRailLoop {
             name: self.station_input_to_name(is_input),
             wagons: self.wagons,
             front_engines: self.front_engines,
-            chests: self.chest_type(is_input),
+            delivery: if is_input {
+                self.delivery_input.clone()
+            } else {
+                self.delivery_output.clone()
+            },
             inserter: self.inserter_type.clone(),
             fuel_inserter: Some(FacEntInserterType::Basic),
             fuel_inserter_chest: Some(FacEntChestType::Infinity(FacBpInfinitySettings {
@@ -127,7 +133,11 @@ impl FacBlkRailLoop {
             name: self.station_input_to_name(is_input),
             wagons: self.wagons,
             front_engines: self.front_engines,
-            chests: self.chest_type(is_input),
+            delivery: if is_input {
+                self.delivery_input.clone()
+            } else {
+                self.delivery_output.clone()
+            },
             inserter: self.inserter_type.clone(),
             fuel_inserter: None,
             fuel_inserter_chest: None,
@@ -147,14 +157,6 @@ impl FacBlkRailLoop {
             dir => panic!("unsupported dir {}", dir),
         }
         station.generate(origin)
-    }
-
-    fn chest_type(&self, is_input: bool) -> Option<FacEntChestType> {
-        if is_input {
-            self.chest_input.clone()
-        } else {
-            self.chest_output.clone()
-        }
     }
 
     pub fn add_base_start_and_end(&mut self) {
@@ -223,8 +225,8 @@ pub struct FacBlkRailLoopProps {
     pub front_engines: usize,
     pub origin: VPoint,
     pub origin_direction: FacDirectionQuarter,
-    pub chest_input: Option<FacEntChestType>,
-    pub chest_output: Option<FacEntChestType>,
+    pub delivery_input: FacExtDelivery,
+    pub delivery_output: FacExtDelivery,
     pub inserter_type: FacEntInserterType,
     pub is_start_input: bool,
     pub output: Rc<FacItemOutput>,

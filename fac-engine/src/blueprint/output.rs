@@ -23,6 +23,7 @@ use super::{
 };
 
 /// Middleware between entity output and blueprint/lua output
+/// Instead of generating everything "post", obscuring errors and logic
 pub struct FacItemOutput {
     otype: FacItemOutputType,
 }

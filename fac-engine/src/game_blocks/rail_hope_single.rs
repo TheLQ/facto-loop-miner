@@ -72,7 +72,7 @@ impl RailHopeSingle {
         trace!("writing direction {}", direction);
         for i in 0..length {
             self.write_link_rail(RailHopeLinkRail {
-                position: origin.move_direction(&direction, i * RAIL_STRAIGHT_DIAMETER),
+                position: origin.move_direction_usz(&direction, i * RAIL_STRAIGHT_DIAMETER),
                 direction: direction.to_direction_eighth(),
                 rtype: FacEntRailType::Straight,
             })
@@ -150,8 +150,8 @@ impl<'o> RailHopeAppender for RailHopeSingle {
 
         // curve 1
         let first_curve_pos = origin_fac
-            .move_direction(&cur_direction, 3)
-            .move_direction_sideways(&cur_direction, neg_if_false(clockwise, 1));
+            .move_direction_usz(&cur_direction, 3)
+            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 1));
         let first_curve_direction = cur_direction.to_direction_eighth();
         let first_curve_direction = if clockwise {
             first_curve_direction.rotate_once()
@@ -167,8 +167,8 @@ impl<'o> RailHopeAppender for RailHopeSingle {
 
         // middle
         let middle_straight_pos = first_curve_pos
-            .move_direction(&cur_direction, 3)
-            .move_direction_sideways(&cur_direction, neg_if_false(clockwise, 3));
+            .move_direction_usz(&cur_direction, 3)
+            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 3));
         let middle_straight_direction = if clockwise {
             first_curve_direction.rotate_opposite().rotate_opposite()
         } else {
@@ -184,8 +184,8 @@ impl<'o> RailHopeAppender for RailHopeSingle {
 
         // curve 2
         let last_curve_pos = middle_straight_pos
-            .move_direction(&cur_direction, 3)
-            .move_direction_sideways(&cur_direction, neg_if_false(clockwise, 3));
+            .move_direction_usz(&cur_direction, 3)
+            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 3));
         let last_curve_direction = if clockwise {
             middle_straight_direction.rotate_opposite()
         } else {
@@ -239,8 +239,8 @@ impl<'o> RailHopeAppender for RailHopeSingle {
 
         // curve 1 (copy of above turn90)
         let first_curve_pos = origin_fac
-            .move_direction(&cur_direction, 3)
-            .move_direction_sideways(&cur_direction, neg_if_false(clockwise, 1));
+            .move_direction_usz(&cur_direction, 3)
+            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 1));
         let first_curve_direction = cur_direction.to_direction_eighth();
         let first_curve_direction = if clockwise {
             first_curve_direction.rotate_once()
@@ -255,8 +255,8 @@ impl<'o> RailHopeAppender for RailHopeSingle {
 
         // middle
         let middle_straight_pos = first_curve_pos
-            .move_direction(&cur_direction, 3)
-            .move_direction_sideways(&cur_direction, neg_if_false(clockwise, 3));
+            .move_direction_usz(&cur_direction, 3)
+            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 3));
         let middle_a_direction = if clockwise {
             first_curve_direction.rotate_opposite().rotate_opposite()
         } else {
@@ -266,7 +266,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
 
         let mut next_a_pos = middle_straight_pos;
         let mut last_b_pos = middle_straight_pos
-            .move_direction_sideways(&cur_direction, neg_if_false(clockwise, -2));
+            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, -2));
         for _ in 0..length {
             self.write_link_rail(RailHopeLinkRail {
                 // -1,-1 to cancel RailStraight's to_fac offset
@@ -274,7 +274,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
                 direction: middle_a_direction.clone(),
                 rtype: FacEntRailType::Straight,
             });
-            last_b_pos = next_a_pos.move_direction(&cur_direction, 2);
+            last_b_pos = next_a_pos.move_direction_usz(&cur_direction, 2);
             self.write_link_rail(RailHopeLinkRail {
                 // -1,-1 to cancel RailStraight's to_fac offset
                 position: last_b_pos - VPOINT_ONE,
@@ -282,13 +282,13 @@ impl<'o> RailHopeAppender for RailHopeSingle {
                 rtype: FacEntRailType::Straight,
             });
             next_a_pos =
-                last_b_pos.move_direction_sideways(&cur_direction, neg_if_false(clockwise, 2))
+                last_b_pos.move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 2))
         }
 
         // curve 2 back
         let last_curve_pos = last_b_pos
-            .move_direction(&cur_direction, 3)
-            .move_direction_sideways(&cur_direction, neg_if_false(clockwise, 3));
+            .move_direction_usz(&cur_direction, 3)
+            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 3));
         let last_curve_direction = if clockwise {
             first_curve_direction
                 .rotate_once()
@@ -321,7 +321,7 @@ impl RailHopeLink {
         match &self.rtype {
             RailHopeLinkType::Straight { length } => self
                 .start_pos
-                .move_direction(&self.link_direction, length * RAIL_STRAIGHT_DIAMETER),
+                .move_direction_usz(&self.link_direction, length * RAIL_STRAIGHT_DIAMETER),
             RailHopeLinkType::Turn90 { clockwise } => {
                 let unrotated = if *clockwise {
                     self.link_direction.rotate_opposite()
@@ -330,13 +330,13 @@ impl RailHopeLink {
                 };
                 trace!("unrotated {}", unrotated);
                 self.start_pos
-                    .move_direction(&unrotated, 10)
-                    .move_direction_sideways(&unrotated, neg_if_false(*clockwise, 12))
+                    .move_direction_usz(&unrotated, 10)
+                    .move_direction_sideways_int(&unrotated, neg_if_false(*clockwise, 12))
             }
             RailHopeLinkType::Shift45 { clockwise, length } => self
                 .start_pos
-                .move_direction(&self.link_direction, 14 + (*length * 2))
-                .move_direction_sideways(
+                .move_direction_usz(&self.link_direction, 14 + (*length * 2))
+                .move_direction_sideways_int(
                     &self.link_direction,
                     neg_if_false(*clockwise, 6 + (*length as i32 * 2)),
                 ),
@@ -366,8 +366,10 @@ fn neg_if_false(flag: bool, value: i32) -> i32 {
 #[cfg(test)]
 mod test {
     use crate::{
-        blueprint::output::FacItemOutput, common::vpoint::VPoint,
-        game_blocks::rail_hope::RailHopeAppender, game_entities::direction::FacDirectionQuarter,
+        blueprint::output::FacItemOutput,
+        common::vpoint::{VPOINT_ZERO, VPoint},
+        game_blocks::rail_hope::RailHopeAppender,
+        game_entities::direction::FacDirectionQuarter,
     };
 
     use super::RailHopeSingle;
@@ -377,7 +379,7 @@ mod test {
         let hope_long_output = FacItemOutput::new_blueprint().into_rc();
         let hope_long_next_pos = {
             let mut hope_long = RailHopeSingle::new(
-                VPoint::zero(),
+                VPOINT_ZERO,
                 FacDirectionQuarter::North,
                 hope_long_output.clone(),
             );
@@ -393,7 +395,7 @@ mod test {
         let hope_short_output = FacItemOutput::new_blueprint().into_rc();
         let hope_short_next_pos = {
             let mut hope_short = RailHopeSingle::new(
-                VPoint::zero(),
+                VPOINT_ZERO,
                 FacDirectionQuarter::North,
                 hope_short_output.clone(),
             );

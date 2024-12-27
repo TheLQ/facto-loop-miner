@@ -9,7 +9,9 @@ use crate::{
         output::{ContextLevel, FacItemOutput},
     },
     common::{entity::FacEntity, vpoint::VPoint},
+    game_blocks::belt_train_unload::FacBlkBeltTrainUnload,
     game_entities::{
+        belt::FacEntBeltType,
         cargo_wagon::FacEntWagon,
         chest::{FacEntChest, FacEntChestType},
         direction::FacDirectionQuarter,
@@ -34,7 +36,7 @@ pub struct FacBlkRailStation {
     pub name: String,
     pub wagons: usize,
     pub front_engines: usize,
-    pub chests: Option<FacEntChestType>,
+    pub delivery: FacExtDelivery,
     pub inserter: FacEntInserterType,
     pub fuel_inserter: Option<FacEntInserterType>,
     pub fuel_inserter_chest: Option<FacEntChestType>,
@@ -118,7 +120,7 @@ impl FacBlock for FacBlkRailStation {
             res
         };
 
-        let stop_rail_pos = station_origin.move_direction(
+        let stop_rail_pos = station_origin.move_direction_usz(
             fill_x_direction.rotate_flip(),
             (base_straight - 1) * RAIL_STRAIGHT_DIAMETER,
         );
@@ -135,8 +137,10 @@ impl FacBlock for FacBlkRailStation {
         stop_block.place_side_electrics();
         stop_block.place_side_inserters(&self.inserter, self.is_input);
         stop_block.place_rail_signals();
-        if let Some(chests) = &self.chests {
-            stop_block.place_side_chests(chests);
+        match &self.delivery {
+            FacExtDelivery::Chest(chests) => stop_block.place_side_chests(chests),
+            FacExtDelivery::Belt(belt_type) => stop_block.place_belts(belt_type),
+            FacExtDelivery::None => {}
         }
         stop_block.place_fuel(&self.fuel_inserter, &self.fuel_inserter_chest);
 
@@ -174,7 +178,7 @@ impl FacBlkRailStation {
         output: &FacItemOutput,
     ) {
         let _ = output.context_handle(ContextLevel::Micro, "🔚Grid-0".into());
-        let electric_start_pos = origin.move_direction(base_direction.rotate_once(), 2);
+        let electric_start_pos = origin.move_direction_usz(base_direction.rotate_once(), 2);
         output.write(BlueprintItem::new(
             FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
             electric_start_pos,
@@ -188,8 +192,8 @@ impl FacBlkRailStation {
     ) {
         let _ = output.context_handle(ContextLevel::Micro, "🔚Grid-1".into());
         let electric_start_pos = origin
-            .move_direction(base_direction.rotate_once(), 4)
-            .move_direction(base_direction.rotate_once().rotate_once(), 6);
+            .move_direction_usz(base_direction.rotate_once(), 4)
+            .move_direction_usz(base_direction.rotate_once().rotate_once(), 6);
         output.write(BlueprintItem::new(
             FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
             electric_start_pos,
@@ -231,7 +235,7 @@ impl FacBlkRailStop {
                     };
                     let start = self
                         .stop_rail_pos
-                        .move_direction(
+                        .move_direction_usz(
                             &self.fill_x_direction,
                             /*pre-pole*/ 1 + car_x_offset + exit,
                         )
@@ -279,7 +283,7 @@ impl FacBlkRailStop {
                     );
                     let start = self
                         .stop_rail_pos
-                        .move_direction(
+                        .move_direction_usz(
                             &self.fill_x_direction,
                             /*pre-pole*/ 1 + car_x_offset + exit,
                         )
@@ -314,7 +318,7 @@ impl FacBlkRailStop {
 
             let start = self
                 .stop_rail_pos
-                .move_direction(
+                .move_direction_usz(
                     &self.fill_x_direction,
                     /*pre-pole*/ 1 + car_x_offset + INSERTERS_PER_CAR,
                 )
@@ -330,7 +334,7 @@ impl FacBlkRailStop {
             FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction.clone())
                 .into_boxed(),
             self.stop_rail_pos
-                .move_direction(self.fill_x_direction.rotate_flip(), 2)
+                .move_direction_usz(self.fill_x_direction.rotate_flip(), 2)
                 .move_y(centered_y_offset(self.rotation, 1)),
         ));
     }
@@ -387,6 +391,37 @@ impl FacBlkRailStop {
         }
     }
 
+    fn place_belts(&self, belt_type: &FacEntBeltType) {
+        let bottom: FacBlkBeltTrainUnload = FacBlkBeltTrainUnload {
+            belt_type: *belt_type,
+            output: self.output.clone(),
+            origin_direction: self.fill_x_direction.rotate_opposite(),
+            padding_unmerged: 0,
+            padding_above: 0,
+            padding_after: 0,
+            turn_clockwise: self.rotation,
+            wagons: self.wagons,
+        };
+        bottom.generate(self.get_rolling_point_at_xy(true, self.front_engines, 0, 3));
+
+        let top: FacBlkBeltTrainUnload = FacBlkBeltTrainUnload {
+            belt_type: *belt_type,
+            output: self.output.clone(),
+            origin_direction: self.fill_x_direction.rotate_once(),
+            padding_unmerged: 0,
+            padding_above: 0,
+            padding_after: 0,
+            turn_clockwise: !self.rotation,
+            wagons: self.wagons,
+        };
+        top.generate(self.get_rolling_point_at_xy(
+            false,
+            self.front_engines + self.wagons,
+            /*??*/ -2,
+            2,
+        ));
+    }
+
     fn get_rolling_point_at_xy(
         &self,
         is_inside: bool,
@@ -396,8 +431,8 @@ impl FacBlkRailStop {
     ) -> VPoint {
         let neg = if is_inside { -1 } else { 1 };
         self.stop_rail_pos
-            .move_direction_i32(&self.fill_x_direction, (7 * roller as i32) + offset_x)
-            .move_direction_i32(&self.fill_x_direction.rotate_once(), neg * offset_y)
+            .move_direction_int(&self.fill_x_direction, (7 * roller as i32) + offset_x)
+            .move_direction_int(&self.fill_x_direction.rotate_once(), neg * offset_y)
     }
 
     // fn get_wagon_point_at_xy(&self, roller: usize, offset_x: i32, offset_y: i32) -> VPoint {
@@ -419,4 +454,11 @@ fn centered_y_offset(negative: bool, entity_size: usize) -> i32 {
 
     let center_offset = 0.5 + entity_size as f32;
     (center_offset * neg).floor() as i32 + /*rel_vpoint*/1
+}
+
+#[derive(Clone)]
+pub enum FacExtDelivery {
+    Chest(FacEntChestType),
+    Belt(FacEntBeltType),
+    None,
 }

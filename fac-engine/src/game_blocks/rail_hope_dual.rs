@@ -23,7 +23,7 @@ impl RailHopeDual {
         origin_direction: FacDirectionQuarter,
         output: Rc<FacItemOutput>,
     ) -> Self {
-        let next_origin = origin.move_direction(
+        let next_origin = origin.move_direction_usz(
             origin_direction.rotate_opposite(),
             RAIL_STRAIGHT_DIAMETER * 2,
         );
@@ -61,13 +61,13 @@ impl RailHopeDual {
 
         let electric_large_pos = self.hopes[0]
             .current_next_pos()
-            .move_direction_sideways(cur_direction, -2);
+            .move_direction_sideways_int(cur_direction, -2);
         self.output.write(BlueprintItem::new(
             FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
             electric_large_pos,
         ));
 
-        let lamp_pos = electric_large_pos.move_direction(cur_direction, 1);
+        let lamp_pos = electric_large_pos.move_direction_usz(cur_direction, 1);
         self.output
             .write(BlueprintItem::new(FacEntLamp::new().into_boxed(), lamp_pos));
     }
