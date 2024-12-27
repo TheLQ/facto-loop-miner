@@ -129,10 +129,10 @@ fn make_belt_bettel_train_unload(output: Rc<FacItemOutput>) -> AdmiralResult<()>
         belt_type: FacEntBeltType::Basic,
         output: output.clone(),
         wagons: 2,
-        padding_unmerged: 3,
-        padding_above: 5,
-        padding_after: 5,
-        turn_clockwise: false,
+        padding_unmerged: 0, // 2,
+        padding_above: 0,
+        padding_after: 0,
+        turn_clockwise: true,
         origin_direction: FacDirectionQuarter::East,
     };
     block.generate(VPoint::zero());
