@@ -11,4 +11,5 @@ pub mod constants;
 pub mod err;
 pub mod game_blocks;
 pub mod game_entities;
+pub mod util;
 pub mod visualizer;

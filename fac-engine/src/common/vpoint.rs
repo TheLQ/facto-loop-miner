@@ -1,6 +1,7 @@
 use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::err::{FError, FResult};
 use crate::game_entities::direction::FacDirectionQuarter;
+use crate::util::ansi::C_BLOCK_LINE;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::borrow::Borrow;
@@ -18,8 +19,6 @@ pub struct VPoint {
 pub const VPOINT_ZERO: VPoint = VPoint { x: 0, y: 0 };
 pub const VPOINT_ONE: VPoint = VPoint { x: 1, y: 1 };
 pub const VPOINT_EIGHT: VPoint = VPoint { x: 8, y: 8 };
-
-pub const C_BLOCK_LINE: char = '\u{1FB72}';
 
 impl VPoint {
     pub fn x(&self) -> i32 {
@@ -209,6 +208,14 @@ impl VPoint {
             FacDirectionQuarter::East => self.move_y(steps),
             FacDirectionQuarter::West => self.move_y(-steps),
         }
+    }
+
+    pub fn move_direction_sideways_usize(
+        &self,
+        direction: impl Borrow<FacDirectionQuarter>,
+        steps: usize,
+    ) -> Self {
+        self.move_direction_sideways(direction, steps as i32)
     }
 
     // pub fn move_xy_u32(&self, x_steps: u32, y_steps: u32) -> Self {

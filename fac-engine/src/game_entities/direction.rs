@@ -5,7 +5,15 @@ use strum::VariantArray;
 use strum::{AsRefStr, Display};
 
 #[derive(
-    Debug, Clone, PartialEq, AsRefStr, IntoStaticStr, VariantArray, Serialize_repr, Deserialize_repr,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    AsRefStr,
+    IntoStaticStr,
+    VariantArray,
+    Serialize_repr,
+    Deserialize_repr,
 )]
 // repr(u8) in order of https://lua-api.factorio.com/1.1.110/defines.html#defines.direction
 #[repr(u8)]
@@ -71,7 +79,7 @@ impl FacDirectionEighth {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Display, AsRefStr, IntoStaticStr, VariantArray)]
+#[derive(Debug, Clone, Copy, PartialEq, Display, AsRefStr, IntoStaticStr, VariantArray)]
 #[repr(u8)]
 pub enum FacDirectionQuarter {
     // clockwise order

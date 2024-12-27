@@ -11,8 +11,9 @@ use crate::{
         executor::{ExecuteResponse, LuaCompiler, client::AdmiralClient},
         lua_command::LuaCommand,
     },
-    common::vpoint::C_BLOCK_LINE,
-    util::ascii_color::{Color, ansi_color, ascii_erase_line, ascii_previous_line},
+    util::ansi::{
+        C_BLOCK_LINE, C_FULL_BLOCK, Color, ansi_color, ansi_erase_line, ansi_previous_line,
+    },
 };
 
 use super::{
@@ -21,6 +22,7 @@ use super::{
     contents::BlueprintContents,
 };
 
+/// Middleware between entity output and blueprint/lua output
 pub struct FacItemOutput {
     otype: FacItemOutputType,
 }
@@ -84,17 +86,17 @@ impl FacItemOutput {
             } else {
                 log_info.total_with_context += 1;
                 if FLAG_ENABLE_LINE_REWRITE {
-                    print!("{}", ascii_previous_line());
+                    print!("{}", ansi_previous_line());
                 }
             };
             (contexts, subcontexts, log_info.total_with_context)
         });
         let subcontexts = pad_grapheme(&subcontexts, 40);
-        const C_FULL_BLOCK: &str = "\u{2588}";
+
         let total_progress = C_FULL_BLOCK.repeat(total_with_context);
         debug!(
             "{}blueprint pos {:6} facpos {:10} {:65} {contexts:42} {total_with_context:2} {subcontexts} total {total_progress}",
-            ascii_erase_line(),
+            ansi_erase_line(),
             item.position().display(),
             blueprint.position.display(),
             item_debug,

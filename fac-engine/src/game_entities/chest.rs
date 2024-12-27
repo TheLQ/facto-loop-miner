@@ -9,8 +9,8 @@ use crate::{
     common::{
         entity::{FacEntity, SquareArea},
         names::FacEntityName,
-        vpoint::C_BLOCK_LINE,
     },
+    util::ansi::C_BLOCK_LINE,
 };
 
 #[derive(Debug, Clone)]

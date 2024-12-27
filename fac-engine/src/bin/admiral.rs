@@ -14,6 +14,7 @@ use facto_loop_miner_fac_engine::common::names::FacEntityName;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
 use facto_loop_miner_fac_engine::game_blocks::belt_bettel::FacBlkBettelBelt;
+use facto_loop_miner_fac_engine::game_blocks::belt_train_unload::FacBlkBeltTrainUnload;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
@@ -56,7 +57,7 @@ fn inner_main() -> AdmiralResult<()> {
 
     let output = FacItemOutput::new_admiral(client).into_rc();
 
-    match 9 {
+    match 10 {
         1 => make_basic(output)?,
         2 => make_assembler_thru(output)?,
         3 => make_belt_bettel(output)?,
@@ -66,6 +67,7 @@ fn inner_main() -> AdmiralResult<()> {
         7 => make_rail_dual_powered(output)?,
         8 => make_rail_station(output)?,
         9 => make_rail_loop(output)?,
+        10 => make_belt_bettel_train_unload(output)?,
         _ => panic!("uihhh"),
     }
 
@@ -117,6 +119,24 @@ fn make_belt_bettel(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     belt.add_straight_underground(5);
     belt.add_turn90(true);
     belt.add_straight(5);
+
+    Ok(())
+}
+
+fn make_belt_bettel_train_unload(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
+    execute_destroy(output.clone())?;
+
+    let block = FacBlkBeltTrainUnload {
+        belt_type: FacEntBeltType::Basic,
+        output: output.clone(),
+        wagons: 2,
+        padding_unmerged: 3,
+        padding_above: 5,
+        padding_after: 5,
+        turn_clockwise: false,
+        origin_direction: FacDirectionQuarter::East,
+    };
+    block.generate(VPoint::zero());
 
     Ok(())
 }

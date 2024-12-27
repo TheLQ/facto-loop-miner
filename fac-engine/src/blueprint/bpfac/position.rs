@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common::vpoint::C_BLOCK_LINE;
+use crate::util::ansi::C_BLOCK_LINE;
 
 use super::FacBpFloat;
 

@@ -38,7 +38,7 @@ impl Color {
 pub const EMOJI_BROWN: &str = "\u{1F3FB}"; // 🏽
 pub const EMOJI_POINT: &str = "\u{1F449}"; // 👉
 
-pub fn ascii_previous_line() -> String {
+pub fn ansi_previous_line() -> String {
     [
         // previous
         C_SHELL_ESCAPE,
@@ -48,7 +48,7 @@ pub fn ascii_previous_line() -> String {
     .concat()
 }
 
-pub fn ascii_erase_line() -> String {
+pub fn ansi_erase_line() -> String {
     [
         // erase line
         C_SHELL_ESCAPE,
@@ -57,3 +57,7 @@ pub fn ascii_erase_line() -> String {
     ]
     .concat()
 }
+
+// https://www.compart.com/en/unicode/block/U+2580
+pub const C_FULL_BLOCK: &str = "\u{2588}";
+pub const C_BLOCK_LINE: char = '\u{1FB72}';

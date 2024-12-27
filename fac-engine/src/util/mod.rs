@@ -1,1 +1,2 @@
-pub mod ascii_color;
+pub mod ansi;
+pub mod bool_num;

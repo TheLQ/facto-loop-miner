@@ -19,6 +19,7 @@ pub struct FacBlkBettelBelt {
     btype: FacEntBeltType,
     links: Vec<FacBlkBettelBeltLink>,
     output: Rc<FacItemOutput>,
+    write_cursor: VPoint,
 }
 
 pub struct FacBlkBettelBeltLink {
@@ -45,6 +46,7 @@ impl FacBlkBettelBelt {
             origin_direction,
             links: Vec::new(),
             output,
+            write_cursor: origin,
         }
     }
 
@@ -89,20 +91,19 @@ impl FacBlkBettelBelt {
     }
 
     pub fn write_link(&mut self, link: FacBlkBettelBeltLink) {
-        let mut cursor = self.origin;
         match &link.ltype {
             FacBlkBettelBeltLinkType::Transport { length } => {
-                let mut last_cursor = cursor;
+                let mut new_cursor = self.origin;
                 for i in 0..*length {
-                    last_cursor = cursor.move_direction(&link.direction, i);
+                    new_cursor = self.write_cursor.move_direction(&link.direction, i);
                     self.output.write(BlueprintItem::new(
                         FacEntBeltTransport::new(self.btype.clone(), link.direction.clone())
                             .into_boxed(),
-                        last_cursor,
+                        new_cursor,
                     ))
                 }
                 // move cursor past the last belt we placed
-                cursor = last_cursor.move_direction(&link.direction, 1);
+                self.write_cursor = new_cursor.move_direction(&link.direction, 1);
             }
             FacBlkBettelBeltLinkType::Underground { length } => {
                 self.output.write(BlueprintItem::new(
@@ -112,7 +113,7 @@ impl FacBlkBettelBelt {
                         FacEntBeltUnderType::Input,
                     )
                     .into_boxed(),
-                    cursor,
+                    self.write_cursor,
                 ));
 
                 self.output.write(BlueprintItem::new(
@@ -122,10 +123,12 @@ impl FacBlkBettelBelt {
                         FacEntBeltUnderType::Output,
                     )
                     .into_boxed(),
-                    cursor.move_direction(&link.direction, *length),
+                    self.write_cursor.move_direction(&link.direction, *length),
                 ));
 
-                cursor = cursor.move_direction(&link.direction, *length + 1)
+                self.write_cursor = self
+                    .write_cursor
+                    .move_direction(&link.direction, *length + 1)
             }
             FacBlkBettelBeltLinkType::Splitter => unimplemented!(),
         };

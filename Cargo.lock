@@ -729,6 +729,7 @@ dependencies = [
  "generic_static",
  "itertools 0.13.0",
  "num-format",
+ "num-traits",
  "rand",
  "rcon-client",
  "regex",
