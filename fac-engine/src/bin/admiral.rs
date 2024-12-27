@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use exhaustive::Exhaustive;
-use facto_loop_miner_common::log_init;
+use facto_loop_miner_common::log_init_trace;
 use facto_loop_miner_fac_engine::admiral::lua_command::train_boot::train_boot;
 use facto_loop_miner_fac_engine::blueprint::bpfac::infinity::{FacBpFilter, FacBpInfinitySettings};
 use facto_loop_miner_fac_engine::blueprint::bpfac::schedule::{
@@ -39,11 +39,10 @@ use facto_loop_miner_fac_engine::{
         tier::FacTier,
     },
 };
-use tracing::Level;
 
 fn main() {
-    log_init(Some(Level::DEBUG));
-    // log_init(Some(Level::TRACE));
+    log_init_trace();
+    // log_init_debug();
 
     if let Err(e) = inner_main() {
         let msg = pretty_panic_admiral(e);

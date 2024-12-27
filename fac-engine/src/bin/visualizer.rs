@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use facto_loop_miner_common::log_init;
+use facto_loop_miner_common::log_init_debug;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
@@ -30,7 +30,7 @@ use facto_loop_miner_fac_engine::{
 };
 
 fn main() {
-    log_init(None);
+    log_init_debug();
 
     let output = FacItemOutput::new_blueprint().into_rc();
 
