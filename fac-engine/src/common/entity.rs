@@ -14,9 +14,9 @@ use super::vpoint::VPoint;
 pub trait FacEntity: FacArea + std::fmt::Debug {
     fn name(&self) -> &FacEntityName;
 
-    fn into_boxed(self) -> Box<impl FacEntity>
+    fn into_boxed(self) -> Box<dyn FacEntity>
     where
-        Self: Sized,
+        Self: Sized + 'static,
     {
         Box::new(self)
     }
@@ -75,6 +75,7 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
     }
 }
 
+#[derive(Debug)]
 pub struct Size {
     width: usize,
     height: usize,
@@ -110,6 +111,11 @@ pub trait FacArea {
         let size = self.rectangle_size();
         position
             .to_fac_with_offset_rectangle(*size.width() as f32 / 2.0, *size.height() as f32 / 2.0)
+    }
+
+    fn from_fac_position(&self, position: &FacBpPosition) -> VPoint {
+        let size = self.rectangle_size();
+        position.to_vpoint_with_offset(*size.width() as f32 / 2.0, *size.height() as f32 / 2.0)
     }
 }
 

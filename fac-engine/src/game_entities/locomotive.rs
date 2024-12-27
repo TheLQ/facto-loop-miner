@@ -8,7 +8,7 @@ use crate::{
     def_entity_name,
 };
 
-use super::cargo_wagon::rolling_stock_offset;
+use super::cargo_wagon::{rolling_stock_offset, rolling_stock_offset_from};
 
 #[derive(Debug)]
 pub struct FacEntLocomotive {
@@ -30,6 +30,10 @@ impl FacArea for FacEntLocomotive {
 
     fn to_fac_position(&self, position: &VPoint) -> FacBpPosition {
         rolling_stock_offset(position)
+    }
+
+    fn from_fac_position(&self, position: &FacBpPosition) -> VPoint {
+        rolling_stock_offset_from(position)
     }
 }
 
