@@ -7,9 +7,9 @@ use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::VResult;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::TILES_PER_CHUNK;
+use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ZERO};
 
 pub struct Step10 {}
 
@@ -51,7 +51,7 @@ pub const REMOVE_RESOURCE_BORDER_TILES: i32 =
 
 pub fn draw_mega_box(surface: &mut VSurface, metrics: &mut Metrics) -> VResult<()> {
     let tiles = CENTRAL_BASE_TILES as u32;
-    for point in points_in_centered_box(tiles, VPoint::zero()) {
+    for point in points_in_centered_box(tiles, VPOINT_ZERO) {
         if !point.is_within_center_radius(tiles - 50) {
             surface.set_pixel(point, Pixel::EdgeWall)?;
             metrics.increment_slow("base-box");

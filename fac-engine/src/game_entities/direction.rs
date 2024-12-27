@@ -136,6 +136,25 @@ impl FacDirectionQuarter {
         }
     }
 
+    pub const fn rotate_clockwise(&self, clockwise: bool) -> Self {
+        if clockwise {
+            self.rotate_once()
+        } else {
+            self.rotate_opposite()
+        }
+    }
+
+    // pub const fn rotate_once_if(&self, enabled: bool) -> Self {
+    //     if enabled { self.rotate_once() } else { *self }
+    // }
+
+    pub fn as_sign_f32(&self) -> f32 {
+        match &self {
+            FacDirectionQuarter::North | FacDirectionQuarter::West => -1.0,
+            FacDirectionQuarter::South | FacDirectionQuarter::East => 1.0,
+        }
+    }
+
     pub fn is_up_down(&self) -> bool {
         match self {
             Self::North | Self::South => true,
