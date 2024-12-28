@@ -7,7 +7,7 @@ use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
 use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
 use facto_loop_miner_fac_engine::tests::assembler::make_assembler_thru;
-use facto_loop_miner_fac_engine::tests::belt::{
+use facto_loop_miner_fac_engine::tests::belt_tests::{
     make_belt_bettel, make_belt_bettel_train_unload, make_belt_combiner,
 };
 use facto_loop_miner_fac_engine::tests::train_loop::make_rail_loop;
