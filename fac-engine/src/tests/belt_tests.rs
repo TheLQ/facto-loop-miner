@@ -65,7 +65,7 @@ pub fn make_belt_bettel_train_unload(output: Rc<FacItemOutput>) -> AdmiralResult
 pub fn make_belt_combiner(output: Rc<FacItemOutput>) {
     let block = FacBlkBeltCombiner {
         belt: FacEntBeltType::Basic,
-        output_belt_order: [3, 1, 4].to_vec(),
+        output_belt_targets: [3, 1, 4].to_vec(),
         direction: FacDirectionQuarter::East,
         output,
     };

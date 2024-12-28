@@ -12,10 +12,11 @@ use crate::{
 
 use super::{belt_bettel::FacBlkBettelBelt, block::FacBlock};
 
+/// Creates splitter array and passthrough to
 pub struct FacBlkBeltCombiner {
     pub belt: FacEntBeltType,
     pub direction: FacDirectionQuarter,
-    pub output_belt_order: Vec<usize>,
+    pub output_belt_targets: Vec<usize>,
     pub output: Rc<FacItemOutput>,
 }
 
@@ -42,21 +43,18 @@ impl FacBlkBeltCombiner {
 
         // build tree of splits
         let mut belts_stack = vec![source_belt];
-        for output_belt in 0..self.output_belt_order.len() {
+        for output_belt in 0..self.output_belt_targets.len() {
             let _ = &mut self
                 .output
                 .context_handle(ContextLevel::Micro, "splits".into());
             for side_belt in 0..2 {
                 let cur_belt = belts_stack.last_mut().unwrap();
+                if output_belt + 1 == self.output_belt_targets.len() && side_belt == 1 {
+                    break;
+                }
                 cur_belt.add_split_priority(clockwise, FacEntBeltSplitPriority {
                     input: FacExtPriority::None,
-                    output: if output_belt == 0 && side_belt == 0 {
-                        output_priority.flip()
-                    } else if output_belt == (self.output_belt_order.len() - 1) && side_belt == 1 {
-                        FacExtPriority::None
-                    } else {
-                        output_priority
-                    },
+                    output: output_priority,
                 });
 
                 let other_belt = cur_belt.belt_for_splitter();
@@ -69,12 +67,12 @@ impl FacBlkBeltCombiner {
 
     fn place_fill(&self, belts_stack: &mut Vec<FacBlkBettelBelt>) {
         // fill depth output belts
-        let total_belts_to_adjust = belts_stack.len().saturating_sub(2);
+        let belt_adjustment = belts_stack.len().saturating_sub(2);
         for (i, belt) in belts_stack.iter_mut().enumerate() {
             let _ = &mut self
                 .output
                 .context_handle(ContextLevel::Micro, "fill".into());
-            belt.add_straight(total_belts_to_adjust.saturating_sub(i));
+            belt.add_straight(belt_adjustment.saturating_sub(i));
         }
 
         // padding
@@ -84,17 +82,13 @@ impl FacBlkBeltCombiner {
     }
 
     fn place_output_skips(&self, belts_stack: &mut Vec<FacBlkBettelBelt>, clockwise: bool) {
-        // source belt keeeps passing through...
-        let mut source_belt = belts_stack.remove(0);
-        // source_belt.add_straight(5);
-
         // add skips
         for (output_belt_num, [first, last]) in belts_stack.iter_mut().array_chunks().enumerate() {
             let _ = &mut self
                 .output
                 .context_handle(ContextLevel::Micro, "ends".into());
 
-            let target_output = self.output_belt_order[output_belt_num];
+            let target_output = self.output_belt_targets[output_belt_num];
 
             let mut cur_index = 0;
             while cur_index < target_output.saturating_sub(1) {
@@ -117,11 +111,10 @@ impl FacBlkBeltCombiner {
             last.add_straight(1);
         }
 
-        for _ in 0..self.output_belt_order.len() {
+        for _ in 0..self.output_belt_targets.len() {
             let _ = &mut self
                 .output
                 .context_handle(ContextLevel::Micro, "tail".into());
-            source_belt.add_straight_underground(1);
         }
     }
 }
