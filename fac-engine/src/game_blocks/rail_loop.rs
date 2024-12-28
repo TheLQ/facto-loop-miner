@@ -6,8 +6,9 @@ use crate::{
             infinity::{FacBpFilter, FacBpInfinitySettings},
             schedule::{
                 FacBpCircuitCondition, FacBpLogic, FacBpSchedule, FacBpScheduleData,
-                FacBpScheduleWait, FacBpSignalId, FacBpSignalIdType, FacBpWaitType,
+                FacBpScheduleWait, FacBpWaitType,
             },
+            signal_id::{FacBpSignalId, FacBpSignalIdType},
         },
         output::{ContextLevel, FacItemOutput},
     },

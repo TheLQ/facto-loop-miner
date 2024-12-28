@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FacBpSignalId {
-    name: String,
+    pub name: String,
     #[serde(rename = "type")]
-    stype: FacBpSignalIdType,
+    pub stype: FacBpSignalIdType,
 }
 
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FacBpSignalIdType {
     Item,

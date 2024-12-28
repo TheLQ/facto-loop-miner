@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::FacBpInteger;
+use super::{FacBpInteger, signal_id::FacBpSignalId};
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct FacBpSchedule {
@@ -33,13 +33,6 @@ pub struct FacBpCircuitCondition {
     pub first_signal: Option<FacBpSignalId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub second_signal: Option<FacBpSignalId>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct FacBpSignalId {
-    #[serde(rename = "type")]
-    pub stype: FacBpSignalIdType,
-    pub name: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
