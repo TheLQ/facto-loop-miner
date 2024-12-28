@@ -8,7 +8,7 @@ use crate::{
 
 use super::{belt_bettel::FacBlkBettelBelt, belt_combiner::FacBlkBeltCombiner, block::FacBlock};
 
-pub struct FacBlkBeltGrid {
+pub struct FacBlkBeltCloud {
     pub belt_input: FacEntBeltType,
     pub belt_output: FacEntBeltType,
     pub belts_input: usize,
@@ -17,7 +17,7 @@ pub struct FacBlkBeltGrid {
     pub output: Rc<FacItemOutput>,
 }
 
-impl FacBlock for FacBlkBeltGrid {
+impl FacBlock for FacBlkBeltCloud {
     fn generate(&self, origin: VPoint) {
         let belts = self.place_loading_belts(origin);
         for belt in &belts {
@@ -27,7 +27,7 @@ impl FacBlock for FacBlkBeltGrid {
     }
 }
 
-impl FacBlkBeltGrid {
+impl FacBlkBeltCloud {
     fn place_loading_belts(&self, origin: VPoint) -> Vec<FacBlkBettelBelt> {
         let mut belts = Vec::new();
         for input_num in 0..self.belts_input {

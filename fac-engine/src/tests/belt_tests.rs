@@ -5,8 +5,9 @@ use crate::{
     blueprint::output::FacItemOutput,
     common::vpoint::{VPOINT_TEN, VPOINT_ZERO},
     game_blocks::{
-        belt_bettel::FacBlkBettelBelt, belt_combiner::FacBlkBeltCombiner,
-        belt_grid::FacBlkBeltGrid, belt_train_unload::FacBlkBeltTrainUnload, block::FacBlock,
+        belt_bettel::FacBlkBettelBelt, belt_cloud::FacBlkBeltCloud,
+        belt_combiner::FacBlkBeltCombiner, belt_train_unload::FacBlkBeltTrainUnload,
+        block::FacBlock,
     },
     game_entities::{belt::FacEntBeltType, direction::FacDirectionQuarter},
 };
@@ -72,7 +73,7 @@ pub fn make_belt_combiner(output: Rc<FacItemOutput>) {
 }
 
 pub fn make_belt_grid(output: Rc<FacItemOutput>) {
-    let block = FacBlkBeltGrid {
+    let block = FacBlkBeltCloud {
         belt_input: FacEntBeltType::Basic,
         belt_output: FacEntBeltType::Fast,
         // belts_input: 2,
