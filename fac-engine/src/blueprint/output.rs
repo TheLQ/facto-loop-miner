@@ -253,7 +253,7 @@ impl FacItemOutputType {
     }
 
     fn flush_cache_maybe(&self) {
-        const CACHE_SIZE: usize = 2000;
+        const CACHE_SIZE: usize = 2;
 
         let size = match self {
             Self::AdmiralClient(cell) => {

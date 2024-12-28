@@ -43,7 +43,7 @@ fn inner_main() -> AdmiralResult<()> {
     execute_destroy(output.clone())?;
 
     let command_output = output.clone();
-    match 12 {
+    match 11 {
         1 => make_basic(command_output)?,
         2 => make_assembler_thru(command_output)?,
         3 => make_belt_bettel(command_output)?,

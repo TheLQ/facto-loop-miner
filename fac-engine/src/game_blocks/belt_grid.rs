@@ -6,11 +6,7 @@ use crate::{
     game_entities::{belt::FacEntBeltType, direction::FacDirectionQuarter},
 };
 
-use super::{
-    belt_bettel::FacBlkBettelBelt,
-    belt_combiner::{FacBlkBeltCombiner, FacExtCombinerStage},
-    block::FacBlock,
-};
+use super::{belt_bettel::FacBlkBettelBelt, belt_combiner::FacBlkBeltCombiner, block::FacBlock};
 
 pub struct FacBlkBeltGrid {
     pub belt_input: FacEntBeltType,
@@ -57,7 +53,7 @@ impl FacBlkBeltGrid {
         let combiner = FacBlkBeltCombiner {
             belt: self.belt_input,
             direction: self.origin_direction,
-            layout: FacExtCombinerStage::FixedOutputBelts(self.belts_output),
+            output_belt_order: todo!(),
             output: self.output.clone(),
         };
         combiner.generate(source_belt.next_insert_position());
