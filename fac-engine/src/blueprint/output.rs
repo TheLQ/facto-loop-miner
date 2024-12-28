@@ -1,6 +1,6 @@
 use enum_map::EnumMap;
 use std::{cell::RefCell, rc::Rc, sync::Mutex};
-use tracing::{debug, error};
+use tracing::{debug, error, trace};
 use unicode_segmentation::UnicodeSegmentation;
 
 const FLAG_ENABLE_LINE_REWRITE: bool = false;
@@ -42,7 +42,8 @@ impl FacItemOutput {
             otype: FacItemOutputType::AdmiralClient(RefCell::new(OutputData {
                 inner: client,
                 dedupe: None,
-                // log_info: FacItemOutputLogInfo::new(),
+                cache: Vec::new(),
+                total_write: 0,
             })),
         }
     }
@@ -52,7 +53,8 @@ impl FacItemOutput {
             otype: FacItemOutputType::AdmiralClient(RefCell::new(OutputData {
                 inner: client,
                 dedupe: Some(Vec::new()),
-                // log_info: FacItemOutputLogInfo::new(),
+                cache: Vec::new(),
+                total_write: 0,
             })),
         }
     }
@@ -62,7 +64,8 @@ impl FacItemOutput {
             otype: FacItemOutputType::Blueprint(RefCell::new(OutputData {
                 inner: BlueprintContents::new(),
                 dedupe: None,
-                // log_info: FacItemOutputLogInfo::new(),
+                cache: Vec::new(),
+                total_write: 0,
             })),
         }
     }
@@ -103,7 +106,7 @@ impl FacItemOutput {
             item_debug,
         );
 
-        self.otype.write(item, blueprint)
+        self.otype.write(FacItemOutputWrite { item, blueprint })
     }
     // pub fn any_handle<'o>(&'o mut self) -> OutputContextHandle<'o> {
     //     OutputContextHandle {
@@ -157,6 +160,10 @@ impl FacItemOutput {
             }
             FacItemOutputType::AdmiralClient(_) => panic!("not a blueprint"),
         }
+    }
+
+    pub fn flush(&self) {
+        self.otype.flush_cache();
     }
 
     #[cfg(test)]
@@ -221,14 +228,68 @@ enum FacItemOutputType {
     Blueprint(RefCell<OutputData<BlueprintContents>>),
 }
 
+struct FacItemOutputWrite {
+    item: BlueprintItem,
+    blueprint: FacBpEntity,
+}
+
 impl FacItemOutputType {
-    fn write(&self, item: BlueprintItem, blueprint: FacBpEntity) {
+    fn write(&self, write: FacItemOutputWrite) {
+        self.push_cache(write);
+        self.flush_cache_maybe();
+    }
+
+    fn push_cache(&self, write: FacItemOutputWrite) {
         match self {
             Self::AdmiralClient(cell) => {
-                let OutputData { inner, dedupe, .. } = &mut *cell.borrow_mut();
-                dedupe_position(dedupe, &blueprint);
-                let res = inner.execute_checked_command(blueprint.to_lua().into_boxed());
-                // all_items.push(item);
+                let OutputData { cache, .. } = &mut *cell.borrow_mut();
+                cache.push(write);
+            }
+            Self::Blueprint(cell) => {
+                let OutputData { cache, .. } = &mut *cell.borrow_mut();
+                cache.push(write);
+            }
+        }
+    }
+
+    fn flush_cache_maybe(&self) {
+        const CACHE_SIZE: usize = 2000;
+
+        let size = match self {
+            Self::AdmiralClient(cell) => {
+                let OutputData { cache, .. } = &*cell.borrow();
+                cache.len()
+            }
+            Self::Blueprint(cell) => {
+                let OutputData { cache, .. } = &*cell.borrow();
+                cache.len()
+            }
+        };
+        if size < CACHE_SIZE {
+            return;
+        }
+        self.flush_cache();
+    }
+
+    fn flush_cache(&self) {
+        match self {
+            Self::AdmiralClient(cell) => {
+                let OutputData {
+                    inner,
+                    dedupe: _,
+                    cache,
+                    total_write,
+                } = &mut *cell.borrow_mut();
+                // dedupe_position(dedupe, &blueprint);
+
+                let mut lua_commands = Vec::new();
+                for FacItemOutputWrite { item, blueprint } in cache.drain(0..) {
+                    *total_write += 1;
+                    lua_commands.push(blueprint.to_lua().into_boxed());
+                }
+                trace!("Flush Cache {} total {}", lua_commands.len(), total_write);
+                let res = inner.execute_checked_commands_in_wrapper_function(lua_commands);
+
                 // Vec::push() does not normally fail
                 // For API sanity, do not make every FacBlk need to pass up the error
                 if let Err(e) = res {
@@ -236,9 +297,19 @@ impl FacItemOutputType {
                 }
             }
             Self::Blueprint(cell) => {
-                let OutputData { inner, dedupe, .. } = &mut *cell.borrow_mut();
-                dedupe_position(dedupe, &blueprint);
-                inner.add(item, blueprint);
+                let OutputData {
+                    inner,
+                    dedupe: _,
+                    cache,
+                    total_write,
+                } = &mut *cell.borrow_mut();
+                let mut count = 0;
+                for FacItemOutputWrite { item, blueprint } in cache.drain(0..) {
+                    count += 1;
+                    inner.add(item, blueprint);
+                }
+                *total_write += count;
+                trace!("Flush Cache {} total {}", count, total_write)
             }
         }
     }
@@ -279,16 +350,16 @@ impl FacItemOutputType {
     }
 }
 
-fn dedupe_position(dedupe: &mut Option<Vec<FacBpPosition>>, blueprint: &FacBpEntity) {
-    if let Some(dedupe) = dedupe {
-        let bppos = &blueprint.position;
-        if dedupe.contains(bppos) {
-            return;
-        } else {
-            dedupe.push(bppos.clone());
-        }
-    }
-}
+// fn dedupe_position(dedupe: &mut Option<Vec<FacBpPosition>>, blueprint: &FacBpEntity) {
+//     if let Some(dedupe) = dedupe {
+//         let bppos = &blueprint.position;
+//         if dedupe.contains(bppos) {
+//             return;
+//         } else {
+//             dedupe.push(bppos.clone());
+//         }
+//     }
+// }
 
 #[derive(Default)]
 pub struct FacItemOutputLogInfo {
@@ -310,7 +381,8 @@ impl FacItemOutputLogInfo {
 struct OutputData<T> {
     inner: T,
     dedupe: Option<Vec<FacBpPosition>>,
-    // log_info: FacItemOutputLogInfo,
+    cache: Vec<FacItemOutputWrite>,
+    total_write: usize,
 }
 
 // Keeps the context alive for access during logging

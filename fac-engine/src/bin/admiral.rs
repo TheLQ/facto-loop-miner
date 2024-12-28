@@ -42,21 +42,23 @@ fn inner_main() -> AdmiralResult<()> {
     let output = FacItemOutput::new_admiral(client).into_rc();
     execute_destroy(output.clone())?;
 
+    let command_output = output.clone();
     match 12 {
-        1 => make_basic(output)?,
-        2 => make_assembler_thru(output)?,
-        3 => make_belt_bettel(output)?,
-        4 => make_rail_spiral_90(output)?,
-        5 => make_rail_shift_45(output)?,
-        6 => make_rail_dual_turning(output)?,
-        7 => make_rail_dual_powered(output)?,
-        8 => make_rail_station(output)?,
-        9 => make_rail_loop(output)?,
-        10 => make_belt_bettel_train_unload(output)?,
-        11 => make_belt_combiner(output),
-        12 => make_belt_grid(output),
+        1 => make_basic(command_output)?,
+        2 => make_assembler_thru(command_output)?,
+        3 => make_belt_bettel(command_output)?,
+        4 => make_rail_spiral_90(command_output)?,
+        5 => make_rail_shift_45(command_output)?,
+        6 => make_rail_dual_turning(command_output)?,
+        7 => make_rail_dual_powered(command_output)?,
+        8 => make_rail_station(command_output)?,
+        9 => make_rail_loop(command_output)?,
+        10 => make_belt_bettel_train_unload(command_output)?,
+        11 => make_belt_combiner(command_output),
+        12 => make_belt_grid(command_output),
         _ => panic!("uihhh"),
     }
+    output.flush();
 
     Ok(())
 }

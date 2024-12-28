@@ -6,11 +6,11 @@ use tracing_subscriber::{EnvFilter, Registry, prelude::*};
 
 pub const LOCALE: Locale = Locale::en;
 
-const TRACE_NO_ADMIRAL_NETWORK: &str =
-    "trace,facto_loop_miner_fac_engine::admiral::executor::client=debug";
+const TRACE_NO_ADMIRAL_NETWORK: &str = "trace,facto_loop_miner_fac_engine::admiral::executor::client=debug,facto_loop_miner_fac_engine::admiral::lua_command::lua_batch=debug";
 
 pub fn log_init_trace() {
     log_init_internal(TRACE_NO_ADMIRAL_NETWORK);
+    // log_init_internal("trace");
 }
 
 pub fn log_init_debug() {
