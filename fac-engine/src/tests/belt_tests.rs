@@ -76,9 +76,12 @@ pub fn make_belt_combiner(output: Rc<FacItemOutput>) {
 
 pub fn make_belt_grid(output: Rc<FacItemOutput>) {
     let block = FacBlkBeltGrid {
-        belt_type: FacEntBeltType::Basic,
-        belts_input: 6,
-        belts_output: 10,
+        belt_input: FacEntBeltType::Basic,
+        belt_output: FacEntBeltType::Fast,
+        // belts_input: 2,
+        // belts_output: 2,
+        belts_input: 4,
+        belts_output: 8,
         output: output.clone(),
         origin_direction: FacDirectionQuarter::East,
     };

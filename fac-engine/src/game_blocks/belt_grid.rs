@@ -13,7 +13,8 @@ use super::{
 };
 
 pub struct FacBlkBeltGrid {
-    pub belt_type: FacEntBeltType,
+    pub belt_input: FacEntBeltType,
+    pub belt_output: FacEntBeltType,
     pub belts_input: usize,
     pub belts_output: usize,
     pub origin_direction: FacDirectionQuarter,
@@ -23,9 +24,10 @@ pub struct FacBlkBeltGrid {
 impl FacBlock for FacBlkBeltGrid {
     fn generate(&self, origin: VPoint) {
         let belts = self.place_loading_belts(origin);
-        for belt in belts {
-            self.place_combiner_row(&belt);
+        for belt in &belts {
+            self.place_combiner_row(belt);
         }
+        self.place_output_thru(&belts);
     }
 }
 
@@ -34,7 +36,7 @@ impl FacBlkBeltGrid {
         let mut belts = Vec::new();
         for input_num in 0..self.belts_input {
             let mut other_belt = FacBlkBettelBelt::new(
-                self.belt_type,
+                self.belt_input,
                 origin.move_direction_sideways_usz(self.origin_direction, input_num),
                 self.origin_direction,
                 self.output.clone(),
@@ -53,11 +55,33 @@ impl FacBlkBeltGrid {
 
     fn place_combiner_row(&self, source_belt: &FacBlkBettelBelt) {
         let combiner = FacBlkBeltCombiner {
-            belt: self.belt_type,
+            belt: self.belt_input,
             direction: self.origin_direction,
             layout: FacExtCombinerStage::FixedOutputBelts(self.belts_output),
             output: self.output.clone(),
         };
         combiner.generate(source_belt.next_insert_position());
+    }
+
+    fn place_output_thru(&self, belts_stack: &[FacBlkBettelBelt]) {
+        let last_belt = belts_stack.last().unwrap();
+        let pos = last_belt
+            .next_insert_position()
+            .move_direction_usz(self.origin_direction, (self.belts_output * 2) + 1)
+            .move_direction_usz(self.origin_direction.rotate_once(), self.belts_output * 2);
+        for belt_num in 0..self.belts_output {
+            let mut belt = FacBlkBettelBelt::new(
+                self.belt_output,
+                pos.move_direction_usz(self.origin_direction, belt_num * 3),
+                self.origin_direction.rotate_opposite(),
+                self.output.clone(),
+            );
+            belt.add_straight(
+                // Reaching each side takes 2 belts. Then passthru belt, then 1x empty spacer
+                ((self.belts_output * 2) +2 )
+                // span
+                * self.belts_input,
+            );
+        }
     }
 }

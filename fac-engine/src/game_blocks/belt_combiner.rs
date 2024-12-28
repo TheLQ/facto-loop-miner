@@ -38,12 +38,12 @@ impl FacBlock for FacBlkBeltCombiner {
 
 impl FacBlkBeltCombiner {
     fn generate_fixed(&self, origin: VPoint, output_belts: usize, clockwise: bool) {
-        let mut belts = self.create_belts(origin, output_belts, clockwise);
-        self.create_fill(&mut belts);
+        let mut belts = self.place_belts(origin, output_belts, clockwise);
+        self.place_fill(&mut belts);
         self.place_output_skips(&mut belts, output_belts, clockwise);
     }
 
-    fn create_belts(
+    fn place_belts(
         &self,
         origin: VPoint,
         output_belts: usize,
@@ -80,7 +80,7 @@ impl FacBlkBeltCombiner {
         belts_stack
     }
 
-    fn create_fill(&self, belts_stack: &mut Vec<FacBlkBettelBelt>) {
+    fn place_fill(&self, belts_stack: &mut Vec<FacBlkBettelBelt>) {
         // fill depth output belts
         let total_belts_to_adjust = belts_stack.len().saturating_sub(2);
         for (i, belt) in belts_stack.iter_mut().enumerate() {
