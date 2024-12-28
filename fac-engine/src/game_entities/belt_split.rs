@@ -35,6 +35,14 @@ impl FacExtPriority {
     pub fn is_none(&self) -> bool {
         self == &Self::None
     }
+
+    pub fn flip(&self) -> FacExtPriority {
+        match &self {
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
+            Self::None => panic!("flipping none"),
+        }
+    }
 }
 
 impl Default for FacExtPriority {

@@ -1,5 +1,6 @@
 #![feature(int_roundings)]
 #![feature(error_generic_member_access)]
+#![feature(iter_array_chunks)]
 // Prefer explicit
 #![allow(clippy::new_without_default)]
 #![warn(clippy::inconsistent_struct_constructor)]

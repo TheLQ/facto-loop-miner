@@ -67,8 +67,8 @@ pub fn make_belt_combiner(output: Rc<FacItemOutput>) {
     let block = FacBlkBeltCombiner {
         input_belts: 5,
         belt: FacEntBeltType::Basic,
-        layout: FacExtCombinerStage::Fixed(4),
-        direction: FacDirectionQuarter::North,
+        layout: FacExtCombinerStage::FixedOutputBelts(8),
+        direction: FacDirectionQuarter::South,
         output,
     };
     block.generate(VPOINT_TEN);

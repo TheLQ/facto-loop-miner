@@ -94,9 +94,9 @@ impl FacItemOutput {
         });
         let subcontexts = pad_grapheme(&subcontexts, 40);
 
-        let total_progress = C_FULL_BLOCK.repeat(total_with_context);
+        let total_progress = C_FULL_BLOCK.repeat(total_with_context.min(30));
         debug!(
-            "{}blueprint pos {:6} facpos {:10} {:65} {contexts:42} {total_with_context:2} {subcontexts} total {total_progress}",
+            "{}blueprint pos {:6} facpos {:10} {:80} {contexts:42} {total_with_context:2} {subcontexts} total {total_progress}",
             ansi_erase_line(),
             item.position().display(),
             blueprint.position.display(),

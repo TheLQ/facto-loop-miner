@@ -72,7 +72,6 @@ impl FacBlkBettelBelt {
 
         self.write_link(FacBlkBettelBeltLink {
             ltype: if is_underground {
-                assert!(length > 2, "underground length {} too short", length);
                 FacBlkBettelBeltLinkType::Underground { length }
             } else {
                 FacBlkBettelBeltLinkType::Transport { length }
@@ -152,12 +151,12 @@ impl FacBlkBettelBelt {
                     )
                     .into_boxed(),
                     self.write_cursor
-                        .move_direction_usz(&link.direction, *length),
+                        .move_direction_usz(&link.direction, *length + 1),
                 ));
 
                 self.write_cursor = self
                     .write_cursor
-                    .move_direction_usz(&link.direction, *length + 1)
+                    .move_direction_usz(&link.direction, *length + 2)
             }
             FacBlkBettelBeltLinkType::Splitter {
                 clockwise,
