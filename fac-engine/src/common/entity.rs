@@ -31,6 +31,7 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
     // }
 
     fn to_blueprint(&self, entity_number: FacBpInteger, position: &VPoint) -> FacBpEntity {
+        // println!("to_bp position {}", position.display());
         FacBpEntity {
             entity_number,
             name: self.name().to_fac_name(),

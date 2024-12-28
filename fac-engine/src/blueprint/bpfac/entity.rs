@@ -11,7 +11,7 @@ use super::{
     FacBpInteger, infinity::FacBpInfinitySettings, position::FacBpPosition, schedule::FacBpSchedule,
 };
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct FacBpEntity {

@@ -140,58 +140,19 @@ impl FacBlkBettelBelt {
                     .move_direction_usz(&link.direction, *length + 1)
             }
             FacBlkBettelBeltLinkType::Splitter { clockwise } => {
-                // let split_pos = if *clockwise {
-                //     println!(
-                //         "cw from {} into {}",
-                //         link.direction,
-                //         link.direction.rotate_opposite()
-                //     );
-                //     self.write_cursor
-                // } else {
-                //     println!(
-                //         "op from {} into {}",
-                //         link.direction,
-                //         link.direction.rotate_opposite()
-                //     );
-                //     self.write_cursor
-                //         .move_direction_usz(link.direction.rotate_opposite(), 1)
-                // };
-
                 let dummy_belt =
                     FacEntBeltTransport::new(FacEntBeltType::Basic, FacDirectionQuarter::North)
                         .into_boxed();
                 let split_belt = FacEntBeltSplit::new(self.btype, link.direction).into_boxed();
 
                 let split_pos = self.write_cursor;
-                // let new_direction = link.direction.rotate_clockwise(*clockwise);
                 let new_direction = link.direction.rotate_clockwise(*clockwise);
-                println!(
-                    "any from {} into {} - sign {}",
-                    link.direction,
-                    new_direction,
-                    new_direction.as_sign_f32()
-                );
-                let split_pos = split_pos.move_between_entity_centers(
+                let split_pos = split_pos.move_factorio_style_direction_entity(
                     &dummy_belt,
                     &split_belt,
-                    new_direction.as_sign_f32() * 0.5,
-                    0.0,
+                    new_direction,
+                    0.5,
                 );
-                // if *clockwise {
-                //     println!(
-                //         "cw from {} into {}",
-                //         link.direction,
-                //         link.direction.rotate_opposite()
-                //     );
-                //     split_pos = split_pos.move_direction_int(link.direction.rotate_opposite(), 1)
-                // } else {
-                //     println!(
-                //         "op from {} into {}",
-                //         link.direction,
-                //         link.direction.rotate_opposite()
-                //     );
-                //     split_pos = split_pos.move_direction_int(link.direction.rotate_opposite(), 1)
-                // }
                 self.output.write(BlueprintItem::new(split_belt, split_pos));
 
                 self.write_cursor = self.write_cursor.move_direction_int(&link.direction, 1)
@@ -270,14 +231,10 @@ impl FacBlkBettelBeltLinkType {
 
 #[cfg(test)]
 mod test {
-    use std::rc::Rc;
-
     use crate::{
         blueprint::{
-            blueprint::Blueprint,
-            bpfac::{blueprint::FacBpBlueprintWrapper, position::FacBpPosition},
-            converter::encode_blueprint_to_string,
-            output::FacItemOutput,
+            bpfac::position::FacBpPosition, contents::BlueprintContents,
+            converter::encode_blueprint_to_string, output::FacItemOutput,
         },
         common::vpoint::VPOINT_TEN,
         game_entities::{belt::FacEntBeltType, direction::FacDirectionQuarter},
@@ -285,22 +242,11 @@ mod test {
 
     use super::FacBlkBettelBelt;
 
+    // north
+
     #[test]
     fn split_north_clw() {
-        let output = FacItemOutput::new_blueprint().into_rc();
-
-        let mut belt = FacBlkBettelBelt::new(
-            FacEntBeltType::Basic,
-            VPOINT_TEN,
-            FacDirectionQuarter::North,
-            output.clone(),
-        );
-        belt.add_straight(1);
-        belt.add_split(true);
-        belt.add_straight(1);
-        drop(belt);
-
-        compare_output_to_expected(output, &[
+        test_split(FacDirectionQuarter::North, true, &[
             FacBpPosition::new(10.5, 10.5),
             FacBpPosition::new(11.0, 9.5),
             FacBpPosition::new(10.5, 8.5),
@@ -309,50 +255,141 @@ mod test {
 
     #[test]
     fn split_north_ccw() {
-        let output = FacItemOutput::new_blueprint().into_rc();
-
-        let mut belt = FacBlkBettelBelt::new(
-            FacEntBeltType::Basic,
-            VPOINT_TEN,
-            FacDirectionQuarter::North,
-            output.clone(),
-        );
-        belt.add_straight(1);
-        belt.add_split(false);
-        belt.add_straight(1);
-        drop(belt);
-
-        compare_output_to_expected(output, &[
+        test_split(FacDirectionQuarter::North, false, &[
             FacBpPosition::new(10.5, 10.5),
             FacBpPosition::new(10.0, 9.5),
             FacBpPosition::new(10.5, 8.5),
         ]);
     }
 
+    // south
+
     #[test]
     fn split_south_clw() {
-        let output = FacItemOutput::new_blueprint().into_rc();
-
-        let mut belt = FacBlkBettelBelt::new(
-            FacEntBeltType::Basic,
-            VPOINT_TEN,
-            FacDirectionQuarter::South,
-            output.clone(),
-        );
-        belt.add_straight(1);
-        belt.add_split(true);
-        belt.add_straight(1);
-        drop(belt);
-
-        compare_output_to_expected(output, &[
+        test_split(FacDirectionQuarter::South, true, &[
             FacBpPosition::new(10.5, 10.5),
             FacBpPosition::new(10.0, 11.5),
             FacBpPosition::new(10.5, 12.5),
         ]);
     }
 
-    fn compare_output_to_expected(output: Rc<FacItemOutput>, expected: &[FacBpPosition]) {
-        let bp = output.consume_rc().into_blueprint_contents();
+    #[test]
+    fn split_south_ccw() {
+        test_split(FacDirectionQuarter::South, false, &[
+            FacBpPosition::new(10.5, 10.5),
+            FacBpPosition::new(11.0, 11.5),
+            FacBpPosition::new(10.5, 12.5),
+        ]);
+    }
+
+    // east
+
+    #[test]
+    fn split_east_clk() {
+        test_split(FacDirectionQuarter::East, true, &[
+            FacBpPosition::new(10.5, 10.5),
+            FacBpPosition::new(11.5, 11.0),
+            FacBpPosition::new(12.5, 10.5),
+        ]);
+    }
+
+    #[test]
+    fn split_east_ccw() {
+        test_split(FacDirectionQuarter::East, false, &[
+            FacBpPosition::new(10.5, 10.5),
+            FacBpPosition::new(11.5, 10.0),
+            FacBpPosition::new(12.5, 10.5),
+        ]);
+    }
+
+    // east
+
+    #[test]
+    fn split_west_clk() {
+        test_split(FacDirectionQuarter::West, true, &[
+            FacBpPosition::new(10.5, 10.5),
+            FacBpPosition::new(9.5, 10.0),
+            FacBpPosition::new(8.5, 10.5),
+        ]);
+    }
+
+    #[test]
+    fn split_west_ccw() {
+        test_split(FacDirectionQuarter::West, false, &[
+            FacBpPosition::new(10.5, 10.5),
+            FacBpPosition::new(9.5, 11.0),
+            FacBpPosition::new(8.5, 10.5),
+        ]);
+    }
+
+    //
+
+    fn test_split(
+        origin_direction: FacDirectionQuarter,
+        clockwise: bool,
+        all_expected: &[FacBpPosition],
+    ) {
+        let output = FacItemOutput::new_blueprint().into_rc();
+        let mut expected_i = 0;
+        let mut is_error = false;
+
+        let mut belt = FacBlkBettelBelt::new(
+            FacEntBeltType::Basic,
+            VPOINT_TEN,
+            origin_direction,
+            output.clone(),
+        );
+        belt.add_straight(1);
+        expect_output(&output, all_expected, &mut expected_i, &mut is_error);
+        belt.add_split(clockwise);
+        expect_output(&output, all_expected, &mut expected_i, &mut is_error);
+        belt.add_straight(1);
+        expect_output(&output, all_expected, &mut expected_i, &mut is_error);
+        drop(belt);
+
+        let bpcontents = output.consume_rc().into_blueprint_contents();
+        if is_error {
+            panic!(
+                "blueprint {}",
+                encode_blueprint_to_string(&bpcontents.into()).unwrap()
+            );
+        }
+
+        assert_eq!(
+            bpcontents.fac_entities().len(),
+            expected_i,
+            "too many entities"
+        );
+        // compare_output_to_expected(bpcontents, all_expected);
+    }
+
+    fn expect_output(
+        output: &FacItemOutput,
+        all_expected: &[FacBpPosition],
+        expected_i: &mut usize,
+        is_error: &mut bool,
+    ) {
+        let output_write = output.last_blueprint_write_last();
+        let actual_pos = output_write.blueprint.position;
+        let expected = &all_expected[*expected_i];
+        *expected_i += 1;
+        let err = if &actual_pos != expected {
+            *is_error = true;
+            "!!!!"
+        } else {
+            ""
+        };
+        println!(
+            "facpos gen {:10} expect {:10} {err}",
+            actual_pos.display(),
+            expected.display(),
+        );
+    }
+
+    #[allow(dead_code)]
+    fn compare_output_to_expected(bp: BlueprintContents, expected: &[FacBpPosition]) {
+        // output: Rc<FacItemOutput>
+        // let bp = output.consume_rc().into_blueprint_contents();
         let mut is_error = false;
         for (i, bp_item) in bp.items().iter().enumerate() {
             let facpos = bp_item.to_blueprint().position;

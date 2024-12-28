@@ -137,6 +137,18 @@ impl FacItemOutput {
         self.otype.admiral_execute_command(lua)
     }
 
+    #[cfg(test)]
+    pub fn last_blueprint_write_last(&self) -> test::LastWrite {
+        use test::LastWrite;
+
+        let blueprint = &self.unwrap_blueprint().inner;
+        let last_item = blueprint.items().last().unwrap();
+        LastWrite {
+            blueprint: blueprint.fac_entities().last().unwrap().clone(),
+            size: last_item.entity().rectangle_size(),
+        }
+    }
+
     pub fn into_blueprint_contents(self) -> BlueprintContents {
         match self.otype {
             FacItemOutputType::Blueprint(inner) => {
@@ -145,6 +157,24 @@ impl FacItemOutput {
             }
             FacItemOutputType::AdmiralClient(_) => panic!("not a blueprint"),
         }
+    }
+
+    #[cfg(test)]
+    fn unwrap_blueprint(&self) -> std::cell::Ref<'_, OutputData<BlueprintContents>> {
+        match &self.otype {
+            FacItemOutputType::Blueprint(inner) => inner.borrow(),
+            FacItemOutputType::AdmiralClient(_) => panic!("not a blueprint"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{blueprint::bpfac::entity::FacBpEntity, common::entity::Size};
+
+    pub struct LastWrite {
+        pub blueprint: FacBpEntity,
+        pub size: Size,
     }
 }
 

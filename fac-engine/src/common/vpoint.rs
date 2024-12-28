@@ -180,7 +180,7 @@ impl VPoint {
         steps: i32,
     ) -> Self {
         // cardinal directions are "north == up == -1" not "north == +1"
-        println!("move {}", steps);
+        // println!("move {}", steps);
         match direction.borrow() {
             FacDirectionQuarter::North => self.move_y(-steps),
             FacDirectionQuarter::South => self.move_y(steps),
@@ -249,17 +249,56 @@ impl VPoint {
         self.move_direction_sideways_int(direction, steps as i32)
     }
 
-    pub fn move_between_entity_centers(
+    // pub fn move_between_entity_centers(
+    //     &self,
+    //     first: &Box<dyn FacEntity>,
+    //     last: &Box<dyn FacEntity>,
+    //     float_x: f32,
+    //     float_y: f32,
+    // ) -> Self {
+    //     let first_facpos = first.to_fac_position(&self);
+    //     let last_facpos =
+    //         FacBpPosition::new(first_facpos.x() + float_x, first_facpos.y() + float_y);
+    //     last.from_fac_position(&last_facpos)
+    // }
+
+    /// "Why Factorio uses Floats"
+    ///
+    /// Imagine this belt
+    /// ██ ██ ██
+    ///    ██
+    /// FacPos Y is 10.5, 11.0, 0.5
+    /// VPoint Y is 10,   10,   10
+    ///
+    /// Now we flip
+    ///    ██
+    /// ██ ██ ██
+    /// FacPos Y is 10.5, 10.0, 10.5
+    /// VPoint Y is 10,   09,   10
+    ///
+    ///
+    /// In Integer, we must "if flip add_one else add_zero" which is... annoying
+    /// In float we can consistiently add or subtract 0.5 then backconvert to VPoint
+    pub fn move_factorio_style_direction_entity(
         &self,
         first: &Box<dyn FacEntity>,
         last: &Box<dyn FacEntity>,
-        float_x: f32,
-        float_y: f32,
+        direction: FacDirectionQuarter,
+        steps: f32,
     ) -> Self {
         let first_facpos = first.to_fac_position(&self);
+        let mut float_x = 0.0;
+        let mut float_y = 0.0;
+        match direction {
+            FacDirectionQuarter::North => float_y += -steps,
+            FacDirectionQuarter::South => float_y += steps,
+            FacDirectionQuarter::East => float_x += steps,
+            FacDirectionQuarter::West => float_x += -steps,
+        }
         let last_facpos =
             FacBpPosition::new(first_facpos.x() + float_x, first_facpos.y() + float_y);
-        last.from_fac_position(&last_facpos)
+        let last_point = last.from_fac_position(&last_facpos);
+        last_point
     }
 
     // pub fn move_direction_corrected(

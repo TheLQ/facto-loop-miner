@@ -366,10 +366,8 @@ fn neg_if_false(flag: bool, value: i32) -> i32 {
 #[cfg(test)]
 mod test {
     use crate::{
-        blueprint::output::FacItemOutput,
-        common::vpoint::{VPOINT_ZERO, VPoint},
-        game_blocks::rail_hope::RailHopeAppender,
-        game_entities::direction::FacDirectionQuarter,
+        blueprint::output::FacItemOutput, common::vpoint::VPOINT_ZERO,
+        game_blocks::rail_hope::RailHopeAppender, game_entities::direction::FacDirectionQuarter,
     };
 
     use super::RailHopeSingle;
