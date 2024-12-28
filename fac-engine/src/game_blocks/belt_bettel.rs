@@ -3,7 +3,7 @@ use crate::blueprint::output::FacItemOutput;
 use crate::common::entity::FacEntity;
 use crate::common::vpoint::VPoint;
 use crate::game_entities::belt::FacEntBeltType;
-use crate::game_entities::belt_split::FacEntBeltSplit;
+use crate::game_entities::belt_split::{FacEntBeltSplit, FacEntBeltSplitPriority};
 use crate::game_entities::belt_transport::FacEntBeltTransport;
 use crate::game_entities::belt_under::{FacEntBeltUnder, FacEntBeltUnderType};
 use crate::game_entities::direction::FacDirectionQuarter;
@@ -29,9 +29,16 @@ pub struct FacBlkBettelBeltLink {
 }
 
 pub enum FacBlkBettelBeltLinkType {
-    Transport { length: usize },
-    Underground { length: usize },
-    Splitter { clockwise: bool },
+    Transport {
+        length: usize,
+    },
+    Underground {
+        length: usize,
+    },
+    Splitter {
+        clockwise: bool,
+        priority: FacEntBeltSplitPriority,
+    },
 }
 
 impl FacBlkBettelBelt {
@@ -94,7 +101,20 @@ impl FacBlkBettelBelt {
     pub fn add_split(&mut self, clockwise: bool) {
         self.write_link(FacBlkBettelBeltLink {
             direction: *self.current_direction(),
-            ltype: FacBlkBettelBeltLinkType::Splitter { clockwise },
+            ltype: FacBlkBettelBeltLinkType::Splitter {
+                clockwise,
+                priority: Default::default(),
+            },
+        });
+    }
+
+    pub fn add_split_priority(&mut self, clockwise: bool, priority: FacEntBeltSplitPriority) {
+        self.write_link(FacBlkBettelBeltLink {
+            direction: *self.current_direction(),
+            ltype: FacBlkBettelBeltLinkType::Splitter {
+                clockwise,
+                priority,
+            },
         });
     }
 
@@ -139,12 +159,16 @@ impl FacBlkBettelBelt {
                     .write_cursor
                     .move_direction_usz(&link.direction, *length + 1)
             }
-            FacBlkBettelBeltLinkType::Splitter { clockwise } => {
+            FacBlkBettelBeltLinkType::Splitter {
+                clockwise,
+                priority,
+            } => {
                 let split_pos = self.write_cursor;
                 let new_direction = link.direction.rotate_clockwise(*clockwise);
                 let split_pos = split_pos.move_factorio_style_direction(new_direction, 0.5);
                 self.output.write(BlueprintItem::new(
-                    FacEntBeltSplit::new(self.btype, link.direction).into_boxed(),
+                    FacEntBeltSplit::new_priority(self.btype, link.direction, *priority)
+                        .into_boxed(),
                     split_pos,
                 ));
 
@@ -165,7 +189,11 @@ impl FacBlkBettelBelt {
         } = self;
         if let FacBlkBettelBeltLink {
             direction,
-            ltype: FacBlkBettelBeltLinkType::Splitter { clockwise },
+            ltype:
+                FacBlkBettelBeltLinkType::Splitter {
+                    clockwise,
+                    priority: _,
+                },
         } = &links.last().unwrap()
         {
             let new_direction = direction.rotate_clockwise(*clockwise);
@@ -348,6 +376,37 @@ mod test {
 
     //
 
+    #[test]
+    fn split_test() {
+        let output = FacItemOutput::new_blueprint().into_rc();
+        let mut is_error = false;
+
+        let mut belt = FacBlkBettelBelt::new(
+            FacEntBeltType::Basic,
+            VPOINT_TEN,
+            FacDirectionQuarter::East,
+            output.clone(),
+        );
+        belt.add_straight(1);
+        expect_output(FacBpPosition::new(0.0, 0.0), &output, &mut is_error);
+        belt.add_split(true);
+        expect_output(FacBpPosition::new(0.0, 0.0), &output, &mut is_error);
+
+        let mut side_belt = belt.belt_for_splitter();
+        side_belt.add_straight(1);
+        expect_output(FacBpPosition::new(0.0, 0.0), &output, &mut is_error);
+        drop(belt);
+        drop(side_belt);
+
+        let bpcontents = output.consume_rc().into_blueprint_contents();
+        panic!(
+            "blueprint {}",
+            encode_blueprint_to_string(&bpcontents.into()).unwrap()
+        );
+    }
+
+    //
+
     fn test_split(
         origin_direction: FacDirectionQuarter,
         clockwise: bool,
@@ -364,11 +423,11 @@ mod test {
             output.clone(),
         );
         belt.add_straight(1);
-        expect_output(&output, all_expected, &mut expected_i, &mut is_error);
+        expect_output_slice(&output, all_expected, &mut expected_i, &mut is_error);
         belt.add_split(clockwise);
-        expect_output(&output, all_expected, &mut expected_i, &mut is_error);
+        expect_output_slice(&output, all_expected, &mut expected_i, &mut is_error);
         belt.add_straight(1);
-        expect_output(&output, all_expected, &mut expected_i, &mut is_error);
+        expect_output_slice(&output, all_expected, &mut expected_i, &mut is_error);
         drop(belt);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
@@ -378,7 +437,6 @@ mod test {
                 encode_blueprint_to_string(&bpcontents.into()).unwrap()
             );
         }
-
         assert_eq!(
             bpcontents.fac_entities().len(),
             expected_i,
@@ -387,7 +445,7 @@ mod test {
         // compare_output_to_expected(bpcontents, all_expected);
     }
 
-    fn expect_output(
+    fn expect_output_slice(
         output: &FacItemOutput,
         all_expected: &[FacBpPosition],
         expected_i: &mut usize,
@@ -398,6 +456,22 @@ mod test {
         let expected = &all_expected[*expected_i];
         *expected_i += 1;
         let err = if &actual_pos != expected {
+            *is_error = true;
+            "!!!!"
+        } else {
+            ""
+        };
+        println!(
+            "facpos gen {:10} expect {:10} {err}",
+            actual_pos.display(),
+            expected.display(),
+        );
+    }
+
+    fn expect_output(expected: FacBpPosition, output: &FacItemOutput, is_error: &mut bool) {
+        let output_write = output.last_blueprint_write_last();
+        let actual_pos = output_write.blueprint.position;
+        let err = if actual_pos != expected {
             *is_error = true;
             "!!!!"
         } else {

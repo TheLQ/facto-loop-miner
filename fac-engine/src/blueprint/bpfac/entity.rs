@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     admiral::lua_command::fac_surface_create_entity::{CreateParam, FacSurfaceCreateEntity},
     game_entities::{
-        belt_under::FacEntBeltUnderType, direction::FacDirectionEighth, module::FacModule,
+        belt_split::{FacEntBeltSplitPriority, FacExtPriority},
+        belt_under::FacEntBeltUnderType,
+        direction::FacDirectionEighth,
+        module::FacModule,
     },
 };
 
@@ -35,6 +38,8 @@ pub struct FacBpEntity {
     pub infinity_settings: Option<FacBpInfinitySettings>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schedule: Option<FacBpSchedule>,
+    pub output_priority: FacExtPriority,
+    pub input_priority: FacExtPriority,
 }
 
 impl FacBpEntity {
@@ -74,6 +79,15 @@ impl FacBpEntity {
 
         if let Some(v) = &self.schedule {
             create.with_command_schedule(v);
+        }
+
+        if self.input_priority != FacExtPriority::None
+            || self.output_priority != FacExtPriority::None
+        {
+            create.with_command_splitter(FacEntBeltSplitPriority {
+                input: self.input_priority,
+                output: self.output_priority,
+            });
         }
 
         create

@@ -5,7 +5,8 @@ use crate::{
     },
     common::names::FacEntityName,
     game_entities::{
-        belt_under::FacEntBeltUnderType, direction::FacDirectionEighth, module::FacModule,
+        belt_split::FacExtPriority, belt_under::FacEntBeltUnderType, direction::FacDirectionEighth,
+        module::FacModule,
     },
 };
 
@@ -31,7 +32,7 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
     // }
 
     fn to_blueprint(&self, entity_number: FacBpInteger, position: &VPoint) -> FacBpEntity {
-        println!("to_bp vpoint {}", position.display());
+        // println!("to_bp vpoint {}", position.display());
         FacBpEntity {
             entity_number,
             name: self.name().to_fac_name(),
@@ -44,6 +45,8 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
             station: self.to_fac_station(),
             infinity_settings: self.to_fac_infinity_settings(),
             schedule: self.to_fac_schedule(),
+            input_priority: self.to_fac_input_priority(),
+            output_priority: self.to_fac_output_priority(),
         }
     }
 
@@ -73,6 +76,14 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
 
     fn to_fac_schedule(&self) -> Option<FacBpSchedule> {
         None
+    }
+
+    fn to_fac_input_priority(&self) -> FacExtPriority {
+        FacExtPriority::None
+    }
+
+    fn to_fac_output_priority(&self) -> FacExtPriority {
+        FacExtPriority::None
     }
 }
 

@@ -2,6 +2,7 @@ use crate::admiral::lua_command::{DEFAULT_FORCE_VAR, LuaCommand};
 use crate::blueprint::bpfac::infinity::{FacBpFilter, FacBpInfinitySettings};
 use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::blueprint::bpfac::schedule::FacBpSchedule;
+use crate::game_entities::belt_split::FacEntBeltSplitPriority;
 use crate::game_entities::direction::FacDirectionEighth;
 use crate::game_entities::module::FacModule;
 use crate::util::ansi::C_BLOCK_LINE;
@@ -162,6 +163,17 @@ impl FacSurfaceCreateEntity {
         ));
         // TODO: Doesn't work, must be seperate command
         self.with_command(format!("admiral_create.train.manual_mode = false"));
+    }
+
+    pub fn with_command_splitter(&mut self, pri: FacEntBeltSplitPriority) {
+        self.with_command(format!(
+            "admiral_create.splitter_input_priority  = {}",
+            serde_json::to_string(&pri.input).unwrap()
+        ));
+        self.with_command(format!(
+            "admiral_create.splitter_output_priority  = {}",
+            serde_json::to_string(&pri.output).unwrap()
+        ));
     }
 }
 

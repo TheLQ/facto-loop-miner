@@ -5,7 +5,10 @@ use crate::{
     blueprint::output::FacItemOutput,
     common::vpoint::{VPOINT_TEN, VPOINT_ZERO},
     game_blocks::{
-        belt_bettel::FacBlkBettelBelt, belt_train_unload::FacBlkBeltTrainUnload, block::FacBlock,
+        belt_bettel::FacBlkBettelBelt,
+        belt_combiner::{FacBlkBeltCombiner, FacExtCombinerStage},
+        belt_train_unload::FacBlkBeltTrainUnload,
+        block::FacBlock,
     },
     game_entities::{belt::FacEntBeltType, direction::FacDirectionQuarter},
 };
@@ -58,4 +61,15 @@ pub fn make_belt_bettel_train_unload(output: Rc<FacItemOutput>) -> AdmiralResult
     block.generate(VPOINT_ZERO);
 
     Ok(())
+}
+
+pub fn make_belt_combiner(output: Rc<FacItemOutput>) {
+    let block = FacBlkBeltCombiner {
+        input_belts: 5,
+        belt: FacEntBeltType::Basic,
+        layout: FacExtCombinerStage::Fixed(4),
+        direction: FacDirectionQuarter::North,
+        output,
+    };
+    block.generate(VPOINT_TEN);
 }
