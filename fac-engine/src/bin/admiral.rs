@@ -8,7 +8,7 @@ use facto_loop_miner_fac_engine::common::names::FacEntityName;
 use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
 use facto_loop_miner_fac_engine::tests::assembler::make_assembler_thru;
 use facto_loop_miner_fac_engine::tests::belt_tests::{
-    make_belt_bettel, make_belt_bettel_train_unload, make_belt_combiner,
+    make_belt_bettel, make_belt_bettel_train_unload, make_belt_combiner, make_belt_grid,
 };
 use facto_loop_miner_fac_engine::tests::train_loop::make_rail_loop;
 use facto_loop_miner_fac_engine::tests::train_rails::{
@@ -42,7 +42,7 @@ fn inner_main() -> AdmiralResult<()> {
     let output = FacItemOutput::new_admiral(client).into_rc();
     execute_destroy(output.clone())?;
 
-    match 11 {
+    match 12 {
         1 => make_basic(output)?,
         2 => make_assembler_thru(output)?,
         3 => make_belt_bettel(output)?,
@@ -54,6 +54,7 @@ fn inner_main() -> AdmiralResult<()> {
         9 => make_rail_loop(output)?,
         10 => make_belt_bettel_train_unload(output)?,
         11 => make_belt_combiner(output),
+        12 => make_belt_grid(output),
         _ => panic!("uihhh"),
     }
 

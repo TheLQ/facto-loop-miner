@@ -117,6 +117,10 @@ impl FacBlkBettelBelt {
         });
     }
 
+    pub fn next_insert_position(&self) -> VPoint {
+        self.write_cursor
+    }
+
     pub fn write_link(&mut self, link: FacBlkBettelBeltLink) {
         match &link.ltype {
             FacBlkBettelBeltLinkType::Transport { length } => {

@@ -7,6 +7,7 @@ use crate::{
     game_blocks::{
         belt_bettel::FacBlkBettelBelt,
         belt_combiner::{FacBlkBeltCombiner, FacExtCombinerStage},
+        belt_grid::FacBlkBeltGrid,
         belt_train_unload::FacBlkBeltTrainUnload,
         block::FacBlock,
     },
@@ -65,11 +66,21 @@ pub fn make_belt_bettel_train_unload(output: Rc<FacItemOutput>) -> AdmiralResult
 
 pub fn make_belt_combiner(output: Rc<FacItemOutput>) {
     let block = FacBlkBeltCombiner {
-        input_belts: 5,
         belt: FacEntBeltType::Basic,
         layout: FacExtCombinerStage::FixedOutputBelts(8),
-        direction: FacDirectionQuarter::South,
+        direction: FacDirectionQuarter::East,
         output,
+    };
+    block.generate(VPOINT_TEN);
+}
+
+pub fn make_belt_grid(output: Rc<FacItemOutput>) {
+    let block = FacBlkBeltGrid {
+        belt_type: FacEntBeltType::Basic,
+        belts_input: 6,
+        belts_output: 10,
+        output: output.clone(),
+        origin_direction: FacDirectionQuarter::East,
     };
     block.generate(VPOINT_TEN);
 }

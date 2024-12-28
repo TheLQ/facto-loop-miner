@@ -13,7 +13,6 @@ use crate::{
 use super::{belt_bettel::FacBlkBettelBelt, block::FacBlock};
 
 pub struct FacBlkBeltCombiner {
-    pub input_belts: usize,
     pub belt: FacEntBeltType,
     pub layout: FacExtCombinerStage,
     pub direction: FacDirectionQuarter,
@@ -39,8 +38,18 @@ impl FacBlock for FacBlkBeltCombiner {
 
 impl FacBlkBeltCombiner {
     fn generate_fixed(&self, origin: VPoint, output_belts: usize, clockwise: bool) {
-        let output_priority = FacExtPriority::Left;
+        let mut belts = self.create_belts(origin, output_belts, clockwise);
+        self.create_fill(&mut belts);
+        self.place_output_skips(&mut belts, output_belts, clockwise);
+    }
 
+    fn create_belts(
+        &self,
+        origin: VPoint,
+        output_belts: usize,
+        clockwise: bool,
+    ) -> Vec<FacBlkBettelBelt> {
+        let output_priority = FacExtPriority::Left;
         let source_belt =
             FacBlkBettelBelt::new(self.belt, origin, self.direction, self.output.clone());
 
@@ -68,6 +77,10 @@ impl FacBlkBeltCombiner {
             }
         }
 
+        belts_stack
+    }
+
+    fn create_fill(&self, belts_stack: &mut Vec<FacBlkBettelBelt>) {
         // fill depth output belts
         let total_belts_to_adjust = belts_stack.len().saturating_sub(2);
         for (i, belt) in belts_stack.iter_mut().enumerate() {
@@ -81,7 +94,14 @@ impl FacBlkBeltCombiner {
         // for belt in belts_stack.iter_mut() {
         //     belt.add_straight(3);
         // }
+    }
 
+    fn place_output_skips(
+        &self,
+        belts_stack: &mut Vec<FacBlkBettelBelt>,
+        output_belts: usize,
+        clockwise: bool,
+    ) {
         // source belt keeeps passing through...
         let mut source_belt = belts_stack.remove(0);
         // source_belt.add_straight(5);
