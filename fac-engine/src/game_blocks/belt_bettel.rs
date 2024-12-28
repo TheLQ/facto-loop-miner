@@ -140,25 +140,49 @@ impl FacBlkBettelBelt {
                     .move_direction_usz(&link.direction, *length + 1)
             }
             FacBlkBettelBeltLinkType::Splitter { clockwise } => {
-                let dummy_belt =
-                    FacEntBeltTransport::new(FacEntBeltType::Basic, FacDirectionQuarter::North)
-                        .into_boxed();
-                let split_belt = FacEntBeltSplit::new(self.btype, link.direction).into_boxed();
-
                 let split_pos = self.write_cursor;
                 let new_direction = link.direction.rotate_clockwise(*clockwise);
-                let split_pos = split_pos.move_factorio_style_direction_entity(
-                    &dummy_belt,
-                    &split_belt,
-                    new_direction,
-                    0.5,
-                );
-                self.output.write(BlueprintItem::new(split_belt, split_pos));
+                let split_pos = split_pos.move_factorio_style_direction(new_direction, 0.5);
+                self.output.write(BlueprintItem::new(
+                    FacEntBeltSplit::new(self.btype, link.direction).into_boxed(),
+                    split_pos,
+                ));
 
                 self.write_cursor = self.write_cursor.move_direction_int(&link.direction, 1)
             }
         };
         self.links.push(link);
+    }
+
+    pub fn belt_for_splitter(&self) -> FacBlkBettelBelt {
+        let Self {
+            btype,
+            links,
+            origin: _,
+            origin_direction,
+            output,
+            write_cursor,
+        } = self;
+        if let FacBlkBettelBeltLink {
+            direction,
+            ltype: FacBlkBettelBeltLinkType::Splitter { clockwise },
+        } = &links.last().unwrap()
+        {
+            let new_direction = direction.rotate_clockwise(*clockwise);
+            let origin = write_cursor
+                // .move_direction_int(direction, 1)
+                .move_direction_int(new_direction, 1);
+            FacBlkBettelBelt {
+                btype: *btype,
+                links: Vec::new(),
+                origin,
+                origin_direction: *origin_direction,
+                output: output.clone(),
+                write_cursor: origin,
+            }
+        } else {
+            panic!("not after inserting splitter")
+        }
     }
 
     fn current_direction(&self) -> &FacDirectionQuarter {

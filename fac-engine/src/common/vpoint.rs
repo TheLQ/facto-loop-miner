@@ -8,8 +8,6 @@ use std::borrow::Borrow;
 use std::fmt::{Debug, Display};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-use super::entity::FacEntity;
-
 /// Core XY Point. Entity origin is top left, not Factorio's center
 #[derive(
     Debug, Serialize, Deserialize, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Hash, Ord,
@@ -142,7 +140,7 @@ impl VPoint {
     // }
 
     pub fn move_x(&self, steps: i32) -> Self {
-        VPoint {
+        Self {
             x: self.x + steps,
             y: self.y,
         }
@@ -153,7 +151,7 @@ impl VPoint {
     }
 
     pub fn move_y(&self, steps: i32) -> Self {
-        VPoint {
+        Self {
             x: self.x,
             y: self.y + steps,
         }
@@ -164,7 +162,7 @@ impl VPoint {
     }
 
     pub fn move_xy(&self, x_steps: i32, y_steps: i32) -> Self {
-        VPoint {
+        Self {
             x: self.x + x_steps,
             y: self.y + y_steps,
         }
@@ -262,12 +260,34 @@ impl VPoint {
     //     last.from_fac_position(&last_facpos)
     // }
 
+    // pub fn move_factorio_style_direction_entity(
+    //     &self,
+    //     first: &Box<dyn FacEntity>,
+    //     last: &Box<dyn FacEntity>,
+    //     direction: FacDirectionQuarter,
+    //     steps: f32,
+    // ) -> Self {
+    //     let first_facpos = first.to_fac_position(&self);
+    //     let mut float_x = 0.0;
+    //     let mut float_y = 0.0;
+    //     match direction {
+    //         FacDirectionQuarter::North => float_y += -steps,
+    //         FacDirectionQuarter::South => float_y += steps,
+    //         FacDirectionQuarter::East => float_x += steps,
+    //         FacDirectionQuarter::West => float_x += -steps,
+    //     }
+    //     let last_facpos =
+    //         FacBpPosition::new(first_facpos.x() + float_x, first_facpos.y() + float_y);
+    //     let last_point = last.from_fac_position(&last_facpos);
+    //     last_point
+    // }
+
     /// "Why Factorio uses Floats"
     ///
     /// Imagine this belt
     /// ██ ██ ██
     ///    ██
-    /// FacPos Y is 10.5, 11.0, 0.5
+    /// FacPos Y is 10.5, 11.0, 10.5
     /// VPoint Y is 10,   10,   10
     ///
     /// Now we flip
@@ -277,28 +297,17 @@ impl VPoint {
     /// VPoint Y is 10,   09,   10
     ///
     ///
-    /// In Integer, we must "if flip add_one else add_zero" which is... annoying
+    /// In VPoint Integer, we must "if flip add_one else add_zero" which is... annoying
+    /// In VPoint converted float, (10 - 0.5).floor() = 9 (good), but (10 + 0.5).floor(10)
+    ///
     /// In float we can consistiently add or subtract 0.5 then backconvert to VPoint
-    pub fn move_factorio_style_direction_entity(
+    pub fn move_factorio_style_direction(
         &self,
-        first: &Box<dyn FacEntity>,
-        last: &Box<dyn FacEntity>,
         direction: FacDirectionQuarter,
         steps: f32,
     ) -> Self {
-        let first_facpos = first.to_fac_position(&self);
-        let mut float_x = 0.0;
-        let mut float_y = 0.0;
-        match direction {
-            FacDirectionQuarter::North => float_y += -steps,
-            FacDirectionQuarter::South => float_y += steps,
-            FacDirectionQuarter::East => float_x += steps,
-            FacDirectionQuarter::West => float_x += -steps,
-        }
-        let last_facpos =
-            FacBpPosition::new(first_facpos.x() + float_x, first_facpos.y() + float_y);
-        let last_point = last.from_fac_position(&last_facpos);
-        last_point
+        self.to_fac_exact()
+            .move_direction_and_vpoint_floor(direction, steps)
     }
 
     // pub fn move_direction_corrected(
