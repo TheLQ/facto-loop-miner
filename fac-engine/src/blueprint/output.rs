@@ -22,6 +22,8 @@ use super::{
     contents::BlueprintContents,
 };
 
+const CACHE_SIZE: usize = 1;
+
 /// Middleware between entity output and blueprint/lua output
 /// Instead of generating everything "post", obscuring errors and logic
 pub struct FacItemOutput {
@@ -253,8 +255,6 @@ impl FacItemOutputType {
     }
 
     fn flush_cache_maybe(&self) {
-        const CACHE_SIZE: usize = 1;
-
         let size = match self {
             Self::AdmiralClient(cell) => {
                 let OutputData { cache, .. } = &*cell.borrow();

@@ -39,6 +39,10 @@ impl FacBlock for FacBlkAssemblerThru {
         for height in 0..self.height {
             let super_row_pos = origin.move_y_usize(height * 9);
 
+            if height == 0 {
+                self.generate_belt_lead(super_row_pos);
+            }
+
             // built first so when executing everything has power
             self.generate_center_offload(super_row_pos, FacDirectionQuarter::East, height);
 
@@ -210,9 +214,22 @@ impl FacBlkAssemblerThru {
         for cell_x_offset in 0..((self.width * self.cell_width()) + CELL_HEIGHT) {
             // belt row
             self.output.write(BlueprintItem::new(
-                FacEntBeltTransport::new(self.belt_type.clone(), direction.clone()).into_boxed(),
+                FacEntBeltTransport::new(self.belt_type.clone(), direction.rotate_flip())
+                    .into_boxed(),
                 origin.move_xy_usize(cell_x_offset, cell_y_offset + 1),
             ));
+        }
+    }
+
+    fn generate_belt_lead(&self, origin: VPoint) {
+        for x in 0..START_BUFFER {
+            for y in 0..CELL_HEIGHT {
+                self.output.write(BlueprintItem::new(
+                    FacEntBeltTransport::new(self.belt_type, FacDirectionQuarter::East)
+                        .into_boxed(),
+                    origin.move_xy_usize(x, y),
+                ));
+            }
         }
     }
 
