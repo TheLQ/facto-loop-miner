@@ -6,12 +6,13 @@ use crate::{
     game_entities::{
         assembler::{FacEntAssembler, FacEntAssemblerModSlice},
         belt::FacEntBeltType,
+        direction::FacDirectionQuarter,
         inserter::FacEntInserterType,
         tier::FacTier,
     },
 };
 
-use super::{assembler_thru::FacBlkAssemblerThru, block::FacBlock};
+use super::{assembler_thru::FacBlkAssemblerThru, belt_bettel::FacBlkBettelBelt, block::FacBlock};
 
 pub struct FacBlkIndustry {
     pub belt: FacEntBeltType,
@@ -39,19 +40,62 @@ impl FacBlock for FacBlkIndustry {
         let _ = &mut self
             .output
             .context_handle(ContextLevel::Block, "Industry".into());
-        let mut thru_origin = origin;
-        for thru in &self.thru {
-            thru_origin =
-                thru_origin.move_y_usize(FacBlkAssemblerThru::total_height(thru.height) + 1);
 
-            self.place_thru(thru, thru_origin);
+        let mut output_belts = self.place_input_belts(origin);
+
+        for thru in &self.thru {
+            self.place_thru(thru, output_belts.remove(0));
         }
     }
 }
 
 impl FacBlkIndustry {
-    fn place_input_belts(&self, thru: &IndustryThru, origin: VPoint) {
-        for belt in 0..thru.input_belts {}
+    fn place_input_belts(&self, origin: VPoint) -> Vec<VPoint> {
+        let mut output_belts = Vec::new();
+
+        let total_input_belts: usize = self.thru.iter().map(|v| v.input_belts).sum();
+
+        let mut cur_belt_count: usize = 0;
+        let mut height_offset = 0;
+        for (thru_num, thru) in self.thru.iter().enumerate() {
+            for thru_belt_num in 0..thru.input_belts {
+                let bettel_origin = origin.move_y_usize(cur_belt_count);
+
+                let mut belt = FacBlkBettelBelt::new(
+                    self.belt,
+                    bettel_origin,
+                    FacDirectionQuarter::East,
+                    self.output.clone(),
+                );
+
+                // arbitrary buffer
+                belt.add_straight(2);
+
+                // start turn buffering
+                belt.add_straight(total_input_belts - cur_belt_count);
+
+                // going down
+                belt.add_turn90(true);
+                belt.add_straight(height_offset);
+
+                // end turn buffering
+                belt.add_turn90(false);
+                belt.add_straight(cur_belt_count);
+
+                cur_belt_count += 1;
+
+                if thru_belt_num == 0 {
+                    output_belts.push(belt.next_insert_position());
+                }
+            }
+
+            // go past the whole block
+            height_offset += FacBlkAssemblerThru::total_height(thru.height) - thru.input_belts;
+
+            // arbitrary buffer
+            height_offset += 2;
+        }
+        output_belts
     }
 
     fn place_thru(&self, thru: &IndustryThru, origin: VPoint) {

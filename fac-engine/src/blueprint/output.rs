@@ -74,7 +74,31 @@ impl FacItemOutput {
     /// Status logs, then do actual write
     pub fn write(&self, item: BlueprintItem) {
         let blueprint = item.to_blueprint();
-        let item_debug = format!("{:?}", item.entity());
+
+        // Shorten by removing keys, their obvious
+        let mut item_debug = format!("{:?}", item.entity());
+        let item_debug_str = item_debug.as_bytes().to_vec();
+        for end in (0..item_debug.len()).rev() {
+            if item_debug_str[end] == b':' {
+                // find all chars
+                let mut start = 0;
+                for cur_start in (0..end).rev() {
+                    let cur_char: char = item_debug_str[cur_start].into();
+                    if cur_char.is_alphabetic() {
+                        start = cur_start;
+                    } else {
+                        break;
+                    }
+                }
+                // space
+                start -= 1;
+                // include the colon
+                let end = end + 1;
+
+                item_debug.replace_range(start..end, "");
+            }
+        }
+
         let (contexts, subcontexts, total_with_context) = get_global_context_map(|log_info| {
             let contexts = ansi_color(
                 log_info.context_map[ContextLevel::Block].join(&format!(" {C_BLOCK_LINE} ")),
@@ -101,7 +125,7 @@ impl FacItemOutput {
 
         let total_progress = C_FULL_BLOCK.repeat(total_with_context.min(30));
         debug!(
-            "{}blueprint pos {:6} facpos {:10} {:80} {contexts:42} {total_with_context:2} {subcontexts} total {total_progress}",
+            "{}blueprint pos {:6} facpos {:10} {:70} {contexts:42} {total_with_context:2} {subcontexts} total {total_progress}",
             ansi_erase_line(),
             item.position().display(),
             blueprint.position.display(),

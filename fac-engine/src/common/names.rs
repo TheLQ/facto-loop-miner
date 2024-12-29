@@ -31,6 +31,8 @@ pub enum FacEntityName {
     // resources
     IronOre,
     IronPlate,
+    IronStick,
+    IronGear,
     Steel,
     CopperOre,
     CopperPlate,
@@ -94,6 +96,8 @@ impl FacEntityName {
             // resources
             Self::IronOre => "iron-ore".into(),
             Self::IronPlate => "iron-plate".into(),
+            Self::IronStick => "iron-stick".into(),
+            Self::IronGear => "iron-gear-wheel".into(),
             Self::Steel => "steel".into(),
             Self::CopperOre => "copper-ore".into(),
             Self::CopperPlate => "copper-plate".into(),

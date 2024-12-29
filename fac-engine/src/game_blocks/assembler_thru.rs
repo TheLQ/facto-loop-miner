@@ -211,14 +211,22 @@ impl FacBlkAssemblerThru {
             ));
         }
 
-        for cell_x_offset in 0..((self.width * self.cell_width()) + CELL_HEIGHT) {
-            // belt row
-            self.output.write(BlueprintItem::new(
-                FacEntBeltTransport::new(self.belt_type.clone(), direction.rotate_flip())
-                    .into_boxed(),
-                origin.move_xy_usize(cell_x_offset, cell_y_offset + 1),
-            ));
-        }
+        let mut belt = FacBlkBettelBelt::new(
+            self.belt_type,
+            origin.move_xy_usize(START_BUFFER, cell_y_offset + /*center*/1),
+            direction,
+            self.output.clone(),
+        );
+        belt.add_straight(self.width * self.cell_width() - 1);
+        belt.add_straight_underground(4);
+        // for cell_x_offset in 0..((self.width * self.cell_width()) + CELL_HEIGHT) {
+        //     // belt row
+        //     self.output.write(BlueprintItem::new(
+        //         FacEntBeltTransport::new(self.belt_type.clone(), direction.rotate_flip())
+        //             .into_boxed(),
+        //         origin.move_xy_usize(cell_x_offset, cell_y_offset + 1),
+        //     ));
+        // }
     }
 
     fn generate_belt_lead(&self, origin: VPoint) {

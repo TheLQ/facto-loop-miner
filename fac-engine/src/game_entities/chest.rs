@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 
-use debug_ignore::DebugIgnore;
 use exhaustive::Exhaustive;
 use itertools::Itertools;
 
