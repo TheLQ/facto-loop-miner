@@ -63,25 +63,25 @@ pub fn make_belt_bettel_train_unload(output: Rc<FacItemOutput>) -> AdmiralResult
 }
 
 pub fn make_belt_combiner(output: Rc<FacItemOutput>) {
-    let block = FacBlkBeltCombiner {
-        belt: FacEntBeltType::Basic,
-        output_belt_targets: [3, 1, 4].to_vec(),
-        direction: FacDirectionQuarter::East,
-        output,
-    };
+    // let block = FacBlkBeltCombiner {
+    //     belt: FacEntBeltType::Basic,
+    //     output_belt_targets: [3, 1, 4].to_vec(),
+    //     direction: FacDirectionQuarter::East,
+    //     output,
+    // };
+    let block =
+        FacBlkBeltCombiner::new_wavy(FacEntBeltType::Basic, FacDirectionQuarter::East, 10, output);
     block.generate(VPOINT_TEN);
 }
 
 pub fn make_belt_grid(output: Rc<FacItemOutput>) {
-    let block = FacBlkBeltCloud {
-        belt_input: FacEntBeltType::Basic,
-        belt_output: FacEntBeltType::Fast,
-        // belts_input: 2,
-        // belts_output: 2,
-        belts_input: 4,
-        belts_output: 8,
-        output: output.clone(),
-        origin_direction: FacDirectionQuarter::East,
-    };
-    block.generate(VPOINT_TEN);
+    // let block = FacBlkBeltCloud {
+    //     belt_input: FacEntBeltType::Basic,
+    //     belt_output: FacEntBeltType::Fast,
+    //     sources:
+    //     output: output.clone(),
+    //     origin_direction: FacDirectionQuarter::East,
+    // };
+    todo!()
+    // block.generate(VPOINT_TEN);
 }

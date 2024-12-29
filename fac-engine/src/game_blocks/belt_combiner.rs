@@ -30,6 +30,25 @@ impl FacBlock for FacBlkBeltCombiner {
 }
 
 impl FacBlkBeltCombiner {
+    pub fn new_wavy(
+        belt: FacEntBeltType,
+        direction: FacDirectionQuarter,
+        total: usize,
+        output: Rc<FacItemOutput>,
+    ) -> Self {
+        let mut output_belt_targets = Vec::new();
+        for i in 0..total {
+            output_belt_targets.push(i);
+        }
+
+        Self {
+            belt,
+            direction,
+            output_belt_targets,
+            output,
+        }
+    }
+
     fn generate_fixed(&self, origin: VPoint, clockwise: bool) {
         let mut belts = self.place_splits(origin, clockwise);
         self.place_fill(&mut belts);
@@ -86,7 +105,7 @@ impl FacBlkBeltCombiner {
         for (output_belt_num, [first, last]) in belts_stack.iter_mut().array_chunks().enumerate() {
             let _ = &mut self
                 .output
-                .context_handle(ContextLevel::Micro, "ends".into());
+                .context_handle(ContextLevel::Micro, format!("ends{output_belt_num}"));
 
             let target_output = self.output_belt_targets[output_belt_num];
 
@@ -109,12 +128,6 @@ impl FacBlkBeltCombiner {
             last.add_turn90(!clockwise);
             last.add_turn90(!clockwise);
             last.add_straight(1);
-        }
-
-        for _ in 0..self.output_belt_targets.len() {
-            let _ = &mut self
-                .output
-                .context_handle(ContextLevel::Micro, "tail".into());
         }
     }
 }
