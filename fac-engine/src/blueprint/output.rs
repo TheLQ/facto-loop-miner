@@ -3,8 +3,6 @@ use std::{cell::RefCell, rc::Rc, sync::Mutex};
 use tracing::{debug, error, trace};
 use unicode_segmentation::UnicodeSegmentation;
 
-const FLAG_ENABLE_LINE_REWRITE: bool = false;
-
 use crate::{
     admiral::{
         err::AdmiralResult,
@@ -22,7 +20,8 @@ use super::{
     contents::BlueprintContents,
 };
 
-const CACHE_SIZE: usize = 1;
+const FLAG_ENABLE_LINE_REWRITE: bool = false;
+const CACHE_SIZE: usize = 3;
 
 /// Middleware between entity output and blueprint/lua output
 /// Instead of generating everything "post", obscuring errors and logic
@@ -72,6 +71,7 @@ impl FacItemOutput {
         }
     }
 
+    /// Status logs, then do actual write
     pub fn write(&self, item: BlueprintItem) {
         let blueprint = item.to_blueprint();
         let item_debug = format!("{:?}", item.entity());
@@ -110,12 +110,10 @@ impl FacItemOutput {
 
         self.otype.write(FacItemOutputWrite { item, blueprint })
     }
-    // pub fn any_handle<'o>(&'o mut self) -> OutputContextHandle<'o> {
-    //     OutputContextHandle {
-    //         output: self,
-    //         htype: OutputContextHandleType::Empty,
-    //     }
-    // }
+
+    pub fn flush(&self) {
+        self.otype.flush_cache();
+    }
 
     pub fn context_handle(
         &self,
@@ -129,10 +127,6 @@ impl FacItemOutput {
             log_info.context_map[context_level.clone()].push(new_context.clone())
         });
         res
-    }
-
-    pub fn log_info(&self) -> FacItemOutputLogInfo {
-        get_global_context_map(|log_info| log_info.questitionable_clone())
     }
 
     pub fn admiral_execute_command(
@@ -162,10 +156,6 @@ impl FacItemOutput {
             }
             FacItemOutputType::AdmiralClient(_) => panic!("not a blueprint"),
         }
-    }
-
-    pub fn flush(&self) {
-        self.otype.flush_cache();
     }
 
     #[cfg(test)]
@@ -276,19 +266,20 @@ impl FacItemOutputType {
             Self::AdmiralClient(cell) => {
                 let OutputData {
                     inner,
-                    dedupe: _,
+                    dedupe,
                     cache,
                     total_write,
                 } = &mut *cell.borrow_mut();
-                // dedupe_position(dedupe, &blueprint);
 
                 let mut lua_commands = Vec::new();
-                for FacItemOutputWrite { item, blueprint } in cache.drain(0..) {
+                for FacItemOutputWrite { item: _, blueprint } in cache.drain(0..) {
                     *total_write += 1;
+
+                    dedupe_position(dedupe, &blueprint);
                     lua_commands.push(blueprint.to_lua().into_boxed());
                 }
                 let flush_count = lua_commands.len();
-                if flush_count > 2 {
+                if flush_count > 5 {
                     // don't spam the console on micro writes
                     trace!("Flush Cache {} total {}", flush_count, total_write)
                 }
@@ -303,13 +294,14 @@ impl FacItemOutputType {
             Self::Blueprint(cell) => {
                 let OutputData {
                     inner,
-                    dedupe: _,
+                    dedupe,
                     cache,
                     total_write,
                 } = &mut *cell.borrow_mut();
                 let mut flush_count = 0;
                 for FacItemOutputWrite { item, blueprint } in cache.drain(0..) {
                     flush_count += 1;
+                    dedupe_position(dedupe, &blueprint);
                     inner.add(item, blueprint);
                 }
                 *total_write += flush_count;
@@ -358,32 +350,23 @@ impl FacItemOutputType {
     }
 }
 
-// fn dedupe_position(dedupe: &mut Option<Vec<FacBpPosition>>, blueprint: &FacBpEntity) {
-//     if let Some(dedupe) = dedupe {
-//         let bppos = &blueprint.position;
-//         if dedupe.contains(bppos) {
-//             return;
-//         } else {
-//             dedupe.push(bppos.clone());
-//         }
-//     }
-// }
+fn dedupe_position(dedupe: &mut Option<Vec<FacBpPosition>>, blueprint: &FacBpEntity) {
+    if let Some(dedupe) = dedupe {
+        let bppos = &blueprint.position;
+        if dedupe.contains(bppos) {
+            // hmm...
+            panic!("dupe");
+        } else {
+            dedupe.push(bppos.clone());
+        }
+    }
+}
 
 #[derive(Default)]
 pub struct FacItemOutputLogInfo {
     pub context_map: EnumMap<ContextLevel, Vec<String>>,
     pub last_context: String,
     pub total_with_context: usize,
-}
-
-impl FacItemOutputLogInfo {
-    fn questitionable_clone(&self) -> Self {
-        Self {
-            context_map: self.context_map.clone(),
-            last_context: self.last_context.clone(),
-            total_with_context: self.total_with_context,
-        }
-    }
 }
 
 struct OutputData<T> {
