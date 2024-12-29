@@ -5,7 +5,7 @@ use crate::common::{
     names::FacEntityName,
 };
 
-#[derive(Clone, Debug, Exhaustive)]
+#[derive(Clone, Debug, PartialEq, Exhaustive)]
 
 pub enum FacEntElectricMiniType {
     Small,

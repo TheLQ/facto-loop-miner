@@ -1,6 +1,6 @@
 use exhaustive::Exhaustive;
 
-#[derive(Debug, Clone, Copy, Exhaustive)]
+#[derive(Debug, Clone, PartialEq, Copy, Exhaustive)]
 pub enum FacEntBeltType {
     Basic,
     Fast,

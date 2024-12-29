@@ -7,7 +7,7 @@ use crate::common::{
 
 use super::direction::{FacDirectionEighth, FacDirectionQuarter};
 
-#[derive(Clone, Debug, Exhaustive)]
+#[derive(Clone, Debug, PartialEq, Exhaustive)]
 pub enum FacEntRailSignalType {
     Basic,
     Chain,

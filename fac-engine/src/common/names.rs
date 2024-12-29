@@ -7,7 +7,7 @@ use crate::game_entities::{
     rail_signal::FacEntRailSignalType, tier::FacTier,
 };
 
-#[derive(Clone, Debug, AsRefStr, Exhaustive)]
+#[derive(Clone, Debug, PartialEq, AsRefStr, Exhaustive)]
 pub enum FacEntityName {
     Lamp,
     RailStraight,

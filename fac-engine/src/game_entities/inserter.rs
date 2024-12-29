@@ -7,7 +7,7 @@ use crate::common::{
 
 use super::direction::{FacDirectionEighth, FacDirectionQuarter};
 
-#[derive(Debug, Clone, Exhaustive)]
+#[derive(Debug, Clone, PartialEq, Exhaustive)]
 pub enum FacEntInserterType {
     Burner,
     Basic,

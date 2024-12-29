@@ -7,7 +7,7 @@ use crate::common::{
 
 pub const FACENT_ELECTRIC_LARGE_DIAMETER: usize = 2;
 
-#[derive(Debug, Clone, Exhaustive)]
+#[derive(Debug, Clone, PartialEq, Exhaustive)]
 pub enum FacEntElectricLargeType {
     Substation,
     Big,

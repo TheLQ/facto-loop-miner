@@ -13,7 +13,7 @@ use crate::{
     util::ansi::C_BLOCK_LINE,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FacEntChestType {
     Wood,
     Iron,
