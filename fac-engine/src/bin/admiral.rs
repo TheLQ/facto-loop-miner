@@ -6,7 +6,7 @@ use facto_loop_miner_fac_engine::blueprint::bpitem::BlueprintItem;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
 use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
-use facto_loop_miner_fac_engine::tests::assembler_tests::make_assembler_thru;
+use facto_loop_miner_fac_engine::tests::assembler_tests::{make_assembler_thru, make_industry};
 use facto_loop_miner_fac_engine::tests::belt_tests::{
     make_belt_bettel, make_belt_bettel_train_unload, make_belt_combiner, make_belt_grid,
 };
@@ -43,9 +43,9 @@ fn inner_main() -> AdmiralResult<()> {
     execute_destroy(output.clone())?;
 
     let command_output = output.clone();
-    match 2 {
+    match 13 {
         1 => make_basic(command_output)?,
-        2 => make_assembler_thru(command_output)?,
+        2 => make_assembler_thru(command_output),
         3 => make_belt_bettel(command_output)?,
         4 => make_rail_spiral_90(command_output)?,
         5 => make_rail_shift_45(command_output)?,
@@ -56,6 +56,7 @@ fn inner_main() -> AdmiralResult<()> {
         10 => make_belt_bettel_train_unload(command_output)?,
         11 => make_belt_combiner(command_output),
         12 => make_belt_grid(command_output),
+        13 => make_industry(command_output),
         _ => panic!("uihhh"),
     }
     output.flush();

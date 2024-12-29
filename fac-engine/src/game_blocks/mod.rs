@@ -1,4 +1,5 @@
 pub mod assembler_cell;
+pub mod assembler_industry;
 pub mod assembler_thru;
 pub mod beacon_farm;
 pub mod belt_bettel;

@@ -34,7 +34,7 @@ impl FacBlock for FacBlkAssemblerThru {
     fn generate(&self, origin: VPoint) {
         let _ = &mut self.output.context_handle(
             ContextLevel::Micro,
-            format!("Assembler-{}", self.assembler.recipe().to_fac_name()),
+            format!("Assembler-{}", self.assembler.recipe().as_ref()),
         );
         for height in 0..self.height {
             let super_row_pos = origin.move_y_usize(height * 9);
@@ -84,10 +84,10 @@ impl FacBlkAssemblerThru {
         direction: FacDirectionQuarter,
         is_second_row: bool,
     ) {
-        let _ = &mut self
-            .output
-            .context_handle(ContextLevel::Micro, "Chain".into());
         for row_pos in 0..self.width {
+            let _ = &mut self
+                .output
+                .context_handle(ContextLevel::Micro, format!("Chain-{row_pos}"));
             let mut cell_x_offset = row_pos * self.cell_width();
 
             let mut utype = FacEntBeltUnderType::Input;
@@ -253,5 +253,9 @@ impl FacBlkAssemblerThru {
             CELL_HEIGHT,
             self.output.clone(),
         )
+    }
+
+    pub fn total_height(height: usize) -> usize {
+        (CELL_HEIGHT * 3) * height
     }
 }
