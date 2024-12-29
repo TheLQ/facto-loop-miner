@@ -230,6 +230,7 @@ impl FacBlkBettelBelt {
         belt_total: usize,
         output: Rc<FacItemOutput>,
     ) {
+        let clockwise = true;
         let belt_total_0 = belt_total - 1;
 
         for belt_num in 0..belt_total {
@@ -240,10 +241,10 @@ impl FacBlkBettelBelt {
                 output.clone(),
             );
             belt.add_straight(belt_total_0 - belt_num);
-            belt.add_turn90(false);
+            belt.add_turn90(clockwise);
             // go down past the middle "cell"
             belt.add_straight((belt_total_0 - belt_num) * 2 + mid_span);
-            belt.add_turn90(false);
+            belt.add_turn90(clockwise);
             belt.add_straight(belt_total_0 - belt_num);
         }
     }
@@ -255,6 +256,7 @@ impl FacBlkBettelBelt {
         belt_total: usize,
         output: Rc<FacItemOutput>,
     ) {
+        let clockwise = false;
         let belt_total_0 = belt_total - 1;
 
         for belt_num in 0..belt_total {
@@ -265,10 +267,10 @@ impl FacBlkBettelBelt {
                 output.clone(),
             );
             belt.add_straight(belt_total_0 - belt_num);
-            belt.add_turn90(true);
+            belt.add_turn90(clockwise);
             // go down past the middle "cell"
             belt.add_straight((belt_total_0 - belt_num) * 2 + mid_span);
-            belt.add_turn90(true);
+            belt.add_turn90(clockwise);
             belt.add_straight(belt_total_0 - belt_num);
         }
     }
