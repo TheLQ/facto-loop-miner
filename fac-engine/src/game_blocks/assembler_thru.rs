@@ -1,5 +1,7 @@
 use std::rc::Rc;
 
+use tracing::info;
+
 use super::block::FacBlock;
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
 use crate::game_blocks::belt_bettel::FacBlkBettelBelt;
@@ -23,6 +25,7 @@ use crate::{
 pub struct FacBlkAssemblerThru {
     pub width: usize,
     pub height: usize,
+    pub output_padding_width: Option<usize>,
     pub assembler: FacEntAssembler,
     pub belt_type: FacEntBeltType,
     pub inserter_input: FacEntInserterType,
@@ -219,14 +222,12 @@ impl FacBlkAssemblerThru {
         );
         belt.add_straight(self.width * self.cell_width() - 1);
         belt.add_straight_underground(4);
-        // for cell_x_offset in 0..((self.width * self.cell_width()) + CELL_HEIGHT) {
-        //     // belt row
-        //     self.output.write(BlueprintItem::new(
-        //         FacEntBeltTransport::new(self.belt_type.clone(), direction.rotate_flip())
-        //             .into_boxed(),
-        //         origin.move_xy_usize(cell_x_offset, cell_y_offset + 1),
-        //     ));
-        // }
+
+        if let Some(output_padding_width) = &self.output_padding_width {
+            let remaining_width = output_padding_width - self.width;
+            info!("adding {}", remaining_width);
+            belt.add_straight(self.cell_width() * remaining_width);
+        }
     }
 
     fn generate_belt_lead(&self, origin: VPoint) {

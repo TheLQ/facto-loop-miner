@@ -26,6 +26,7 @@ pub fn make_assembler_thru(output: Rc<FacItemOutput>) {
         inserter_output: FacEntInserterType::Basic,
         width: 4,
         height: 3,
+        output_padding_width: None,
         output: output.clone(),
     };
     farm.generate(VPoint::new(5, 5));
@@ -49,7 +50,7 @@ pub fn make_industry(output: Rc<FacItemOutput>) {
                 custom_inserter_output: None,
             },
             IndustryThru {
-                width: 2,
+                width: 3,
                 height: 1,
                 input_belts: 1,
                 recipe: FacEntityName::IronGear,
@@ -58,7 +59,7 @@ pub fn make_industry(output: Rc<FacItemOutput>) {
                 custom_inserter_output: None,
             },
             IndustryThru {
-                width: 1,
+                width: 2,
                 height: 1,
                 input_belts: 1,
                 recipe: FacEntityName::IronStick,

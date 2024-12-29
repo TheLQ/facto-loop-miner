@@ -99,6 +99,8 @@ impl FacBlkIndustry {
     }
 
     fn place_thru(&self, thru: &IndustryThru, origin: VPoint) {
+        let max_width: usize = self.thru.iter().map(|v| v.width).max().unwrap();
+
         let block = FacBlkAssemblerThru {
             assembler: FacEntAssembler::new(
                 self.assembler_tier,
@@ -109,6 +111,7 @@ impl FacBlkIndustry {
             belt_type: self.belt,
             height: thru.height,
             width: thru.width,
+            output_padding_width: Some(max_width),
             inserter_input: thru.custom_inserter_input.unwrap_or(self.inserter_input),
             inserter_output: thru.custom_inserter_output.unwrap_or(self.inserter_output),
             output: self.output.clone(),
