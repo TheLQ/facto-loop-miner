@@ -8,16 +8,20 @@ use crate::{
 
 use super::{belt_bettel::FacBlkBettelBelt, belt_combiner::FacBlkBeltCombiner, block::FacBlock};
 
-pub struct FacBlkBeltCloud {
+/// Like the real cloud, take all input and put into a bunch of queues
+/// Scale by adding more output belts
+pub struct FacBlkBeltBus {
     pub belt_input: FacEntBeltType,
     pub belt_output: FacEntBeltType,
     pub belts_input: usize,
     pub belts_output: usize,
+    // pub sources: Vec<CloudProvide>,
+    // pub wants: Vec<CloudWant>,
     pub origin_direction: FacDirectionQuarter,
     pub output: Rc<FacItemOutput>,
 }
 
-impl FacBlock for FacBlkBeltCloud {
+impl FacBlock for FacBlkBeltBus {
     fn generate(&self, origin: VPoint) {
         let belts = self.place_loading_belts(origin);
         for belt in &belts {
@@ -27,7 +31,7 @@ impl FacBlock for FacBlkBeltCloud {
     }
 }
 
-impl FacBlkBeltCloud {
+impl FacBlkBeltBus {
     fn place_loading_belts(&self, origin: VPoint) -> Vec<FacBlkBettelBelt> {
         let mut belts = Vec::new();
         for input_num in 0..self.belts_input {
@@ -53,7 +57,7 @@ impl FacBlkBeltCloud {
         let combiner = FacBlkBeltCombiner {
             belt: self.belt_input,
             direction: self.origin_direction,
-            output_belt_order: todo!(),
+            output_belt_targets: todo!(),
             output: self.output.clone(),
         };
         combiner.generate(source_belt.next_insert_position());

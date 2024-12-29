@@ -27,6 +27,7 @@ pub fn make_assembler_thru(output: Rc<FacItemOutput>) {
         width: 4,
         height: 3,
         output_padding_width: None,
+        integ_belts: Default::default(),
         output: output.clone(),
     };
     farm.generate(VPoint::new(5, 5));
