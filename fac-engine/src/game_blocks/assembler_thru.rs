@@ -34,7 +34,7 @@ impl FacBlock for FacBlkAssemblerThru {
     fn generate(&self, origin: VPoint) {
         let _ = &mut self.output.context_handle(
             ContextLevel::Micro,
-            format!("Assembler-{}", self.assembler.recipe()),
+            format!("Assembler-{}", self.assembler.recipe().to_fac_name()),
         );
         for height in 0..self.height {
             let super_row_pos = origin.move_y_usize(height * 9);

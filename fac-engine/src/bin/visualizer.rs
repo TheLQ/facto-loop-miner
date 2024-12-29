@@ -2,17 +2,16 @@ use std::rc::Rc;
 
 use facto_loop_miner_common::log_init_debug;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
+use facto_loop_miner_fac_engine::common::names::FacEntityName;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
 use facto_loop_miner_fac_engine::game_blocks::rail_station::FacExtDelivery;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::{
-    blueprint::bpitem::BlueprintItem,
-    common::{entity::FacEntity, vpoint::VPoint},
+    common::vpoint::VPoint,
     game_blocks::{
         assembler_cell::{FacBlkAssemblerCell, FacBlkAssemblerCellEntry},
-        assembler_thru::FacBlkAssemblerThru,
         beacon_farm::FacBlkBeaconFarm,
         block::FacBlock,
         rail_station::FacBlkRailStation,
@@ -21,7 +20,6 @@ use facto_loop_miner_fac_engine::{
     },
     game_entities::{
         assembler::FacEntAssembler,
-        belt::FacEntBeltType,
         chest::{FacEntChest, FacEntChestType},
         inserter::FacEntInserterType,
         module::FacModule,
@@ -36,7 +34,6 @@ fn main() {
     let output = FacItemOutput::new_blueprint().into_rc();
 
     match 8 {
-        1 => basic_build_bp(output.clone()),
         2 => basic_build_gen(output.clone()),
         3 => basic_build_terapower(output.clone()),
         4 => basic_build_beacon_farm(output.clone()),
@@ -59,18 +56,6 @@ fn main() {
 
     // let res = encode_blueprint_to_string(&blueprint.to_fac()).unwrap();
     // println!("bp {}", res);
-}
-
-fn basic_build_bp(output: Rc<FacItemOutput>) {
-    {
-        let entity = FacEntAssembler::new_basic(FacTier::Tier1, "something".into());
-        output.write(BlueprintItem::new(entity.into_boxed(), VPoint::new(1, 1)));
-    }
-
-    {
-        let entity = FacEntAssembler::new_basic(FacTier::Tier1, "something2".into());
-        output.write(BlueprintItem::new(entity.into_boxed(), VPoint::new(1, 4)));
-    }
 }
 
 fn basic_build_gen(output: Rc<FacItemOutput>) {
@@ -106,7 +91,7 @@ fn basic_build_beacon_farm(output: Rc<FacItemOutput>) {
         cell: Some(FacBlkAssemblerCell {
             assembler: FacEntAssembler::new(
                 FacTier::Tier1,
-                "small-lamp".into(),
+                FacEntityName::CopperCable,
                 Default::default(),
             ),
             side_bottom: [

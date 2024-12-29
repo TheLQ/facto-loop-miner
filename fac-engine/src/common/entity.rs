@@ -39,7 +39,7 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
             position: self.to_fac_position(position),
             direction: self.to_fac_direction(),
             neighbours: None,
-            recipe: self.to_fac_recipe(),
+            recipe: self.to_fac_recipe().map(|v| v.to_fac_name()),
             items: self.to_fac_items(),
             utype: self.to_fac_belt_under_type(),
             station: self.to_fac_station(),
@@ -54,7 +54,7 @@ pub trait FacEntity: FacArea + std::fmt::Debug {
         None
     }
 
-    fn to_fac_recipe(&self) -> Option<String> {
+    fn to_fac_recipe(&self) -> Option<FacEntityName> {
         None
     }
 

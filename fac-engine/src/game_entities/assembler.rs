@@ -4,11 +4,13 @@ use crate::common::{
     names::FacEntityName,
 };
 
+pub type FacEntAssemblerModSlice = [Option<FacModule>; 3];
+
 #[derive(Debug, Clone)]
 pub struct FacEntAssembler {
-    recipe: String,
+    recipe: FacEntityName,
     name: FacEntityName,
-    modules: [Option<FacModule>; 3],
+    modules: FacEntAssemblerModSlice,
 }
 
 impl SquareArea for FacEntAssembler {
@@ -22,7 +24,7 @@ impl FacEntity for FacEntAssembler {
         &self.name
     }
 
-    fn to_fac_recipe(&self) -> Option<String> {
+    fn to_fac_recipe(&self) -> Option<FacEntityName> {
         Some(self.recipe.clone())
     }
 
@@ -32,7 +34,7 @@ impl FacEntity for FacEntAssembler {
 }
 
 impl FacEntAssembler {
-    pub fn new(level: FacTier, recipe: String, modules: [Option<FacModule>; 3]) -> Self {
+    pub fn new(level: FacTier, recipe: FacEntityName, modules: FacEntAssemblerModSlice) -> Self {
         Self {
             name: FacEntityName::Assembler(level),
             recipe,
@@ -40,11 +42,11 @@ impl FacEntAssembler {
         }
     }
 
-    pub fn new_basic(level: FacTier, recipe: String) -> Self {
+    pub fn new_basic(level: FacTier, recipe: FacEntityName) -> Self {
         Self::new(level, recipe, [const { None }; 3])
     }
 
-    pub fn recipe(&self) -> &str {
+    pub fn recipe(&self) -> &FacEntityName {
         &self.recipe
     }
 }

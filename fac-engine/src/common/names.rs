@@ -28,6 +28,13 @@ pub enum FacEntityName {
     InfinityPower,
     Locomotive,
     CargoWagon,
+    // resources
+    IronOre,
+    IronPlate,
+    Steel,
+    CopperOre,
+    CopperPlate,
+    CopperCable,
 }
 
 impl FacEntityName {
@@ -84,6 +91,13 @@ impl FacEntityName {
             Self::InfinityPower => "electric-energy-interface".into(),
             Self::Locomotive => "locomotive".into(),
             Self::CargoWagon => "cargo-wagon".into(),
+            // resources
+            Self::IronOre => "iron-ore".into(),
+            Self::IronPlate => "iron-plate".into(),
+            Self::Steel => "steel".into(),
+            Self::CopperOre => "copper-ore".into(),
+            Self::CopperPlate => "copper-plate".into(),
+            Self::CopperCable => "copper-cable".into(),
         }
     }
 }
