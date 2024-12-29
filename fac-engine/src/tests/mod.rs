@@ -1,4 +1,4 @@
-pub mod assembler;
+pub mod assembler_tests;
 pub mod belt_tests;
 pub mod train_loop;
 pub mod train_rails;
