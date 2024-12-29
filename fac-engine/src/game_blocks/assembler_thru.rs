@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use super::block::FacBlock;
-use crate::blueprint::output::FacItemOutput;
+use crate::blueprint::output::{ContextLevel, FacItemOutput};
 use crate::game_blocks::belt_bettel::FacBlkBettelBelt;
 use crate::game_entities::infinity_power::FacEntInfinityPower;
 use crate::{
@@ -31,6 +31,10 @@ pub struct FacBlkAssemblerThru {
 
 impl FacBlock for FacBlkAssemblerThru {
     fn generate(&self, origin: VPoint) {
+        let _ = &mut self.output.context_handle(
+            ContextLevel::Micro,
+            format!("Assembler-{}", self.assembler.recipe()),
+        );
         for height in 0..self.height {
             let super_row_pos = origin.move_y_usize(height * 9);
 
@@ -47,6 +51,10 @@ impl FacBlock for FacBlkAssemblerThru {
                 FacDirectionQuarter::West,
                 true,
             );
+
+            let _ = &mut self
+                .output
+                .context_handle(ContextLevel::Micro, "Intra".into());
             self.generate_belt_turn_for_row(super_row_pos.move_x_usize(START_BUFFER));
 
             if self.height > 1 && height != self.height - 1 {
@@ -71,6 +79,9 @@ impl FacBlkAssemblerThru {
         direction: FacDirectionQuarter,
         is_second_row: bool,
     ) {
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Micro, "Chain".into());
         for row_pos in 0..self.width {
             let mut cell_x_offset = row_pos * self.cell_width();
 
@@ -133,6 +144,9 @@ impl FacBlkAssemblerThru {
         direction: FacDirectionQuarter,
         cur_height: usize,
     ) {
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Micro, "Center".into());
         let cell_y_offset = 3;
 
         struct Side {

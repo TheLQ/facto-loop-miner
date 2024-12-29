@@ -43,4 +43,8 @@ impl FacEntAssembler {
     pub fn new_basic(level: FacTier, recipe: String) -> Self {
         Self::new(level, recipe, [const { None }; 3])
     }
+
+    pub fn recipe(&self) -> &str {
+        &self.recipe
+    }
 }

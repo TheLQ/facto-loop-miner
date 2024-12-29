@@ -190,7 +190,7 @@ fn pad_grapheme(input: &str, up_to: usize) -> String {
         .graphemes(false)
         .map(|v| if v.len() > 1 { 2 } else { 1 })
         .sum();
-    let diff = up_to - actual_len;
+    let diff = up_to.saturating_sub(actual_len);
     if diff > 0 {
         format!("{}{:diff$}", input, "")
     } else {
@@ -253,7 +253,7 @@ impl FacItemOutputType {
     }
 
     fn flush_cache_maybe(&self) {
-        const CACHE_SIZE: usize = 2;
+        const CACHE_SIZE: usize = 1;
 
         let size = match self {
             Self::AdmiralClient(cell) => {
@@ -287,7 +287,11 @@ impl FacItemOutputType {
                     *total_write += 1;
                     lua_commands.push(blueprint.to_lua().into_boxed());
                 }
-                trace!("Flush Cache {} total {}", lua_commands.len(), total_write);
+                let flush_count = lua_commands.len();
+                if flush_count > 2 {
+                    // don't spam the console on micro writes
+                    trace!("Flush Cache {} total {}", flush_count, total_write)
+                }
                 let res = inner.execute_checked_commands_in_wrapper_function(lua_commands);
 
                 // Vec::push() does not normally fail
@@ -303,13 +307,17 @@ impl FacItemOutputType {
                     cache,
                     total_write,
                 } = &mut *cell.borrow_mut();
-                let mut count = 0;
+                let mut flush_count = 0;
                 for FacItemOutputWrite { item, blueprint } in cache.drain(0..) {
-                    count += 1;
+                    flush_count += 1;
                     inner.add(item, blueprint);
                 }
-                *total_write += count;
-                trace!("Flush Cache {} total {}", count, total_write)
+                *total_write += flush_count;
+
+                if flush_count > 2 {
+                    // don't spam the console on micro writes
+                    trace!("Flush Cache {} total {}", flush_count, total_write)
+                }
             }
         }
     }
