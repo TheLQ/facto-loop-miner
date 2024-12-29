@@ -46,12 +46,11 @@ impl Exhaustive for FacEntChestType {
 #[derive(Clone)]
 pub struct FacEntChest {
     ctype: FacEntChestType,
-    name: DebugIgnore<FacEntityName>,
 }
 
 impl FacEntity for FacEntChest {
-    fn name(&self) -> &FacEntityName {
-        &self.name
+    fn name(&self) -> FacEntityName {
+        FacEntityName::Chest(self.ctype.clone())
     }
 
     fn to_fac_infinity_settings(&self) -> Option<FacBpInfinitySettings> {
@@ -103,10 +102,7 @@ impl SquareArea for FacEntChest {
 
 impl FacEntChest {
     pub fn new(ctype: FacEntChestType) -> Self {
-        Self {
-            name: FacEntityName::Chest(ctype.clone()).into(),
-            ctype,
-        }
+        Self { ctype }
     }
 
     pub fn chest_type(&self) -> &FacEntChestType {

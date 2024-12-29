@@ -5,7 +5,7 @@ use crate::common::{
     names::FacEntityName,
 };
 
-#[derive(Clone, Debug, PartialEq, Exhaustive)]
+#[derive(Clone, Copy, Debug, PartialEq, Exhaustive)]
 
 pub enum FacEntElectricMiniType {
     Small,
@@ -14,12 +14,12 @@ pub enum FacEntElectricMiniType {
 
 #[derive(Debug)]
 pub struct FacEntElectricMini {
-    name: FacEntityName,
+    ptype: FacEntElectricMiniType,
 }
 
 impl FacEntity for FacEntElectricMini {
-    fn name(&self) -> &FacEntityName {
-        &self.name
+    fn name(&self) -> FacEntityName {
+        FacEntityName::ElectricMini(self.ptype)
     }
 }
 
@@ -31,15 +31,6 @@ impl SquareArea for FacEntElectricMini {
 
 impl FacEntElectricMini {
     pub fn new(ptype: FacEntElectricMiniType) -> Self {
-        Self {
-            name: FacEntityName::ElectricMini(ptype),
-        }
-    }
-
-    pub fn pole_type(&self) -> &FacEntElectricMiniType {
-        match &self.name {
-            FacEntityName::ElectricMini(t) => t,
-            _ => panic!("wtf"),
-        }
+        Self { ptype }
     }
 }

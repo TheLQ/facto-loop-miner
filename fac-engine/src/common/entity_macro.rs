@@ -12,9 +12,9 @@ macro_rules! def_entity_size_square {
 #[macro_export]
 macro_rules! def_entity_name {
     ($name: path) => {
-        fn name(&self) -> &FacEntityName {
+        fn name(&self) -> FacEntityName {
             const RES: FacEntityName = $name;
-            &RES
+            RES
         }
     };
 }

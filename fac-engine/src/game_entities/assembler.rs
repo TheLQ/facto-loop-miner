@@ -9,7 +9,7 @@ pub type FacEntAssemblerModSlice = [Option<FacModule>; 3];
 #[derive(Debug, Clone)]
 pub struct FacEntAssembler {
     recipe: FacEntityName,
-    name: FacEntityName,
+    tier: FacTier,
     modules: FacEntAssemblerModSlice,
 }
 
@@ -20,8 +20,8 @@ impl SquareArea for FacEntAssembler {
 }
 
 impl FacEntity for FacEntAssembler {
-    fn name(&self) -> &FacEntityName {
-        &self.name
+    fn name(&self) -> FacEntityName {
+        FacEntityName::Assembler(self.tier)
     }
 
     fn to_fac_recipe(&self) -> Option<FacEntityName> {
@@ -34,9 +34,9 @@ impl FacEntity for FacEntAssembler {
 }
 
 impl FacEntAssembler {
-    pub fn new(level: FacTier, recipe: FacEntityName, modules: FacEntAssemblerModSlice) -> Self {
+    pub fn new(tier: FacTier, recipe: FacEntityName, modules: FacEntAssemblerModSlice) -> Self {
         Self {
-            name: FacEntityName::Assembler(level),
+            tier,
             recipe,
             modules,
         }

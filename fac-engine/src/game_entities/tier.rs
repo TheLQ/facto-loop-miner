@@ -1,6 +1,6 @@
 use exhaustive::Exhaustive;
 
-#[derive(Clone, PartialEq, Debug, Exhaustive)]
+#[derive(Clone, Copy, PartialEq, Debug, Exhaustive)]
 pub enum FacTier {
     Tier1,
     Tier2,

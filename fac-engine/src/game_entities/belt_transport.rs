@@ -10,13 +10,13 @@ use super::{
 
 #[derive(Debug)]
 pub struct FacEntBeltTransport {
-    name: FacEntityName,
+    btype: FacEntBeltType,
     direction: FacDirectionQuarter,
 }
 
 impl FacEntity for FacEntBeltTransport {
-    fn name(&self) -> &FacEntityName {
-        &self.name
+    fn name(&self) -> FacEntityName {
+        FacEntityName::BeltTransport(self.btype)
     }
 
     fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
@@ -32,9 +32,6 @@ impl SquareArea for FacEntBeltTransport {
 
 impl FacEntBeltTransport {
     pub fn new(btype: FacEntBeltType, direction: FacDirectionQuarter) -> Self {
-        Self {
-            name: FacEntityName::BeltTransport(btype),
-            direction,
-        }
+        Self { btype, direction }
     }
 }

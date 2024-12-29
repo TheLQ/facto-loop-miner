@@ -12,7 +12,7 @@ use super::{
 
 #[derive(Debug)]
 pub struct FacEntBeltSplit {
-    name: FacEntityName,
+    btype: FacEntBeltType,
     direction: FacDirectionQuarter,
     priority: Option<FacEntBeltSplitPriority>,
 }
@@ -52,8 +52,8 @@ impl Default for FacExtPriority {
 }
 
 impl FacEntity for FacEntBeltSplit {
-    fn name(&self) -> &FacEntityName {
-        &self.name
+    fn name(&self) -> FacEntityName {
+        FacEntityName::BeltSplit(self.btype)
     }
 
     fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
@@ -81,7 +81,7 @@ impl FacArea for FacEntBeltSplit {
 impl FacEntBeltSplit {
     pub fn new(btype: FacEntBeltType, direction: FacDirectionQuarter) -> Self {
         Self {
-            name: FacEntityName::BeltSplit(btype),
+            btype,
             direction,
             priority: None,
         }
@@ -93,7 +93,7 @@ impl FacEntBeltSplit {
         priority: FacEntBeltSplitPriority,
     ) -> Self {
         Self {
-            name: FacEntityName::BeltSplit(btype),
+            btype,
             direction,
             priority: Some(priority),
         }

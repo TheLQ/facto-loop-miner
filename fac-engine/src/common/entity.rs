@@ -13,7 +13,7 @@ use crate::{
 use super::vpoint::VPoint;
 
 pub trait FacEntity: FacArea + std::fmt::Debug {
-    fn name(&self) -> &FacEntityName;
+    fn name(&self) -> FacEntityName;
 
     fn into_boxed(self) -> Box<dyn FacEntity>
     where

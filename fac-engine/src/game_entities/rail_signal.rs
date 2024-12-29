@@ -7,7 +7,7 @@ use crate::common::{
 
 use super::direction::{FacDirectionEighth, FacDirectionQuarter};
 
-#[derive(Clone, Debug, PartialEq, Exhaustive)]
+#[derive(Clone, Copy, Debug, PartialEq, Exhaustive)]
 pub enum FacEntRailSignalType {
     Basic,
     Chain,
@@ -15,13 +15,13 @@ pub enum FacEntRailSignalType {
 
 #[derive(Debug)]
 pub struct FacEntRailSignal {
-    name: FacEntityName,
+    stype: FacEntRailSignalType,
     direction: FacDirectionQuarter,
 }
 
 impl FacEntity for FacEntRailSignal {
-    fn name(&self) -> &FacEntityName {
-        &self.name
+    fn name(&self) -> FacEntityName {
+        FacEntityName::RailSignal(self.stype)
     }
 
     fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
@@ -37,9 +37,6 @@ impl SquareArea for FacEntRailSignal {
 
 impl FacEntRailSignal {
     pub fn new(stype: FacEntRailSignalType, direction: FacDirectionQuarter) -> Self {
-        Self {
-            name: FacEntityName::RailSignal(stype),
-            direction,
-        }
+        Self { stype, direction }
     }
 }

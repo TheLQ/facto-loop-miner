@@ -36,14 +36,14 @@ impl FacEntBeltUnderType {
 
 #[derive(Debug)]
 pub struct FacEntBeltUnder {
-    name: FacEntityName,
+    btype: FacEntBeltType,
     direction: FacDirectionQuarter,
     utype: FacEntBeltUnderType,
 }
 
 impl FacEntity for FacEntBeltUnder {
-    fn name(&self) -> &FacEntityName {
-        &self.name
+    fn name(&self) -> FacEntityName {
+        FacEntityName::BeltUnder(self.btype)
     }
 
     fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
@@ -68,7 +68,7 @@ impl FacEntBeltUnder {
         utype: FacEntBeltUnderType,
     ) -> Self {
         Self {
-            name: FacEntityName::BeltUnder(btype),
+            btype,
             direction,
             utype,
         }

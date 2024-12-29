@@ -7,7 +7,7 @@ use crate::common::{
 
 pub const FACENT_ELECTRIC_LARGE_DIAMETER: usize = 2;
 
-#[derive(Debug, Clone, PartialEq, Exhaustive)]
+#[derive(Debug, Clone, Copy, PartialEq, Exhaustive)]
 pub enum FacEntElectricLargeType {
     Substation,
     Big,
@@ -15,12 +15,12 @@ pub enum FacEntElectricLargeType {
 
 #[derive(Debug)]
 pub struct FacEntElectricLarge {
-    name: FacEntityName,
+    etype: FacEntElectricLargeType,
 }
 
 impl FacEntity for FacEntElectricLarge {
-    fn name(&self) -> &FacEntityName {
-        &self.name
+    fn name(&self) -> FacEntityName {
+        FacEntityName::ElectricLarge(self.etype)
     }
 }
 
@@ -32,8 +32,6 @@ impl SquareArea for FacEntElectricLarge {
 
 impl FacEntElectricLarge {
     pub fn new(etype: FacEntElectricLargeType) -> Self {
-        Self {
-            name: FacEntityName::ElectricLarge(etype),
-        }
+        Self { etype }
     }
 }
