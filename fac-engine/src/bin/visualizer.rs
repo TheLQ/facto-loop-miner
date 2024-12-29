@@ -41,7 +41,6 @@ fn main() {
         3 => basic_build_terapower(output.clone()),
         4 => basic_build_beacon_farm(output.clone()),
         5 => basic_build_robo_farm(output.clone()),
-        6 => basic_build_assembler_thru(output.clone()),
         7 => basic_build_rail_hope_single(output.clone()),
         8 => basic_build_rail_hope_dual(output.clone()),
         _ => panic!("asdf"),
@@ -149,18 +148,6 @@ fn basic_build_robo_farm(output: Rc<FacItemOutput>) {
         width: 3,
         height: 3,
         is_row_depth_full: true,
-        output,
-    };
-    farm.generate(VPoint::new(5, 5))
-}
-
-fn basic_build_assembler_thru(output: Rc<FacItemOutput>) {
-    let farm = FacBlkAssemblerThru {
-        assembler: FacEntAssembler::new(FacTier::Tier1, "copper-wire".into(), Default::default()),
-        belt_type: FacEntBeltType::Fast,
-        inserter_type: FacEntInserterType::Fast,
-        width: 2,
-        height: 3,
         output,
     };
     farm.generate(VPoint::new(5, 5))

@@ -25,7 +25,8 @@ pub struct FacBlkAssemblerThru {
     pub height: usize,
     pub assembler: FacEntAssembler,
     pub belt_type: FacEntBeltType,
-    pub inserter_type: FacEntInserterType,
+    pub inserter_input: FacEntInserterType,
+    pub inserter_output: FacEntInserterType,
     pub output: Rc<FacItemOutput>,
 }
 
@@ -113,7 +114,7 @@ impl FacBlkAssemblerThru {
                     direction.rotate_flip()
                 };
                 self.output.write(BlueprintItem::new(
-                    FacEntInserter::new(self.inserter_type.clone(), inserter_direction)
+                    FacEntInserter::new(self.inserter_input.clone(), inserter_direction)
                         .into_boxed(),
                     origin.move_xy_usize(cell_x_offset + 2, y_offset),
                 ));
@@ -177,7 +178,7 @@ impl FacBlkAssemblerThru {
 
                 // removing inserter
                 self.output.write(BlueprintItem::new(
-                    FacEntInserter::new(self.inserter_type.clone(), side_direction.clone())
+                    FacEntInserter::new(self.inserter_output.clone(), side_direction.clone())
                         .into_boxed(),
                     origin.move_xy_usize(cell_x_offset + 4, side_y_offset),
                 ));
