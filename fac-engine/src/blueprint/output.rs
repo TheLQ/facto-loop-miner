@@ -42,7 +42,7 @@ impl FacItemOutput {
         Self {
             otype: FacItemOutputType::AdmiralClient(RefCell::new(OutputData {
                 inner: client,
-                dedupe: None,
+                dedupe: Some(Vec::new()),
                 cache: Vec::new(),
                 total_write: 0,
             })),
@@ -227,11 +227,6 @@ where
 {
     // thread_local! {
     static CUR: Mutex<Option<FacItemOutputLogInfo>> = Mutex::new(None);
-    // }
-
-    // enum_map::enum_map! {
-    // ContextLevel::Block => Vec::new(),
-    // ContextLevel::Micro => Vec::new(),
     // }
 
     let mut lock = CUR.lock().unwrap();

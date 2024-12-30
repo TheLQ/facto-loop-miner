@@ -27,7 +27,8 @@ pub fn make_assembler_thru(output: Rc<FacItemOutput>) {
         width: 4,
         height: 3,
         output_padding_width: None,
-        integ_belts: Default::default(),
+        integ_input: Default::default(),
+        integ_output: Default::default(),
         output: output.clone(),
     };
     farm.generate(VPoint::new(5, 5));
@@ -43,17 +44,17 @@ pub fn make_industry(output: Rc<FacItemOutput>) {
         thru: Vec::from([
             IndustryThru {
                 width: 1,
-                height: 2,
-                input_belts: 1,
+                height: 1,
+                input_belts: 2,
                 recipe: FacEntityName::CopperCable,
                 custom_assembler_modules: None,
                 custom_inserter_input: None,
                 custom_inserter_output: None,
             },
             IndustryThru {
-                width: 3,
+                width: 1,
                 height: 1,
-                input_belts: 1,
+                input_belts: 2,
                 recipe: FacEntityName::IronGear,
                 custom_assembler_modules: None,
                 custom_inserter_input: None,

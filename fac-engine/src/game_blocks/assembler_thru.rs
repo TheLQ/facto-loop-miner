@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use tracing::info;
@@ -30,6 +31,8 @@ pub struct FacBlkAssemblerThru {
     pub belt_type: FacEntBeltType,
     pub inserter_input: FacEntInserterType,
     pub inserter_output: FacEntInserterType,
+    pub integ_input: RefCell<Vec<VPoint>>,
+    pub integ_output: RefCell<Vec<FacBlkBettelBelt>>,
     pub output: Rc<FacItemOutput>,
 }
 
@@ -228,15 +231,20 @@ impl FacBlkAssemblerThru {
             info!("adding {}", remaining_width);
             belt.add_straight(self.cell_width() * remaining_width);
         }
+        let mut integ_output = self.integ_output.borrow_mut();
+        integ_output.push(belt);
     }
 
     fn generate_belt_lead(&self, origin: VPoint) {
+        let mut integ_input = self.integ_input.borrow_mut();
         for x in 0..START_BUFFER {
             for y in 0..CELL_HEIGHT {
+                let origin_y = origin.move_y_usize(y);
+                integ_input.push(origin_y);
                 self.output.write(BlueprintItem::new(
                     FacEntBeltTransport::new(self.belt_type, FacDirectionQuarter::East)
                         .into_boxed(),
-                    origin.move_xy_usize(x, y),
+                    origin_y.move_x_usize(x),
                 ));
             }
         }
@@ -264,7 +272,11 @@ impl FacBlkAssemblerThru {
         )
     }
 
-    pub fn total_height(height: usize) -> usize {
-        (CELL_HEIGHT * 3) * height
+    pub fn total_point_height(&self) -> usize {
+        (CELL_HEIGHT * 3) * self.width
+    }
+
+    pub fn total_point_width(&self) -> usize {
+        (self.cell_width() * self.width) + START_BUFFER + /*exit turn back*/CELL_HEIGHT
     }
 }
