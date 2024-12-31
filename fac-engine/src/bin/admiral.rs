@@ -41,6 +41,7 @@ fn inner_main() -> AdmiralResult<()> {
 
     let output = FacItemOutput::new_admiral(client).into_rc();
     execute_destroy(output.clone())?;
+    // let output = FacItemOutput::new_blueprint().into_rc();
 
     let command_output = output.clone();
     match 13 {
@@ -60,6 +61,11 @@ fn inner_main() -> AdmiralResult<()> {
         _ => panic!("uihhh"),
     }
     output.flush();
+
+    // let bpcontents = output.consume_rc().into_blueprint_contents();
+    // let bp: FacBpBlueprintWrapper = bpcontents.into();
+    // let res = encode_blueprint_to_string(&bp).unwrap();
+    // println!("bp {res}");
 
     Ok(())
 }

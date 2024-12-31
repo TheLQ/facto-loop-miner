@@ -62,11 +62,16 @@ impl FacBlkIndustry {
             .max()
             .unwrap();
 
-        let mut cur_belt_num: usize = 0;
+        // stick out as much as output belts from underground
+        let output_padding: usize = 2;
+
+        let mut cur_total_belts: usize = 0;
         for (thru_num, thru) in self.thru.iter().enumerate() {
-            for _ in 0..thru.input_belts {
-                let bettel_origin =
-                    origin.move_xy((max_width as i32) - /*??*/1, -(cur_belt_num as i32 + 1));
+            for cur_thr_belt in 0..thru.input_belts {
+                let bettel_origin = origin.move_xy(
+                    (max_width + output_padding) as i32 - /*??*/1,
+                    -(cur_total_belts as i32 + 1),
+                );
 
                 let mut belt = FacBlkBettelBelt::new(
                     self.belt,
@@ -76,24 +81,24 @@ impl FacBlkIndustry {
                 );
 
                 // come back from the output side
-                belt.add_straight(max_width);
+                belt.add_straight(max_width + output_padding as usize);
 
                 // going down to assembler thru inputs
-                belt.add_straight(cur_belt_num);
+                belt.add_straight(cur_total_belts);
                 belt.add_turn90(false);
-                belt.add_straight(cur_belt_num);
+                belt.add_straight(cur_total_belts);
 
                 // intra assembler skip
                 for inner_thru in &thru_block[0..thru_num] {
-                    belt.add_straight(inner_thru.total_point_height() - thru.input_belts);
+                    belt.add_straight(inner_thru.total_point_height());
                 }
 
                 // going to assembler thru input
-                belt.add_straight(cur_belt_num);
+                belt.add_straight(cur_thr_belt);
                 belt.add_turn90(false);
-                belt.add_straight(cur_belt_num);
+                belt.add_straight(cur_total_belts);
 
-                cur_belt_num += 1;
+                cur_total_belts += 1;
             }
         }
     }
