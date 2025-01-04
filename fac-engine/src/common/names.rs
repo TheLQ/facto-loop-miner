@@ -2,9 +2,9 @@ use exhaustive::Exhaustive;
 use strum::AsRefStr;
 
 use crate::game_entities::{
-    belt::FacEntBeltType, chest::FacEntChestType, electric_large::FacEntElectricLargeType,
-    electric_mini::FacEntElectricMiniType, inserter::FacEntInserterType,
-    rail_signal::FacEntRailSignalType, tier::FacTier,
+    belt::FacEntBeltType, chest::FacEntChestType, concrete::FacEntConcreteType,
+    electric_large::FacEntElectricLargeType, electric_mini::FacEntElectricMiniType,
+    inserter::FacEntInserterType, rail_signal::FacEntRailSignalType, tier::FacTier,
 };
 
 #[derive(Clone, Debug, PartialEq, AsRefStr, Exhaustive)]
@@ -28,6 +28,7 @@ pub enum FacEntityName {
     InfinityPower,
     Locomotive,
     CargoWagon,
+    Concrete(FacEntConcreteType),
     // resources
     IronOre,
     IronPlate,
@@ -93,6 +94,12 @@ impl FacEntityName {
             Self::InfinityPower => "electric-energy-interface".into(),
             Self::Locomotive => "locomotive".into(),
             Self::CargoWagon => "cargo-wagon".into(),
+            Self::Concrete(ctype) => match ctype {
+                FacEntConcreteType::Basic => "concrete".into(),
+                FacEntConcreteType::Hazard => "hazard-concrete".into(),
+                FacEntConcreteType::Refined => "refined-concrete".into(),
+                FacEntConcreteType::RefinedHazard => "refined-hazard-concrete".into(),
+            },
             // resources
             Self::IronOre => "iron-ore".into(),
             Self::IronPlate => "iron-plate".into(),

@@ -6,6 +6,7 @@ pub mod belt_transport;
 pub mod belt_under;
 pub mod cargo_wagon;
 pub mod chest;
+pub mod concrete;
 pub mod direction;
 pub mod electric_large;
 pub mod electric_mini;
