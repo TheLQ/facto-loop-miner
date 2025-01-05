@@ -29,6 +29,7 @@ pub enum FacEntityName {
     Locomotive,
     CargoWagon,
     ElectricMiningDrill,
+    SolarPanel,
     // resources
     IronOre,
     IronPlate,
@@ -95,6 +96,7 @@ impl FacEntityName {
             Self::Locomotive => "locomotive".into(),
             Self::CargoWagon => "cargo-wagon".into(),
             Self::ElectricMiningDrill => "electric-mining-drill".into(),
+            Self::SolarPanel => "solar-panel".into(),
             // resources
             Self::IronOre => "iron-ore".into(),
             Self::IronPlate => "iron-plate".into(),

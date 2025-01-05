@@ -15,4 +15,5 @@ pub mod rail_hope_single;
 pub mod rail_loop;
 pub mod rail_station;
 pub mod robo_farm;
+pub mod solar_bath;
 pub mod terapower;
