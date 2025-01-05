@@ -55,7 +55,7 @@ fn inner_main() -> AdmiralResult<()> {
     };
 
     let command_output = output.clone();
-    match 15 {
+    match 9 {
         1 => make_basic(command_output)?,
         2 => make_assembler_thru(command_output),
         3 => make_belt_bettel(command_output)?,
@@ -109,7 +109,9 @@ fn execute_destroy(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
 
     let command = FacDestroy::new_filtered(
         150,
-        FacTileConcreteType::all().map(|v| v.to_fac_name()).to_vec(),
+        FacTileConcreteType::iter_exhaustive(None)
+            .map(|v| v.to_fac_name())
+            .collect(),
     )
     .into_tiles();
     output.admiral_execute_command(command.into_boxed())?;

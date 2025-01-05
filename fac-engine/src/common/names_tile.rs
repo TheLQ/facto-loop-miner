@@ -1,7 +1,8 @@
+use exhaustive::Exhaustive;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use strum::AsRefStr;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Exhaustive)]
 pub enum FacTileConcreteType {
     Basic,
     Hazard(FacTileDirection),
@@ -9,7 +10,7 @@ pub enum FacTileConcreteType {
     RefinedHazard(FacTileDirection),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, AsRefStr)]
+#[derive(Clone, Copy, Debug, PartialEq, AsRefStr, Exhaustive)]
 #[strum(serialize_all = "lowercase")]
 pub enum FacTileDirection {
     Left,
@@ -27,17 +28,6 @@ impl FacTileConcreteType {
             }
         }
     }
-
-    pub const fn all() -> [Self; 4 + 2] {
-        [
-            Self::Basic,
-            Self::Hazard(FacTileDirection::Left),
-            Self::Hazard(FacTileDirection::Right),
-            Self::Refined,
-            Self::RefinedHazard(FacTileDirection::Left),
-            Self::RefinedHazard(FacTileDirection::Right),
-        ]
-    }
 }
 
 impl Serialize for FacTileConcreteType {
@@ -50,7 +40,7 @@ impl Serialize for FacTileConcreteType {
 }
 
 impl<'de> Deserialize<'de> for FacTileConcreteType {
-    fn deserialize<D>(deserializer: D) -> Result<FacTileConcreteType, D::Error>
+    fn deserialize<D>(_: D) -> Result<FacTileConcreteType, D::Error>
     where
         D: Deserializer<'de>,
     {
