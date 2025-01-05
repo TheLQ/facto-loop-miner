@@ -13,6 +13,7 @@ pub mod infinity_power;
 pub mod inserter;
 pub mod lamp;
 pub mod locomotive;
+pub mod mining_drill_electric;
 pub mod module;
 pub mod radar;
 pub mod rail;

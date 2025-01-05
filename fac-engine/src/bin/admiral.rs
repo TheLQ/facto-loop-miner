@@ -13,6 +13,7 @@ use facto_loop_miner_fac_engine::tests::assembler_tests::{make_assembler_thru, m
 use facto_loop_miner_fac_engine::tests::belt_tests::{
     make_belt_bettel, make_belt_bettel_train_unload, make_belt_combiner, make_belt_grid,
 };
+use facto_loop_miner_fac_engine::tests::ore_tests::make_mine;
 use facto_loop_miner_fac_engine::tests::train_loop::make_rail_loop;
 use facto_loop_miner_fac_engine::tests::train_rails::{
     make_rail_dual_powered, make_rail_dual_turning, make_rail_shift_45, make_rail_spiral_90,
@@ -53,7 +54,7 @@ fn inner_main() -> AdmiralResult<()> {
     };
 
     let command_output = output.clone();
-    match 13 {
+    match 14 {
         1 => make_basic(command_output)?,
         2 => make_assembler_thru(command_output),
         3 => make_belt_bettel(command_output)?,
@@ -67,6 +68,7 @@ fn inner_main() -> AdmiralResult<()> {
         11 => make_belt_combiner(command_output),
         12 => make_belt_grid(command_output),
         13 => make_industry(command_output),
+        14 => make_mine(command_output),
         _ => panic!("uihhh"),
     }
     output.flush();

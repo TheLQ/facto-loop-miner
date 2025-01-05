@@ -67,7 +67,6 @@ impl FacBpEntity {
                 lua: v.into(),
             });
         }
-        // TODO
         if let Some(v) = &self.items {
             for module in v {
                 create.with_command_module(module);

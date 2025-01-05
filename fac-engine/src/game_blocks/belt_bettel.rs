@@ -14,6 +14,7 @@ use std::rc::Rc;
 ///
 /// Describe belts as a sequence of links,
 /// without pathfinding concerns or complicated loop math
+#[derive(Clone)]
 pub struct FacBlkBettelBelt {
     origin: VPoint,
     origin_direction: FacDirectionQuarter,
@@ -21,13 +22,16 @@ pub struct FacBlkBettelBelt {
     links: Vec<FacBlkBettelBeltLink>,
     output: Rc<FacItemOutput>,
     write_cursor: VPoint,
+    dummy_nav_mode: bool,
 }
 
+#[derive(Clone)]
 pub struct FacBlkBettelBeltLink {
     ltype: FacBlkBettelBeltLinkType,
     direction: FacDirectionQuarter,
 }
 
+#[derive(Clone)]
 pub enum FacBlkBettelBeltLinkType {
     Transport {
         length: usize,
@@ -55,7 +59,12 @@ impl FacBlkBettelBelt {
             links: Vec::new(),
             output,
             write_cursor: origin,
+            dummy_nav_mode: false,
         }
+    }
+
+    pub fn set_dummy_nav_mode(&mut self, dummy_nav_mode: bool) {
+        self.dummy_nav_mode = dummy_nav_mode;
     }
 
     fn add_straight_raw(
@@ -122,12 +131,17 @@ impl FacBlkBettelBelt {
     }
 
     pub fn write_link(&mut self, link: FacBlkBettelBeltLink) {
+        let output = if self.dummy_nav_mode {
+            &FacItemOutput::new_blueprint()
+        } else {
+            &self.output
+        };
         match &link.ltype {
             FacBlkBettelBeltLinkType::Transport { length } => {
                 let mut new_cursor = self.origin;
                 for i in 0..*length {
                     new_cursor = self.write_cursor.move_direction_usz(&link.direction, i);
-                    self.output.write(BlueprintItem::new(
+                    output.write(BlueprintItem::new(
                         FacEntBeltTransport::new(self.btype.clone(), link.direction.clone())
                             .into_boxed(),
                         new_cursor,
@@ -137,7 +151,7 @@ impl FacBlkBettelBelt {
                 self.write_cursor = new_cursor.move_direction_int(&link.direction, 1);
             }
             FacBlkBettelBeltLinkType::Underground { length } => {
-                self.output.write(BlueprintItem::new(
+                output.write(BlueprintItem::new(
                     FacEntBeltUnder::new(
                         self.btype.clone(),
                         link.direction.clone(),
@@ -147,7 +161,7 @@ impl FacBlkBettelBelt {
                     self.write_cursor,
                 ));
 
-                self.output.write(BlueprintItem::new(
+                output.write(BlueprintItem::new(
                     FacEntBeltUnder::new(
                         self.btype.clone(),
                         link.direction.clone(),
@@ -169,7 +183,7 @@ impl FacBlkBettelBelt {
                 let split_pos = self.write_cursor;
                 let new_direction = link.direction.rotate_clockwise(*clockwise);
                 let split_pos = split_pos.move_factorio_style_direction(new_direction, 0.5);
-                self.output.write(BlueprintItem::new(
+                output.write(BlueprintItem::new(
                     FacEntBeltSplit::new_priority(self.btype, link.direction, *priority)
                         .into_boxed(),
                     split_pos,
@@ -189,6 +203,7 @@ impl FacBlkBettelBelt {
             origin_direction,
             output,
             write_cursor,
+            dummy_nav_mode,
         } = self;
         if let FacBlkBettelBeltLink {
             direction,
@@ -210,6 +225,7 @@ impl FacBlkBettelBelt {
                 origin_direction: *origin_direction,
                 output: output.clone(),
                 write_cursor: origin,
+                dummy_nav_mode: *dummy_nav_mode,
             }
         } else {
             panic!("not after inserting splitter")

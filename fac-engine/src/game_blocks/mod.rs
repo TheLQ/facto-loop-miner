@@ -8,6 +8,7 @@ pub mod belt_combiner;
 pub mod belt_train_unload;
 pub mod block;
 pub mod brain;
+pub mod mine_ore;
 pub mod rail_hope;
 pub mod rail_hope_dual;
 pub mod rail_hope_single;
