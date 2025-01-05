@@ -11,8 +11,9 @@ pub fn make_mine(output: Rc<FacItemOutput>) {
     let block = FacBlkMineOre {
         height: 3,
         width: 5,
-        build_direction: FacDirectionQuarter::East,
+        build_direction: FacDirectionQuarter::North,
         belt: FacEntBeltType::Basic,
+        drill_modules: Default::default(),
         output,
     };
     block.generate(VPOINT_TEN);

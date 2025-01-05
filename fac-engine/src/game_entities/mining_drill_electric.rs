@@ -39,9 +39,10 @@ impl SquareArea for FacEntMiningDrillElectric {
 
 impl FacEntMiningDrillElectric {
     pub fn new(direction: FacDirectionQuarter) -> Self {
-        Self {
-            direction,
-            modules: Default::default(),
-        }
+        Self::new_modules(direction, Default::default())
+    }
+
+    pub fn new_modules(direction: FacDirectionQuarter, modules: [Option<FacModule>; 3]) -> Self {
+        Self { direction, modules }
     }
 }

@@ -8,6 +8,7 @@ use crate::{
         direction::FacDirectionQuarter,
         electric_mini::{FacEntElectricMini, FacEntElectricMiniType},
         mining_drill_electric::{ELECTRIC_DRILL_SIZE, FacEntMiningDrillElectric},
+        module::FacModule,
     },
 };
 
@@ -18,6 +19,7 @@ pub struct FacBlkMineOre {
     pub height: usize,
     pub build_direction: FacDirectionQuarter,
     pub belt: FacEntBeltType,
+    pub drill_modules: [Option<FacModule>; 3],
     pub output: Rc<FacItemOutput>,
 }
 
@@ -63,7 +65,8 @@ impl FacBlkMineOre {
     ) {
         for i in 0..count {
             self.output.write(BlueprintItem::new(
-                FacEntMiningDrillElectric::new(direction_drill).into_boxed(),
+                FacEntMiningDrillElectric::new_modules(direction_drill, self.drill_modules)
+                    .into_boxed(),
                 origin.move_direction_usz(direction_build, i * ELECTRIC_DRILL_SIZE),
             ));
         }
