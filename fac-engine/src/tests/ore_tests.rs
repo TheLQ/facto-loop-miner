@@ -9,7 +9,7 @@ use crate::{
 
 pub fn make_mine(output: Rc<FacItemOutput>) {
     let block = FacBlkMineOre {
-        height: 2,
+        height: 3,
         width: 5,
         build_direction: FacDirectionQuarter::East,
         belt: FacEntBeltType::Basic,

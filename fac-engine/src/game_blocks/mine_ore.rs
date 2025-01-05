@@ -47,6 +47,7 @@ impl FacBlock for FacBlkMineOre {
                     self.build_direction,
                     offset_y + ELECTRIC_DRILL_SIZE,
                 ),
+                height,
             );
         }
     }
@@ -68,14 +69,11 @@ impl FacBlkMineOre {
         }
     }
 
-    fn place_inner_belts(&self, origin: VPoint) {
+    fn place_inner_belts(&self, origin: VPoint, cur_height: usize) {
         let mut belt =
             FacBlkBettelBelt::new(self.belt, origin, self.build_direction, self.output.clone());
 
         let needed_poles = self.width.div_ceil(3);
-        // if needed_poles == 0 {
-        //     needed_poles += 1;
-        // }
         for _ in 0..needed_poles {
             belt.add_straight(2);
 
@@ -89,6 +87,16 @@ impl FacBlkMineOre {
 
             belt.add_straight_underground(1);
             belt.add_straight(4);
+        }
+
+        if cur_height == 0 {
+            belt.add_straight(self.height - cur_height);
+        } else {
+            belt.add_straight(cur_height - 1);
+            belt.add_turn90(false);
+            belt.add_straight((ELECTRIC_DRILL_SIZE * 2 * cur_height) - /*turn spacing*/1);
+            belt.add_turn90(true);
+            belt.add_straight(self.height - cur_height);
         }
     }
 }
