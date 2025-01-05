@@ -4,7 +4,9 @@ use std::rc::Rc;
 use tracing::info;
 
 use super::block::FacBlock;
+use crate::blueprint::bpfac::tile::FacBpTile;
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
+use crate::common::names_tile::FacTileConcreteType;
 use crate::game_blocks::belt_bettel::FacBlkBettelBelt;
 use crate::game_entities::infinity_power::FacEntInfinityPower;
 use crate::{
@@ -42,6 +44,7 @@ impl FacBlock for FacBlkAssemblerThru {
             ContextLevel::Micro,
             format!("Assembler-{}", self.assembler.recipe().as_ref()),
         );
+        self.generate_tiles(origin);
         for height in 0..self.height {
             let super_row_pos = origin.move_y_usize(height * 9);
 
@@ -204,14 +207,12 @@ impl FacBlkAssemblerThru {
         if cur_height == 0 {
             self.output.write(BlueprintItem::new(
                 FacEntInfinityPower::new().into_boxed(),
-                origin.move_x_usize(
-                    START_BUFFER + (self.width * self.cell_width()) + CELL_HEIGHT + 1,
-                ),
+                origin.move_x_usize(START_BUFFER + (self.width * self.cell_width()) + CELL_HEIGHT),
             ));
             self.output.write(BlueprintItem::new(
                 FacEntElectricMini::new(FacEntElectricMiniType::Medium).into_boxed(),
                 origin.move_xy_usize(
-                    START_BUFFER + (self.width * self.cell_width()) + CELL_HEIGHT + 1,
+                    START_BUFFER + (self.width * self.cell_width()) + CELL_HEIGHT,
                     3,
                 ),
             ));
@@ -272,8 +273,17 @@ impl FacBlkAssemblerThru {
         )
     }
 
+    fn generate_tiles(&self, origin: VPoint) {
+        for i in 0..self.total_point_height() {
+            self.output.write_tile(FacBpTile::new(
+                FacTileConcreteType::Basic,
+                origin.move_y_usize(i),
+            ));
+        }
+    }
+
     pub fn total_point_height(&self) -> usize {
-        (CELL_HEIGHT * 3) * self.width
+        (CELL_HEIGHT * 3) * self.height
     }
 
     pub fn total_point_width(&self) -> usize {

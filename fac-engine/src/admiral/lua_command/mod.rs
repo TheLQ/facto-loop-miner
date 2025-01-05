@@ -7,6 +7,7 @@ pub mod fac_execution_define;
 pub mod fac_execution_run;
 pub mod fac_log;
 pub mod fac_surface_create_entity;
+pub mod fac_surface_create_tile;
 pub mod lua_batch;
 pub mod raw_lua;
 pub mod scanner;

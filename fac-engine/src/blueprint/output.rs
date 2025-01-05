@@ -1,6 +1,6 @@
 use enum_map::EnumMap;
 use std::{cell::RefCell, rc::Rc, sync::Mutex};
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
@@ -9,19 +9,20 @@ use crate::{
         executor::{ExecuteResponse, LuaCompiler, client::AdmiralClient},
         lua_command::LuaCommand,
     },
+    common::names::FacEntityName,
     util::ansi::{
         C_BLOCK_LINE, C_FULL_BLOCK, Color, ansi_color, ansi_erase_line, ansi_previous_line,
     },
 };
 
 use super::{
-    bpfac::{entity::FacBpEntity, position::FacBpPosition},
+    bpfac::{entity::FacBpEntity, position::FacBpPosition, tile::FacBpTile},
     bpitem::BlueprintItem,
     contents::BlueprintContents,
 };
 
 const FLAG_ENABLE_LINE_REWRITE: bool = false;
-const CACHE_SIZE: usize = 3;
+const CACHE_SIZE: usize = 1;
 
 /// Middleware between entity output and blueprint/lua output
 /// Instead of generating everything "post", obscuring errors and logic
@@ -71,12 +72,32 @@ impl FacItemOutput {
         }
     }
 
-    /// Status logs, then do actual write
     pub fn write(&self, item: BlueprintItem) {
         let blueprint = item.to_blueprint();
 
+        let item_debug = format!("{:?}", item.entity());
+        let message_pos = format!(
+            "blueprint pos {:6} facpos {:10}",
+            item.position().display(),
+            blueprint.position.display(),
+        );
+        Self::log_write(item_debug, message_pos);
+
+        self.otype
+            .write(FacItemOutputWrite::Entity { item, blueprint })
+    }
+
+    pub fn write_tile(&self, blueprint: FacBpTile) {
+        let item_debug = format!("{:?}", blueprint);
+        let message_pos = format!("blueprint facpos {:10}", blueprint.position.display());
+        Self::log_write(item_debug, message_pos);
+
+        self.otype.write(FacItemOutputWrite::Tile { blueprint })
+    }
+
+    /// Status logs, then do actual write
+    pub fn log_write(mut item_debug: String, message_pos: String) {
         // Shorten by removing keys, their obvious
-        let mut item_debug = format!("{:?}", item.entity());
         let item_debug_str = item_debug.as_bytes().to_vec();
         for end in (0..item_debug.len()).rev() {
             if item_debug_str[end] == b':' {
@@ -115,24 +136,47 @@ impl FacItemOutput {
                 // print!("\n");
             } else {
                 log_info.total_with_context += 1;
-                if FLAG_ENABLE_LINE_REWRITE {
-                    print!("{}", ansi_previous_line());
-                }
             };
             (contexts, subcontexts, log_info.total_with_context)
         });
         let subcontexts = pad_grapheme(&subcontexts, 40);
 
-        let total_progress = C_FULL_BLOCK.repeat(total_with_context.min(30));
-        debug!(
-            "{}blueprint pos {:6} facpos {:10} {:70} {contexts:42} {total_with_context:2} {subcontexts} total {total_progress}",
-            ansi_erase_line(),
-            item.position().display(),
-            blueprint.position.display(),
-            item_debug,
-        );
+        const EXTRA: [char; 8] = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
+        const PROGRESS_TRUNCATE: usize = 10;
+        const UNICODE_TRUNCATE: usize = PROGRESS_TRUNCATE * 3;
+        let mut total_progress = C_FULL_BLOCK.repeat(total_with_context.min(PROGRESS_TRUNCATE));
+        let progress_len = total_progress.len();
+        if true || progress_len == UNICODE_TRUNCATE {
+            // let remain = total_with_context - PROGRESS_TRUNCATE;
+            let remain = total_with_context;
+            total_progress.push(EXTRA[remain % EXTRA.len()]);
+        } else {
+            // total_progress.push_str(&format!("m{progress_len} = {UNICODE_TRUNCATE}"));
+        }
 
-        self.otype.write(FacItemOutputWrite { item, blueprint })
+        let message_context = format!("{contexts:42} {total_with_context:2} {subcontexts}");
+        let message_entity = format!("{item_debug:70}");
+        // if message_entity.len() > 70 {
+        //     message_entity = message_entity[..70].to_string();
+        // }
+
+        if FLAG_ENABLE_LINE_REWRITE {
+            // push terminal down
+            println!();
+
+            // go up 3 lines (debug area) + log line
+            print!(
+                "{prev}{reset}{prev}{reset}{prev}{reset}{prev}{reset}",
+                prev = ansi_previous_line(),
+                reset = ansi_erase_line()
+            );
+            debug!("{message_pos} {message_entity} {message_context} total {total_progress}",);
+            println!("{message_pos}");
+            println!("{message_context}");
+            println!("{message_entity}");
+        } else {
+            debug!("{message_pos} {message_entity} {message_context} total {total_progress}",);
+        }
     }
 
     pub fn flush(&self) {
@@ -239,9 +283,14 @@ enum FacItemOutputType {
     Blueprint(RefCell<OutputData<BlueprintContents>>),
 }
 
-struct FacItemOutputWrite {
-    item: BlueprintItem,
-    blueprint: FacBpEntity,
+enum FacItemOutputWrite {
+    Entity {
+        item: BlueprintItem,
+        blueprint: FacBpEntity,
+    },
+    Tile {
+        blueprint: FacBpTile,
+    },
 }
 
 impl FacItemOutputType {
@@ -291,11 +340,18 @@ impl FacItemOutputType {
                 } = &mut *cell.borrow_mut();
 
                 let mut lua_commands = Vec::new();
-                for FacItemOutputWrite { item: _, blueprint } in cache.drain(0..) {
+                for write in cache.drain(0..) {
                     *total_write += 1;
 
-                    dedupe_position(dedupe, &blueprint);
-                    lua_commands.push(blueprint.to_lua().into_boxed());
+                    match write {
+                        FacItemOutputWrite::Entity { item, blueprint } => {
+                            dedupe_position(dedupe, &item, &blueprint);
+                            lua_commands.push(blueprint.to_lua().into_boxed());
+                        }
+                        FacItemOutputWrite::Tile { blueprint } => {
+                            lua_commands.push(blueprint.to_lua().into_boxed());
+                        }
+                    }
                 }
                 let flush_count = lua_commands.len();
                 if flush_count > 5 {
@@ -307,7 +363,7 @@ impl FacItemOutputType {
                 // Vec::push() does not normally fail
                 // For API sanity, do not make every FacBlk need to pass up the error
                 if let Err(e) = res {
-                    error!("⛔⛔⛔ Write failed {}", e);
+                    panic!("⛔⛔⛔ Write failed {}", e);
                 }
             }
             Self::Blueprint(cell) => {
@@ -318,10 +374,18 @@ impl FacItemOutputType {
                     total_write,
                 } = &mut *cell.borrow_mut();
                 let mut flush_count = 0;
-                for FacItemOutputWrite { item, blueprint } in cache.drain(0..) {
+                for write in cache.drain(0..) {
                     flush_count += 1;
-                    dedupe_position(dedupe, &blueprint);
-                    inner.add(item, blueprint);
+
+                    match write {
+                        FacItemOutputWrite::Entity { item, blueprint } => {
+                            dedupe_position(dedupe, &item, &blueprint);
+                            inner.add(item, blueprint);
+                        }
+                        FacItemOutputWrite::Tile { blueprint } => {
+                            inner.add_tile(blueprint);
+                        }
+                    }
                 }
                 *total_write += flush_count;
 
@@ -369,12 +433,24 @@ impl FacItemOutputType {
     }
 }
 
-fn dedupe_position(dedupe: &mut Option<Vec<FacBpPosition>>, blueprint: &FacBpEntity) {
+fn dedupe_position(
+    dedupe: &mut Option<Vec<FacBpPosition>>,
+    item: &BlueprintItem,
+    blueprint: &FacBpEntity,
+) {
     if let Some(dedupe) = dedupe {
         let bppos = &blueprint.position;
         if dedupe.contains(bppos) {
             // hmm...
-            panic!("dupe");
+
+            if matches!(
+                item.entity().name(),
+                FacEntityName::Locomotive | FacEntityName::CargoWagon
+            ) {
+                // initially dedupe
+            } else {
+                panic!("dupe {:?}", blueprint);
+            }
         } else {
             dedupe.push(bppos.clone());
         }
