@@ -8,6 +8,7 @@ use tracing::debug;
 pub struct FacDestroy {
     area: String,
     entity_names: Vec<String>,
+    is_tiles: bool,
 }
 
 impl FacDestroy {
@@ -15,6 +16,7 @@ impl FacDestroy {
         Self {
             area: format!("{{ {{ -{radius}, -{radius} }} , {{ {radius}, {radius} }} }}"),
             entity_names: Vec::new(),
+            is_tiles: false,
         }
     }
 
@@ -25,6 +27,7 @@ impl FacDestroy {
         Self {
             area: format!("{{ {{ -{radius}, -{radius} }} , {{ {radius}, {radius} }} }}"),
             entity_names,
+            is_tiles: false,
         }
     }
 
@@ -40,7 +43,13 @@ impl FacDestroy {
         Self {
             area: format!("{{ {{ {start_x}, {start_y} }} , {{ {end_x}, {end_y} }} }}"),
             entity_names,
+            is_tiles: false,
         }
+    }
+
+    pub fn into_tiles(mut self) -> Self {
+        self.is_tiles = true;
+        self
     }
 }
 
@@ -49,17 +58,18 @@ impl LuaCommand for FacDestroy {
         if self.entity_names.is_empty() {
             self.destroy_everything()
         } else {
-            self.destroy_filtered()
+            if self.is_tiles {
+                self.destroy_filtered_tiles()
+            } else {
+                self.destroy_filtered_entities()
+            }
         }
     }
 }
 
 impl FacDestroy {
-    fn destroy_filtered(&self) -> String {
-        debug!("destroying filtered {:?}", self);
-        // game.players[1].teleport({{ 1000, 1000 }})
-        // rcon.print('destroy_' .. entity.name )
-        // for entity in
+    fn destroy_filtered_entities(&self) -> String {
+        debug!("destroying filtered entities {:?}", self);
         let area = &self.area;
         let filters = self
             .entity_names
@@ -81,7 +91,37 @@ end
         .replace('\n', "")
     }
 
+    fn destroy_filtered_tiles(&self) -> String {
+        debug!("destroying filtered tiles {:?}", self);
+        // game.players[1].teleport({{ 1000, 1000 }})
+        // rcon.print('destroy_' .. entity.name )
+        // for entity in
+        let area = &self.area;
+        let filters = self
+            .entity_names
+            .iter()
+            .map(|v| format!("\"{}\"", v))
+            .join(",");
+        format!(
+            r#"
+local tiles = game.surfaces[1].find_tiles_filtered{{ 
+    area = {area}, 
+    name = {{ {filters} }} 
+}}
+for _, tile in ipairs(tiles) do
+    game.surfaces[1].set_tiles( {{ {{ name = tile.hidden_tile, position = tile.position }} }} )
+end
+        "#
+        )
+        .trim()
+        .replace('\n', "")
+    }
+
     fn destroy_everything(&self) -> String {
+        if self.is_tiles {
+            panic!("tiles unsupported");
+        }
+
         debug!("destroying everything {:?}", self);
         let area = &self.area;
         format!(

@@ -2,9 +2,12 @@ use std::rc::Rc;
 
 use exhaustive::Exhaustive;
 use facto_loop_miner_common::log_init_trace;
+use facto_loop_miner_fac_engine::blueprint::bpfac::blueprint::FacBpBlueprintWrapper;
 use facto_loop_miner_fac_engine::blueprint::bpitem::BlueprintItem;
+use facto_loop_miner_fac_engine::blueprint::converter::encode_blueprint_to_string;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
+use facto_loop_miner_fac_engine::common::names_tile::FacTileConcreteType;
 use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
 use facto_loop_miner_fac_engine::tests::assembler_tests::{make_assembler_thru, make_industry};
 use facto_loop_miner_fac_engine::tests::belt_tests::{
@@ -39,9 +42,15 @@ fn inner_main() -> AdmiralResult<()> {
     let mut client = AdmiralClient::new()?;
     client.auth()?;
 
-    let output = FacItemOutput::new_admiral(client).into_rc();
-    execute_destroy(output.clone())?;
-    // let output = FacItemOutput::new_blueprint().into_rc();
+    let is_lua = true;
+
+    let output = if is_lua {
+        let output = FacItemOutput::new_admiral(client).into_rc();
+        execute_destroy(output.clone())?;
+        output
+    } else {
+        FacItemOutput::new_blueprint().into_rc()
+    };
 
     let command_output = output.clone();
     match 13 {
@@ -62,10 +71,12 @@ fn inner_main() -> AdmiralResult<()> {
     }
     output.flush();
 
-    // let bpcontents = output.consume_rc().into_blueprint_contents();
-    // let bp: FacBpBlueprintWrapper = bpcontents.into();
-    // let res = encode_blueprint_to_string(&bp).unwrap();
-    // println!("bp {res}");
+    if !is_lua {
+        let bpcontents = output.consume_rc().into_blueprint_contents();
+        let bp: FacBpBlueprintWrapper = bpcontents.into();
+        let res = encode_blueprint_to_string(&bp).unwrap();
+        println!("bp {res}");
+    }
 
     Ok(())
 }
@@ -90,6 +101,13 @@ fn execute_destroy(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     );
     // Do not use, this deletes mine resource tiles
     // let command = FacDestroy::new_everything(50);
+    output.admiral_execute_command(command.into_boxed())?;
+
+    let command = FacDestroy::new_filtered(
+        150,
+        FacTileConcreteType::all().map(|v| v.to_fac_name()).to_vec(),
+    )
+    .into_tiles();
     output.admiral_execute_command(command.into_boxed())?;
 
     Ok(())

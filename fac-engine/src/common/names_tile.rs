@@ -27,6 +27,17 @@ impl FacTileConcreteType {
             }
         }
     }
+
+    pub const fn all() -> [Self; 4 + 2] {
+        [
+            Self::Basic,
+            Self::Hazard(FacTileDirection::Left),
+            Self::Hazard(FacTileDirection::Right),
+            Self::Refined,
+            Self::RefinedHazard(FacTileDirection::Left),
+            Self::RefinedHazard(FacTileDirection::Right),
+        ]
+    }
 }
 
 impl Serialize for FacTileConcreteType {
