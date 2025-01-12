@@ -23,7 +23,7 @@ use crate::{
 pub fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     let station = FacBlkRailStation {
         name: "test".into(),
-        wagons: 2,
+        wagons: 9,
         front_engines: 2,
         delivery: FacExtDelivery::Belt(FacEntBeltType::Basic),
         // chests: Some(FacEntChestType::Steel),

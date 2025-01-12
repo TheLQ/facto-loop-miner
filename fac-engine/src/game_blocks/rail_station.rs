@@ -391,9 +391,12 @@ impl FacBlkRailStop {
 
         let belt_num = output_belts.len();
         for (i, belt) in output_belts.iter_mut().enumerate() {
+            let wagon_offset = (i + 1).div_ceil(6);
+            belt.add_straight(wagon_offset);
             belt.add_turn90_stacked_row_ccw(i);
             belt.add_straight_underground(5);
             belt.add_turn90_stacked_row_clk(i, belt_num);
+            belt.add_straight(self.wagons - wagon_offset);
         }
 
         let top = FacBlkBeltTrainUnload {
@@ -402,7 +405,7 @@ impl FacBlkRailStop {
             origin_direction: self.fill_x_direction.rotate_once(),
             padding_unmerged: 0,
             padding_above: self.wagons * 3,
-            padding_after: self.wagons * 3,
+            padding_after: (self.wagons * 4),
             turn_clockwise: !self.rotation,
             wagons: self.wagons,
         };
