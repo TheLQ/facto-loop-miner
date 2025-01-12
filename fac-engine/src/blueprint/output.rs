@@ -9,7 +9,7 @@ use crate::{
         executor::{ExecuteResponse, LuaCompiler, client::AdmiralClient},
         lua_command::LuaCommand,
     },
-    common::names::FacEntityName,
+    common::{entity::FacEntity, names::FacEntityName, vpoint::VPoint},
     util::ansi::{
         C_BLOCK_LINE, C_FULL_BLOCK, Color, ansi_color, ansi_erase_line, ansi_previous_line,
     },
@@ -70,6 +70,10 @@ impl FacItemOutput {
                 total_write: 0,
             })),
         }
+    }
+
+    pub fn writei(&self, entity: impl FacEntity + 'static, position: VPoint) {
+        self.write(BlueprintItem::newb(entity, position))
     }
 
     pub fn write(&self, item: BlueprintItem) {

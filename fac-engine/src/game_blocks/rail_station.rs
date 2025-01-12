@@ -1,7 +1,3 @@
-use std::rc::Rc;
-
-use tracing::trace;
-
 use crate::{
     blueprint::{
         bpfac::schedule::FacBpSchedule,
@@ -24,6 +20,7 @@ use crate::{
         train_stop::FacEntTrainStop,
     },
 };
+use std::rc::Rc;
 
 use super::{block::FacBlock, rail_hope::RailHopeAppender, rail_hope_single::RailHopeSingle};
 
@@ -345,7 +342,6 @@ impl FacBlkRailStop {
             .context_handle(ContextLevel::Micro, "🔚Stock".into());
         for roller in 0..(self.front_engines + self.wagons) {
             let roller_pos = self.get_rolling_point_at_xy(true, roller + 1, 2, 0);
-            trace!(" {roller_pos:?} origin {:?}", self.stop_rail_pos);
             let entity: Box<dyn FacEntity> = if roller < self.front_engines {
                 FacEntLocomotive::new_with_schedule(schedule.clone()).into_boxed()
             } else {

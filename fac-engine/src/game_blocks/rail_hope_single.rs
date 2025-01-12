@@ -14,7 +14,8 @@ use crate::game_entities::rail_curved::FacEntRailCurved;
 /// Rail Pathing v10.999?, "Irys💎 Hope"
 ///
 /// Describe Rail as a self-contained sequence of links,
-/// without significant Pathfinding-specific code overhead
+/// powered by the vastly better fac-engine API,
+/// without significant Pathfinding-specific code overhead.
 pub struct RailHopeSingle {
     links: Vec<RailHopeLink>,
     origin: VPoint,

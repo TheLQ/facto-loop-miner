@@ -12,6 +12,13 @@ impl BlueprintItem {
         Self { entity, position }
     }
 
+    pub fn newb(entity: impl FacEntity + 'static, position: VPoint) -> Self {
+        Self {
+            entity: entity.into_boxed(),
+            position,
+        }
+    }
+
     #[allow(clippy::borrowed_box)] // makes this not "object safe trait"
     pub fn entity(&self) -> &Box<dyn FacEntity> {
         &self.entity

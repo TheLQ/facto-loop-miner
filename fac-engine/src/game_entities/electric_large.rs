@@ -13,6 +13,12 @@ pub enum FacEntElectricLargeType {
     Big,
 }
 
+impl FacEntElectricLargeType {
+    pub fn entity(self) -> FacEntElectricLarge {
+        FacEntElectricLarge::new(self)
+    }
+}
+
 #[derive(Debug)]
 pub struct FacEntElectricLarge {
     etype: FacEntElectricLargeType,

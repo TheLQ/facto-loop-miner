@@ -1,17 +1,14 @@
-use std::rc::Rc;
-
 use crate::{
     admiral::generators::xy_grid_vpoint,
-    blueprint::{bpitem::BlueprintItem, output::FacItemOutput},
-    common::{entity::FacEntity, vpoint::VPoint},
+    blueprint::output::FacItemOutput,
+    common::vpoint::VPoint,
     game_entities::{
-        electric_large::{
-            FACENT_ELECTRIC_LARGE_DIAMETER, FacEntElectricLarge, FacEntElectricLargeType,
-        },
+        electric_large::{FACENT_ELECTRIC_LARGE_DIAMETER, FacEntElectricLargeType},
         lamp::FacEntLamp,
         roboport::{FACENT_ROBOPORT_DIAMETER, FacEntRoboport},
     },
 };
+use std::rc::Rc;
 
 use super::block::FacBlock;
 
@@ -42,28 +39,25 @@ impl FacBlock for FacBlkRobofarm {
                 let center_i = cell_robo_width - /*center*/2 - /*count by 1*/1;
                 if pos.ix == center_i && pos.iy == center_i {
                     // substation to grab all roboports
-                    self.output.write(BlueprintItem::new(
-                        FacEntElectricLarge::new(FacEntElectricLargeType::Substation).into_boxed(),
+                    self.output.writei(
+                        FacEntElectricLargeType::Substation.entity(),
                         pos.point().move_xy(0, 1),
-                    ));
+                    );
 
                     // big pole to get all
-                    self.output.write(BlueprintItem::new(
-                        FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
+                    self.output.writei(
+                        FacEntElectricLargeType::Big.entity(),
                         pos.point().move_xy(2, 1),
-                    ));
+                    );
 
                     // highlighter
-                    self.output.write(BlueprintItem::new(
-                        FacEntLamp::new().into_boxed(),
+                    self.output.writei(
+                        FacEntLamp::new(),
                         pos.point()
                             .move_xy_usize(1, 1 + FACENT_ELECTRIC_LARGE_DIAMETER),
-                    ));
+                    );
                 } else {
-                    self.output.write(BlueprintItem::new(
-                        FacEntRoboport::new().into_boxed(),
-                        pos.point(),
-                    ));
+                    self.output.writei(FacEntRoboport::new(), pos.point());
                 }
             }
         }
