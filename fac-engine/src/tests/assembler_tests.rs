@@ -43,8 +43,8 @@ pub fn make_industry(output: Rc<FacItemOutput>) {
         inserter_output: FacEntInserterType::Basic,
         thru: Vec::from([
             IndustryThru {
-                width: 1,
-                height: 1,
+                width: 3,
+                height: 2,
                 input_belts: 2,
                 recipe: FacEntityName::CopperCable,
                 custom_assembler_modules: None,
@@ -52,18 +52,18 @@ pub fn make_industry(output: Rc<FacItemOutput>) {
                 custom_inserter_output: None,
             },
             IndustryThru {
-                width: 1,
+                width: 2,
                 height: 1,
-                input_belts: 2,
+                input_belts: 3,
                 recipe: FacEntityName::IronGear,
                 custom_assembler_modules: None,
                 custom_inserter_input: None,
                 custom_inserter_output: None,
             },
             IndustryThru {
-                width: 2,
+                width: 4,
                 height: 1,
-                input_belts: 1,
+                input_belts: 2,
                 recipe: FacEntityName::IronStick,
                 custom_assembler_modules: None,
                 custom_inserter_input: None,

@@ -8,8 +8,8 @@ use crate::{
 
 pub fn make_solar_bath_test(output: Rc<FacItemOutput>) {
     let block = FacBlkSolarBath {
-        width: 2,
-        height: 2,
+        width: 3,
+        height: 3,
         output,
     };
     block.generate(VPOINT_TEN);

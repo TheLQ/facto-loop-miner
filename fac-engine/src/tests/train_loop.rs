@@ -45,7 +45,7 @@ pub fn make_rail_loop(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         delivery_output: FacExtDelivery::Chest(FacEntChestType::Infinity(FacBpInfinitySettings {
             remove_unfiltered_items: true,
             filters: vec![
-                FacBpFilter::new_for_item("iron-stick"),
+                // FacBpFilter::new_for_item("iron-stick"),
                 FacBpFilter::new_for_item("iron-ore"),
             ],
         })),
