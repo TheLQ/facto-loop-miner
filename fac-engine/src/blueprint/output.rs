@@ -119,6 +119,12 @@ impl FacItemOutput {
                 item_debug.replace_range(start..end, "");
             }
         }
+        const ITEM_DEBUG_MAX: usize = 40;
+        const ITEM_DEBUG_MAX_PRE_ELIPSIS: usize = ITEM_DEBUG_MAX - 3;
+        if item_debug.len() > ITEM_DEBUG_MAX_PRE_ELIPSIS {
+            item_debug.replace_range(ITEM_DEBUG_MAX_PRE_ELIPSIS.., "");
+            item_debug.push_str("...");
+        }
 
         let (contexts, subcontexts, total_with_context) = get_global_context_map(|log_info| {
             let contexts = ansi_color(
@@ -149,13 +155,13 @@ impl FacItemOutput {
         if true || progress_len == UNICODE_TRUNCATE {
             // let remain = total_with_context - PROGRESS_TRUNCATE;
             let remain = total_with_context;
-            total_progress.push(EXTRA[remain % EXTRA.len()]);
+            total_progress.insert(0, EXTRA[remain % EXTRA.len()]);
         } else {
             // total_progress.push_str(&format!("m{progress_len} = {UNICODE_TRUNCATE}"));
         }
 
         let message_context = format!("{contexts:42} {total_with_context:2} {subcontexts}");
-        let message_entity = format!("{item_debug:70}");
+        let message_entity = format!("{item_debug:ITEM_DEBUG_MAX$}");
         // if message_entity.len() > 70 {
         //     message_entity = message_entity[..70].to_string();
         // }
@@ -170,12 +176,12 @@ impl FacItemOutput {
                 prev = ansi_previous_line(),
                 reset = ansi_erase_line()
             );
-            debug!("{message_pos} {message_entity} {message_context} total {total_progress}",);
+            debug!("{message_pos} {message_entity} {message_context} {total_progress}",);
             println!("{message_pos}");
             println!("{message_context}");
             println!("{message_entity}");
         } else {
-            debug!("{message_pos} {message_entity} {message_context} total {total_progress}",);
+            debug!("{message_pos} {message_entity} {message_context} {total_progress}",);
         }
     }
 
