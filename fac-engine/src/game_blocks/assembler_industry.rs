@@ -48,14 +48,17 @@ impl FacBlock for FacBlkIndustry {
         // let mut output_belts = self.place_input_belts(origin);
 
         let thru_blocks = self.place_thru(origin);
-
-        // let hj = Self::get_thru_output_x(thru_blocks);
         self.place_input_belts(&thru_blocks, origin);
+
+        let hj = Self::get_thru_output_x(thru_blocks);
     }
 }
 
 impl FacBlkIndustry {
     fn place_input_belts(&self, thru_block: &[FacBlkAssemblerThru], origin: VPoint) {
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Micro, format!("Input Belts"));
         let max_width: usize = thru_block
             .iter()
             .map(|v| v.total_point_width())
@@ -70,7 +73,7 @@ impl FacBlkIndustry {
             for cur_thr_belt in 0..thru.input_belts {
                 let bettel_origin = origin.move_xy(
                     (max_width + output_padding) as i32 - /*??*/1,
-                    -(cur_total_belts as i32 + 1),
+                    -(cur_total_belts as i32 + /*above assemblers*/1),
                 );
 
                 let mut belt = FacBlkBettelBelt::new(
