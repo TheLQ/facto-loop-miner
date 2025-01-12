@@ -22,13 +22,18 @@ pub struct FacBlkBeltTrainUnload {
     pub origin_direction: FacDirectionQuarter,
 }
 
-impl FacBlock for FacBlkBeltTrainUnload {
-    fn generate(&self, origin: VPoint) {
+// impl FacBlock for FacBlkBeltTrainUnload {
+//     fn generate(&self, origin: VPoint) {}
+// }
+
+impl FacBlkBeltTrainUnload {
+    pub fn generate(&self, origin: VPoint) -> Vec<FacBlkBettelBelt> {
         const DUALS_PER_WAGON: usize = 3;
         const BELTS_PER_DUAL: usize = 2;
         // const BELTS_PER_WAGON: usize = DUALS_PER_WAGON * BELTS_PER_DUAL;
         const WAGON_SIZE: usize = 7;
 
+        let mut belts = Vec::new();
         for wagon in 0..self.wagons {
             let origin = origin.move_direction_sideways_usz(self.origin_direction, wagon * 7);
             for output_belt in 0..DUALS_PER_WAGON {
@@ -80,12 +85,12 @@ impl FacBlock for FacBlkBeltTrainUnload {
                     one_belt.add_turn90(self.turn_clockwise);
                     one_belt.add_straight(finish_straights);
                 }
+                belts.push(one_belt);
             }
         }
+        belts
     }
-}
 
-impl FacBlkBeltTrainUnload {
     fn add_dual_to_one(
         &self,
         origin: VPoint,

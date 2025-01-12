@@ -106,6 +106,18 @@ impl FacBlkBettelBelt {
         self.add_straight_raw(1, false, new_direction);
     }
 
+    pub fn add_turn90_stacked_row_ccw(&mut self, row_number: usize) {
+        self.add_straight(row_number);
+        self.add_turn90(false);
+        self.add_straight(row_number);
+    }
+
+    pub fn add_turn90_stacked_row_clk(&mut self, row_number: usize, total: usize) {
+        self.add_straight(total - row_number);
+        self.add_turn90(true);
+        self.add_straight(total - 1 - row_number);
+    }
+
     pub fn add_split(&mut self, clockwise: bool) {
         self.write_link(FacBlkBettelBeltLink {
             direction: *self.current_direction(),
@@ -289,6 +301,12 @@ impl FacBlkBettelBelt {
             belt.add_turn90(clockwise);
             belt.add_straight(belt_total_0 - belt_num);
         }
+    }
+
+    pub fn turn_and_under(&mut self, clockwise: bool, row_number: usize) {
+        self.add_straight(row_number);
+        self.add_turn90(clockwise);
+        self.add_straight(row_number);
     }
 }
 

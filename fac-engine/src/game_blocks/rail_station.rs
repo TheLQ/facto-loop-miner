@@ -135,7 +135,7 @@ impl FacBlock for FacBlkRailStation {
         stop_block.place_rail_signals();
         match &self.delivery {
             FacExtDelivery::Chest(chests) => stop_block.place_side_chests(chests),
-            FacExtDelivery::Belt(belt_type) => stop_block.place_belts(belt_type),
+            FacExtDelivery::Belt(belt_type) => stop_block.place_belts_output_combined(belt_type),
             FacExtDelivery::None => {}
         }
         stop_block.place_fuel(&self.fuel_inserter, &self.fuel_inserter_chest);
@@ -375,8 +375,48 @@ impl FacBlkRailStop {
         }
     }
 
-    fn place_belts(&self, belt_type: &FacEntBeltType) {
-        let bottom: FacBlkBeltTrainUnload = FacBlkBeltTrainUnload {
+    fn place_belts_output_combined(&self, belt_type: &FacEntBeltType) {
+        let bottom = FacBlkBeltTrainUnload {
+            belt_type: *belt_type,
+            output: self.output.clone(),
+            origin_direction: self.fill_x_direction.rotate_opposite(),
+            padding_unmerged: 0,
+            padding_above: 0,
+            padding_after: 1,
+            turn_clockwise: self.rotation,
+            wagons: self.wagons,
+        };
+        let mut output_belts =
+            bottom.generate(self.get_rolling_point_at_xy(true, self.front_engines, 0, 3));
+
+        let belt_num = output_belts.len();
+        for (i, belt) in output_belts.iter_mut().enumerate() {
+            belt.add_turn90_stacked_row_ccw(i);
+            belt.add_straight_underground(5);
+            belt.add_turn90_stacked_row_clk(i, belt_num);
+        }
+
+        let top = FacBlkBeltTrainUnload {
+            belt_type: *belt_type,
+            output: self.output.clone(),
+            origin_direction: self.fill_x_direction.rotate_once(),
+            padding_unmerged: 0,
+            padding_above: self.wagons * 3,
+            padding_after: self.wagons * 3,
+            turn_clockwise: !self.rotation,
+            wagons: self.wagons,
+        };
+        top.generate(self.get_rolling_point_at_xy(
+            false,
+            self.front_engines + self.wagons,
+            /*??*/ -2,
+            2,
+        ));
+    }
+
+    #[allow(unused)]
+    fn place_belts_output_pointy(&self, belt_type: &FacEntBeltType) {
+        let bottom = FacBlkBeltTrainUnload {
             belt_type: *belt_type,
             output: self.output.clone(),
             origin_direction: self.fill_x_direction.rotate_opposite(),
@@ -388,7 +428,7 @@ impl FacBlkRailStop {
         };
         bottom.generate(self.get_rolling_point_at_xy(true, self.front_engines, 0, 3));
 
-        let top: FacBlkBeltTrainUnload = FacBlkBeltTrainUnload {
+        let top = FacBlkBeltTrainUnload {
             belt_type: *belt_type,
             output: self.output.clone(),
             origin_direction: self.fill_x_direction.rotate_once(),
