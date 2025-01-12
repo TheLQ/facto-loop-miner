@@ -1,17 +1,16 @@
 use crate::{
     blueprint::{
         bpfac::schedule::FacBpSchedule,
-        bpitem::BlueprintItem,
         output::{ContextLevel, FacItemOutput},
     },
-    common::{entity::FacEntity, vpoint::VPoint},
+    common::vpoint::VPoint,
     game_blocks::belt_train_unload::FacBlkBeltTrainUnload,
     game_entities::{
         belt::FacEntBeltType,
         cargo_wagon::FacEntWagon,
         chest::{FacEntChest, FacEntChestType},
         direction::FacDirectionQuarter,
-        electric_large::{FacEntElectricLarge, FacEntElectricLargeType},
+        electric_large::FacEntElectricLargeType,
         electric_mini::{FacEntElectricMini, FacEntElectricMiniType},
         inserter::{FacEntInserter, FacEntInserterType},
         locomotive::FacEntLocomotive,
@@ -176,10 +175,7 @@ impl FacBlkRailStation {
     ) {
         let _ = output.context_handle(ContextLevel::Micro, "🔚Grid-0".into());
         let electric_start_pos = origin.move_direction_usz(base_direction.rotate_once(), 2);
-        output.write(BlueprintItem::new(
-            FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
-            electric_start_pos,
-        ));
+        output.writei(FacEntElectricLargeType::Big.entity(), electric_start_pos);
     }
 
     fn place_electric_connect(
@@ -191,10 +187,7 @@ impl FacBlkRailStation {
         let electric_start_pos = origin
             .move_direction_usz(base_direction.rotate_once(), 4)
             .move_direction_usz(base_direction.rotate_once().rotate_once(), 6);
-        output.write(BlueprintItem::new(
-            FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
-            electric_start_pos,
-        ));
+        output.writei(FacEntElectricLargeType::Big.entity(), electric_start_pos);
     }
 }
 
@@ -237,10 +230,8 @@ impl FacBlkRailStop {
                             /*pre-pole*/ 1 + car_x_offset + exit,
                         )
                         .move_y(centered_y_offset(negative, 1));
-                    self.output.write(BlueprintItem::new(
-                        FacEntInserter::new(inserter.clone(), direction).into_boxed(),
-                        start,
-                    ));
+                    self.output
+                        .writei(FacEntInserter::new(inserter.clone(), direction), start);
                 }
             }
         }
@@ -254,14 +245,14 @@ impl FacBlkRailStop {
         for roller in 0..(self.wagons + self.front_engines + 1) {
             let electric_pos = self.get_rolling_point_at_xy(false, roller, -1, 1);
 
-            // output.write(BlueprintItem::new(
+            // output.writei(
             //     FacEntLamp::new().into_boxed(),
             //     start.move_y(centered_y_offset(!self.rotation, 2)),
             // ));
-            self.output.write(BlueprintItem::new(
-                FacEntElectricMini::new(FacEntElectricMiniType::Medium).into_boxed(),
+            self.output.writei(
+                FacEntElectricMini::new(FacEntElectricMiniType::Medium),
                 electric_pos,
-            ));
+            );
         }
     }
 
@@ -285,10 +276,8 @@ impl FacBlkRailStop {
                             /*pre-pole*/ 1 + car_x_offset + exit,
                         )
                         .move_y(centered_y_offset(negative, 2));
-                    self.output.write(BlueprintItem::new(
-                        FacEntChest::new(chest_type.clone()).into_boxed(),
-                        start,
-                    ));
+                    self.output
+                        .writei(FacEntChest::new(chest_type.clone()), start);
                 }
             }
         }
@@ -300,10 +289,10 @@ impl FacBlkRailStop {
             .context_handle(ContextLevel::Micro, "🔚Stop".into());
         // wtf? Why does this not work? centered_y_offset(self.rotation, 2)
         let y_offset = if self.rotation { -2 } else { 2 };
-        self.output.write(BlueprintItem::new(
-            FacEntTrainStop::new(self.fill_x_direction.rotate_flip(), station_name).into_boxed(),
+        self.output.writei(
+            FacEntTrainStop::new(self.fill_x_direction.rotate_flip(), station_name),
             self.stop_rail_pos.move_y(y_offset),
-        ));
+        );
     }
 
     fn place_rail_signals(&self) {
@@ -320,20 +309,18 @@ impl FacBlkRailStop {
                     /*pre-pole*/ 1 + car_x_offset + INSERTERS_PER_CAR,
                 )
                 .move_y(centered_y_offset(self.rotation, 1));
-            self.output.write(BlueprintItem::new(
-                FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction.clone())
-                    .into_boxed(),
+            self.output.writei(
+                FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction.clone()),
                 start,
-            ));
+            );
         }
 
-        self.output.write(BlueprintItem::new(
-            FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction.clone())
-                .into_boxed(),
+        self.output.writei(
+            FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction.clone()),
             self.stop_rail_pos
                 .move_direction_usz(self.fill_x_direction.rotate_flip(), 2)
                 .move_y(centered_y_offset(self.rotation, 1)),
-        ));
+        );
     }
 
     fn place_train(&self, schedule: &Option<FacBpSchedule>) {
@@ -342,13 +329,14 @@ impl FacBlkRailStop {
             .context_handle(ContextLevel::Micro, "🔚Stock".into());
         for roller in 0..(self.front_engines + self.wagons) {
             let roller_pos = self.get_rolling_point_at_xy(true, roller + 1, 2, 0);
-            let entity: Box<dyn FacEntity> = if roller < self.front_engines {
-                FacEntLocomotive::new_with_schedule(schedule.clone()).into_boxed()
+            if roller < self.front_engines {
+                self.output.writei(
+                    FacEntLocomotive::new_with_schedule(schedule.clone()),
+                    roller_pos,
+                );
             } else {
-                FacEntWagon::new().into_boxed()
+                self.output.writei(FacEntWagon::new(), roller_pos);
             };
-
-            self.output.write(BlueprintItem::new(entity, roller_pos));
         }
     }
 
@@ -376,14 +364,14 @@ impl FacBlkRailStop {
             } else {
                 inserter_direction
             };
-            self.output.write(BlueprintItem::new(
-                FacEntInserter::new(fuel_inserter.clone(), inserter_direction).into_boxed(),
+            self.output.writei(
+                FacEntInserter::new(fuel_inserter.clone(), inserter_direction),
                 self.get_rolling_point_at_xy(true, roller, 1, 2),
-            ));
-            self.output.write(BlueprintItem::new(
-                FacEntChest::new(fuel_inserter_chest.clone()).into_boxed(),
+            );
+            self.output.writei(
+                FacEntChest::new(fuel_inserter_chest.clone()),
                 self.get_rolling_point_at_xy(true, roller, 1, 3),
-            ));
+            );
         }
     }
 
