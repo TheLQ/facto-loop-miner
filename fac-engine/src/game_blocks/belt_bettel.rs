@@ -153,36 +153,33 @@ impl FacBlkBettelBelt {
                 let mut new_cursor = self.origin;
                 for i in 0..*length {
                     new_cursor = self.write_cursor.move_direction_usz(&link.direction, i);
-                    output.write(BlueprintItem::new(
-                        FacEntBeltTransport::new(self.btype.clone(), link.direction.clone())
-                            .into_boxed(),
+                    output.writei(
+                        FacEntBeltTransport::new(self.btype.clone(), link.direction.clone()),
                         new_cursor,
-                    ))
+                    )
                 }
                 // move cursor past the last belt we placed
                 self.write_cursor = new_cursor.move_direction_int(&link.direction, 1);
             }
             FacBlkBettelBeltLinkType::Underground { length } => {
-                output.write(BlueprintItem::new(
+                output.writei(
                     FacEntBeltUnder::new(
                         self.btype.clone(),
                         link.direction.clone(),
                         FacEntBeltUnderType::Input,
-                    )
-                    .into_boxed(),
+                    ),
                     self.write_cursor,
-                ));
+                );
 
-                output.write(BlueprintItem::new(
+                output.writei(
                     FacEntBeltUnder::new(
                         self.btype.clone(),
                         link.direction.clone(),
                         FacEntBeltUnderType::Output,
-                    )
-                    .into_boxed(),
+                    ),
                     self.write_cursor
                         .move_direction_usz(&link.direction, *length + 1),
-                ));
+                );
 
                 self.write_cursor = self
                     .write_cursor
@@ -195,11 +192,10 @@ impl FacBlkBettelBelt {
                 let split_pos = self.write_cursor;
                 let new_direction = link.direction.rotate_clockwise(*clockwise);
                 let split_pos = split_pos.move_factorio_style_direction(new_direction, 0.5);
-                output.write(BlueprintItem::new(
-                    FacEntBeltSplit::new_priority(self.btype, link.direction, *priority)
-                        .into_boxed(),
+                output.writei(
+                    FacEntBeltSplit::new_priority(self.btype, link.direction, *priority),
                     split_pos,
-                ));
+                );
 
                 self.write_cursor = self.write_cursor.move_direction_int(&link.direction, 1)
             }

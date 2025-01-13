@@ -4,6 +4,8 @@ Mine every ore patch within hundreds of chunks with a massive generated rail loo
 Jump start your base with effectively unlimited throughput resource collection
 on base game vanilla-like maps.
 
+!["Large random map of resources, with rails between them and center box"](history/bad-pathing6-2.png)
+
 ## Why
 
 A point2point rail network of loops without intersections avoids bottleneck problems in other designs at scale.
