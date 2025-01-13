@@ -19,7 +19,7 @@ use facto_loop_miner_fac_engine::tests::train_loop::make_rail_loop;
 use facto_loop_miner_fac_engine::tests::train_rails::{
     make_rail_dual_powered, make_rail_dual_turning, make_rail_shift_45, make_rail_spiral_90,
 };
-use facto_loop_miner_fac_engine::tests::train_station::make_rail_station;
+use facto_loop_miner_fac_engine::tests::train_station_tests::make_rail_station;
 use facto_loop_miner_fac_engine::{
     admiral::{
         err::{AdmiralResult, pretty_panic_admiral},
@@ -55,7 +55,7 @@ fn inner_main() -> AdmiralResult<()> {
     };
 
     let command_output = output.clone();
-    match 9 {
+    match 8 {
         1 => make_basic(command_output)?,
         2 => make_assembler_thru(command_output),
         3 => make_belt_bettel(command_output)?,
@@ -71,6 +71,7 @@ fn inner_main() -> AdmiralResult<()> {
         13 => make_industry(command_output),
         14 => make_mine(command_output),
         15 => make_solar_bath_test(command_output),
+        16 => make_mine_and_rail(command_output),
         _ => panic!("uihhh"),
     }
     output.flush();
