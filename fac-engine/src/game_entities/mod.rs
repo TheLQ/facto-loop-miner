@@ -19,6 +19,7 @@ pub mod radar;
 pub mod rail;
 pub mod rail_curved;
 pub mod rail_signal;
+pub mod resource;
 pub mod roboport;
 pub mod solar;
 pub mod tier;
