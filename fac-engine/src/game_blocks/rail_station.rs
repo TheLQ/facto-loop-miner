@@ -402,7 +402,7 @@ impl FacBlkRailStop {
             let wagon_offset = (i + 1).div_ceil(6);
             belt.add_straight(wagon_offset);
             belt.add_turn90_stacked_row_ccw(i);
-            belt.add_straight_underground(5);
+            belt.add_straight_underground(4);
             belt.add_turn90_stacked_row_clk(i, belt_num);
             belt.add_straight(self.wagons - wagon_offset);
         }
@@ -412,7 +412,7 @@ impl FacBlkRailStop {
             output: self.output.clone(),
             origin_direction: self.fill_x_direction.rotate_once(),
             padding_unmerged: 0,
-            padding_above: self.wagons * 3,
+            padding_above: (self.wagons * 3) - 1,
             padding_after: (self.wagons * 4),
             turn_clockwise: !self.rotation,
             wagons: self.wagons,
