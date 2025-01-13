@@ -50,7 +50,7 @@ impl FacBlock for FacBlkIndustry {
         let thru_blocks = self.place_thru(origin);
         self.place_input_belts(&thru_blocks, origin);
 
-        let hj = Self::get_thru_output_x(thru_blocks);
+        // let hj = Self::get_thru_output_x(thru_blocks);
     }
 }
 

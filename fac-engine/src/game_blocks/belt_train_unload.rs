@@ -9,7 +9,7 @@ use crate::{
     util::bool_num::bool_to_num_usize,
 };
 
-use super::{belt_bettel::FacBlkBettelBelt, block::FacBlock};
+use super::belt_bettel::FacBlkBettelBelt;
 
 pub struct FacBlkBeltTrainUnload {
     pub belt_type: FacEntBeltType,

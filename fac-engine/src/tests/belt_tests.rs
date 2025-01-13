@@ -5,7 +5,7 @@ use crate::{
     blueprint::output::FacItemOutput,
     common::vpoint::{VPOINT_TEN, VPOINT_ZERO},
     game_blocks::{
-        belt_bettel::FacBlkBettelBelt, belt_bus::FacBlkBeltBus, belt_combiner::FacBlkBeltCombiner,
+        belt_bettel::FacBlkBettelBelt, belt_combiner::FacBlkBeltCombiner,
         belt_train_unload::FacBlkBeltTrainUnload, block::FacBlock,
     },
     game_entities::{belt::FacEntBeltType, direction::FacDirectionQuarter},

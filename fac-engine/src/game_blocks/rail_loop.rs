@@ -19,7 +19,7 @@ use crate::{
 };
 
 use super::{
-    block::FacBlock,
+    block::FacBlock2,
     rail_hope::RailHopeAppender,
     rail_hope_dual::RailHopeDual,
     rail_station::{FacBlkRailStation, FacExtDelivery},
@@ -124,7 +124,7 @@ impl FacBlkRailLoop {
         // RailHope places rail here
         origin = origin.move_x(2);
 
-        station.generate(origin)
+        station.generate(origin);
     }
 
     fn add_end(&mut self) {
@@ -157,7 +157,7 @@ impl FacBlkRailLoop {
             }
             dir => panic!("unsupported dir {}", dir),
         }
-        station.generate(origin)
+        station.generate(origin);
     }
 
     pub fn add_base_start_and_end(&mut self) {

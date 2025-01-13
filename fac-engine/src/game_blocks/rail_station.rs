@@ -21,7 +21,10 @@ use crate::{
 };
 use std::rc::Rc;
 
-use super::{block::FacBlock, rail_hope::RailHopeAppender, rail_hope_single::RailHopeSingle};
+use super::{
+    belt_bettel::FacBlkBettelBelt, block::FacBlock2, rail_hope::RailHopeAppender,
+    rail_hope_single::RailHopeSingle,
+};
 
 const INSERTERS_PER_CAR: usize = 6;
 
@@ -44,8 +47,8 @@ pub struct FacBlkRailStation {
     pub output: Rc<FacItemOutput>,
 }
 
-impl FacBlock for FacBlkRailStation {
-    fn generate(&self, origin: VPoint) {
+impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
+    fn generate(&self, origin: VPoint) -> Vec<FacBlkBettelBelt> {
         let _ = &mut self
             .output
             .context_handle(ContextLevel::Block, format!("Station-{}", self.name));
@@ -133,9 +136,12 @@ impl FacBlock for FacBlkRailStation {
         stop_block.place_side_electrics();
         stop_block.place_side_inserters(&self.inserter, self.is_input);
         stop_block.place_rail_signals();
+        let mut belts = None;
         match &self.delivery {
             FacExtDelivery::Chest(chests) => stop_block.place_side_chests(chests),
-            FacExtDelivery::Belt(belt_type) => stop_block.place_belts_output_combined(belt_type),
+            FacExtDelivery::Belt(belt_type) => {
+                belts = Some(stop_block.place_belts_output_combined(belt_type));
+            }
             FacExtDelivery::None => {}
         }
         stop_block.place_fuel(&self.fuel_inserter, &self.fuel_inserter_chest);
@@ -164,6 +170,8 @@ impl FacBlock for FacBlkRailStation {
             // otherwise it supposedly creates but doesn't show visually at least
             stop_block.place_train(&self.schedule);
         }
+
+        belts.unwrap_or_default()
     }
 }
 
@@ -375,7 +383,7 @@ impl FacBlkRailStop {
         }
     }
 
-    fn place_belts_output_combined(&self, belt_type: &FacEntBeltType) {
+    fn place_belts_output_combined(&self, belt_type: &FacEntBeltType) -> Vec<FacBlkBettelBelt> {
         let bottom = FacBlkBeltTrainUnload {
             belt_type: *belt_type,
             output: self.output.clone(),
@@ -409,12 +417,14 @@ impl FacBlkRailStop {
             turn_clockwise: !self.rotation,
             wagons: self.wagons,
         };
-        top.generate(self.get_rolling_point_at_xy(
+        let input_belts = top.generate(self.get_rolling_point_at_xy(
             false,
             self.front_engines + self.wagons,
             /*??*/ -2,
             2,
         ));
+
+        [input_belts, output_belts].concat().into_iter().collect()
     }
 
     #[allow(unused)]

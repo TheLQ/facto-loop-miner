@@ -43,7 +43,7 @@ impl FacItemOutput {
         Self {
             otype: FacItemOutputType::AdmiralClient(RefCell::new(OutputData {
                 inner: client,
-                dedupe: Some(Vec::new()),
+                dedupe: None,
                 cache: Vec::new(),
                 total_write: 0,
             })),

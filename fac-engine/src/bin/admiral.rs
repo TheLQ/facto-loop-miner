@@ -13,7 +13,7 @@ use facto_loop_miner_fac_engine::tests::assembler_tests::{make_assembler_thru, m
 use facto_loop_miner_fac_engine::tests::belt_tests::{
     make_belt_bettel, make_belt_bettel_train_unload, make_belt_combiner, make_belt_grid,
 };
-use facto_loop_miner_fac_engine::tests::ore_tests::make_mine;
+use facto_loop_miner_fac_engine::tests::ore_tests::{make_mine, make_mine_and_rail};
 use facto_loop_miner_fac_engine::tests::other_tests::make_solar_bath_test;
 use facto_loop_miner_fac_engine::tests::train_loop::make_rail_loop;
 use facto_loop_miner_fac_engine::tests::train_rails::{

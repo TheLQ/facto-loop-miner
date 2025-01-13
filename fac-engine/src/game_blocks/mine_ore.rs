@@ -12,7 +12,7 @@ use crate::{
     },
 };
 
-use super::{belt_bettel::FacBlkBettelBelt, block::FacBlock};
+use super::{belt_bettel::FacBlkBettelBelt, block::FacBlock2};
 
 pub struct FacBlkMineOre {
     pub width: usize,
@@ -23,8 +23,9 @@ pub struct FacBlkMineOre {
     pub output: Rc<FacItemOutput>,
 }
 
-impl FacBlock for FacBlkMineOre {
-    fn generate(&self, origin: VPoint) {
+impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkMineOre {
+    fn generate(&self, origin: VPoint) -> Vec<FacBlkBettelBelt> {
+        let mut res = Vec::new();
         for height in 0..self.height {
             let offset_y = height * 7;
             self.place_drill_single_row(
@@ -44,14 +45,16 @@ impl FacBlock for FacBlkMineOre {
                 self.build_direction.rotate_once().rotate_flip(),
             );
 
-            self.place_inner_belts(
+            let belt = self.place_inner_belts(
                 origin.move_direction_sideways_usz(
                     self.build_direction,
                     offset_y + ELECTRIC_DRILL_SIZE,
                 ),
                 height,
             );
+            res.push(belt);
         }
+        res
     }
 }
 
@@ -72,7 +75,7 @@ impl FacBlkMineOre {
         }
     }
 
-    fn place_inner_belts(&self, origin: VPoint, cur_height: usize) {
+    fn place_inner_belts(&self, origin: VPoint, cur_height: usize) -> FacBlkBettelBelt {
         let mut belt =
             FacBlkBettelBelt::new(self.belt, origin, self.build_direction, self.output.clone());
 
@@ -101,5 +104,6 @@ impl FacBlkMineOre {
             belt.add_turn90(true);
             belt.add_straight(self.height - cur_height);
         }
+        belt
     }
 }

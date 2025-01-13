@@ -14,7 +14,7 @@ use crate::{
     },
     common::vpoint::VPOINT_ZERO,
     game_blocks::{
-        block::FacBlock,
+        block::FacBlock2,
         rail_station::{FacBlkRailStation, FacExtDelivery},
     },
     game_entities::{belt::FacEntBeltType, chest::FacEntChestType, inserter::FacEntInserterType},
@@ -23,7 +23,7 @@ use crate::{
 pub fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     let station = FacBlkRailStation {
         name: "test".into(),
-        wagons: 9,
+        wagons: 4,
         front_engines: 2,
         delivery: FacExtDelivery::Belt(FacEntBeltType::Basic),
         // chests: Some(FacEntChestType::Steel),
@@ -78,6 +78,9 @@ pub fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         }),
         output,
     };
-    station.generate(VPOINT_ZERO);
+    let belts = station.generate(VPOINT_ZERO);
+    for mut belt in belts {
+        belt.add_straight_underground(5);
+    }
     Ok(())
 }
