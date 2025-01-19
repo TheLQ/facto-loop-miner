@@ -1,7 +1,7 @@
 use crate::surfacev::err::{VError, VResult};
+use facto_loop_miner_fac_engine::opencv_re::core::{Scalar, Vec3b};
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
-use opencv::core::{Scalar, Vec3b};
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::fs::File;

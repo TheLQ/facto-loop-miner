@@ -1,10 +1,9 @@
 use crate::state::machine::StepParams;
 use crate::surface::game_locator::GameLocator;
 use crate::surface::pixel::Pixel;
-use crate::surface::surface::{PointU32, Surface};
 use crate::surfacev::vpatch::VPatch;
 use crate::PixelKdTree;
-use opencv::core::{Point, Rect, Rect_};
+use facto_loop_miner_fac_engine::opencv_re::core::{Point, Rect, Rect_};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashMap;

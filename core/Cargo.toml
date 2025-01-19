@@ -17,11 +17,6 @@ num-traits = "0.2.19"
 serde = { version = "1.0.216", features = ["derive"] }
 serde_json = { version = "1.0.133" }
 simd-json = { version = "0.13.11", features = ["serde"] }
-opencv = { version = "0.89.0", default-features = false, features = [
-    "clang-runtime",
-    "imgcodecs",
-    "imgproc"
-] }
 
 strum = { version = "0.26.3", features = ["derive"] }
 itertools = "0.12.1"

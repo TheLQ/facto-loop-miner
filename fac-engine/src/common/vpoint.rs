@@ -2,6 +2,7 @@ use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::err::{FError, FResult};
 use crate::game_entities::direction::FacDirectionQuarter;
 use crate::util::ansi::C_BLOCK_LINE;
+use opencv::core::Point;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::borrow::Borrow;
@@ -81,12 +82,12 @@ impl VPoint {
         FacBpPosition::new(self.x as f32, self.y as f32)
     }
 
-    // pub fn to_cv_point(&self) -> Point {
-    //     Point {
-    //         x: self.x,
-    //         y: self.y,
-    //     }
-    // }
+    pub fn to_cv_point(&self) -> Point {
+        Point {
+            x: self.x,
+            y: self.y,
+        }
+    }
 
     pub fn to_slice_f32(&self) -> [f32; 2] {
         [self.x as f32, self.y as f32]

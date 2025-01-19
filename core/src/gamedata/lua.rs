@@ -3,8 +3,8 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
+use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
 use num_format::ToFormattedString;
-use opencv::core::Point2f;
 use serde::{Deserialize, Serialize};
 use std::fs::read;
 use std::path::Path;
@@ -32,7 +32,7 @@ pub fn read_lua_tiles(input_dir: &Path) -> Vec<LuaEntity> {
     // let data_inner: ExportCompressedv2 = open_data_file(&input_path, raw_input);
     let entities = parse_exported_lua_data(&mut raw_input, |name, x, y| LuaEntity {
         name: Pixel::from_string(&name).unwrap(),
-        position: LuaPoint { x, y },
+        position: FacBpPosition { x, y },
     })
     .unwrap();
     info!(
@@ -71,7 +71,7 @@ pub fn read_lua_tiles(input_dir: &Path) -> Vec<LuaEntity> {
 
 pub trait LuaThing {
     fn name(&self) -> &Pixel;
-    fn position(&self) -> &LuaPoint;
+    fn position(&self) -> &FacBpPosition;
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -80,14 +80,14 @@ pub struct LuaEntity {
     // pub lua_type: String,
     pub name: Pixel,
     #[serde(rename = "pos")]
-    pub position: LuaPoint,
+    pub position: FacBpPosition,
 }
 
 impl LuaThing for LuaEntity {
     fn name(&self) -> &Pixel {
         &self.name
     }
-    fn position(&self) -> &LuaPoint {
+    fn position(&self) -> &FacBpPosition {
         &self.position
     }
 }
@@ -95,29 +95,14 @@ impl LuaThing for LuaEntity {
 #[derive(Serialize, Deserialize)]
 pub struct LuaTile {
     pub name: Pixel,
-    pub position: LuaPoint,
+    pub position: FacBpPosition,
 }
 
 impl LuaThing for LuaTile {
     fn name(&self) -> &Pixel {
         &self.name
     }
-    fn position(&self) -> &LuaPoint {
+    fn position(&self) -> &FacBpPosition {
         &self.position
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct LuaPoint {
-    pub x: f32,
-    pub y: f32,
-}
-
-impl LuaPoint {
-    pub fn to_point2f(&self) -> Point2f {
-        Point2f {
-            x: self.x,
-            y: self.y,
-        }
     }
 }

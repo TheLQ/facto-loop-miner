@@ -5,7 +5,7 @@ use std::hash::Hash;
 use std::path::Path;
 
 use num_format::ToFormattedString;
-use opencv::core::Mat;
+use facto_loop_miner_fac_engine::opencv_re::core::Mat;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 

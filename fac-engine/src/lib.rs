@@ -15,3 +15,5 @@ pub mod game_entities;
 pub mod tests;
 pub mod util;
 pub mod visualizer;
+
+pub use opencv as opencv_re;

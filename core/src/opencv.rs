@@ -1,8 +1,8 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use opencv::core::{Mat, Point, Rect, Vector};
-use opencv::imgproc::bounding_rect;
+use facto_loop_miner_fac_engine::opencv_re::core::{Mat, Point, Rect, Vector};
+use facto_loop_miner_fac_engine::opencv_re::imgproc::bounding_rect;
 use std::fs::read;
 use std::path::Path;
 use tracing::debug;

@@ -2,9 +2,10 @@ use crate::gamedata::lua::{read_lua_tiles, LuaEntity, LuaPoint, LuaThing};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::err::VResult;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
+use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use std::path::Path;
 use tracing::info;
 

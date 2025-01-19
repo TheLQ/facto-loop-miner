@@ -25,3 +25,10 @@ enum-map = "2.7.3"
 unicode-segmentation = "1.12.0"
 serde-lua-table = { git = "https://github.com/Nerixyz/serde-lua-table.git", tag = "v0.1.2" }
 num-traits = "0.2.19"
+
+# managed for core
+opencv = { version = "0.89.0", default-features = false, features = [
+    "clang-runtime",
+    "imgcodecs",
+    "imgproc"
+] }

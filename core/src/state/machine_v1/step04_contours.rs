@@ -1,16 +1,16 @@
-use itertools::Itertools;
-use kiddo::{Manhattan, NearestNeighbour};
-use opencv::core::{Point, Rect, Vector};
-use opencv::imgcodecs::imwrite;
-use opencv::imgproc::{
+use facto_loop_miner_fac_engine::opencv_re::core::{Point, Rect, Vector};
+use facto_loop_miner_fac_engine::opencv_re::imgcodecs::imwrite;
+use facto_loop_miner_fac_engine::opencv_re::imgproc::{
     bounding_rect, find_contours, rectangle, CHAIN_APPROX_SIMPLE, LINE_8, RETR_EXTERNAL,
 };
-use opencv::prelude::*;
+use facto_loop_miner_fac_engine::opencv_re::prelude::*;
+use itertools::Itertools;
+use kiddo::{Manhattan, NearestNeighbour};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::path::Path;
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, info, trace};
 
 use crate::opencv::combine_rects_into_big_rect;
 use crate::state::err::XMachineResult;

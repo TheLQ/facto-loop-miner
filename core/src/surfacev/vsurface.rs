@@ -24,7 +24,7 @@ use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
 use num_format::ToFormattedString;
-use opencv::core::Mat;
+use facto_loop_miner_fac_engine::opencv_re::core::Mat;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::collections::HashMap;

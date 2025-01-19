@@ -3,6 +3,7 @@ use std::rc::Rc;
 use facto_loop_miner_common::log_init_debug;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
+use facto_loop_miner_fac_engine::game_blocks::block::FacBlock2;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::RailHopeDual;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::RailHopeSingle;
@@ -74,7 +75,7 @@ fn basic_build_gen(output: Rc<FacItemOutput>) {
         is_create_train: true,
         output,
     };
-    station.generate(VPoint::new(5, 5))
+    station.generate(VPoint::new(5, 5));
 }
 
 fn basic_build_terapower(output: Rc<FacItemOutput>) {

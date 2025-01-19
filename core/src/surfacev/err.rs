@@ -1,7 +1,7 @@
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::opencv_re::core::Point2f;
 use facto_loop_miner_io::err::VIoError;
 use itertools::Itertools;
-use opencv::core::Point2f;
 use std::backtrace::Backtrace;
 use std::io;
 use std::path::Path;
