@@ -1,8 +1,5 @@
 use crate::{admiral::lua_command::LuaCommand, common::vpoint::VPoint};
 
-// pub mod rail45;
-// pub mod rail90;
-
 pub fn join_commands<'a>(
     creation_commands: impl Iterator<Item = &'a Box<dyn LuaCommand>>,
 ) -> String {
