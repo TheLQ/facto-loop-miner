@@ -33,17 +33,16 @@
 
 extern crate core;
 
-use crate::navigator::mori::{draw_rail, Rail, RailDirection};
+use crate::navigator::mori::{draw_rail, Rail};
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
 use crate::surfacev::vsurface::VSurface;
-use facto_loop_miner_common::log_init;
+use facto_loop_miner_common::log_init_trace;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use kiddo::float;
 use num_format::Locale;
 use num_traits::PrimInt;
 use std::path::Path;
-use tracing::Level;
 
 mod gamedata;
 pub mod navigator;
@@ -63,7 +62,7 @@ pub const LOCALE: Locale = Locale::en;
 // TODO: REmove now duplicated
 pub const TILES_PER_CHUNK: usize = 32;
 pub fn inner_main() {
-    log_init(None);
+    log_init_trace();
 
     tracing::debug!("hello");
     // let mut data = String::new();
@@ -76,30 +75,6 @@ pub fn inner_main() {
         3 => generate_lookup_image(),
         _ => panic!("wtf"),
     }
-}
-
-pub fn inner_surface_tester() {
-    log_init(None);
-
-    let mut surface = VSurface::load(Path::new("./work/out0/step20-nav")).unwrap();
-
-    // Rail { endpoint: VPoint { x: 649, y: 49 }, direction: Right, mode: Straight } to Rail { endpoint: VPoint { x: 2273, y: 121 }, direction: Right, mode: Straight }
-    let start = Rail::new_straight(VPoint::new(649, 49), RailDirection::Right);
-    let end = Rail::new_straight(VPoint::new(2273, 121), RailDirection::Right);
-
-    let rail = end;
-    let rail = rail.move_force_rotate_clockwise(2);
-    draw_rail(&mut surface, &rail);
-
-    // let rail = rail.move_forward_step();
-    // draw_rail(&mut surface, &rail);
-
-    let rail = rail.move_right();
-    draw_rail(&mut surface, &rail);
-
-    let out_dir = Path::new("./work/test5");
-    std::fs::create_dir(out_dir).unwrap();
-    surface.save(out_dir).unwrap()
 }
 
 /// what is this called?
