@@ -1,4 +1,4 @@
-use crate::gamedata::lua::{read_lua_tiles, LuaEntity, LuaPoint, LuaThing};
+use crate::gamedata::lua::{read_lua_tiles, LuaEntity, LuaThing};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::err::VResult;
@@ -45,8 +45,8 @@ impl Step for Step00 {
 }
 
 fn find_radius(data: &[LuaEntity]) -> f32 {
-    let mut bottom_left = LuaPoint { x: 0.0, y: 0.0 };
-    let mut top_right = LuaPoint { x: 0.0, y: 0.0 };
+    let mut bottom_left: FacBpPosition = FacBpPosition { x: 0.0, y: 0.0 };
+    let mut top_right = FacBpPosition { x: 0.0, y: 0.0 };
     find_radius_max(data, &mut bottom_left, &mut top_right);
 
     let mut max_radius = 0.0f32;
@@ -67,16 +67,16 @@ fn find_radius(data: &[LuaEntity]) -> f32 {
 }
 fn find_radius_max<T: LuaThing>(
     things: &[T],
-    bottom_left: &mut LuaPoint,
-    top_right: &mut LuaPoint,
+    bottom_left: &mut FacBpPosition,
+    top_right: &mut FacBpPosition,
 ) {
     for thing in things {
         let pos = thing.position();
-        *bottom_left = LuaPoint {
+        *bottom_left = FacBpPosition {
             x: bottom_left.x.min(pos.x),
             y: bottom_left.y.min(pos.y),
         };
-        *top_right = LuaPoint {
+        *top_right = FacBpPosition {
             x: top_right.x.max(pos.x),
             y: top_right.y.max(pos.y),
         };
@@ -93,7 +93,7 @@ where
 {
     for entity in entities {
         surface.set_pixel(
-            VPoint::from_f32_with_offset(entity.position().to_point2f(), 0.5)?,
+            entity.position().to_vpoint_with_offset(0.5, 0.5),
             *entity.name(),
         )?;
         params

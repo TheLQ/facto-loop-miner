@@ -1,13 +1,13 @@
-use crate::surface::patch::Patch;
-use crate::surface::pixel::Pixel;
-use crate::surface::surface::PointU32;
+use facto_loop_miner_fac_engine::opencv_re::core::Point_;
+
 use crate::surfacev::vsurface::VSurface;
-use opencv::core::Point;
+
+pub type Point2u = Point_<u32>;
 
 pub struct Navigator<'a> {
     pub surface: &'a VSurface,
-    pub end: PointU32,
-    pub current: PointU32,
+    pub end: Point2u,
+    pub current: Point2u,
 }
 
 impl<'a> Navigator<'a> {
@@ -45,7 +45,7 @@ impl NavDirection {
         }
     }
 
-    pub fn score(&self, start: PointU32, end: PointU32) -> i32 {
+    pub fn score(&self, start: Point2u, end: Point2u) -> i32 {
         let start_line = match self {
             NavDirection::Up(_) | NavDirection::Down(_) => start.y,
             NavDirection::Left(_) | NavDirection::Right(_) => start.x,

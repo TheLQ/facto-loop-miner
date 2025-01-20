@@ -1,10 +1,8 @@
-use crate::navigator::mori::Rail;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::pixel::Pixel;
-use crate::surface::surface::Surface;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use itertools::Itertools;
 use tracing::{error, info, warn};
 
