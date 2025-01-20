@@ -1,3 +1,5 @@
+use serde::Deserialize;
+use serde::Serialize;
 use serde_repr::Deserialize_repr;
 use serde_repr::Serialize_repr;
 use strum::IntoStaticStr;
@@ -79,7 +81,19 @@ impl FacDirectionEighth {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Display, AsRefStr, IntoStaticStr, VariantArray)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    PartialOrd,
+    Display,
+    AsRefStr,
+    IntoStaticStr,
+    VariantArray,
+    Serialize,
+    Deserialize,
+)]
 #[repr(u8)]
 pub enum FacDirectionQuarter {
     // clockwise order

@@ -156,7 +156,7 @@ impl FacItemOutput {
         const UNICODE_TRUNCATE: usize = PROGRESS_TRUNCATE * 3;
         let mut total_progress = C_FULL_BLOCK.repeat(total_with_context.min(PROGRESS_TRUNCATE));
         let progress_len = total_progress.len();
-        if true || progress_len == UNICODE_TRUNCATE {
+        if progress_len == UNICODE_TRUNCATE {
             // let remain = total_with_context - PROGRESS_TRUNCATE;
             let remain = total_with_context;
             total_progress.insert(0, EXTRA[remain % EXTRA.len()]);

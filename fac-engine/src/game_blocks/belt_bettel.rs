@@ -1,6 +1,4 @@
-use crate::blueprint::bpitem::BlueprintItem;
 use crate::blueprint::output::FacItemOutput;
-use crate::common::entity::FacEntity;
 use crate::common::vpoint::VPoint;
 use crate::game_entities::belt::FacEntBeltType;
 use crate::game_entities::belt_split::{FacEntBeltSplit, FacEntBeltSplitPriority};
