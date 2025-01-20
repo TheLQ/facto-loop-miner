@@ -9,7 +9,6 @@ use itertools::Itertools;
 use std::backtrace::Backtrace;
 
 pub mod client;
-// pub mod entrypoint;
 // pub mod file;
 
 const BATCH_SIZE: usize = if DEBUG_POSITION_EXPECTED || DEBUG_PRE_COLLISION {
