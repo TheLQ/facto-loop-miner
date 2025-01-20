@@ -27,7 +27,7 @@ const CACHE_SIZE: usize = 1;
 /// Middleware between entity output and blueprint/lua output
 /// Instead of generating everything "post", obscuring errors and logic
 pub struct FacItemOutput {
-    otype: FacItemOutputType,
+    odata: RefCell<FacItemOutputData>,
 }
 
 impl FacItemOutput {
@@ -41,34 +41,37 @@ impl FacItemOutput {
 
     pub fn new_admiral(client: AdmiralClient) -> Self {
         Self {
-            otype: FacItemOutputType::AdmiralClient(RefCell::new(OutputData {
-                inner: client,
+            odata: RefCell::new(FacItemOutputData {
+                otype: FacItemOutputType::AdmiralClient(client),
                 dedupe: None,
                 cache: Vec::new(),
                 total_write: 0,
-            })),
+                contexts: Default::default(),
+            }),
         }
     }
 
     pub fn new_admiral_dedupe(client: AdmiralClient) -> Self {
         Self {
-            otype: FacItemOutputType::AdmiralClient(RefCell::new(OutputData {
-                inner: client,
+            odata: RefCell::new(FacItemOutputData {
+                otype: FacItemOutputType::AdmiralClient(client),
                 dedupe: Some(Vec::new()),
                 cache: Vec::new(),
                 total_write: 0,
-            })),
+                contexts: Default::default(),
+            }),
         }
     }
 
     pub fn new_blueprint() -> Self {
         Self {
-            otype: FacItemOutputType::Blueprint(RefCell::new(OutputData {
-                inner: BlueprintContents::new(),
+            odata: RefCell::new(FacItemOutputData {
+                otype: FacItemOutputType::Blueprint(BlueprintContents::new()),
                 dedupe: None,
                 cache: Vec::new(),
                 total_write: 0,
-            })),
+                contexts: Default::default(),
+            }),
         }
     }
 
@@ -85,22 +88,27 @@ impl FacItemOutput {
             item.position().display(),
             blueprint.position.display(),
         );
-        Self::log_write(item_debug, message_pos);
 
-        self.otype
-            .write(FacItemOutputWrite::Entity { item, blueprint })
+        let mut odata = self.odata.borrow_mut();
+        Self::log_write(&mut odata.contexts, item_debug, message_pos);
+        odata.write(FacItemOutputWrite::Entity { item, blueprint })
     }
 
     pub fn write_tile(&self, blueprint: FacBpTile) {
         let item_debug = format!("{:?}", blueprint);
         let message_pos = format!("blueprint facpos {:10}", blueprint.position.display());
-        Self::log_write(item_debug, message_pos);
 
-        self.otype.write(FacItemOutputWrite::Tile { blueprint })
+        let mut odata = self.odata.borrow_mut();
+        Self::log_write(&mut odata.contexts, item_debug, message_pos);
+        odata.write(FacItemOutputWrite::Tile { blueprint })
     }
 
     /// Status logs, then do actual write
-    pub fn log_write(mut item_debug: String, message_pos: String) {
+    pub fn log_write(
+        log_info: &mut FacItemOutputLogInfo,
+        mut item_debug: String,
+        message_pos: String,
+    ) {
         // Shorten by removing keys, their obvious
         let item_debug_str = item_debug.as_bytes().to_vec();
         for end in (0..item_debug.len()).rev() {
@@ -130,7 +138,7 @@ impl FacItemOutput {
             item_debug.push_str("...");
         }
 
-        let (contexts, subcontexts, total_with_context) = get_global_context_map(|log_info| {
+        let (contexts, subcontexts, total_with_context) = {
             let contexts = ansi_color(
                 log_info.context_map[ContextLevel::Block].join(&format!(" {C_BLOCK_LINE} ")),
                 Color::Green,
@@ -148,7 +156,7 @@ impl FacItemOutput {
                 log_info.total_with_context += 1;
             };
             (contexts, subcontexts, log_info.total_with_context)
-        });
+        };
         let subcontexts = pad_grapheme(&subcontexts, 40);
 
         const EXTRA: [char; 8] = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
@@ -190,59 +198,59 @@ impl FacItemOutput {
     }
 
     pub fn flush(&self) {
-        self.otype.flush_cache();
+        let mut odata = self.odata.borrow_mut();
+        odata.flush_cache();
     }
 
     pub fn context_handle(
-        &self,
+        self: &Rc<Self>,
         context_level: ContextLevel,
         new_context: String,
     ) -> OutputContextHandle {
-        let res = OutputContextHandle {
+        let handle = OutputContextHandle {
             context_level: context_level.clone(),
+            output: self.clone(),
         };
-        get_global_context_map(move |log_info| {
-            log_info.context_map[context_level.clone()].push(new_context.clone())
-        });
-        res
+        let mut odata = self.odata.borrow_mut();
+        odata.contexts.context_map[context_level].push(new_context);
+        handle
     }
 
     pub fn admiral_execute_command(
         &self,
         lua: Box<dyn LuaCommand>,
     ) -> AdmiralResult<ExecuteResponse> {
-        self.otype.admiral_execute_command(lua)
+        let mut odata = self.odata.borrow_mut();
+        odata.admiral_execute_command(lua)
     }
 
-    #[cfg(test)]
-    pub fn last_blueprint_write_last(&self) -> test::LastWrite {
-        use test::LastWrite;
-
-        let blueprint = &self.unwrap_blueprint().inner;
-        let last_item = blueprint.items().last().unwrap();
-        LastWrite {
-            blueprint: blueprint.fac_entities().last().unwrap().clone(),
-            size: last_item.entity().rectangle_size(),
-        }
-    }
+    // #[cfg(test)]
+    // pub fn last_blueprint_write_last(&self) -> test::LastWrite {
+    //     use test::LastWrite;
+    //
+    //     let blueprint = &self.unwrap_blueprint().inner;
+    //     let last_item = blueprint.items().last().unwrap();
+    //     LastWrite {
+    //         blueprint: blueprint.fac_entities().last().unwrap().clone(),
+    //         size: last_item.entity().rectangle_size(),
+    //     }
+    // }
 
     pub fn into_blueprint_contents(self) -> BlueprintContents {
-        match self.otype {
-            FacItemOutputType::Blueprint(inner) => {
-                let output_data = inner.into_inner();
-                output_data.inner
-            }
+        let odata = self.odata.into_inner();
+        match odata.otype {
+            FacItemOutputType::Blueprint(inner) => inner,
             FacItemOutputType::AdmiralClient(_) => panic!("not a blueprint"),
         }
     }
 
-    #[cfg(test)]
-    fn unwrap_blueprint(&self) -> std::cell::Ref<'_, OutputData<BlueprintContents>> {
-        match &self.otype {
-            FacItemOutputType::Blueprint(inner) => inner.borrow(),
-            FacItemOutputType::AdmiralClient(_) => panic!("not a blueprint"),
-        }
-    }
+    // #[cfg(test)]
+    // fn unwrap_blueprint(&self) -> std::cell::Ref<'_, FacItemOutputData<BlueprintContents>> {
+    //     match &self.otype {
+    //         FacItemOutputType::Blueprint(inner) => inner.borrow(),
+    //         FacItemOutputType::AdmiralClient(_) => panic!("not a blueprint"),
+    //     }
+    // }
 }
 
 #[cfg(test)]
@@ -274,23 +282,17 @@ pub enum ContextLevel {
     Micro,
 }
 
-/// TODO: lifetime soup with multiple muts is hard. New plan: Global!
-fn get_global_context_map<A, R>(mut action: A) -> R
-where
-    A: FnMut(&mut FacItemOutputLogInfo) -> R,
-{
-    // thread_local! {
-    static CUR: Mutex<Option<FacItemOutputLogInfo>> = Mutex::new(None);
-    // }
-
-    let mut lock = CUR.lock().unwrap();
-    let map = lock.get_or_insert_default();
-    action(map)
+struct FacItemOutputData {
+    otype: FacItemOutputType,
+    dedupe: Option<Vec<FacBpPosition>>,
+    cache: Vec<FacItemOutputWrite>,
+    total_write: usize,
+    contexts: FacItemOutputLogInfo,
 }
 
 enum FacItemOutputType {
-    AdmiralClient(RefCell<OutputData<AdmiralClient>>),
-    Blueprint(RefCell<OutputData<BlueprintContents>>),
+    AdmiralClient(AdmiralClient),
+    Blueprint(BlueprintContents),
 }
 
 enum FacItemOutputWrite {
@@ -303,52 +305,34 @@ enum FacItemOutputWrite {
     },
 }
 
-impl FacItemOutputType {
-    fn write(&self, write: FacItemOutputWrite) {
+impl FacItemOutputData {
+    fn write(&mut self, write: FacItemOutputWrite) {
         self.push_cache(write);
         self.flush_cache_maybe();
     }
 
-    fn push_cache(&self, write: FacItemOutputWrite) {
-        match self {
-            Self::AdmiralClient(cell) => {
-                let OutputData { cache, .. } = &mut *cell.borrow_mut();
-                cache.push(write);
-            }
-            Self::Blueprint(cell) => {
-                let OutputData { cache, .. } = &mut *cell.borrow_mut();
-                cache.push(write);
-            }
-        }
+    fn push_cache(&mut self, write: FacItemOutputWrite) {
+        self.cache.push(write);
     }
 
-    fn flush_cache_maybe(&self) {
-        let size = match self {
-            Self::AdmiralClient(cell) => {
-                let OutputData { cache, .. } = &*cell.borrow();
-                cache.len()
-            }
-            Self::Blueprint(cell) => {
-                let OutputData { cache, .. } = &*cell.borrow();
-                cache.len()
-            }
-        };
+    fn flush_cache_maybe(&mut self) {
+        let size = self.cache.len();
         if size < CACHE_SIZE {
             return;
         }
         self.flush_cache();
     }
 
-    fn flush_cache(&self) {
-        match self {
-            Self::AdmiralClient(cell) => {
-                let OutputData {
-                    inner,
-                    dedupe,
-                    cache,
-                    total_write,
-                } = &mut *cell.borrow_mut();
-
+    fn flush_cache(&mut self) {
+        let FacItemOutputData {
+            otype,
+            dedupe,
+            cache,
+            total_write,
+            contexts: _,
+        } = self;
+        match otype {
+            FacItemOutputType::AdmiralClient(inner) => {
                 let mut lua_commands = Vec::new();
                 for write in cache.drain(0..) {
                     *total_write += 1;
@@ -376,13 +360,7 @@ impl FacItemOutputType {
                     panic!("⛔⛔⛔ Write failed {}", e);
                 }
             }
-            Self::Blueprint(cell) => {
-                let OutputData {
-                    inner,
-                    dedupe,
-                    cache,
-                    total_write,
-                } = &mut *cell.borrow_mut();
+            FacItemOutputType::Blueprint(inner) => {
                 let mut flush_count = 0;
                 for write in cache.drain(0..) {
                     flush_count += 1;
@@ -407,38 +385,13 @@ impl FacItemOutputType {
         }
     }
 
-    // fn push_context(&self, context_level: ContextLevel, new_context: String) {
-    //     match self {
-    //         Self::AdmiralClient(cell) => {
-    //             cell.borrow_mut().log_info.context_map[context_level].push(new_context)
-    //         }
-    //         Self::Blueprint(cell) => {
-    //             cell.borrow_mut().log_info.context_map[context_level].push(new_context)
-    //         }
-    //     }
-    // }
-
-    // fn pop_context(&self, context_level: ContextLevel) {
-    //     match self {
-    //         Self::AdmiralClient(cell) => {
-    //             cell.borrow_mut().log_info.context_map[context_level].pop()
-    //         }
-    //         Self::Blueprint(cell) => cell.borrow_mut().log_info.context_map[context_level].pop(),
-    //     }
-    //     .unwrap();
-    // }
-
-    // fn get_context(&self) -> FacItemOutputLogInfo {
-    //     match self {
-    //         Self::AdmiralClient(cell) => cell.borrow().log_info.questitionable_clone(),
-    //         Self::Blueprint(cell) => cell.borrow().log_info.questitionable_clone(),
-    //     }
-    // }
-
-    fn admiral_execute_command(&self, lua: Box<dyn LuaCommand>) -> AdmiralResult<ExecuteResponse> {
-        match self {
-            Self::AdmiralClient(cell) => cell.borrow_mut().inner.execute_checked_command(lua),
-            Self::Blueprint(_) => panic!("not a admiral"),
+    fn admiral_execute_command(
+        &mut self,
+        lua: Box<dyn LuaCommand>,
+    ) -> AdmiralResult<ExecuteResponse> {
+        match &mut self.otype {
+            FacItemOutputType::AdmiralClient(inner) => inner.execute_checked_command(lua),
+            FacItemOutputType::Blueprint(_) => panic!("not a admiral"),
         }
     }
 }
@@ -474,21 +427,16 @@ pub struct FacItemOutputLogInfo {
     pub total_with_context: usize,
 }
 
-struct OutputData<T> {
-    inner: T,
-    dedupe: Option<Vec<FacBpPosition>>,
-    cache: Vec<FacItemOutputWrite>,
-    total_write: usize,
-}
-
 // Keeps the context alive for access during logging
 pub struct OutputContextHandle {
     context_level: ContextLevel,
+    output: Rc<FacItemOutput>,
 }
 
 impl Drop for OutputContextHandle {
     fn drop(&mut self) {
-        get_global_context_map(|log_info| log_info.context_map[self.context_level.clone()].pop());
+        let mut data = self.output.odata.borrow_mut();
+        data.contexts.context_map[self.context_level.clone()].pop();
     }
 }
 

@@ -179,7 +179,7 @@ impl FacBlkRailStation {
     fn place_electric_initial(
         origin: &VPoint,
         base_direction: &FacDirectionQuarter,
-        output: &FacItemOutput,
+        output: &Rc<FacItemOutput>,
     ) {
         let _ = output.context_handle(ContextLevel::Micro, "🔚Grid-0".into());
         let electric_start_pos = origin.move_direction_usz(base_direction.rotate_once(), 2);
@@ -189,7 +189,7 @@ impl FacBlkRailStation {
     fn place_electric_connect(
         origin: &VPoint,
         base_direction: &FacDirectionQuarter,
-        output: &FacItemOutput,
+        output: &Rc<FacItemOutput>,
     ) {
         let _ = output.context_handle(ContextLevel::Micro, "🔚Grid-1".into());
         let electric_start_pos = origin
