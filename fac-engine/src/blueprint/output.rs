@@ -1,5 +1,5 @@
 use enum_map::EnumMap;
-use std::{cell::RefCell, rc::Rc, sync::Mutex};
+use std::{cell::RefCell, rc::Rc};
 use tracing::{debug, trace};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -75,11 +75,28 @@ impl FacItemOutput {
         }
     }
 
+    pub fn new_null() -> Self {
+        Self {
+            odata: RefCell::new(FacItemOutputData {
+                otype: FacItemOutputType::Null,
+                dedupe: None,
+                cache: Vec::new(),
+                total_write: 0,
+                contexts: Default::default(),
+            }),
+        }
+    }
+
     pub fn writei(&self, entity: impl FacEntity + 'static, position: VPoint) {
         self.write(BlueprintItem::newb(entity, position))
     }
 
     pub fn write(&self, item: BlueprintItem) {
+        if let FacItemOutputType::Null = self.odata.borrow().otype {
+            return;
+        }
+        let mut odata = self.odata.borrow_mut();
+
         let blueprint = item.to_blueprint();
 
         let item_debug = format!("{:?}", item.entity());
@@ -89,7 +106,6 @@ impl FacItemOutput {
             blueprint.position.display(),
         );
 
-        let mut odata = self.odata.borrow_mut();
         Self::log_write(&mut odata.contexts, item_debug, message_pos);
         odata.write(FacItemOutputWrite::Entity { item, blueprint })
     }
@@ -240,7 +256,9 @@ impl FacItemOutput {
         let odata = self.odata.into_inner();
         match odata.otype {
             FacItemOutputType::Blueprint(inner) => inner,
-            FacItemOutputType::AdmiralClient(_) => panic!("not a blueprint"),
+            FacItemOutputType::AdmiralClient(_) | FacItemOutputType::Null => {
+                panic!("not a blueprint")
+            }
         }
     }
 
@@ -293,6 +311,7 @@ struct FacItemOutputData {
 enum FacItemOutputType {
     AdmiralClient(AdmiralClient),
     Blueprint(BlueprintContents),
+    Null,
 }
 
 enum FacItemOutputWrite {
@@ -382,6 +401,9 @@ impl FacItemOutputData {
                     trace!("Flush Cache {} total {}", flush_count, total_write)
                 }
             }
+            FacItemOutputType::Null => {
+                panic!("should not be here")
+            }
         }
     }
 
@@ -391,7 +413,7 @@ impl FacItemOutputData {
     ) -> AdmiralResult<ExecuteResponse> {
         match &mut self.otype {
             FacItemOutputType::AdmiralClient(inner) => inner.execute_checked_command(lua),
-            FacItemOutputType::Blueprint(_) => panic!("not a admiral"),
+            FacItemOutputType::Blueprint(_) | FacItemOutputType::Null => panic!("not a admiral"),
         }
     }
 }
