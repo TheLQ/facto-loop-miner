@@ -484,7 +484,7 @@ mod test {
         expected_i: &mut usize,
         is_error: &mut bool,
     ) {
-        let output_write = output.last_blueprint_write_last();
+        let output_write = output.last_blueprint_write();
         let actual_pos = output_write.blueprint.position;
         let expected = &all_expected[*expected_i];
         *expected_i += 1;
@@ -502,7 +502,7 @@ mod test {
     }
 
     fn expect_output(expected: FacBpPosition, output: &FacItemOutput, is_error: &mut bool) {
-        let output_write = output.last_blueprint_write_last();
+        let output_write = output.last_blueprint_write();
         let actual_pos = output_write.blueprint.position;
         let err = if actual_pos != expected {
             *is_error = true;
