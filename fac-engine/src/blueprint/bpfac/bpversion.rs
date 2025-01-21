@@ -8,24 +8,20 @@ use std::mem::transmute;
 #[derive(Debug, PartialEq)]
 #[repr(C)]
 pub struct FacBpVersion {
-    major: u16,
-    minor: u16,
-    patch: u16,
+    // Reversed for little endian?
     dev: u16,
+    patch: u16,
+    minor: u16,
+    major: u16,
 }
 
 impl FacBpVersion {
     const fn decode(raw: u64) -> Self {
-        let parts: [u16; 4] = unsafe { transmute(raw.to_be()) };
-        FacBpVersion {
-            major: u16::from_be(parts[0]),
-            minor: u16::from_be(parts[1]),
-            patch: u16::from_be(parts[2]),
-            dev: u16::from_be(parts[3]),
-        }
+        unsafe { transmute(raw) }
     }
 
     const fn encode(&self) -> u64 {
+        // todo: just transmute not working?
         let raw = [
             self.major.to_be_bytes(),
             self.minor.to_be_bytes(),
@@ -106,8 +102,8 @@ mod test {
         let encoded_version = decoded_version.encode();
         assert_eq!(
             encoded_version, DEFAULT_VERSION_AS_U64,
-            "decoded {:?}",
-            decoded_version
+            "decoded {:?}\n--\n leftb {:x}\nrightb {:x}\n---",
+            decoded_version, encoded_version, DEFAULT_VERSION_AS_U64,
         )
     }
 }
