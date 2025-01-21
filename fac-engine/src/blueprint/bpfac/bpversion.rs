@@ -42,9 +42,9 @@ const DEFAULT_VERSION_AS_U64: u64 = 281479278886912;
 
 impl Default for FacBpVersion {
     fn default() -> Self {
-        /// MUST use a modern version, as older versions will mangle rail Blueprints.
-        /// Probably backwards compatible stuff.
-        /// Eg 45 degree rails as part of Turn90 will be placed in an odd area
+        // MUST use a modern version, as older versions will mangle rail Blueprints.
+        // Probably backwards compatible stuff.
+        // Eg 45 degree rails as part of Turn90 will be placed in an odd area
         Self {
             major: 1,
             minor: 1,

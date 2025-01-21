@@ -48,6 +48,7 @@ pub fn encode_blueprint_to_string_auto_index(
 
 fn _encode_blueprint_to_string(blueprint: &FacBpBlueprintWrapper) -> FResult<String> {
     let json = serde_json::to_string(blueprint)?;
+    // println!("JSONify {}", json);
 
     let mut zlib = flate2::write::ZlibEncoder::new(Vec::new(), Compression::default());
     zlib.write_all(json.as_bytes()).unwrap();

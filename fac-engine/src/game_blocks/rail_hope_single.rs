@@ -362,12 +362,13 @@ fn neg_if_false(flag: bool, value: i32) -> i32 {
 
 #[cfg(test)]
 mod test {
+    use super::RailHopeSingle;
+    use crate::blueprint::bpfac::position::FacBpPosition;
+    use crate::common::vpoint::VPOINT_TEN;
     use crate::{
         blueprint::output::FacItemOutput, common::vpoint::VPOINT_ZERO,
         game_blocks::rail_hope::RailHopeAppender, game_entities::direction::FacDirectionQuarter,
     };
-
-    use super::RailHopeSingle;
 
     #[test]
     fn test_straight_chain() {
@@ -403,5 +404,47 @@ mod test {
 
         assert_eq!(hope_long_bp.fac_entities(), hope_short_bp.fac_entities(),);
         assert_eq!(hope_long_next_pos, hope_short_next_pos);
+    }
+
+    #[test]
+    fn test_turn_90_clw() {
+        let output = FacItemOutput::new_blueprint().into_rc();
+
+        let mut hope = RailHopeSingle::new(VPOINT_TEN, FacDirectionQuarter::East, output.clone());
+        hope.add_turn90(true);
+        drop(hope);
+
+        let bpcontents = output.consume_rc().into_blueprint_contents();
+        let entities = bpcontents.fac_entities();
+
+        assert_eq!(entities[0].name, "curved-rail");
+        assert_eq!(entities[0].position, FacBpPosition::new(14.0, 12.0));
+
+        assert_eq!(entities[1].name, "straight-rail");
+        assert_eq!(entities[1].position, FacBpPosition::new(17.0, 15.0));
+
+        assert_eq!(entities[2].name, "curved-rail");
+        assert_eq!(entities[2].position, FacBpPosition::new(20.0, 18.0));
+    }
+
+    #[test]
+    fn test_turn_90_ccw() {
+        let output = FacItemOutput::new_blueprint().into_rc();
+
+        let mut hope = RailHopeSingle::new(VPOINT_TEN, FacDirectionQuarter::East, output.clone());
+        hope.add_turn90(false);
+        drop(hope);
+
+        let bpcontents = output.consume_rc().into_blueprint_contents();
+        let entities = bpcontents.fac_entities();
+
+        assert_eq!(entities[0].name, "curved-rail");
+        assert_eq!(entities[0].position, FacBpPosition::new(14.0, 10.0));
+
+        assert_eq!(entities[1].name, "straight-rail");
+        assert_eq!(entities[1].position, FacBpPosition::new(17.0, 7.0));
+
+        assert_eq!(entities[2].name, "curved-rail");
+        assert_eq!(entities[2].position, FacBpPosition::new(20.0, 4.0));
     }
 }
