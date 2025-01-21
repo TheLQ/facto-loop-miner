@@ -1,6 +1,7 @@
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::Formatter;
+use std::mem::transmute;
 
 /// Factorio Version, not a blueprint version
 /// https://wiki.factorio.com/Version_string_format
@@ -14,31 +15,25 @@ pub struct FacBpVersion {
 }
 
 impl FacBpVersion {
-    fn decode(raw: u64) -> Self {
-        let bytes = raw.to_be_bytes();
-        // TODO: sigh... this is so inelegant
-        let mut iter = bytes.iter();
+    const fn decode(raw: u64) -> Self {
+        let parts: [u16; 4] = unsafe { transmute(raw.to_be()) };
         FacBpVersion {
-            major: u16::from_be_bytes([*iter.next().unwrap(), *iter.next().unwrap()]),
-            minor: u16::from_be_bytes([*iter.next().unwrap(), *iter.next().unwrap()]),
-            patch: u16::from_be_bytes([*iter.next().unwrap(), *iter.next().unwrap()]),
-            dev: u16::from_be_bytes([*iter.next().unwrap(), *iter.next().unwrap()]),
+            major: u16::from_be(parts[0]),
+            minor: u16::from_be(parts[1]),
+            patch: u16::from_be(parts[2]),
+            dev: u16::from_be(parts[3]),
         }
     }
 
-    fn encode(&self) -> u64 {
-        u64::from_be_bytes(
-            [
-                self.major.to_be_bytes(),
-                self.minor.to_be_bytes(),
-                self.patch.to_be_bytes(),
-                self.dev.to_be_bytes(),
-            ]
-            .concat()
-            // no .into()...
-            .try_into()
-            .unwrap(),
-        )
+    const fn encode(&self) -> u64 {
+        let raw = [
+            self.major.to_be_bytes(),
+            self.minor.to_be_bytes(),
+            self.patch.to_be_bytes(),
+            self.dev.to_be_bytes(),
+        ];
+        let be_num: u64 = unsafe { transmute(raw) };
+        be_num.to_be()
     }
 }
 
