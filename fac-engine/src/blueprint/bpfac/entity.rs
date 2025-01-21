@@ -19,7 +19,7 @@ use super::{
 #[serde(deny_unknown_fields)]
 pub struct FacBpEntity {
     #[serde(rename = "entity_number")]
-    pub entity_number: FacBpInteger,
+    pub entity_number: Option<FacBpInteger>,
     pub name: String,
     pub position: FacBpPosition,
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -319,7 +319,7 @@ mod test {
     use crate::{
         blueprint::{
             bpfac::position::FacBpPosition, contents::BlueprintContents,
-            converter::encode_blueprint_to_string, output::FacItemOutput,
+            converter::encode_blueprint_to_string_dangerous_index, output::FacItemOutput,
         },
         common::vpoint::VPOINT_TEN,
         game_entities::{belt::FacEntBeltType, direction::FacDirectionQuarter},
@@ -464,7 +464,7 @@ mod test {
         if is_error {
             panic!(
                 "blueprint {}",
-                encode_blueprint_to_string(&bpcontents.into()).unwrap()
+                encode_blueprint_to_string_dangerous_index(&bpcontents.into()).unwrap()
             );
         }
         assert_eq!(
@@ -539,7 +539,7 @@ mod test {
         if is_error {
             panic!(
                 "blueprint {}",
-                encode_blueprint_to_string(&bp.into()).unwrap()
+                encode_blueprint_to_string_dangerous_index(&bp.into()).unwrap()
             );
         }
         let item_len = bp.items().len();

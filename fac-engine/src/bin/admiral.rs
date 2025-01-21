@@ -4,7 +4,7 @@ use exhaustive::Exhaustive;
 use facto_loop_miner_common::log_init_trace;
 use facto_loop_miner_fac_engine::blueprint::bpfac::blueprint::FacBpBlueprintWrapper;
 use facto_loop_miner_fac_engine::blueprint::bpitem::BlueprintItem;
-use facto_loop_miner_fac_engine::blueprint::converter::encode_blueprint_to_string;
+use facto_loop_miner_fac_engine::blueprint::converter::encode_blueprint_to_string_dangerous_index;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
 use facto_loop_miner_fac_engine::common::names_tile::FacTileConcreteType;
@@ -79,7 +79,7 @@ fn inner_main() -> AdmiralResult<()> {
     if !is_lua {
         let bpcontents = output.consume_rc().into_blueprint_contents();
         let bp: FacBpBlueprintWrapper = bpcontents.into();
-        let res = encode_blueprint_to_string(&bp).unwrap();
+        let res = encode_blueprint_to_string_dangerous_index(&bp).unwrap();
         println!("bp {res}");
     }
 

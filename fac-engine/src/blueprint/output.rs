@@ -36,7 +36,7 @@ impl FacItemOutput {
     }
 
     pub fn consume_rc(self: Rc<Self>) -> Self {
-        Rc::into_inner(self).unwrap()
+        Rc::into_inner(self).expect("Output Rc somewhere. Need to Drop?")
     }
 
     pub fn new_admiral(client: AdmiralClient) -> Self {

@@ -29,6 +29,6 @@ impl BlueprintItem {
     }
 
     pub fn to_blueprint(&self) -> FacBpEntity {
-        self.entity().to_blueprint(0, self.position())
+        self.entity().to_blueprint(None, self.position())
     }
 }
