@@ -37,6 +37,7 @@ impl From<BlueprintContents> for FacBpBlueprintWrapper {
 }
 
 #[derive(Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
 pub enum FacBpBlueprintItem {
     Blueprint,
     // todo

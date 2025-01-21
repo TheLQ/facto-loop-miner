@@ -73,7 +73,7 @@ impl RailHopeSingle {
         trace!("writing direction {}", direction);
         for i in 0..length {
             self.write_link_rail(RailHopeLinkRail {
-                position: origin.move_direction_usz(&direction, i * RAIL_STRAIGHT_DIAMETER),
+                position: origin.move_direction_usz(direction, i * RAIL_STRAIGHT_DIAMETER),
                 direction: direction.to_direction_eighth(),
                 rtype: FacEntRailType::Straight,
             })
@@ -114,11 +114,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         let _ = &mut self
             .output
             .context_handle(ContextLevel::Micro, format!("👉Straight-{}", length));
-        self.add_straight_line_raw(
-            self.current_next_pos(),
-            self.current_direction().clone(),
-            length,
-        );
+        self.add_straight_line_raw(self.current_next_pos(), *self.current_direction(), length);
     }
 
     fn add_turn90(&mut self, clockwise: bool) {

@@ -38,7 +38,9 @@ pub struct FacBpEntity {
     pub infinity_settings: Option<FacBpInfinitySettings>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schedule: Option<FacBpSchedule>,
+    #[serde(skip_serializing_if = "FacExtPriority::is_none", default)]
     pub output_priority: FacExtPriority,
+    #[serde(skip_serializing_if = "FacExtPriority::is_none", default)]
     pub input_priority: FacExtPriority,
 }
 
