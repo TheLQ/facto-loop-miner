@@ -1,4 +1,5 @@
 pub mod blueprint;
+mod bpversion;
 pub mod entity;
 pub mod icons;
 pub mod infinity;

@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
-
+use crate::blueprint::bpfac::bpversion::FacBpVersion;
 use crate::blueprint::contents::BlueprintContents;
+use serde::{Deserialize, Serialize};
 
 use super::{entity::FacBpEntity, icons::FacBpIcon, schedule::FacBpSchedule};
 
@@ -10,7 +10,7 @@ pub struct FacBpBlueprint {
     pub icons: Vec<FacBpIcon>,
     pub entities: Vec<FacBpEntity>,
     pub item: FacBpBlueprintItem,
-    pub version: usize,
+    pub version: FacBpVersion,
     #[serde(default)]
     pub schedules: Vec<FacBpSchedule>,
 }
@@ -29,7 +29,7 @@ impl From<BlueprintContents> for FacBpBlueprintWrapper {
                 entities,
                 icons: Vec::new(),
                 item: FacBpBlueprintItem::Blueprint,
-                version: 5,
+                version: Default::default(),
                 schedules: Vec::new(),
             },
         }
