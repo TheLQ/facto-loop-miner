@@ -1,9 +1,8 @@
-// use num_traits::ToBytes;
-
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::Formatter;
 
+/// Factorio Version, not a blueprint version
 /// https://wiki.factorio.com/Version_string_format
 #[derive(Debug, PartialEq)]
 #[repr(C)]
@@ -17,6 +16,7 @@ pub struct FacBpVersion {
 impl FacBpVersion {
     fn decode(raw: u64) -> Self {
         let bytes = raw.to_be_bytes();
+        // TODO: sigh... this is so inelegant
         let mut iter = bytes.iter();
         FacBpVersion {
             major: u16::from_be_bytes([*iter.next().unwrap(), *iter.next().unwrap()]),
@@ -42,12 +42,8 @@ impl FacBpVersion {
     }
 }
 
-/// See [`asdf<T>`] AtomicU32::fetch_add
-fn fetch_add(index: &mut usize) -> usize {
-    let old = *index;
-    *index += 1;
-    old
-}
+#[cfg(test)]
+const DEFAULT_VERSION_AS_U64: u64 = 281479278886912;
 
 impl Default for FacBpVersion {
     fn default() -> Self {
@@ -100,20 +96,23 @@ impl<'de> Visitor<'de> for FacBpVersionVisitor {
 
 #[cfg(test)]
 mod test {
-    use crate::blueprint::bpfac::bpversion::FacBpVersion;
-
-    const DEFAULT_VERSION_U64: u64 = 281479278886912;
+    use crate::blueprint::bpfac::bpversion::{DEFAULT_VERSION_AS_U64, FacBpVersion};
 
     #[test]
     fn test_decode() {
-        let as_struct = FacBpVersion::decode(DEFAULT_VERSION_U64);
-        // panic!("res {:?}", version)
-
-        let actual_number = as_struct.encode();
+        let decoded_version = FacBpVersion::decode(DEFAULT_VERSION_AS_U64);
         assert_eq!(
-            actual_number, DEFAULT_VERSION_U64,
+            decoded_version,
+            Default::default(),
             "decoded {:?}",
-            as_struct
+            decoded_version
+        );
+
+        let encoded_version = decoded_version.encode();
+        assert_eq!(
+            encoded_version, DEFAULT_VERSION_AS_U64,
+            "decoded {:?}",
+            decoded_version
         )
     }
 }
