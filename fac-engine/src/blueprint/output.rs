@@ -240,17 +240,21 @@ impl FacItemOutput {
         odata.admiral_execute_command(lua)
     }
 
-    // #[cfg(test)]
-    // pub fn last_blueprint_write_last(&self) -> test::LastWrite {
-    //     use test::LastWrite;
-    //
-    //     let blueprint = &self.unwrap_blueprint().inner;
-    //     let last_item = blueprint.items().last().unwrap();
-    //     LastWrite {
-    //         blueprint: blueprint.fac_entities().last().unwrap().clone(),
-    //         size: last_item.entity().rectangle_size(),
-    //     }
-    // }
+    #[cfg(test)]
+    pub fn last_blueprint_write(&self) -> test::LastWrite {
+        use test::LastWrite;
+
+        let odata = self.odata.borrow();
+        if let FacItemOutputType::Blueprint(blueprint) = &odata.otype {
+            let last_item = blueprint.items().last().unwrap();
+            LastWrite {
+                blueprint: blueprint.fac_entities().last().unwrap().clone(),
+                size: last_item.entity().rectangle_size(),
+            }
+        } else {
+            panic!("Not a blueprint")
+        }
+    }
 
     pub fn into_blueprint_contents(self) -> BlueprintContents {
         let odata = self.odata.into_inner();
@@ -261,14 +265,6 @@ impl FacItemOutput {
             }
         }
     }
-
-    // #[cfg(test)]
-    // fn unwrap_blueprint(&self) -> std::cell::Ref<'_, FacItemOutputData<BlueprintContents>> {
-    //     match &self.otype {
-    //         FacItemOutputType::Blueprint(inner) => inner.borrow(),
-    //         FacItemOutputType::AdmiralClient(_) => panic!("not a blueprint"),
-    //     }
-    // }
 }
 
 #[cfg(test)]
