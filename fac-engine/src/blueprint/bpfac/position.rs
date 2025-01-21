@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 
 use crate::{
     common::vpoint::{VPoint, display_any_pos},
@@ -13,7 +13,9 @@ use super::FacBpFloat;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FacBpPosition {
+    #[serde(serialize_with = "serialize_float_without_zero")]
     pub x: FacBpFloat,
+    #[serde(serialize_with = "serialize_float_without_zero")]
     pub y: FacBpFloat,
 }
 
@@ -97,5 +99,19 @@ impl FacBpPosition {
 
     pub fn to_vpoint_exact(&self) -> VPoint {
         self.to_vpoint_with_offset(0.0, 0.0)
+    }
+}
+
+/// Micro-opt: Factorio does this, which helps reduce every entity's size
+/// "1.0" should be "1"
+fn serialize_float_without_zero<S>(value: &FacBpFloat, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let value = *value;
+    if value.trunc() != value {
+        serializer.serialize_f32(value)
+    } else {
+        serializer.serialize_i32(value as i32)
     }
 }
