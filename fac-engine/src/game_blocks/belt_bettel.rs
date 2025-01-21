@@ -421,21 +421,18 @@ mod test {
             output.clone(),
         );
         belt.add_straight(1);
-        expect_output(FacBpPosition::new(0.0, 0.0), &output, &mut is_error);
+        expect_output(FacBpPosition::new(10.5, 10.5), &output, &mut is_error);
         belt.add_split(true);
-        expect_output(FacBpPosition::new(0.0, 0.0), &output, &mut is_error);
+        expect_output(FacBpPosition::new(11.5, 11.0), &output, &mut is_error);
 
         let mut side_belt = belt.belt_for_splitter();
         side_belt.add_straight(1);
-        expect_output(FacBpPosition::new(0.0, 0.0), &output, &mut is_error);
+        expect_output(FacBpPosition::new(12.5, 11.5), &output, &mut is_error);
         drop(belt);
         drop(side_belt);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
-        panic!(
-            "blueprint {}",
-            encode_blueprint_to_string(&bpcontents.into()).unwrap()
-        );
+        assert_eq!(bpcontents.fac_entities().len(), 3, "too many entities");
     }
 
     //
