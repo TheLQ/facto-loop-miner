@@ -18,26 +18,26 @@ pub struct FacBpPosition {
 }
 
 impl FacBpPosition {
-    pub fn new(x: FacBpFloat, y: FacBpFloat) -> Self {
+    pub const fn new(x: FacBpFloat, y: FacBpFloat) -> Self {
         Self { x, y }
     }
 
-    pub fn x(&self) -> FacBpFloat {
+    pub const fn x(&self) -> FacBpFloat {
         self.x
     }
 
-    pub fn y(&self) -> FacBpFloat {
+    pub const fn y(&self) -> FacBpFloat {
         self.y
     }
 
-    pub fn move_x(&self, steps: FacBpFloat) -> Self {
+    pub const fn move_x(&self, steps: FacBpFloat) -> Self {
         Self {
             x: self.x + steps,
             y: self.y,
         }
     }
 
-    pub fn move_y(&self, steps: FacBpFloat) -> Self {
+    pub const fn move_y(&self, steps: FacBpFloat) -> Self {
         Self {
             x: self.x,
             y: self.y + steps,

@@ -24,15 +24,15 @@ pub const VPOINT_EIGHT: VPoint = VPoint { x: 8, y: 8 };
 pub const VPOINT_TEN: VPoint = VPoint { x: 10, y: 10 };
 
 impl VPoint {
-    pub fn x(&self) -> i32 {
+    pub const fn x(&self) -> i32 {
         self.x
     }
 
-    pub fn y(&self) -> i32 {
+    pub const fn y(&self) -> i32 {
         self.y
     }
 
-    pub fn new(x: i32, y: i32) -> Self {
+    pub const fn new(x: i32, y: i32) -> Self {
         VPoint { x, y }
     }
 
@@ -50,7 +50,7 @@ impl VPoint {
     //     }
     // }
 
-    pub fn from_value(value: i32) -> Self {
+    pub const fn from_value(value: i32) -> Self {
         VPoint { x: value, y: value }
     }
 
@@ -74,26 +74,30 @@ impl VPoint {
     }
 
     /// Factorio export. Offset is half the entity width
-    pub fn to_fac_with_offset_rectangle(&self, offset_x: f32, offset_y: f32) -> FacBpPosition {
+    pub const fn to_fac_with_offset_rectangle(
+        &self,
+        offset_x: f32,
+        offset_y: f32,
+    ) -> FacBpPosition {
         FacBpPosition::new(self.x as f32 + offset_x, self.y as f32 + offset_y)
     }
 
-    pub fn to_fac_exact(&self) -> FacBpPosition {
+    pub const fn to_fac_exact(&self) -> FacBpPosition {
         FacBpPosition::new(self.x as f32, self.y as f32)
     }
 
-    pub fn to_cv_point(&self) -> Point {
+    pub const fn to_cv_point(&self) -> Point {
         Point {
             x: self.x,
             y: self.y,
         }
     }
 
-    pub fn to_slice_f32(&self) -> [f32; 2] {
+    pub const fn to_slice_f32(&self) -> [f32; 2] {
         [self.x as f32, self.y as f32]
     }
 
-    pub fn is_within_center_radius(&self, center_radius: u32) -> bool {
+    pub const fn is_within_center_radius(&self, center_radius: u32) -> bool {
         let center_radius = center_radius as i32;
         self.x > -center_radius
             && self.x < center_radius
@@ -140,36 +144,36 @@ impl VPoint {
     //     (self.y - 1) % 16 == 0
     // }
 
-    pub fn move_x(&self, steps: i32) -> Self {
+    pub const fn move_x(&self, steps: i32) -> Self {
         Self {
             x: self.x + steps,
             y: self.y,
         }
     }
 
-    pub fn move_x_usize(&self, steps: usize) -> Self {
+    pub const fn move_x_usize(&self, steps: usize) -> Self {
         self.move_x(steps as i32)
     }
 
-    pub fn move_y(&self, steps: i32) -> Self {
+    pub const fn move_y(&self, steps: i32) -> Self {
         Self {
             x: self.x,
             y: self.y + steps,
         }
     }
 
-    pub fn move_y_usize(&self, steps: usize) -> Self {
+    pub const fn move_y_usize(&self, steps: usize) -> Self {
         self.move_y(steps as i32)
     }
 
-    pub fn move_xy(&self, x_steps: i32, y_steps: i32) -> Self {
+    pub const fn move_xy(&self, x_steps: i32, y_steps: i32) -> Self {
         Self {
             x: self.x + x_steps,
             y: self.y + y_steps,
         }
     }
 
-    pub fn move_xy_usize(&self, x_steps: usize, y_steps: usize) -> Self {
+    pub const fn move_xy_usize(&self, x_steps: usize, y_steps: usize) -> Self {
         self.move_xy(x_steps as i32, y_steps as i32)
     }
 
@@ -341,22 +345,22 @@ impl VPoint {
     //     self.move_round_down(3)
     // }
 
-    pub fn move_round16_down(&self) -> Self {
+    pub const fn move_round16_down(&self) -> Self {
         self.move_round_down(16)
     }
 
-    fn move_round_down(&self, size: i32) -> Self {
+    const fn move_round_down(&self, size: i32) -> Self {
         VPoint {
             x: self.x - (self.x % size),
             y: self.y - (self.y % size),
         }
     }
 
-    pub fn move_round16_up(&self) -> Self {
+    pub const fn move_round16_up(&self) -> Self {
         self.move_round_up(16)
     }
 
-    fn move_round_up(&self, size: i32) -> Self {
+    const fn move_round_up(&self, size: i32) -> Self {
         let x_rem = self.x % size;
         let y_rem = self.y % size;
         VPoint {
@@ -373,7 +377,7 @@ impl VPoint {
         }
     }
 
-    pub fn get_entity_area_2x2(&self) -> [Self; 4] {
+    pub const fn get_entity_area_2x2(&self) -> [Self; 4] {
         [
             *self,
             self.move_x(1),
@@ -381,7 +385,7 @@ impl VPoint {
             self.move_x(1).move_y(1),
         ]
     }
-    pub fn get_entity_area_3x3(&self) -> [Self; 9] {
+    pub const fn get_entity_area_3x3(&self) -> [Self; 9] {
         [
             *self,
             self.move_x(1),
@@ -398,7 +402,7 @@ impl VPoint {
     }
 
     // aka Manhattan distance
-    pub fn distance_to(&self, other: &Self) -> u32 {
+    pub const fn distance_to(&self, other: &Self) -> u32 {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
     }
 
@@ -408,11 +412,11 @@ impl VPoint {
         (squared_euclidean as f32).sqrt()
     }
 
-    pub fn subtract_x(&self, other: &Self) -> i32 {
+    pub const fn subtract_x(&self, other: &Self) -> i32 {
         self.x - other.x
     }
 
-    pub fn subtract_y(&self, other: &Self) -> i32 {
+    pub const fn subtract_y(&self, other: &Self) -> i32 {
         self.y - other.y
     }
 
