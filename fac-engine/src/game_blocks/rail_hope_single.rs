@@ -363,12 +363,15 @@ fn neg_if_false(flag: bool, value: i32) -> i32 {
 #[cfg(test)]
 mod test {
     use super::RailHopeSingle;
+    use crate::blueprint::bpfac::entity::FacBpEntity;
     use crate::blueprint::bpfac::position::FacBpPosition;
+    use crate::blueprint::contents::BlueprintContents;
     use crate::common::vpoint::VPOINT_TEN;
     use crate::{
         blueprint::output::FacItemOutput, common::vpoint::VPOINT_ZERO,
         game_blocks::rail_hope::RailHopeAppender, game_entities::direction::FacDirectionQuarter,
     };
+    use std::borrow::Borrow;
 
     #[test]
     fn test_straight_chain() {
@@ -415,16 +418,11 @@ mod test {
         drop(hope);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
-        let entities = bpcontents.fac_entities();
-
-        assert_eq!(entities[0].name, "curved-rail");
-        assert_eq!(entities[0].position, FacBpPosition::new(14.0, 12.0));
-
-        assert_eq!(entities[1].name, "straight-rail");
-        assert_eq!(entities[1].position, FacBpPosition::new(17.0, 15.0));
-
-        assert_eq!(entities[2].name, "curved-rail");
-        assert_eq!(entities[2].position, FacBpPosition::new(20.0, 18.0));
+        compare_output(bpcontents, [
+            (FacBpPosition::new(14.0, 12.0), "curved-rail"),
+            (FacBpPosition::new(17.0, 15.0), "straight-rail"),
+            (FacBpPosition::new(20.0, 18.0), "curved-rail"),
+        ])
     }
 
     #[test]
@@ -436,15 +434,94 @@ mod test {
         drop(hope);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
+
+        compare_output(bpcontents, [
+            (FacBpPosition::new(14.0, 10.0), "curved-rail"),
+            (FacBpPosition::new(17.0, 7.0), "straight-rail"),
+            (FacBpPosition::new(20.0, 4.0), "curved-rail"),
+        ])
+    }
+
+    #[test]
+    fn test_shift_45_ccw() {
+        let output = FacItemOutput::new_blueprint().into_rc();
+
+        let mut hope = RailHopeSingle::new(VPOINT_TEN, FacDirectionQuarter::East, output.clone());
+        hope.add_shift45(false, 1);
+        hope.add_straight(1);
+        drop(hope);
+
+        let bpcontents = output.consume_rc().into_blueprint_contents();
+
+        compare_output(bpcontents, [
+            (FacBpPosition::new(14.0, 10.0), "curved-rail"),
+            (FacBpPosition::new(17.0, 7.0), "straight-rail"),
+            (FacBpPosition::new(19.0, 7.0), "straight-rail"),
+            (FacBpPosition::new(22.0, 4.0), "curved-rail"),
+            (FacBpPosition::new(27.0, 3.0), "straight-rail"),
+        ])
+    }
+
+    #[test]
+    fn test_shift_45_clw() {
+        let output = FacItemOutput::new_blueprint().into_rc();
+
+        let mut hope = RailHopeSingle::new(VPOINT_TEN, FacDirectionQuarter::East, output.clone());
+        hope.add_shift45(true, 1);
+        hope.add_straight(1);
+        drop(hope);
+
+        let bpcontents = output.consume_rc().into_blueprint_contents();
+        // panic!(
+        //     "bp {}",
+        //     encode_blueprint_to_string_auto_index(bpcontents.into()).unwrap()
+        // );
+        compare_output(bpcontents, [
+            (FacBpPosition::new(14.0, 12.0), "curved-rail"),
+            (FacBpPosition::new(17.0, 15.0), "straight-rail"),
+            (FacBpPosition::new(19.0, 15.0), "straight-rail"),
+            (FacBpPosition::new(22.0, 18.0), "curved-rail"),
+            (FacBpPosition::new(27.0, 19.0), "straight-rail"),
+        ])
+    }
+
+    fn compare_output(
+        bpcontents: BlueprintContents,
+        expected: impl Borrow<[(FacBpPosition, &'static str)]>,
+    ) {
+        let expected = expected.borrow();
+        let mut is_success = true;
+
         let entities = bpcontents.fac_entities();
+        let entities_len = entities.len();
+        for (i, FacBpEntity { position, name, .. }) in entities.into_iter().enumerate() {
+            let (expected_pos, expected_name) = &expected[i];
+            println!(
+                "actual {} expected {} {}",
+                name,
+                expected_name,
+                if name == expected_name {
+                    ""
+                } else {
+                    is_success = false;
+                    "!!!"
+                }
+            );
+            println!(
+                "actual {}     expected {}   {}",
+                position.display(),
+                expected_pos.display(),
+                if position == expected_pos {
+                    ""
+                } else {
+                    is_success = false;
+                    "!!!"
+                }
+            );
+            println!()
+        }
 
-        assert_eq!(entities[0].name, "curved-rail");
-        assert_eq!(entities[0].position, FacBpPosition::new(14.0, 10.0));
-
-        assert_eq!(entities[1].name, "straight-rail");
-        assert_eq!(entities[1].position, FacBpPosition::new(17.0, 7.0));
-
-        assert_eq!(entities[2].name, "curved-rail");
-        assert_eq!(entities[2].position, FacBpPosition::new(20.0, 4.0));
+        assert!(is_success, "not success");
+        assert_eq!(entities_len, expected.len(), "diff len");
     }
 }

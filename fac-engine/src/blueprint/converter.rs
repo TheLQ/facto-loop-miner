@@ -1,3 +1,4 @@
+use std::borrow::BorrowMut;
 use std::io::{Read, Write};
 
 use base64ct::{Base64, Encoding};
@@ -32,8 +33,9 @@ pub fn encode_blueprint_to_string_dangerous_index(
 }
 
 pub fn encode_blueprint_to_string_auto_index(
-    blueprint: &mut FacBpBlueprintWrapper,
+    mut blueprint: impl BorrowMut<FacBpBlueprintWrapper>,
 ) -> FResult<String> {
+    let blueprint = blueprint.borrow_mut();
     let mut auto_index = /*lua...*/1;
     for entity in &mut blueprint.blueprint.entities {
         if entity.entity_number == None {
