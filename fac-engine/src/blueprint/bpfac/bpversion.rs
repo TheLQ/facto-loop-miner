@@ -68,7 +68,7 @@ impl<'de> Deserialize<'de> for FacBpVersion {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_i32(FacBpVersionVisitor)
+        deserializer.deserialize_u64(FacBpVersionVisitor)
     }
 }
 
