@@ -14,8 +14,8 @@ use crate::{
         electric_mini::{FacEntElectricMini, FacEntElectricMiniType},
         inserter::{FacEntInserter, FacEntInserterType},
         locomotive::FacEntLocomotive,
-        rail::RAIL_STRAIGHT_DIAMETER,
         rail_signal::{FacEntRailSignal, FacEntRailSignalType},
+        rail_straight::RAIL_STRAIGHT_DIAMETER,
         train_stop::FacEntTrainStop,
     },
 };

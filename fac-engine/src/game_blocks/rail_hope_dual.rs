@@ -9,7 +9,7 @@ use crate::game_blocks::rail_hope_single::RailHopeSingle;
 use crate::game_entities::direction::FacDirectionQuarter;
 use crate::game_entities::electric_large::{FacEntElectricLarge, FacEntElectricLargeType};
 use crate::game_entities::lamp::FacEntLamp;
-use crate::game_entities::rail::RAIL_STRAIGHT_DIAMETER;
+use crate::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER;
 
 // Side-by-side rail
 pub struct RailHopeDual {

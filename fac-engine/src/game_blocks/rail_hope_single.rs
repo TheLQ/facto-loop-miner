@@ -8,8 +8,8 @@ use crate::common::entity::FacEntity;
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
 use crate::game_blocks::rail_hope::RailHopeAppender;
 use crate::game_entities::direction::{FacDirectionEighth, FacDirectionQuarter};
-use crate::game_entities::rail::{FacEntRailStraight, RAIL_STRAIGHT_DIAMETER};
 use crate::game_entities::rail_curved::FacEntRailCurved;
+use crate::game_entities::rail_straight::{FacEntRailStraight, RAIL_STRAIGHT_DIAMETER};
 
 /// Rail Pathing v10.999?, "Irys💎 Hope"
 ///
