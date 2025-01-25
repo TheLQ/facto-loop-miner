@@ -18,19 +18,19 @@ use crate::game_entities::rail_straight::{FacEntRailStraight, RAIL_STRAIGHT_DIAM
 /// powered by the vastly better fac-engine API,
 /// without significant Pathfinding-specific code overhead.
 pub struct RailHopeSingle {
-    links: Vec<RailHopeLink>,
-    rail_cache: Vec<RailHopeLinkRail>,
+    links: Vec<HopeLink>,
+    rail_cache: Vec<HopeFactoRail>,
     origin: VPoint,
     origin_direction: FacDirectionQuarter,
     output: Rc<FacItemOutput>,
 }
 
-#[derive(Debug)]
-pub struct RailHopeLink {
-    pub start_pos: VPoint,
+#[derive(Debug, Clone)]
+pub struct HopeLink {
+    pub start: VPoint,
     pub rtype: RailHopeLinkType,
-    pub link_direction: FacDirectionQuarter,
-    pub rails: Vec<RailHopeLinkRail>,
+    pub next_direction: FacDirectionQuarter,
+    pub rails: Vec<HopeFactoRail>,
 }
 
 #[derive(Debug, Clone)]
@@ -39,14 +39,15 @@ pub enum FacEntRailType {
     Curved,
 }
 
-#[derive(Debug)]
-pub struct RailHopeLinkRail {
-    direction: FacDirectionEighth,
-    rtype: FacEntRailType,
-    position: VPoint,
+/// Everything needed to create a BlueprintItem rail
+#[derive(Debug, Clone)]
+pub struct HopeFactoRail {
+    pub direction: FacDirectionEighth,
+    pub rtype: FacEntRailType,
+    pub position: VPoint,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RailHopeLinkType {
     Straight { length: usize },
     Turn90 { clockwise: bool },
@@ -69,7 +70,7 @@ impl RailHopeSingle {
         }
     }
 
-    pub fn links(&self) -> &[RailHopeLink] {
+    pub fn links(&self) -> &[HopeLink] {
         &self.links
     }
 
@@ -83,16 +84,16 @@ impl RailHopeSingle {
     ) {
         trace!("writing direction {}", direction);
         for i in 0..length {
-            self.write_link_rail(RailHopeLinkRail {
+            self.write_link_rail(HopeFactoRail {
                 position: origin.move_direction_usz(direction, i * RAIL_STRAIGHT_DIAMETER),
                 direction: direction.to_direction_eighth(),
                 rtype: FacEntRailType::Straight,
             })
         }
         let rails = self.drain_rails_cache();
-        self.links.push(RailHopeLink {
-            start_pos: origin,
-            link_direction: direction,
+        self.links.push(HopeLink {
+            start: origin,
+            next_direction: direction,
             rtype: RailHopeLinkType::Straight { length },
             rails,
         })
@@ -106,7 +107,7 @@ impl RailHopeSingle {
     pub(crate) fn current_direction(&self) -> &FacDirectionQuarter {
         self.links
             .last()
-            .map(|v| &v.link_direction)
+            .map(|v| &v.next_direction)
             .unwrap_or(&self.origin_direction)
     }
 
@@ -117,12 +118,12 @@ impl RailHopeSingle {
             .unwrap_or(self.origin)
     }
 
-    fn write_link_rail(&mut self, link: RailHopeLinkRail) {
+    fn write_link_rail(&mut self, link: HopeFactoRail) {
         link.to_fac(&self.output);
         self.rail_cache.push(link)
     }
 
-    fn drain_rails_cache(&mut self) -> Vec<RailHopeLinkRail> {
+    fn drain_rails_cache(&mut self) -> Vec<HopeFactoRail> {
         let mut new = Vec::new();
         mem::swap(&mut self.rail_cache, &mut new);
         assert!(!new.is_empty(), "len {}", new.len());
@@ -176,7 +177,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         } else {
             first_curve_direction
         };
-        self.write_link_rail(RailHopeLinkRail {
+        self.write_link_rail(HopeFactoRail {
             position: first_curve_pos,
             direction: first_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
@@ -193,7 +194,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             first_curve_direction.rotate_once()
         };
         trace!("middle straight {:?}", middle_straight_direction);
-        self.write_link_rail(RailHopeLinkRail {
+        self.write_link_rail(HopeFactoRail {
             // -1,-1 to cancel RailStraight's to_fac offset
             position: middle_straight_pos - VPOINT_ONE,
             direction: middle_straight_direction.clone(),
@@ -210,7 +211,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             middle_straight_direction.rotate_once().rotate_once()
         };
         trace!("last curve {:?}", middle_straight_direction);
-        self.write_link_rail(RailHopeLinkRail {
+        self.write_link_rail(HopeFactoRail {
             position: last_curve_pos,
             direction: last_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
@@ -227,9 +228,9 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             cur_direction, link_direction
         );
         let rails = self.drain_rails_cache();
-        self.links.push(RailHopeLink {
-            start_pos: self.current_next_pos(),
-            link_direction,
+        self.links.push(HopeLink {
+            start: self.current_next_pos(),
+            next_direction: link_direction,
             rtype: RailHopeLinkType::Turn90 { clockwise },
             rails,
         })
@@ -267,7 +268,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         } else {
             first_curve_direction
         };
-        self.write_link_rail(RailHopeLinkRail {
+        self.write_link_rail(HopeFactoRail {
             position: first_curve_pos,
             direction: first_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
@@ -288,14 +289,14 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         let mut last_b_pos = middle_straight_pos
             .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, -2));
         for _ in 0..length {
-            self.write_link_rail(RailHopeLinkRail {
+            self.write_link_rail(HopeFactoRail {
                 // -1,-1 to cancel RailStraight's to_fac offset
                 position: next_a_pos - VPOINT_ONE,
                 direction: middle_a_direction.clone(),
                 rtype: FacEntRailType::Straight,
             });
             last_b_pos = next_a_pos.move_direction_usz(&cur_direction, 2);
-            self.write_link_rail(RailHopeLinkRail {
+            self.write_link_rail(HopeFactoRail {
                 // -1,-1 to cancel RailStraight's to_fac offset
                 position: last_b_pos - VPOINT_ONE,
                 direction: middle_b_direction.clone(),
@@ -322,50 +323,50 @@ impl<'o> RailHopeAppender for RailHopeSingle {
                 .rotate_opposite()
                 .rotate_opposite()
         };
-        self.write_link_rail(RailHopeLinkRail {
+        self.write_link_rail(HopeFactoRail {
             position: last_curve_pos,
             direction: last_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
         });
         let rails = self.drain_rails_cache();
-        self.links.push(RailHopeLink {
-            start_pos: self.current_next_pos(),
-            link_direction: cur_direction.clone(),
+        self.links.push(HopeLink {
+            start: self.current_next_pos(),
+            next_direction: cur_direction.clone(),
             rtype: RailHopeLinkType::Shift45 { clockwise, length },
             rails,
         })
     }
 }
 
-impl RailHopeLink {
+impl HopeLink {
     fn next_straight_position(&self) -> VPoint {
         match &self.rtype {
             RailHopeLinkType::Straight { length } => self
-                .start_pos
-                .move_direction_usz(&self.link_direction, length * RAIL_STRAIGHT_DIAMETER),
+                .start
+                .move_direction_usz(&self.next_direction, length * RAIL_STRAIGHT_DIAMETER),
             RailHopeLinkType::Turn90 { clockwise } => {
                 let unrotated = if *clockwise {
-                    self.link_direction.rotate_opposite()
+                    self.next_direction.rotate_opposite()
                 } else {
-                    self.link_direction.rotate_once()
+                    self.next_direction.rotate_once()
                 };
                 trace!("unrotated {}", unrotated);
-                self.start_pos
+                self.start
                     .move_direction_usz(&unrotated, 10)
                     .move_direction_sideways_int(&unrotated, neg_if_false(*clockwise, 12))
             }
             RailHopeLinkType::Shift45 { clockwise, length } => self
-                .start_pos
-                .move_direction_usz(&self.link_direction, 14 + (*length * 2))
+                .start
+                .move_direction_usz(&self.next_direction, 14 + (*length * 2))
                 .move_direction_sideways_int(
-                    &self.link_direction,
+                    &self.next_direction,
                     neg_if_false(*clockwise, 6 + (*length as i32 * 2)),
                 ),
         }
     }
 }
 
-impl RailHopeLinkRail {
+impl HopeFactoRail {
     fn to_fac(&self, res: &FacItemOutput) {
         match self.rtype {
             FacEntRailType::Straight => res.write(BlueprintItem::new(
@@ -380,13 +381,22 @@ impl RailHopeLinkRail {
     }
 }
 
+impl FacEntRailType {
+    fn to_facto_name(&self) -> &str {
+        match self {
+            Self::Curved => "curved-rail",
+            Self::Straight => "straight-rail",
+        }
+    }
+}
+
 fn neg_if_false(flag: bool, value: i32) -> i32 {
     if flag { value } else { -value }
 }
 
 #[cfg(test)]
 mod test {
-    use super::RailHopeSingle;
+    use super::{HopeFactoRail, HopeLink, RailHopeSingle};
     use crate::blueprint::bpfac::entity::FacBpEntity;
     use crate::blueprint::bpfac::position::FacBpPosition;
     use crate::blueprint::contents::BlueprintContents;
@@ -395,6 +405,7 @@ mod test {
         blueprint::output::FacItemOutput, common::vpoint::VPOINT_ZERO,
         game_blocks::rail_hope::RailHopeAppender, game_entities::direction::FacDirectionQuarter,
     };
+    use itertools::Itertools;
     use std::borrow::Borrow;
 
     #[test]
@@ -439,10 +450,11 @@ mod test {
 
         let mut hope = RailHopeSingle::new(VPOINT_TEN, FacDirectionQuarter::East, output.clone());
         hope.add_turn90(true);
+        let links = hope.links.clone();
         drop(hope);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
-        compare_output(bpcontents, [
+        compare_output(bpcontents, links, [
             (FacBpPosition::new(14.0, 12.0), "curved-rail"),
             (FacBpPosition::new(17.0, 15.0), "straight-rail"),
             (FacBpPosition::new(20.0, 18.0), "curved-rail"),
@@ -455,11 +467,11 @@ mod test {
 
         let mut hope = RailHopeSingle::new(VPOINT_TEN, FacDirectionQuarter::East, output.clone());
         hope.add_turn90(false);
+        let links = hope.links.clone();
         drop(hope);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
-
-        compare_output(bpcontents, [
+        compare_output(bpcontents, links, [
             (FacBpPosition::new(14.0, 10.0), "curved-rail"),
             (FacBpPosition::new(17.0, 7.0), "straight-rail"),
             (FacBpPosition::new(20.0, 4.0), "curved-rail"),
@@ -473,11 +485,11 @@ mod test {
         let mut hope = RailHopeSingle::new(VPOINT_TEN, FacDirectionQuarter::East, output.clone());
         hope.add_shift45(false, 1);
         hope.add_straight(1);
+        let links = hope.links.clone();
         drop(hope);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
-
-        compare_output(bpcontents, [
+        compare_output(bpcontents, links, [
             (FacBpPosition::new(14.0, 10.0), "curved-rail"),
             (FacBpPosition::new(17.0, 7.0), "straight-rail"),
             (FacBpPosition::new(19.0, 7.0), "straight-rail"),
@@ -493,18 +505,11 @@ mod test {
         let mut hope = RailHopeSingle::new(VPOINT_TEN, FacDirectionQuarter::East, output.clone());
         hope.add_shift45(true, 1);
         hope.add_straight(1);
-        // println!();
-        // for link in &hope.links {
-        //     println!("link {:?}", link)
-        // }
+        let links = hope.links.clone();
         drop(hope);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
-        // panic!(
-        //     "bp {}",
-        //     encode_blueprint_to_string_auto_index(bpcontents.into()).unwrap()
-        // );
-        compare_output(bpcontents, [
+        compare_output(bpcontents, links, [
             (FacBpPosition::new(14.0, 12.0), "curved-rail"),
             (FacBpPosition::new(17.0, 15.0), "straight-rail"),
             (FacBpPosition::new(19.0, 15.0), "straight-rail"),
@@ -513,17 +518,37 @@ mod test {
         ])
     }
 
+    // panic!(
+    //     "bp {}",
+    //     encode_blueprint_to_string_auto_index(bpcontents.into()).unwrap()
+    // );
+
     fn compare_output(
         bpcontents: BlueprintContents,
+        links: Vec<HopeLink>,
         expected: impl Borrow<[(FacBpPosition, &'static str)]>,
     ) {
         let expected = expected.borrow();
         let mut is_success = true;
-
         let entities = bpcontents.fac_entities();
+        let links_rails = links.iter().flat_map(|v| &v.rails).collect_vec();
+
         let entities_len = entities.len();
+        let links_rails_len: usize = links_rails.len();
+        let expected_len = expected.len();
+        assert_eq!(entities_len, expected_len, "bpentities vs expected");
+        assert_eq!(entities_len, links_rails_len, "bpentities vs links_cat");
+
         for (i, FacBpEntity { position, name, .. }) in entities.into_iter().enumerate() {
             let (expected_pos, expected_name) = &expected[i];
+            // let (link_pos, link_name) = &links[i];
+            let HopeFactoRail {
+                position: link_pos,
+                rtype: link_type,
+                direction: _,
+            } = &links_rails[i];
+            let link_type_name = link_type.to_facto_name();
+
             println!(
                 "actual {} expected {} {}",
                 name,
@@ -540,6 +565,31 @@ mod test {
                 position.display(),
                 expected_pos.display(),
                 if position == expected_pos {
+                    ""
+                } else {
+                    is_success = false;
+                    "!!!"
+                }
+            );
+
+            // todo: entities have vpoint these are facto points
+            // println!(
+            //     "actual {} link expected {}   {}",
+            //     position.display(),
+            //     link_pos.display(),
+            //     if position == link_pos {
+            //         ""
+            //     } else {
+            //         is_success = false;
+            //         "!!!"
+            //     }
+            // );
+
+            println!(
+                "actual {} link expected {}   {}",
+                name,
+                link_type_name,
+                if name == link_type_name {
                     ""
                 } else {
                     is_success = false;
