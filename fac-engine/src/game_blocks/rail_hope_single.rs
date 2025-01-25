@@ -1,3 +1,4 @@
+use std::mem;
 use std::rc::Rc;
 
 use tracing::trace;
@@ -18,15 +19,18 @@ use crate::game_entities::rail_straight::{FacEntRailStraight, RAIL_STRAIGHT_DIAM
 /// without significant Pathfinding-specific code overhead.
 pub struct RailHopeSingle {
     links: Vec<RailHopeLink>,
+    rail_cache: Vec<RailHopeLinkRail>,
     origin: VPoint,
     origin_direction: FacDirectionQuarter,
     output: Rc<FacItemOutput>,
 }
 
+#[derive(Debug)]
 pub struct RailHopeLink {
-    start_pos: VPoint,
-    rtype: RailHopeLinkType,
-    link_direction: FacDirectionQuarter,
+    pub start_pos: VPoint,
+    pub rtype: RailHopeLinkType,
+    pub link_direction: FacDirectionQuarter,
+    pub rails: Vec<RailHopeLinkRail>,
 }
 
 #[derive(Debug, Clone)]
@@ -35,12 +39,14 @@ pub enum FacEntRailType {
     Curved,
 }
 
+#[derive(Debug)]
 pub struct RailHopeLinkRail {
     direction: FacDirectionEighth,
     rtype: FacEntRailType,
     position: VPoint,
 }
 
+#[derive(Debug)]
 pub enum RailHopeLinkType {
     Straight { length: usize },
     Turn90 { clockwise: bool },
@@ -56,10 +62,15 @@ impl RailHopeSingle {
         origin.assert_even_position();
         Self {
             links: Vec::new(),
+            rail_cache: Vec::new(),
             origin,
             origin_direction,
             output,
         }
+    }
+
+    pub fn links(&self) -> &[RailHopeLink] {
+        &self.links
     }
 
     // pub fn compress_straight(&mut self) {}
@@ -78,10 +89,12 @@ impl RailHopeSingle {
                 rtype: FacEntRailType::Straight,
             })
         }
+        let rails = self.drain_rails_cache();
         self.links.push(RailHopeLink {
             start_pos: origin,
             link_direction: direction,
             rtype: RailHopeLinkType::Straight { length },
+            rails,
         })
     }
 
@@ -106,6 +119,14 @@ impl RailHopeSingle {
 
     fn write_link_rail(&mut self, link: RailHopeLinkRail) {
         link.to_fac(&self.output);
+        self.rail_cache.push(link)
+    }
+
+    fn drain_rails_cache(&mut self) -> Vec<RailHopeLinkRail> {
+        let mut new = Vec::new();
+        mem::swap(&mut self.rail_cache, &mut new);
+        assert!(!new.is_empty(), "len {}", new.len());
+        new
     }
 }
 
@@ -205,10 +226,12 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             "from start direction {} to end direction {}",
             cur_direction, link_direction
         );
+        let rails = self.drain_rails_cache();
         self.links.push(RailHopeLink {
             start_pos: self.current_next_pos(),
             link_direction,
             rtype: RailHopeLinkType::Turn90 { clockwise },
+            rails,
         })
     }
 
@@ -304,11 +327,12 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             direction: last_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
         });
-
+        let rails = self.drain_rails_cache();
         self.links.push(RailHopeLink {
             start_pos: self.current_next_pos(),
             link_direction: cur_direction.clone(),
             rtype: RailHopeLinkType::Shift45 { clockwise, length },
+            rails,
         })
     }
 }
@@ -469,6 +493,10 @@ mod test {
         let mut hope = RailHopeSingle::new(VPOINT_TEN, FacDirectionQuarter::East, output.clone());
         hope.add_shift45(true, 1);
         hope.add_straight(1);
+        // println!();
+        // for link in &hope.links {
+        //     println!("link {:?}", link)
+        // }
         drop(hope);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
