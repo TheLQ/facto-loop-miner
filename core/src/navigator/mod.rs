@@ -2,6 +2,7 @@ use crate::navigator::mori::Rail;
 
 // pub mod basic;
 pub mod mori;
+mod mori2;
 pub mod mori_cost;
 pub mod path_executor;
 pub mod path_grouper;

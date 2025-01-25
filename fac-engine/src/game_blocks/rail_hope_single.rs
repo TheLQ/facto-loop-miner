@@ -25,7 +25,7 @@ pub struct RailHopeSingle {
     output: Rc<FacItemOutput>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct HopeLink {
     pub start: VPoint,
     pub rtype: RailHopeLinkType,
@@ -33,21 +33,21 @@ pub struct HopeLink {
     pub rails: Vec<HopeFactoRail>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FacEntRailType {
     Straight,
     Curved,
 }
 
 /// Everything needed to create a BlueprintItem rail
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct HopeFactoRail {
     pub direction: FacDirectionEighth,
     pub rtype: FacEntRailType,
     pub position: VPoint,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RailHopeLinkType {
     Straight { length: usize },
     Turn90 { clockwise: bool },
@@ -72,6 +72,10 @@ impl RailHopeSingle {
 
     pub fn links(&self) -> &[HopeLink] {
         &self.links
+    }
+
+    pub fn into_links(self) -> Vec<HopeLink> {
+        self.links
     }
 
     // pub fn compress_straight(&mut self) {}
