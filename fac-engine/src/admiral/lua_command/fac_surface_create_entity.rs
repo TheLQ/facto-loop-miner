@@ -10,7 +10,7 @@ use itertools::Itertools;
 use regex::Regex;
 use std::convert::AsRef;
 
-pub const DEBUG_PRE_COLLISION: bool = false;
+pub const DEBUG_PRE_COLLISION: bool = true;
 pub const DEBUG_POSITION_EXPECTED: bool = true;
 
 #[derive(Debug)]
@@ -60,7 +60,7 @@ impl LuaCommand for FacSurfaceCreateEntity {
                     "#
                 )
                 .trim()
-                .replace('\n', "")
+                .replace('\n', " ")
                 .replace("    ", ""),
             )
         }
