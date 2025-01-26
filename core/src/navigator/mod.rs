@@ -1,5 +1,5 @@
 // pub mod basic;
-pub mod mori2;
+pub mod mori;
 pub mod mori_cost;
 // pub mod path_executor;
 // pub mod path_grouper;
