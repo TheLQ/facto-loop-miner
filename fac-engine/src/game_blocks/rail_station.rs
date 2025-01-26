@@ -98,7 +98,7 @@ impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
             hope.add_shift45(rotation, 6);
         }
 
-        Self::place_electric_connect(&hope.current_next_pos(), &base_direction, &self.output);
+        Self::place_electric_connect(&hope.next_pos(), &base_direction, &self.output);
 
         const RAILS_PER_CART: f32 = 3.5;
         let base_straight: usize =
@@ -111,7 +111,7 @@ impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
             if !origin_after_straight {
                 hope.add_straight(base_straight);
             }
-            let res = hope.current_next_pos();
+            let res = hope.next_pos();
             // warn!("origin {:?}", station_origin);
             if origin_after_straight {
                 hope.add_straight(base_straight);

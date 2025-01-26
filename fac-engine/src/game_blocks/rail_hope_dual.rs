@@ -57,10 +57,11 @@ impl RailHopeDual {
     pub fn add_electric_next(&mut self) {
         // todo: self.current_direction() causes
         // cannot borrow `self.electric_larges` as mutable because it is also borrowed as immutable
-        let cur_direction = self.hopes[0].current_direction();
+        let last_link = self.hopes[0].last_link();
+        let cur_direction = last_link.next_direction;
 
-        let electric_large_pos = self.hopes[0]
-            .current_next_pos()
+        let electric_large_pos = last_link
+            .start
             .move_direction_sideways_int(cur_direction, -2);
         self.output.write(BlueprintItem::new(
             FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
@@ -73,11 +74,11 @@ impl RailHopeDual {
     }
 
     pub(crate) fn next_buildable_point(&self) -> VPoint {
-        self.hopes[0].current_next_pos()
+        self.hopes[0].next_pos()
     }
 
     pub(crate) fn current_direction(&self) -> &FacDirectionQuarter {
-        self.hopes[0].current_direction()
+        &self.hopes[0].last_link().next_direction
     }
 }
 

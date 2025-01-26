@@ -7,7 +7,7 @@ use crate::blueprint::bpitem::BlueprintItem;
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
 use crate::common::entity::FacEntity;
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
-use crate::game_blocks::rail_hope::RailHopeAppender;
+use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
 use crate::game_entities::direction::{FacDirectionEighth, FacDirectionQuarter};
 use crate::game_entities::rail_curved::FacEntRailCurved;
 use crate::game_entities::rail_straight::{FacEntRailStraight, RAIL_STRAIGHT_DIAMETER};
@@ -19,9 +19,7 @@ use crate::game_entities::rail_straight::{FacEntRailStraight, RAIL_STRAIGHT_DIAM
 /// without significant Pathfinding-specific code overhead.
 pub struct RailHopeSingle {
     links: Vec<HopeLink>,
-    rail_cache: Vec<HopeFactoRail>,
-    origin: VPoint,
-    origin_direction: FacDirectionQuarter,
+    init_link: HopeLink,
     output: Rc<FacItemOutput>,
 }
 
@@ -62,10 +60,13 @@ impl RailHopeSingle {
     ) -> Self {
         origin.assert_even_position();
         Self {
+            init_link: HopeLink {
+                start: origin,
+                next_direction: origin_direction,
+                rtype: RailHopeLinkType::Straight { length: 0 },
+                rails: Vec::new(),
+            },
             links: Vec::new(),
-            rail_cache: Vec::new(),
-            origin,
-            origin_direction,
             output,
         }
     }
@@ -78,72 +79,79 @@ impl RailHopeSingle {
         self.links
     }
 
-    // pub fn compress_straight(&mut self) {}
+    pub fn last_link(&self) -> &HopeLink {
+        // we always should have a link
+        self.links.last().unwrap()
+    }
 
-    fn add_straight_line_raw(
-        &mut self,
-        origin: VPoint,
-        direction: FacDirectionQuarter,
-        length: usize,
-    ) {
-        trace!("writing direction {}", direction);
-        for i in 0..length {
-            self.write_link_rail(HopeFactoRail {
-                position: origin.move_direction_usz(direction, i * RAIL_STRAIGHT_DIAMETER),
-                direction: direction.to_direction_eighth(),
-                rtype: FacEntRailType::Straight,
-            })
+    // with internal init
+    fn appender_link(&self) -> &HopeLink {
+        self.links.last().unwrap_or(&self.init_link)
+    }
+
+    pub fn next_pos(&self) -> VPoint {
+        self.last_link().next_straight_position()
+    }
+
+    fn push_link(&mut self, new_link: HopeLink) {
+        for rail in &new_link.rails {
+            rail.to_fac(&self.output);
         }
-        let rails = self.drain_rails_cache();
-        self.links.push(HopeLink {
-            start: origin,
-            next_direction: direction,
-            rtype: RailHopeLinkType::Straight { length },
-            rails,
-        })
-    }
-
-    // fn last_link(&self) -> &RailHopeLink {
-    //     // we always should have a link
-    //     self.links.last().unwrap()
-    // }
-
-    pub(crate) fn current_direction(&self) -> &FacDirectionQuarter {
-        self.links
-            .last()
-            .map(|v| &v.next_direction)
-            .unwrap_or(&self.origin_direction)
-    }
-
-    pub(crate) fn current_next_pos(&self) -> VPoint {
-        self.links
-            .last()
-            .map(|v| v.next_straight_position())
-            .unwrap_or(self.origin)
-    }
-
-    fn write_link_rail(&mut self, link: HopeFactoRail) {
-        link.to_fac(&self.output);
-        self.rail_cache.push(link)
-    }
-
-    fn drain_rails_cache(&mut self) -> Vec<HopeFactoRail> {
-        let mut new = Vec::new();
-        mem::swap(&mut self.rail_cache, &mut new);
-        assert!(!new.is_empty(), "len {}", new.len());
-        new
+        self.links.push(new_link)
     }
 }
 
-impl<'o> RailHopeAppender for RailHopeSingle {
+impl RailHopeAppender for RailHopeSingle {
     fn add_straight(&mut self, length: usize) {
-        let _ = &mut self
-            .output
-            .context_handle(ContextLevel::Micro, format!("👉Straight-{}", length));
-        self.add_straight_line_raw(self.current_next_pos(), *self.current_direction(), length);
+        // let _ = &mut self
+        //     .output
+        //     .context_handle(ContextLevel::Micro, format!("👉Straight-{}", length));
+        let new_link = self.appender_link().add_straight(length);
+        self.push_link(new_link)
     }
 
     fn add_turn90(&mut self, clockwise: bool) {
+        let _ = &mut self.output.context_handle(
+            ContextLevel::Micro,
+            format!("👉Turn90-{}", if clockwise { "clw" } else { "ccw" }),
+        );
+        let new_link = self.appender_link().add_turn90(clockwise);
+        self.push_link(new_link)
+    }
+
+    fn add_shift45(&mut self, clockwise: bool, length: usize) -> () {
+        let _ = &mut self.output.context_handle(
+            ContextLevel::Micro,
+            format!("👉Shift45-{}", if clockwise { "clw" } else { "ccw" }),
+        );
+        let new_link = self.appender_link().add_shift45(clockwise, length);
+        self.push_link(new_link)
+    }
+}
+
+impl RailHopeAppenderExt<HopeLink> for HopeLink {
+    fn add_straight(&self, length: usize) -> HopeLink {
+        let new_origin = self.next_straight_position();
+        trace!("writing direction {}", self.next_direction);
+
+        let mut rails = Vec::new();
+        for i in 0..length {
+            rails.push(HopeFactoRail {
+                position: new_origin
+                    .move_direction_usz(self.next_direction, i * RAIL_STRAIGHT_DIAMETER),
+                direction: self.next_direction.to_direction_eighth(),
+                rtype: FacEntRailType::Straight,
+            })
+        }
+        HopeLink {
+            start: new_origin,
+            next_direction: self.next_direction,
+            rtype: RailHopeLinkType::Straight { length },
+            rails,
+        }
+    }
+
+    fn add_turn90(&self, clockwise: bool) -> HopeLink {
         /*
         Factorio 1 Rails are really complicated
         This is version 3544579 💎
@@ -161,18 +169,15 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         Directions appear arbitraty
         eg. curved rail from North to NorthWest in Factorio is... curved-rail North?
         */
-        let _ = &mut self.output.context_handle(
-            ContextLevel::Micro,
-            format!("👉Turn90-{}", if clockwise { "clw" } else { "ccw" }),
-        );
-
-        let cur_direction = self.current_direction().clone();
+        let cur_direction = self.next_direction;
         trace!("cur direction {}", cur_direction);
         // 1,1 to cancel RailStraight's to_fac offset
-        let origin_fac = self.current_next_pos() + VPOINT_ONE;
+        let new_origin = self.next_straight_position();
+        let new_origin_fac = new_origin + VPOINT_ONE;
+        let mut rails = Vec::new();
 
         // curve 1
-        let first_curve_pos = origin_fac
+        let first_curve_pos = new_origin_fac
             .move_direction_usz(&cur_direction, 3)
             .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 1));
         let first_curve_direction = cur_direction.to_direction_eighth();
@@ -181,7 +186,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         } else {
             first_curve_direction
         };
-        self.write_link_rail(HopeFactoRail {
+        rails.push(HopeFactoRail {
             position: first_curve_pos,
             direction: first_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
@@ -198,7 +203,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             first_curve_direction.rotate_once()
         };
         trace!("middle straight {:?}", middle_straight_direction);
-        self.write_link_rail(HopeFactoRail {
+        rails.push(HopeFactoRail {
             // -1,-1 to cancel RailStraight's to_fac offset
             position: middle_straight_pos - VPOINT_ONE,
             direction: middle_straight_direction.clone(),
@@ -215,7 +220,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             middle_straight_direction.rotate_once().rotate_once()
         };
         trace!("last curve {:?}", middle_straight_direction);
-        self.write_link_rail(HopeFactoRail {
+        rails.push(HopeFactoRail {
             position: last_curve_pos,
             direction: last_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
@@ -231,16 +236,15 @@ impl<'o> RailHopeAppender for RailHopeSingle {
             "from start direction {} to end direction {}",
             cur_direction, link_direction
         );
-        let rails = self.drain_rails_cache();
-        self.links.push(HopeLink {
-            start: self.current_next_pos(),
+        HopeLink {
+            start: new_origin,
             next_direction: link_direction,
             rtype: RailHopeLinkType::Turn90 { clockwise },
             rails,
-        })
+        }
     }
 
-    fn add_shift45(&mut self, clockwise: bool, length: usize) {
+    fn add_shift45(&self, clockwise: bool, length: usize) -> HopeLink {
         /*
         Factorio 1 Rails at 45 degrees are still really complicated
 
@@ -253,17 +257,15 @@ impl<'o> RailHopeAppender for RailHopeSingle {
 
         Between 2x pairs, the middle 2 rails are on the same Y axis
         */
-        let _ = &mut self.output.context_handle(
-            ContextLevel::Micro,
-            format!("👉Shift45-{}", if clockwise { "clw" } else { "ccw" }),
-        );
-
-        let cur_direction = self.current_direction().clone();
+        let cur_direction = self.next_direction;
+        trace!("cur direction {}", cur_direction);
         // 1,1 to cancel RailStraight's to_fac offset
-        let origin_fac = self.current_next_pos() + VPOINT_ONE;
+        let new_origin = self.next_straight_position();
+        let new_origin_fac = new_origin + VPOINT_ONE;
+        let mut rails = Vec::new();
 
         // curve 1 (copy of above turn90)
-        let first_curve_pos = origin_fac
+        let first_curve_pos = new_origin_fac
             .move_direction_usz(&cur_direction, 3)
             .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 1));
         let first_curve_direction = cur_direction.to_direction_eighth();
@@ -272,7 +274,7 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         } else {
             first_curve_direction
         };
-        self.write_link_rail(HopeFactoRail {
+        rails.push(HopeFactoRail {
             position: first_curve_pos,
             direction: first_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
@@ -293,14 +295,14 @@ impl<'o> RailHopeAppender for RailHopeSingle {
         let mut last_b_pos = middle_straight_pos
             .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, -2));
         for _ in 0..length {
-            self.write_link_rail(HopeFactoRail {
+            rails.push(HopeFactoRail {
                 // -1,-1 to cancel RailStraight's to_fac offset
                 position: next_a_pos - VPOINT_ONE,
                 direction: middle_a_direction.clone(),
                 rtype: FacEntRailType::Straight,
             });
             last_b_pos = next_a_pos.move_direction_usz(&cur_direction, 2);
-            self.write_link_rail(HopeFactoRail {
+            rails.push(HopeFactoRail {
                 // -1,-1 to cancel RailStraight's to_fac offset
                 position: last_b_pos - VPOINT_ONE,
                 direction: middle_b_direction.clone(),
@@ -327,23 +329,22 @@ impl<'o> RailHopeAppender for RailHopeSingle {
                 .rotate_opposite()
                 .rotate_opposite()
         };
-        self.write_link_rail(HopeFactoRail {
+        rails.push(HopeFactoRail {
             position: last_curve_pos,
             direction: last_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
         });
-        let rails = self.drain_rails_cache();
-        self.links.push(HopeLink {
-            start: self.current_next_pos(),
+        HopeLink {
+            start: new_origin,
             next_direction: cur_direction.clone(),
             rtype: RailHopeLinkType::Shift45 { clockwise, length },
             rails,
-        })
+        }
     }
 }
 
 impl HopeLink {
-    fn next_straight_position(&self) -> VPoint {
+    pub fn next_straight_position(&self) -> VPoint {
         match &self.rtype {
             RailHopeLinkType::Straight { length } => self
                 .start
@@ -425,7 +426,7 @@ mod test {
             hope_long.add_straight(3);
             hope_long.add_straight(6);
 
-            hope_long.current_next_pos()
+            hope_long.next_pos()
         };
 
         let hope_long_bp = hope_long_output.consume_rc().into_blueprint_contents();
@@ -439,7 +440,7 @@ mod test {
             );
             hope_short.add_straight(11);
 
-            hope_short.current_next_pos()
+            hope_short.next_pos()
         };
 
         let hope_short_bp = hope_short_output.consume_rc().into_blueprint_contents();
