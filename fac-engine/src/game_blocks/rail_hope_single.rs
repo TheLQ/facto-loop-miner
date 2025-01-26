@@ -1,6 +1,5 @@
-use std::mem;
+use serde::{Deserialize, Serialize};
 use std::rc::Rc;
-
 use tracing::trace;
 
 use crate::blueprint::bpitem::BlueprintItem;
@@ -23,7 +22,7 @@ pub struct RailHopeSingle {
     output: Rc<FacItemOutput>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct HopeLink {
     pub start: VPoint,
     pub rtype: HopeLinkType,
@@ -31,21 +30,21 @@ pub struct HopeLink {
     pub rails: Vec<HopeFactoRail>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum FacEntRailType {
     Straight,
     Curved,
 }
 
 /// Everything needed to create a BlueprintItem rail
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct HopeFactoRail {
     pub direction: FacDirectionEighth,
     pub rtype: FacEntRailType,
     pub position: VPoint,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum HopeLinkType {
     Straight { length: usize },
     Turn90 { clockwise: bool },

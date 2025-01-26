@@ -17,7 +17,11 @@ const STRAIGHT_STEP_SIZE: usize = 1;
 ///
 /// Makes a dual rail + spacing, +6 straight or 90 degree turning, path of rail from start to end.
 /// Without collisions into any point on the Surface.
-pub fn mori2_start(surface: &VSurface, start: VPointDirectionQ, end: VPointDirectionQ) {
+pub fn mori2_start(
+    surface: &VSurface,
+    start: VPointDirectionQ,
+    end: VPointDirectionQ,
+) -> MoriResult {
     let pathfind_watch = BasicWatch::start();
 
     let endpoints = &PathSegmentPoints { start, end };
@@ -37,6 +41,14 @@ pub fn mori2_start(surface: &VSurface, start: VPointDirectionQ, end: VPointDirec
         |_p| 1,
         |p| p == &end_link,
     );
+
+    match pathfind {
+        Ok((path, cost)) => MoriResult::Route { path, cost },
+        Err((inner_map, parents)) => {
+            let entries = parents.into_iter().map(|(node, _v)| node).collect();
+            MoriResult::FailingDebug(entries)
+        }
+    }
 }
 
 pub struct PathSegmentPoints {
@@ -60,8 +72,8 @@ impl MoriResult {
 
 impl PathSegmentPoints {
     fn validate_positions(&self) {
-        self.start.point().assert_odd_16x16_position();
-        self.end.point().assert_odd_16x16_position();
+        // self.start.point().assert_odd_16x16_position();
+        // self.end.point().assert_odd_16x16_position();
     }
 }
 

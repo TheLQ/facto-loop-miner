@@ -237,13 +237,6 @@ pub fn extend_rail_end(
     Some(rails)
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct MinePath {
-    pub mine_base: MineBase,
-    pub rail: Vec<Rail>,
-    pub cost: u32,
-}
-
 pub enum MineRouteCombinationPathResult {
     Success {
         paths: Vec<MinePath>,

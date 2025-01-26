@@ -3,11 +3,11 @@ use crate::navigator::path_side::{BaseSource, BaseSourceEighth};
 use crate::state::machine_v1::{CENTRAL_BASE_TILES, REMOVE_RESOURCE_BASE_TILES};
 use crate::surface::patch::map_vpatch_to_kdtree;
 use crate::surface::pixel::Pixel;
-use facto_loop_miner_fac_engine::common::varea::VArea;
 use crate::surfacev::vpatch::VPatch;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use crate::TILES_PER_CHUNK;
+use facto_loop_miner_fac_engine::common::varea::VArea;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use itertools::Itertools;
 use kiddo::{Manhattan, NearestNeighbour};
 use serde::{Deserialize, Serialize};
@@ -17,12 +17,6 @@ use std::sync::Mutex;
 use tracing::{debug, error, info, trace};
 
 const MAX_PATCHES: usize = 200;
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, Hash, Clone, Debug)]
-pub struct MineBase {
-    pub patch_indexes: Vec<usize>,
-    pub area: VArea,
-}
 
 pub struct MineBaseBatch {
     pub mines: Vec<MineBase>,

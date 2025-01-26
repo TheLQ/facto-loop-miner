@@ -4,12 +4,14 @@ use crate::state::tuneables::Tunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
+use crate::surfacev::mine::MinePath;
 use crate::surfacev::ventity_map::{VEntityMap, VEntityXY};
 use crate::surfacev::vpatch::VPatch;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::opencv_re::core::Mat;
 use facto_loop_miner_io::err::VIoError;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
@@ -36,8 +38,8 @@ pub struct VSurface {
     pixels: VEntityMap<VPixel>,
     entities: VEntityMap<VEntity>,
     patches: Vec<VPatch>,
-    // #[serde(default)]
-    // rail_paths: Vec<MinePath>,
+    #[serde(default)]
+    rail_paths: Vec<MinePath>,
     tunables: Tunables,
 }
 
@@ -49,7 +51,7 @@ impl VSurface {
             pixels: VEntityMap::new(radius),
             entities: VEntityMap::new(radius),
             patches: Vec::new(),
-            // rail_paths: Vec::new(),
+            rail_paths: Vec::new(),
             tunables: Tunables::default(),
         }
     }
@@ -456,9 +458,9 @@ impl VSurface {
         }
     }
 
-    // pub fn add_rail_path_drain(&mut self, rails: Vec<MinePath>) {
-    //     self.rail_paths.extend(rails)
-    // }
+    pub fn add_mine_path(&mut self, rails: Vec<MinePath>) {
+        self.rail_paths.extend(rails)
+    }
     //
     // pub fn get_rail_TODO(&self) -> impl Iterator<Item = &Rail> {
     //     self.rail_paths.iter().flat_map(|v| &v.rail)
