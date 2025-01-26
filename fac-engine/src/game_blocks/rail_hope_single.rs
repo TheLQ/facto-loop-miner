@@ -18,13 +18,13 @@ use crate::game_entities::rail_straight::{FacEntRailStraight, RAIL_STRAIGHT_DIAM
 /// powered by the vastly better fac-engine API,
 /// without significant Pathfinding-specific code overhead.
 pub struct RailHopeSingle {
-    links: Vec<HopeLink>,
-    init_link: HopeLink,
+    links: Vec<HopeSingleLink>,
+    init_link: HopeSingleLink,
     output: Rc<FacItemOutput>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct HopeLink {
+pub struct HopeSingleLink {
     pub start: VPoint,
     pub rtype: RailHopeLinkType,
     pub next_direction: FacDirectionQuarter,
@@ -60,7 +60,7 @@ impl RailHopeSingle {
     ) -> Self {
         origin.assert_even_position();
         Self {
-            init_link: HopeLink {
+            init_link: HopeSingleLink {
                 start: origin,
                 next_direction: origin_direction,
                 rtype: RailHopeLinkType::Straight { length: 0 },
@@ -71,21 +71,21 @@ impl RailHopeSingle {
         }
     }
 
-    pub fn links(&self) -> &[HopeLink] {
+    pub fn links(&self) -> &[HopeSingleLink] {
         &self.links
     }
 
-    pub fn into_links(self) -> Vec<HopeLink> {
+    pub fn into_links(self) -> Vec<HopeSingleLink> {
         self.links
     }
 
-    pub fn last_link(&self) -> &HopeLink {
+    pub fn last_link(&self) -> &HopeSingleLink {
         // we always should have a link
         self.links.last().unwrap()
     }
 
     // with internal init
-    fn appender_link(&self) -> &HopeLink {
+    fn appender_link(&self) -> &HopeSingleLink {
         self.links.last().unwrap_or(&self.init_link)
     }
 
@@ -93,7 +93,7 @@ impl RailHopeSingle {
         self.last_link().next_straight_position()
     }
 
-    fn push_link(&mut self, new_link: HopeLink) {
+    fn push_link(&mut self, new_link: HopeSingleLink) {
         for rail in &new_link.rails {
             rail.to_fac(&self.output);
         }
@@ -129,8 +129,8 @@ impl RailHopeAppender for RailHopeSingle {
     }
 }
 
-impl RailHopeAppenderExt<HopeLink> for HopeLink {
-    fn add_straight(&self, length: usize) -> HopeLink {
+impl RailHopeAppenderExt<HopeSingleLink> for HopeSingleLink {
+    fn add_straight(&self, length: usize) -> HopeSingleLink {
         let new_origin = self.next_straight_position();
         trace!("writing direction {}", self.next_direction);
 
@@ -143,7 +143,7 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
                 rtype: FacEntRailType::Straight,
             })
         }
-        HopeLink {
+        HopeSingleLink {
             start: new_origin,
             next_direction: self.next_direction,
             rtype: RailHopeLinkType::Straight { length },
@@ -151,7 +151,7 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
         }
     }
 
-    fn add_turn90(&self, clockwise: bool) -> HopeLink {
+    fn add_turn90(&self, clockwise: bool) -> HopeSingleLink {
         /*
         Factorio 1 Rails are really complicated
         This is version 3544579 💎
@@ -236,7 +236,7 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
             "from start direction {} to end direction {}",
             cur_direction, link_direction
         );
-        HopeLink {
+        HopeSingleLink {
             start: new_origin,
             next_direction: link_direction,
             rtype: RailHopeLinkType::Turn90 { clockwise },
@@ -244,7 +244,7 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
         }
     }
 
-    fn add_shift45(&self, clockwise: bool, length: usize) -> HopeLink {
+    fn add_shift45(&self, clockwise: bool, length: usize) -> HopeSingleLink {
         /*
         Factorio 1 Rails at 45 degrees are still really complicated
 
@@ -334,7 +334,7 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
             direction: last_curve_direction.clone(),
             rtype: FacEntRailType::Curved,
         });
-        HopeLink {
+        HopeSingleLink {
             start: new_origin,
             next_direction: cur_direction.clone(),
             rtype: RailHopeLinkType::Shift45 { clockwise, length },
@@ -343,7 +343,7 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
     }
 }
 
-impl HopeLink {
+impl HopeSingleLink {
     pub fn next_straight_position(&self) -> VPoint {
         match &self.rtype {
             RailHopeLinkType::Straight { length } => self
@@ -401,7 +401,7 @@ fn neg_if_false(flag: bool, value: i32) -> i32 {
 
 #[cfg(test)]
 mod test {
-    use super::{HopeFactoRail, HopeLink, RailHopeSingle};
+    use super::{HopeFactoRail, HopeSingleLink, RailHopeSingle};
     use crate::blueprint::bpfac::entity::FacBpEntity;
     use crate::blueprint::bpfac::position::FacBpPosition;
     use crate::blueprint::contents::BlueprintContents;
@@ -530,7 +530,7 @@ mod test {
 
     fn compare_output(
         bpcontents: BlueprintContents,
-        links: Vec<HopeLink>,
+        links: Vec<HopeSingleLink>,
         expected: impl Borrow<[(FacBpPosition, &'static str)]>,
     ) {
         let expected = expected.borrow();
