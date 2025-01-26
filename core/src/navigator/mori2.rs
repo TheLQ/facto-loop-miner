@@ -6,7 +6,7 @@ use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{
-    HopeFactoRail, HopeSingleLink, RailHopeLinkType, RailHopeSingle,
+    HopeFactoRail, HopeLink, HopeLinkType, RailHopeSingle,
 };
 use pathfinding::prelude::astar_mori;
 
@@ -38,11 +38,8 @@ pub fn mori2_start(surface: &VSurface, start: VPointDirectionQ, end: VPointDirec
 }
 
 pub enum MoriResult {
-    Route {
-        path: Vec<HopeSingleLink>,
-        cost: u32,
-    },
-    FailingDebug(Vec<HopeSingleLink>),
+    Route { path: Vec<HopeLink>, cost: u32 },
+    FailingDebug(Vec<HopeLink>),
 }
 
 impl MoriResult {
@@ -59,7 +56,7 @@ fn validate_positions(start: &VPointDirectionQ, end: &VPointDirectionQ) {
     end.point().assert_odd_16x16_position();
 }
 
-fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeSingleLink {
+fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeLink {
     let mut hope = RailHopeSingle::new(
         *start.point(),
         *start.direction(),
@@ -70,11 +67,7 @@ fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeSingleLink {
     links.into_iter().next().unwrap()
 }
 
-fn successors(
-    surface: &VSurface,
-    parents: &[HopeSingleLink],
-    cur: &HopeSingleLink,
-) -> Vec<(HopeSingleLink, u32)> {
+fn successors(surface: &VSurface, parents: &[HopeLink], cur: &HopeLink) -> Vec<(HopeLink, u32)> {
     let mut successors = Vec::new();
 
     let nexts = [
@@ -92,7 +85,7 @@ fn successors(
     successors
 }
 
-fn into_buildable_link(surface: &VSurface, new_link: HopeSingleLink) -> Option<HopeSingleLink> {
+fn into_buildable_link(surface: &VSurface, new_link: HopeLink) -> Option<HopeLink> {
     let area = link_area(surface, &new_link);
     if surface.is_points_free_unchecked(&area) {
         Some(new_link)
@@ -101,7 +94,7 @@ fn into_buildable_link(surface: &VSurface, new_link: HopeSingleLink) -> Option<H
     }
 }
 
-fn link_area(surface: &VSurface, new_link: &HopeSingleLink) -> Vec<VPoint> {
+fn link_area(surface: &VSurface, new_link: &HopeLink) -> Vec<VPoint> {
     Vec::new()
 }
 

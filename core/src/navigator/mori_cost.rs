@@ -1,19 +1,8 @@
-use crate::navigator::mori::{Rail, RailMode, RAIL_STEP_SIZE};
-use crate::navigator::rail_point_compare::RailPointCompare;
-use crate::navigator::resource_cloud::ResourceCloud;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use crate::state::tuneables::MoriTunables;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, HopeLinkType};
 use strum::IntoStaticStr;
-
 // const ANTI_WRONG_BIAS_EFFECT: f32 = 10f32;
 // const RESOURCE_BIAS_EFFECT: f32 = 20f32;
-
-pub const STRAIGHT_COST_UNIT: f32 = 1.0;
-pub const TURN_COST_UNIT: f32 = 4.0;
-// const MULTI_TURN_LOOKBACK: usize = 10;
-pub const MULTI_TURN_COST_UNIT: f32 = 48.0;
-
-pub const DIRECTION_COST_UNIT: f32 = 10.0;
-pub const AXIS_COST_UNIT: f32 = 5.0;
 
 #[derive(IntoStaticStr)]
 pub enum MoriCostMode {
@@ -21,7 +10,6 @@ pub enum MoriCostMode {
     DistanceManhattanOnly,
     Complete,
 }
-pub const MORI_COST_MODE: MoriCostMode = MoriCostMode::Complete;
 
 pub enum RailAction {
     TurnLeft,
@@ -29,22 +17,23 @@ pub enum RailAction {
     Straight,
 }
 
-pub fn calculate_cost_for_point(
-    next: &Rail,
-    start: &Rail,
-    end: &VPoint,
-    resource_cloud: &ResourceCloud,
-    parents_compare: &[RailPointCompare],
+pub fn calculate_cost_for_link(
+    next: &HopeLink,
+    start: &HopeLink,
+    end: &HopeLink,
+    parents: &[HopeLink],
+    tune: &MoriTunables,
 ) -> u32 {
-    let result = match MORI_COST_MODE {
+    let result = match tune.cost_mode {
         MoriCostMode::Dummy => 5.0,
-        MoriCostMode::DistanceManhattanOnly => distance_basic_manhattan(next, end),
-        MoriCostMode::Complete => into_end_landing_bias(
-            next,
-            start,
-            end,
-            distance_with_less_parent_turns(parents_compare, next, end),
-        ),
+        MoriCostMode::DistanceManhattanOnly => distance_by_basic_manhattan(next, end),
+        MoriCostMode::Complete => distance_by_punish_turns(parents, next, end, tune),
+        // MoriCostMode::Complete => into_end_landing_bias(
+        //     next,
+        //     start,
+        //     end,
+        //     distance_by_punish_turns(parents_compare, next, end),
+        // ),
     };
     result as u32
 
@@ -74,78 +63,75 @@ pub fn calculate_cost_for_point(
     //
 }
 
-fn distance_basic_manhattan(next: &Rail, end: &VPoint) -> f32 {
-    next.endpoint.distance_to(end) as f32
+fn distance_by_basic_manhattan(next: &HopeLink, end: &HopeLink) -> f32 {
+    next.next_straight_position()
+        .distance_to(&end.next_straight_position()) as f32
 }
 
-fn distance_with_less_parent_turns(
-    parents_compare: &[RailPointCompare],
-    next: &Rail,
-    end: &VPoint,
+fn distance_by_punish_turns(
+    parents: &[HopeLink],
+    next: &HopeLink,
+    end: &HopeLink,
+    tune: &MoriTunables,
 ) -> f32 {
-    // turning is costly
-    let mut total_cost = distance_basic_manhattan(next, end) / RAIL_STEP_SIZE as f32;
+    let base_distance = distance_by_basic_manhattan(next, end);
 
-    total_cost += match next.mode {
-        RailMode::Straight => STRAIGHT_COST_UNIT,
-        RailMode::Turn(_) => TURN_COST_UNIT,
-    };
+    let link_cost: f32 = match next.rtype {
+        HopeLinkType::Straight { length } => tune.straight_cost_unit,
+        HopeLinkType::Turn90 { .. } => {
+            let mut cost = tune.turn_cost_unit;
 
-    // add extra cost for previous turns
-    let mut last_turns = 0u32;
-    for parent in parents_compare.iter().rev().take(5) {
-        if let RailMode::Turn(_) = parent.inner.mode {
-            last_turns += 25;
-            // TODO: If this is too low, direction bias takes over and forces rail all the way to the end
-            // .pow(last_turns.min(3))
-            total_cost += last_turns as f32 * MULTI_TURN_COST_UNIT;
-        } else {
-            last_turns = last_turns.saturating_sub(1);
+            let num_recent_turns: f32 = parents
+                .iter()
+                .rev()
+                .take(tune.multi_turn_lookback)
+                .map(|link| match link.rtype {
+                    HopeLinkType::Turn90 { .. } => 1.0,
+                    _ => 0.0,
+                })
+                .sum();
+            cost += num_recent_turns * tune.multi_turn_cost_unit;
+
+            cost
         }
-    }
-    // let mut parent_iter = parents.iter().rev();
-    // for _ in 0..MULTI_TURN_LOOKBACK {
-    //     if let Some(rail) = parent_iter.next() {
-    //         if let RailMode::Turn(_) = rail.mode {
-    //             total_cost += MULTI_TURN_COST_UNIT;
-    //         }
-    //     }
-    // }
-    total_cost
-}
-
-fn into_end_landing_bias(next: &Rail, start: &Rail, end: &VPoint, base_distance: f32) -> f32 {
-    // const BIAS_DISTANCE_START: f32 = 30.0;
-    // const DIRECTION_COST_UNIT: f32 = 5.0;
-    // const AXIS_COST_UNIT: f32 = 5.0;
-
-    let mut total_cost = base_distance;
-
-    // if next.endpoint.distance_to(&end.endpoint) > BIAS_DISTANCE_START as u32 {
-    //     return 0.0;
-    // }
-
-    // Add cost if wrong direction near base
-    // - Don't "hug" the base border and turn right before, overwriting many destinations
-    // - Don't go behind the destination
-    let direction_bias = if next.direction.is_same_axis(&start.direction) {
-        0.0
-    } else {
-        // DIRECTION_COST_UNIT * (BIAS_DISTANCE_START - base_distance)
-        DIRECTION_COST_UNIT
+        HopeLinkType::Shift45 { .. } => todo!("shift45"),
     };
-    // total_cost += direction_bias;
 
-    let axis_distance = start
-        .distance_between_perpendicular_axis(&next.endpoint)
-        .unsigned_abs() as f32
-        * AXIS_COST_UNIT;
-    // let axis_distance = (axis_distance - 3).max(1) as f32;
-    // let axis_bias = axis_distance as f32 * AXIS_COST_UNIT;
-    // (base_distance + direction_bias) * (axis_distance)
-    // base_distance + (axis_distance * AXIS_COST_UNIT)
-
-    total_cost += axis_distance;
-
-    total_cost
+    base_distance * link_cost
 }
+
+// fn into_end_landing_bias(next: &Rail, start: &Rail, end: &VPoint, base_distance: f32) -> f32 {
+//     // const BIAS_DISTANCE_START: f32 = 30.0;
+//     // const DIRECTION_COST_UNIT: f32 = 5.0;
+//     // const AXIS_COST_UNIT: f32 = 5.0;
+//
+//     let mut total_cost = base_distance;
+//
+//     // if next.endpoint.distance_to(&end.endpoint) > BIAS_DISTANCE_START as u32 {
+//     //     return 0.0;
+//     // }
+//
+//     // Add cost if wrong direction near base
+//     // - Don't "hug" the base border and turn right before, overwriting many destinations
+//     // - Don't go behind the destination
+//     let direction_bias = if next.direction.is_same_axis(&start.direction) {
+//         0.0
+//     } else {
+//         // DIRECTION_COST_UNIT * (BIAS_DISTANCE_START - base_distance)
+//         DIRECTION_COST_UNIT
+//     };
+//     // total_cost += direction_bias;
+//
+//     let axis_distance = start
+//         .distance_between_perpendicular_axis(&next.endpoint)
+//         .unsigned_abs() as f32
+//         * AXIS_COST_UNIT;
+//     // let axis_distance = (axis_distance - 3).max(1) as f32;
+//     // let axis_bias = axis_distance as f32 * AXIS_COST_UNIT;
+//     // (base_distance + direction_bias) * (axis_distance)
+//     // base_distance + (axis_distance * AXIS_COST_UNIT)
+//
+//     total_cost += axis_distance;
+//
+//     total_cost
+// }
