@@ -1,7 +1,5 @@
-use crate::navigator::mori::{Rail, RailMode, TurnType};
-use crate::navigator::rail_point_compare::RailPointCompare;
-use facto_loop_miner_fac_engine::common::varea::VArea;
 use crate::surfacev::vsurface::VSurface;
+use facto_loop_miner_fac_engine::common::varea::VArea;
 use itertools::Itertools;
 use strum::Display;
 use tracing::{error, info, trace};
