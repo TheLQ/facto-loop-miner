@@ -40,8 +40,8 @@ impl Step for Step10 {
     }
 }
 
-pub const CENTRAL_BASE_CHUNKS: i32 = 20;
-pub const REMOVE_RESOURCE_BASE_CHUNKS: i32 = 55;
+pub const CENTRAL_BASE_CHUNKS: i32 = 2;
+pub const REMOVE_RESOURCE_BASE_CHUNKS: i32 = 2;
 pub const REMOVE_RESOURCE_BORDER_CHUNKS: i32 = 2;
 
 pub const CENTRAL_BASE_TILES: i32 = CENTRAL_BASE_CHUNKS * TILES_PER_CHUNK as i32;
