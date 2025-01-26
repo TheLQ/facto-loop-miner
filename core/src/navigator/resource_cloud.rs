@@ -1,6 +1,5 @@
 use crate::surface::patch::DiskPatch;
 use crate::surface::pixel::Pixel;
-use crate::surface::surface::PointU32;
 use crate::surfacev::vsurface::VSurface;
 use crate::PixelKdTree;
 
@@ -46,8 +45,4 @@ impl ResourceCloud {
             pixels,
         }
     }
-}
-
-pub fn point_to_slice_f32(point: PointU32) -> [f32; 2] {
-    [point.x as f32, point.y as f32]
 }

@@ -1,7 +1,3 @@
-use crate::navigator::mori::{
-    draw_rail, mori_start, write_rail, write_rail_with_pixel, Rail, RAIL_STEP_SIZE,
-    RAIL_STEP_SIZE_I32,
-};
 use crate::navigator::path_executor::{execute_route_batch, MineRouteCombinationPathResult};
 use crate::navigator::path_grouper::{
     base_bottom_right_corner, get_mine_bases_by_batch, MineBaseBatch, MineBaseBatchResult,
@@ -10,7 +6,6 @@ use crate::navigator::path_planner::{
     expanded_mine_no_touching_zone, get_possible_routes_for_batch, MineChoices,
 };
 use crate::navigator::path_side::BaseSource;
-use crate::navigator::PathingResult;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::patch::{DiskPatch, Patch};

@@ -33,12 +33,9 @@
 
 extern crate core;
 
-use crate::navigator::mori::{draw_rail, Rail};
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
-use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_common::log_init_trace;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use kiddo::float;
 use num_format::Locale;
 use num_traits::PrimInt;

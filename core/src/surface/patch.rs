@@ -76,12 +76,12 @@ impl Patch {
         }
     }
 
-    pub fn corner_point_u32(&self) -> PointU32 {
-        PointU32 {
-            x: self.x as u32,
-            y: self.y as u32,
-        }
-    }
+    // pub fn corner_point_u32(&self) -> PointU32 {
+    //     PointU32 {
+    //         x: self.x as u32,
+    //         y: self.y as u32,
+    //     }
+    // }
 
     pub fn corner_point_slice_f32(&self) -> [f32; 2] {
         [self.x as f32, self.y as f32]
@@ -96,20 +96,20 @@ impl Patch {
         }
     }
 
-    pub fn remove_resource_from_surface_square(&self, pixel: &Pixel, surface: &mut Surface) -> u32 {
-        let mut metric = 0;
-        for remove_x in self.x..self.x + self.width {
-            for remove_y in self.y..self.y + self.height {
-                let remove_x = remove_x as u32;
-                let remove_y = remove_y as u32;
-                if surface.get_pixel(remove_x, remove_y) == pixel {
-                    surface.set_pixel(Pixel::Empty, remove_x, remove_y);
-                    metric += 1;
-                }
-            }
-        }
-        metric
-    }
+    // pub fn remove_resource_from_surface_square(&self, pixel: &Pixel, surface: &mut Surface) -> u32 {
+    //     let mut metric = 0;
+    //     for remove_x in self.x..self.x + self.width {
+    //         for remove_y in self.y..self.y + self.height {
+    //             let remove_x = remove_x as u32;
+    //             let remove_y = remove_y as u32;
+    //             if surface.get_pixel(remove_x, remove_y) == pixel {
+    //                 surface.set_pixel(Pixel::Empty, remove_x, remove_y);
+    //                 metric += 1;
+    //             }
+    //         }
+    //     }
+    //     metric
+    // }
 }
 
 impl From<Rect_<i32>> for Patch {

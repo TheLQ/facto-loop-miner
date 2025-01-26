@@ -1,4 +1,5 @@
 use crate::navigator::mori_cost::calculate_cost_for_link;
+use crate::state::tuneables::MoriTunables;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
@@ -21,20 +22,28 @@ const STRAIGHT_STEP_SIZE: usize = 1;
 pub fn mori2_start(surface: &VSurface, start: VPointDirectionQ, end: VPointDirectionQ) {
     let pathfind_watch = BasicWatch::start();
 
-    validate_positions(&start, &end);
-    let start_link = new_straight_link_from_vd(&start);
-    let end_link = new_straight_link_from_vd(&start);
+    let endpoints = &PathSegmentPoints { start, end };
+    endpoints.validate_positions();
+    let start_link = new_straight_link_from_vd(&endpoints.start);
+    let end_link = new_straight_link_from_vd(&endpoints.end);
+
+    let tunables = MoriTunables::default();
 
     let pathfind = astar_mori(
         &start_link,
-        |(successor_rail, parents, _total_cost)| {
-            let (next, parents) = parents.split_last().unwrap();
-            assert_eq!(successor_rail, next);
-            successors(surface, parents, next)
+        |(successor_rail, path, _total_cost)| {
+            // let (next, parents) = parents.split_last().unwrap();
+            // assert_eq!(successor_rail, next);
+            successors(surface, endpoints, &path, &tunables)
         },
         |_p| 1,
         |p| p == &end_link,
     );
+}
+
+pub(crate) struct PathSegmentPoints {
+    start: VPointDirectionQ,
+    pub(crate) end: VPointDirectionQ,
 }
 
 pub enum MoriResult {
@@ -51,9 +60,11 @@ impl MoriResult {
     }
 }
 
-fn validate_positions(start: &VPointDirectionQ, end: &VPointDirectionQ) {
-    start.point().assert_odd_16x16_position();
-    end.point().assert_odd_16x16_position();
+impl PathSegmentPoints {
+    fn validate_positions(&self) {
+        self.start.point().assert_odd_16x16_position();
+        self.end.point().assert_odd_16x16_position();
+    }
 }
 
 fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeLink {
@@ -67,17 +78,23 @@ fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeLink {
     links.into_iter().next().unwrap()
 }
 
-fn successors(surface: &VSurface, parents: &[HopeLink], cur: &HopeLink) -> Vec<(HopeLink, u32)> {
+fn successors(
+    surface: &VSurface,
+    segment_points: &PathSegmentPoints,
+    path: &[HopeLink],
+    tune: &MoriTunables,
+) -> Vec<(HopeLink, u32)> {
     let mut successors = Vec::new();
+    let last = path.last().unwrap();
 
     let nexts = [
-        into_buildable_link(surface, cur.add_straight(STRAIGHT_STEP_SIZE)),
-        into_buildable_link(surface, cur.add_turn90(false)),
-        into_buildable_link(surface, cur.add_turn90(true)),
+        into_buildable_link(surface, last.add_straight(STRAIGHT_STEP_SIZE)),
+        into_buildable_link(surface, last.add_turn90(false)),
+        into_buildable_link(surface, last.add_turn90(true)),
     ];
     for next in nexts {
         if let Some(next) = next {
-            let cost = calculate_cost_for_link(surface, &next);
+            let cost = calculate_cost_for_link(&next, segment_points, path, tune);
             successors.push((next, cost));
         }
     }

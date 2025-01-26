@@ -1,10 +1,13 @@
+use crate::navigator::mori2::PathSegmentPoints;
 use crate::state::tuneables::MoriTunables;
+use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, HopeLinkType};
+use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
 // const ANTI_WRONG_BIAS_EFFECT: f32 = 10f32;
 // const RESOURCE_BIAS_EFFECT: f32 = 20f32;
 
-#[derive(IntoStaticStr)]
+#[derive(Serialize, Deserialize, Clone)]
 pub enum MoriCostMode {
     Dummy,
     DistanceManhattanOnly,
@@ -19,21 +22,23 @@ pub enum RailAction {
 
 pub fn calculate_cost_for_link(
     next: &HopeLink,
-    start: &HopeLink,
-    end: &HopeLink,
+    segment_points: &PathSegmentPoints,
     parents: &[HopeLink],
     tune: &MoriTunables,
 ) -> u32 {
     let result = match tune.cost_mode {
         MoriCostMode::Dummy => 5.0,
-        MoriCostMode::DistanceManhattanOnly => distance_by_basic_manhattan(next, end),
-        MoriCostMode::Complete => distance_by_punish_turns(parents, next, end, tune),
-        // MoriCostMode::Complete => into_end_landing_bias(
-        //     next,
-        //     start,
-        //     end,
-        //     distance_by_punish_turns(parents_compare, next, end),
-        // ),
+        MoriCostMode::DistanceManhattanOnly => {
+            distance_by_basic_manhattan(next, &segment_points.end)
+        }
+        MoriCostMode::Complete => {
+            distance_by_punish_turns(parents, next, &segment_points.end, tune)
+        } // MoriCostMode::Complete => into_end_landing_bias(
+          //     next,
+          //     start,
+          //     end,
+          //     distance_by_punish_turns(parents_compare, next, end),
+          // ),
     };
     result as u32
 
@@ -63,15 +68,14 @@ pub fn calculate_cost_for_link(
     //
 }
 
-fn distance_by_basic_manhattan(next: &HopeLink, end: &HopeLink) -> f32 {
-    next.next_straight_position()
-        .distance_to(&end.next_straight_position()) as f32
+fn distance_by_basic_manhattan(next: &HopeLink, end: &VPointDirectionQ) -> f32 {
+    next.next_straight_position().distance_to(&end.0) as f32
 }
 
 fn distance_by_punish_turns(
     parents: &[HopeLink],
     next: &HopeLink,
-    end: &HopeLink,
+    end: &VPointDirectionQ,
     tune: &MoriTunables,
 ) -> f32 {
     let base_distance = distance_by_basic_manhattan(next, end);

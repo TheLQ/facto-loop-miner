@@ -1,8 +1,12 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::opencv_re::core::{Mat, Point, Rect, Vector};
-use facto_loop_miner_fac_engine::opencv_re::imgproc::bounding_rect;
+use facto_loop_miner_fac_engine::opencv_re::core::{
+    rotate, Mat, Point, Rect, Vector, ROTATE_90_COUNTERCLOCKWISE,
+};
+use facto_loop_miner_fac_engine::opencv_re::imgproc::{
+    bounding_rect, get_font_scale_from_height, put_text, FONT_HERSHEY_SIMPLEX, LINE_8,
+};
 use std::fs::read;
 use std::path::Path;
 use tracing::debug;
@@ -94,4 +98,41 @@ pub fn combine_rects_into_big_rect<'a>(rects: impl IntoIterator<Item = &'a Rect>
         );
     }
     get_cv_bounding_rect(corners)
+}
+
+pub fn draw_text_cv(img: &mut Mat, text: &str, origin: Point) {
+    tracing::debug!("drawing {} at {:?}", text, origin);
+    put_text(
+        img,
+        text,
+        origin,
+        FONT_HERSHEY_SIMPLEX,
+        get_font_scale_from_height(FONT_HERSHEY_SIMPLEX, 100, 10).unwrap(),
+        Pixel::EdgeWall.scalar_cv(),
+        10,
+        LINE_8,
+        false,
+    )
+    .unwrap();
+}
+
+pub fn draw_text_vertical_cv(_img: &mut Mat, text: &str, origin: Point) {
+    tracing::debug!("drawing {} at {:?}", text, origin);
+    // "cv(0,0)" is roughly 500x150
+    let mut text_img = unsafe { Mat::new_rows_cols(500, 1000, 0).unwrap() };
+    put_text(
+        &mut text_img,
+        text,
+        origin,
+        FONT_HERSHEY_SIMPLEX,
+        get_font_scale_from_height(FONT_HERSHEY_SIMPLEX, 100, 10).unwrap(),
+        Pixel::EdgeWall.scalar_cv(),
+        10,
+        LINE_8,
+        false,
+    )
+    .unwrap();
+
+    let mut rotated_text_img = unsafe { Mat::new_rows_cols(1000, 500, 0).unwrap() };
+    rotate(&text_img, &mut rotated_text_img, ROTATE_90_COUNTERCLOCKWISE).unwrap();
 }
