@@ -6,9 +6,7 @@ use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{
-    HopeFactoRail, HopeLink, HopeLinkType, RailHopeSingle,
-};
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
 use pathfinding::prelude::astar_mori;
 
 const STRAIGHT_STEP_SIZE: usize = 1;
@@ -41,7 +39,7 @@ pub fn mori2_start(surface: &VSurface, start: VPointDirectionQ, end: VPointDirec
     );
 }
 
-pub(crate) struct PathSegmentPoints {
+pub struct PathSegmentPoints {
     start: VPointDirectionQ,
     pub(crate) end: VPointDirectionQ,
 }

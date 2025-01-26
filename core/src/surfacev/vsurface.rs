@@ -167,6 +167,7 @@ impl VSurface {
         self.log_pixel_stats("vsurface save");
         let total_save_watch = BasicWatch::start();
         self.save_state(out_dir)?;
+
         self.save_pixel_img_colorized(out_dir)?;
         self.save_entity_buffers(out_dir)?;
         self.save_tuning_parameters(out_dir)?;
@@ -531,6 +532,7 @@ fn display_patches(patches: &Vec<VPatch>) -> String {
 //<editor-fold desc="io common">
 
 fn save_png(path: &Path, rgb: &[u8], width: u32, height: u32) {
+    let watch = BasicWatch::start();
     let file = File::create(path).unwrap();
     let writer = BufWriter::new(&file);
 
@@ -540,9 +542,10 @@ fn save_png(path: &Path, rgb: &[u8], width: u32, height: u32) {
         .unwrap();
     let size = file.metadata().unwrap().len();
     debug!(
-        "Saved {} byte image to {}",
+        "Saved {} byte image to {} in {}",
         size.to_formatted_string(&LOCALE),
         path.display(),
+        watch
     );
 }
 
