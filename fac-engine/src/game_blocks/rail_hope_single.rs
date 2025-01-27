@@ -381,10 +381,23 @@ impl HopeLink {
                     area.extend(rail.area_2x2());
                 }
             }
-            HopeLinkType::Turn90 { .. } => {
-                let other = self.next_straight_position();
-                let rough_area = VArea::from_arbitrary_points_pair(self.start, other);
-                area.extend(rough_area.get_points());
+            HopeLinkType::Turn90 { clockwise } => {
+                // todo: hack just goes at an angle. Probably fine?
+                let unrotated = if *clockwise {
+                    self.next_direction.rotate_opposite()
+                } else {
+                    self.next_direction.rotate_once()
+                };
+
+                let mut rail = self.start;
+                for i in 0..5 {
+                    area.extend(rail.area_2x2());
+                    rail = rail.move_direction_usz(unrotated, RAIL_STRAIGHT_DIAMETER);
+                }
+                for i in 0..6 {
+                    area.extend(rail.area_2x2());
+                    rail = rail.move_direction_usz(self.next_direction, RAIL_STRAIGHT_DIAMETER);
+                }
             }
             HopeLinkType::Shift45 { .. } => {
                 todo!("shift 45 area")
