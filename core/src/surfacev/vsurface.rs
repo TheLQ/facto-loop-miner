@@ -36,7 +36,7 @@ use tracing::{debug, info, trace, warn};
 #[derive(Serialize, Deserialize, Clone)]
 pub struct VSurface {
     pixels: VEntityMap<VPixel>,
-    entities: VEntityMap<VEntity>,
+    // entities: VEntityMap<VEntity>,
     patches: Vec<VPatch>,
     #[serde(default)]
     rail_paths: Vec<MinePath>,
@@ -49,7 +49,7 @@ impl VSurface {
     pub fn new(radius: u32) -> Self {
         VSurface {
             pixels: VEntityMap::new(radius),
-            entities: VEntityMap::new(radius),
+            // entities: VEntityMap::new(radius),
             patches: Vec::new(),
             rail_paths: Vec::new(),
             tunables: Tunables::default(),
@@ -62,13 +62,14 @@ impl VSurface {
 
         let surface_out_dir = out_dir.to_path_buf();
         let surface_thread = thread::spawn(move || Self::load_state(&surface_out_dir));
-        let (pixel_thread, entity_thread) = Self::new(1).load_entity_buffers(out_dir);
+        // let (pixel_thread, entity_thread) = Self::new(1).load_entity_buffers(out_dir);
+        let (pixel_thread,) = Self::new(1).load_entity_buffers(out_dir);
 
         let mut new_surface = surface_thread.join().expect("surface join failed")?;
 
-        new_surface
-            .entities
-            .load_xy_from_other(entity_thread.join().expect("entity thread failed")?);
+        // new_surface
+        //     .entities
+        //     .load_xy_from_other(entity_thread.join().expect("entity thread failed")?);
         new_surface
             .pixels
             .load_xy_from_other(pixel_thread.join().expect("pixel thread failed")?);
@@ -120,13 +121,17 @@ impl VSurface {
     }
 
     #[allow(clippy::type_complexity)]
+    // fn load_entity_buffers(
+    //     &mut self,
+    //     out_dir: &Path,
+    // ) -> (
+    //     JoinHandle<VResult<VEntityMap<VPixel>>>,
+    //     JoinHandle<VResult<VEntityMap<VEntity>>>,
+    // ) {
     fn load_entity_buffers(
         &mut self,
         out_dir: &Path,
-    ) -> (
-        JoinHandle<VResult<VEntityMap<VPixel>>>,
-        JoinHandle<VResult<VEntityMap<VEntity>>>,
-    ) {
+    ) -> (JoinHandle<VResult<VEntityMap<VPixel>>>,) {
         let out_dir_buf = out_dir.to_path_buf();
         let pixel_thread = thread::Builder::new()
             .name("pixel-loader".to_string())
@@ -138,18 +143,19 @@ impl VSurface {
             })
             .unwrap();
 
-        let out_dir_buf = out_dir.to_path_buf();
-        let entity_thread = thread::Builder::new()
-            .name("entity-loader".to_string())
-            .spawn(move || {
-                trace!("start entity thread");
-                let entity_path = &path_entity_xy_indexes(&out_dir_buf);
-                let mut buffer = VEntityMap::<VEntity>::new(0);
-                buffer.load_xy_file(entity_path).map(|_| buffer)
-            })
-            .unwrap();
+        // let out_dir_buf = out_dir.to_path_buf();
+        // let entity_thread = thread::Builder::new()
+        //     .name("entity-loader".to_string())
+        //     .spawn(move || {
+        //         trace!("start entity thread");
+        //         let entity_path = &path_entity_xy_indexes(&out_dir_buf);
+        //         let mut buffer = VEntityMap::<VEntity>::new(0);
+        //         buffer.load_xy_file(entity_path).map(|_| buffer)
+        //     })
+        //     .unwrap();
 
-        (pixel_thread, entity_thread)
+        // (pixel_thread, entity_thread)
+        (pixel_thread,)
     }
 
     pub fn load_from_last_step(params: &StepParams) -> VResult<Self> {
@@ -228,8 +234,8 @@ impl VSurface {
         let pixel_path = path_pixel_xy_indexes(out_dir);
         self.pixels.save_xy_file(&pixel_path)?;
 
-        let entity_path = path_entity_xy_indexes(out_dir);
-        self.entities.save_xy_file(&entity_path)?;
+        // let entity_path = path_entity_xy_indexes(out_dir);
+        // self.entities.save_xy_file(&entity_path)?;
 
         Ok(())
     }
@@ -263,7 +269,7 @@ impl VSurface {
     }
 
     pub fn get_diameter(&self) -> usize {
-        self.entities.diameter()
+        self.pixels.diameter()
     }
 
     pub fn get_pixel(&self, point: impl Borrow<VPoint>) -> Pixel {
@@ -312,8 +318,8 @@ impl VSurface {
     }
 
     pub fn crop(&mut self, new_radius: u32) {
-        info!("Crop from {} to {}", self.entities.radius(), new_radius);
-        self.entities.crop(new_radius);
+        info!("Crop from {} to {}", self.pixels.radius(), new_radius);
+        // self.entities.crop(new_radius);
         self.pixels.crop(new_radius);
     }
 
@@ -500,9 +506,8 @@ impl Display for VSurface {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "VSurface pixels {{ {} }} entities {{ {} }} patches {{ {} }}",
+            "VSurface pixels {{ {} }} patches {{ {} }}",
             self.pixels,
-            self.entities,
             display_patches(&self.patches)
         )
     }
@@ -546,9 +551,9 @@ fn path_pixel_xy_indexes(out_dir: &Path) -> PathBuf {
     out_dir.join("pixel-xy-indexes.dat")
 }
 
-fn path_entity_xy_indexes(out_dir: &Path) -> PathBuf {
-    out_dir.join("entity-xy-indexes.dat")
-}
+// fn path_entity_xy_indexes(out_dir: &Path) -> PathBuf {
+//     out_dir.join("entity-xy-indexes.dat")
+// }
 
 fn path_state(out_dir: &Path) -> PathBuf {
     out_dir.join("vsurface-state.json")
@@ -564,10 +569,6 @@ pub(crate) struct VPixel {
 impl VPixel {
     pub fn pixel(&self) -> &Pixel {
         &self.pixel
-    }
-
-    pub fn set_pixel(&mut self, pixel: Pixel) {
-        self.pixel = pixel;
     }
 }
 
