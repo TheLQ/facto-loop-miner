@@ -17,11 +17,6 @@ pub enum VError {
         positions: Vec<VPoint>,
         backtrace: Backtrace,
     },
-    #[error("XYNotInteger point {}", position_to_strings_f32(position))]
-    XYNotInteger {
-        position: Point2f,
-        backtrace: Backtrace,
-    },
     #[error("IoError {path} {e}")]
     IoError {
         path: String,
@@ -46,7 +41,6 @@ impl VError {
     pub fn my_backtrace(&self) -> &Backtrace {
         match self {
             VError::XYOutOfBounds { backtrace, .. }
-            | VError::XYNotInteger { backtrace, .. }
             | VError::IoError { backtrace, .. }
             | VError::UnknownName { backtrace, .. }
             | VError::SimdJsonFail { backtrace, .. }
@@ -74,13 +68,5 @@ impl VError {
 }
 
 fn positions_to_strings(positions: &[VPoint]) -> String {
-    positions.iter().map(|e| format!("{:?}", e)).join(",")
-}
-
-fn position_to_strings(position: &VPoint) -> String {
-    format!("{:?}", position)
-}
-
-fn position_to_strings_f32(position: &Point2f) -> String {
-    format!("{:?}", position)
+    positions.iter().map(VPoint::display).join(",")
 }

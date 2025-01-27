@@ -1,22 +1,17 @@
-// #![feature(cell_update)]
-// #![feature(convert_float_to_int)]
 #![feature(iter_array_chunks)]
-#![feature(portable_simd)]
-// #![feature(slice_pattern)]
-#![feature(iterator_try_collect)]
-// #![feature(iterator_try_reduce)]
-// #![feature(slice_flatten)]
-#![feature(extract_if)]
 #![feature(array_chunks)]
+#![feature(portable_simd)]
 #![feature(error_generic_member_access)]
-#![feature(int_roundings)]
-#![feature(const_trait_impl)]
+//
 // lints
+//
 #![allow(unused_variables)]
-#![allow(dead_code)]
+// #![allow(dead_code)]
 // todo: This is for something() { Ok(()) } , only testing
 #![allow(clippy::unnecessary_wraps)]
+//
 // styling
+//
 #![allow(clippy::uninlined_format_args)]
 #![allow(clippy::missing_errors_doc)]
 // TODO: <<<< SHOULD REVIEW
@@ -25,7 +20,6 @@
 // #![deny(clippy::all)]
 #![allow(clippy::let_and_return)]
 #![allow(clippy::result_large_err)]
-#![feature(test)]
 
 // TODO #![deny(future-incompatible)]
 // TODO #![deny(let-underscore)]
