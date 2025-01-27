@@ -536,7 +536,10 @@ fn save_png(path: &Path, rgb: &[u8], width: u32, height: u32) {
     let file = File::create(path).unwrap();
     let writer = BufWriter::new(&file);
 
-    let encoder = PngEncoder::new(writer);
+    // For input 2000x2000 image:
+    // Custom takes 0.121 seconds to save
+    // Default takes 2.4 seconds to save
+    let encoder = PngEncoder::new_with_quality(writer, CompressionType::Fast, FilterType::NoFilter);
     encoder
         .write_image(rgb, width, height, ExtendedColorType::Rgb8)
         .unwrap();
