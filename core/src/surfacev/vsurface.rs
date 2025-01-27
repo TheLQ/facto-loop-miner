@@ -14,7 +14,7 @@ use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::opencv_re::core::Mat;
 use facto_loop_miner_io::err::VIoError;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
-use image::codecs::png::PngEncoder;
+use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
 use itertools::Itertools;
 use num_format::ToFormattedString;
@@ -448,7 +448,7 @@ impl VSurface {
         new_points.dedup();
         let new_len = new_points.len();
         if old_len != new_len {
-            warn!(
+            panic!(
                 "pixel {} dedupe mine path from {} to {}",
                 pixel.as_ref(),
                 old_len.to_formatted_string(&LOCALE),
@@ -457,6 +457,16 @@ impl VSurface {
         }
 
         self.set_pixels(pixel, new_points)?;
+
+        // add markers for start points
+        let start_points: Vec<VPoint> = mine_paths
+            .iter()
+            .map(|v| &v.links)
+            .flatten()
+            .map(|v| v.start)
+            .collect_vec();
+        self.set_pixels(Pixel::EdgeWall, start_points)?;
+
         self.rail_paths.extend(mine_paths);
         Ok(())
     }
