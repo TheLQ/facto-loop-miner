@@ -180,17 +180,15 @@ where
 
         for position in &positions {
             let xy_index = self.point_to_index(position);
-
-            let existing_entity_index = self.xy_to_entity.as_slice()[xy_index];
-            if existing_entity_index != entity_index {
+            let existing_entity_index = &mut self.xy_to_entity.as_mut_slice()[xy_index];
+            if existing_entity_index == &entity_index {
                 // we may be called with duplicate points, which we can't remove
                 continue;
-            }
-            if existing_entity_index != EMPTY_XY_INDEX {
+            } else if existing_entity_index != &EMPTY_XY_INDEX {
                 // remove existing
-                self.entity_to_xy[existing_entity_index].retain(|v| v != position)
+                self.entity_to_xy[*existing_entity_index].retain(|v| v != position)
             }
-            self.xy_to_entity.as_mut_slice()[xy_index] = entity_index;
+            *existing_entity_index = entity_index;
         }
 
         assert_eq!(self.entity_to_xy.len(), entity_index);

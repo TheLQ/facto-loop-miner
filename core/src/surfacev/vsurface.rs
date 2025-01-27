@@ -359,15 +359,14 @@ impl VSurface {
     }
 
     pub fn log_pixel_stats(&self, debug_message: &str) {
-        // let mut metrics = FastMetrics::new(format!("log_pixel_stats XY {}", debug_message));
-        // for pixel in self.pixels.iter_xy_pixels() {
-        //     metrics.increment(FastMetric::VSurface_Pixel(*pixel));
+        // let mut metrics = FastMetrics::new(format!("log_pixel_stats Entities {}", debug_message));
+        // for entity in self.pixels.iter_entities() {
+        //     metrics.increment(FastMetric::VSurface_Pixel(*entity.pixel()));
         // }
-        // metrics.log_final();
 
-        let mut metrics = FastMetrics::new(format!("log_pixel_stats Entities {}", debug_message));
-        for entity in self.pixels.iter_entities() {
-            metrics.increment(FastMetric::VSurface_Pixel(*entity.pixel()));
+        let mut metrics = FastMetrics::new(format!("log_pixel_counts Entities {}", debug_message));
+        for entity in self.pixels.iter_xy_pixels() {
+            metrics.increment(FastMetric::VSurface_Pixel(*entity));
         }
         metrics.log_final();
     }
@@ -434,6 +433,8 @@ impl VSurface {
     // }
 
     pub fn add_mine_path(&mut self, mine_paths: Vec<MinePath>) -> VResult<()> {
+        let pixel = Pixel::Rail;
+
         let mut new_points: Vec<VPoint> = mine_paths
             .iter()
             .map(|v| &v.links)
@@ -448,13 +449,14 @@ impl VSurface {
         let new_len = new_points.len();
         if old_len != new_len {
             warn!(
-                "dedupe mine path from {} to {}",
+                "pixel {} dedupe mine path from {} to {}",
+                pixel.as_ref(),
                 old_len.to_formatted_string(&LOCALE),
                 new_len.to_formatted_string(&LOCALE)
             )
         }
 
-        self.set_pixels(Pixel::Rail, new_points)?;
+        self.set_pixels(pixel, new_points)?;
         self.rail_paths.extend(mine_paths);
         Ok(())
     }
