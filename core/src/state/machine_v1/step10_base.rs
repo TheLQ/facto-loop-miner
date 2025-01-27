@@ -1,5 +1,5 @@
+use itertools::Itertools;
 use std::ops::{Add, Mul};
-
 use tracing::debug;
 
 use crate::state::err::XMachineResult;
@@ -51,12 +51,14 @@ pub const REMOVE_RESOURCE_BORDER_TILES: i32 =
 
 pub fn draw_mega_box(surface: &mut VSurface, metrics: &mut Metrics) -> VResult<()> {
     let tiles = CENTRAL_BASE_TILES as u32;
-    for point in points_in_centered_box(tiles, VPOINT_ZERO) {
-        if !point.is_within_center_radius(tiles - 50) {
-            surface.set_pixel(point, Pixel::EdgeWall)?;
-            metrics.increment_slow("base-box");
-        }
-    }
+
+    let box_points = points_in_centered_box(tiles, VPOINT_ZERO)
+        .into_iter()
+        .filter(|v| !v.is_within_center_radius(tiles - 50))
+        .collect_vec();
+    surface.set_pixels(Pixel::EdgeWall, box_points)?;
+    // for each metrics.increment_slow("base-box");
+
     debug!("megabox? for {}", tiles);
     Ok(())
 }

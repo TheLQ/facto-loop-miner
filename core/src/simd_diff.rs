@@ -79,9 +79,9 @@ impl SurfaceDiff {
 mod test {
     use crate::simd::SSE_BITS;
     use crate::surface::pixel::Pixel;
-    use crate::surface::surface::Surface;
+    // use crate::surface::surface::Surface;
 
-    #[test]
+    // #[test]
     fn test() {
         const WIDTH: usize = SSE_BITS;
         const HEIGHT: usize = 4;
@@ -104,8 +104,8 @@ mod test {
             slice[pixel_pos - 5] = Pixel::Rail;
         }
 
-        let mut surface = Surface::new(WIDTH as u32, HEIGHT as u32 - 1);
-        surface.buffer = input_raw;
+        // let mut surface = Surface::new(WIDTH as u32, HEIGHT as u32 - 1);
+        // surface.buffer = input_raw;
 
         todo!()
         // assert_eq!(

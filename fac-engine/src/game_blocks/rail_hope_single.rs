@@ -5,6 +5,7 @@ use tracing::trace;
 use crate::blueprint::bpitem::BlueprintItem;
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
 use crate::common::entity::FacEntity;
+use crate::common::varea::VArea;
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
 use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
 use crate::game_entities::direction::{FacDirectionEighth, FacDirectionQuarter};
@@ -118,7 +119,7 @@ impl RailHopeAppender for RailHopeSingle {
         self.push_link(new_link)
     }
 
-    fn add_shift45(&mut self, clockwise: bool, length: usize) -> () {
+    fn add_shift45(&mut self, clockwise: bool, length: usize) {
         let _ = &mut self.output.context_handle(
             ContextLevel::Micro,
             format!("👉Shift45-{}", if clockwise { "clw" } else { "ccw" }),
@@ -367,6 +368,29 @@ impl HopeLink {
                     neg_if_false(*clockwise, 6 + (*length as i32 * 2)),
                 ),
         }
+    }
+
+    pub fn area(&self) -> Vec<VPoint> {
+        let mut area = Vec::new();
+        match &self.rtype {
+            HopeLinkType::Straight { length } => {
+                for i in 0..*length {
+                    let rail = self
+                        .start
+                        .move_direction_usz(&self.next_direction, i * RAIL_STRAIGHT_DIAMETER);
+                    area.extend(rail.area_2x2());
+                }
+            }
+            HopeLinkType::Turn90 { .. } => {
+                let other = self.next_straight_position();
+                let rough_area = VArea::from_arbitrary_points_pair(self.start, other);
+                area.extend(rough_area.get_points());
+            }
+            HopeLinkType::Shift45 { .. } => {
+                todo!("shift 45 area")
+            }
+        }
+        area
     }
 }
 

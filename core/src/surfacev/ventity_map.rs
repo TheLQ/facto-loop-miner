@@ -1,30 +1,24 @@
+use crate::surface::pixel::Pixel;
+use crate::surfacev::err::{VError, VResult};
+use crate::surfacev::vsurface::VPixel;
+use crate::util::duration::BasicWatch;
+use crate::LOCALE;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::opencv_re::core::Mat;
+use facto_loop_miner_io::varray::{VArray, EMPTY_XY_INDEX};
+use num_format::ToFormattedString;
+use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 use std::path::Path;
-
-use num_format::ToFormattedString;
-use facto_loop_miner_fac_engine::opencv_re::core::Mat;
-use serde::{Deserialize, Serialize};
 use tracing::debug;
-
-use crate::surface::pixel::Pixel;
-use crate::surfacev::err::{VError, VResult};
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use crate::surfacev::vsurface::VPixel;
-use crate::util::duration::BasicWatch;
-use crate::LOCALE;
-use facto_loop_miner_io::varray::{VArray, EMPTY_XY_INDEX};
 
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use facto_loop_miner_io::{
     get_mebibytes_of_slice_usize, read_entire_file_varray_mmap_lib, write_entire_file,
 };
-
-pub trait VEntityXY {
-    fn get_xy(&self) -> &[VPoint];
-}
 
 /// Collection of entities and xy positions they cover
 ///
@@ -35,18 +29,20 @@ pub struct VEntityMap<E> {
     /// More efficient to store a (radius * 2)^2 length Array as a raw file instead of JSON  
     #[serde(skip)]
     xy_to_entity: VArray,
+    entity_to_xy: Vec<Vec<VPoint>>,
     /// A *square* centered on 0,0
     radius: u32,
 }
 
 impl<E> VEntityMap<E>
 where
-    E: VEntityXY + Clone + Eq + Hash,
+    E: Clone + Eq + Hash,
 {
     pub fn new(radius: u32) -> Self {
         let res = VEntityMap {
             entities: Vec::new(),
             xy_to_entity: VArray::new_length(Self::_xy_array_length_from_radius(radius)),
+            entity_to_xy: Vec::new(),
             radius,
         };
         res
@@ -177,44 +173,62 @@ where
     // }
     //</editor-fold>
 
-    pub fn add(&mut self, entity: E) -> VResult<()> {
-        let positions = entity.get_xy();
-        self.check_points_if_in_range_iter(positions)?;
+    pub fn add(&mut self, entity: E, positions: Vec<VPoint>) -> VResult<()> {
+        self.check_points_if_in_range_iter(&positions)?;
 
         let entity_index = self.entities.len();
+
+        for position in &positions {
+            let xy_index = self.point_to_index(position);
+
+            let existing_entity_index = self.xy_to_entity.as_slice()[xy_index];
+            if existing_entity_index != entity_index {
+                // we may be called with duplicate points, which we can't remove
+                continue;
+            }
+            if existing_entity_index != EMPTY_XY_INDEX {
+                // remove existing
+                self.entity_to_xy[existing_entity_index].retain(|v| v != position)
+            }
+            self.xy_to_entity.as_mut_slice()[xy_index] = entity_index;
+        }
+
+        assert_eq!(self.entity_to_xy.len(), entity_index);
+        self.entity_to_xy.push(positions);
+
         self.entities.push(entity);
-        self.add_positions_of_entity(entity_index);
 
         Ok(())
     }
 
-    fn add_positions_of_entity(&mut self, entity_index: usize) {
-        for position in self.entities[entity_index].get_xy() {
-            let xy_index = self.xy_to_index_unchecked(position.x(), position.y());
-            self.xy_to_entity.as_mut_slice()[xy_index] = entity_index;
-        }
-    }
+    // fn add_entity_positions(&mut self, entity_index: usize, positions: &[VPoint]) {
+    //     for position in positions {
+    //         let xy_index = self.xy_to_index_unchecked(position.x(), position.y());
+    //         self.xy_to_entity.as_mut_slice()[xy_index] = entity_index;
+    //     }
+    // }
 
-    pub fn remove(&mut self, entity_index: usize) {}
-
+    // pub fn remove(&mut self, entity_index: usize) {}
+    //
     pub fn remove_positions(&mut self, points: &[VPoint]) {
         for point in points {
-            let index = self.point_to_index(point);
-            self.xy_to_entity.as_mut_slice()[index] = EMPTY_XY_INDEX;
+            let xy_index = self.point_to_index(point);
+            let entity_index = self.xy_to_entity.as_slice()[xy_index];
+
+            self.xy_to_entity.as_mut_slice()[xy_index] = EMPTY_XY_INDEX;
+            self.entity_to_xy[entity_index].retain(|v| v != point)
         }
     }
 
     /// crop entities then rebuild xy_to_entity lookup
     pub fn crop(&mut self, new_radius: u32) {
-        self.radius = new_radius;
-
         let old_entity_length = self.entities.len();
         let old_xy_length = self.xy_to_entity.len();
-        self.entities.retain(|e| {
-            e.get_xy()
-                .iter()
-                .all(|i| i.is_within_center_radius(new_radius))
-        });
+
+        self.radius = new_radius;
+        for positions in self.entity_to_xy.iter_mut() {
+            positions.retain(|e| e.is_within_center_radius(new_radius));
+        }
 
         self.xy_to_entity = VArray::new_length(self.xy_array_length_from_radius());
         debug!(
@@ -225,8 +239,13 @@ where
             self.xy_to_entity.len().to_formatted_string(&LOCALE)
         );
 
-        for i in 0..self.entities.len() {
-            self.add_positions_of_entity(i);
+        for entity_index in 0..self.entities.len() {
+            let res: &[VPoint] = &self.entity_to_xy[entity_index];
+            // self.sync_positions_to_xy(entity_index, res);
+            for position in res {
+                let xy_index = self.xy_to_index_unchecked(position.x(), position.y());
+                self.xy_to_entity.as_mut_slice()[xy_index] = entity_index;
+            }
         }
     }
 
@@ -378,38 +397,6 @@ where
         result
     }
 
-    // fn _map_xy_to_vec_targeted<const TARGETED_MAPPED_SIZE: usize>(
-    //     &self,
-    //     mapper: impl Fn(Option<&E>) -> [u8; TARGETED_MAPPED_SIZE],
-    // ) -> Vec<u8> {
-    //     let mut image = vec![0u8; self.xy_to_entity.len() * TARGETED_MAPPED_SIZE];
-    //     trace!("mapping {} total {}", TARGETED_MAPPED_SIZE, image.len());
-    //     for entity_index in &self.xy_to_entity {
-    //         let mapped_value = mapper(self.entities.get(*entity_index));
-    //         let index = self.xy_to_index(entity_pos.x(), entity_pos.y()) * TARGETED_MAPPED_SIZE;
-    //         image[index..(index + TARGETED_MAPPED_SIZE)].copy_from_slice(&color);
-    //
-    //         for entity_pos in entity.get_xy() {
-    //             let color = mapper(entity);
-    //             if index + TARGETED_MAPPED_SIZE > image.len() {
-    //                 trace!("overflowing for index {}", index);
-    //             }
-    //             // todo recheck this for >1
-    //             if TARGETED_MAPPED_SIZE == 1 {
-    //                 image[index] = color[0];
-    //             } else {
-    //                 image[index..(index + TARGETED_MAPPED_SIZE)].copy_from_slice(&color);
-    //             }
-    //         }
-    //     }
-    //     trace!(
-    //         "mapped xy from {} to {}",
-    //         self.xy_to_entity.len(),
-    //         image.len()
-    //     );
-    //     image
-    // }
-
     pub fn get_entity_by_index(&self, index: usize) -> &E {
         match self.entities.get(index) {
             Some(v) => v,
@@ -522,8 +509,8 @@ impl VEntityMap<VPixel> {
 #[cfg(test)]
 mod test {
     use crate::surfacev::ventity_map::VEntityMap;
-    use facto_loop_miner_fac_engine::common::vpoint::VPoint;
     use crate::surfacev::vsurface::VPixel;
+    use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 
     #[test]
     pub fn to_xy_index_and_back() {

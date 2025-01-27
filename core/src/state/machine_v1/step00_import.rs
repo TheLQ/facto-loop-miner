@@ -1,11 +1,13 @@
 use crate::gamedata::lua::{read_lua_tiles, LuaEntity, LuaThing};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
+use crate::surface::pixel::Pixel;
 use crate::surfacev::err::VResult;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use std::collections::HashMap;
 use std::path::Path;
 use tracing::info;
 
@@ -91,15 +93,22 @@ fn translate_entities_to_image<E>(
 where
     E: LuaThing,
 {
+    let mut mega_init_entities: HashMap<Pixel, Vec<VPoint>> = HashMap::new();
+
     for entity in entities {
-        surface.set_pixel(
-            entity.position().to_vpoint_with_offset(0.5, 0.5),
-            *entity.name(),
-        )?;
+        let name = *entity.name();
+        mega_init_entities
+            .entry(name)
+            .or_default()
+            .push(entity.position().to_vpoint_with_offset(0.5, 0.5));
         params
             .metrics
             .borrow_mut()
             .increment_slow(entity.name().as_ref());
+    }
+
+    for (pixel, points) in mega_init_entities {
+        surface.set_pixels(pixel, points)?;
     }
     Ok(())
 }

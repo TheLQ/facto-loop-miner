@@ -377,7 +377,7 @@ impl VPoint {
         }
     }
 
-    pub const fn get_entity_area_2x2(&self) -> [Self; 4] {
+    pub const fn area_2x2(&self) -> [Self; 4] {
         [
             *self,
             self.move_x(1),

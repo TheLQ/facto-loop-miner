@@ -5,18 +5,18 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::mine::MinePath;
-use crate::surfacev::ventity_map::{VEntityMap, VEntityXY};
+use crate::surfacev::ventity_map::VEntityMap;
 use crate::surfacev::vpatch::VPatch;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::opencv_re::core::Mat;
 use facto_loop_miner_io::err::VIoError;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
+use itertools::Itertools;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
@@ -286,39 +286,8 @@ impl VSurface {
             })
     }
 
-    pub fn set_pixel(&mut self, start: VPoint, pixel: Pixel) -> VResult<()> {
-        if pixel == Pixel::Empty {
-            match self.pixels.get_entity_by_point(&start) {
-                Some(existing) => {
-                    if existing.starts.len() != 1 {
-                        warn!("wrong size {:?}", start);
-                    } else {
-                        self.pixels.remove_positions(&[start]);
-                    }
-                }
-                None => {
-                    // want empty and already empty, probably not expected
-                    warn!("already empty at {:?}", start);
-                }
-            }
-        } else {
-            match self.pixels.get_entity_by_point_mut(&start) {
-                Some(existing) => {
-                    if existing.starts.len() != 1 {
-                        warn!("wrong size {:?}", start);
-                    } else {
-                        existing.set_pixel(pixel);
-                    }
-                }
-                None => {
-                    self.pixels.add(VPixel {
-                        starts: [start].to_vec(),
-                        pixel,
-                    })?;
-                }
-            }
-        }
-        Ok(())
+    pub fn set_pixels(&mut self, pixel: Pixel, positions: Vec<VPoint>) -> VResult<()> {
+        self.pixels.add(VPixel { pixel }, positions)
     }
 
     pub fn add_patches(&mut self, patches: &[VPatch]) {
@@ -397,69 +366,91 @@ impl VSurface {
         metrics.log_final();
     }
 
-    pub fn draw_square_area(
-        &mut self,
-        area: &VArea,
-        empty_map: Pixel,
-        existing_map: Option<Pixel>,
-    ) {
-        self.draw_square(
-            area.start.x(),
-            area.end_x_exclusive(),
-            area.start.y(),
-            area.end_y_exclusive(),
-            empty_map,
-            existing_map,
-        )
-    }
+    // pub fn draw_square_area(
+    //     &mut self,
+    //     area: &VArea,
+    //     empty_map: Pixel,
+    //     existing_map: Option<Pixel>,
+    // ) {
+    //     self.draw_square(
+    //         area.start.x(),
+    //         area.end_x_exclusive(),
+    //         area.start.y(),
+    //         area.end_y_exclusive(),
+    //         empty_map,
+    //         existing_map,
+    //     )
+    // }
+    //
+    // pub fn draw_square_around_point(
+    //     &mut self,
+    //     point: &VPoint,
+    //     padding: i32,
+    //     empty_map: Pixel,
+    //     existing_map: Option<Pixel>,
+    // ) {
+    //     self.draw_square(
+    //         point.x() - padding,
+    //         point.x() + padding,
+    //         point.y() - padding,
+    //         point.y() + padding,
+    //         empty_map,
+    //         existing_map,
+    //     )
+    // }
 
-    pub fn draw_square_around_point(
-        &mut self,
-        point: &VPoint,
-        padding: i32,
-        empty_map: Pixel,
-        existing_map: Option<Pixel>,
-    ) {
-        self.draw_square(
-            point.x() - padding,
-            point.x() + padding,
-            point.y() - padding,
-            point.y() + padding,
-            empty_map,
-            existing_map,
-        )
-    }
+    // pub fn draw_square(
+    //     &mut self,
+    //     start_x: i32,
+    //     end_x_exclusive: i32,
+    //     start_y: i32,
+    //     end_y_exclusive: i32,
+    //     empty_map: Pixel,
+    //     existing_map: Option<Pixel>,
+    // ) {
+    //     for x in start_x..end_x_exclusive {
+    //         for y in start_y..end_y_exclusive {
+    //             let cur = VPoint::new(x, y);
+    //             if self.pixels.is_point_out_of_bounds(&cur) {
+    //                 continue;
+    //             }
+    //
+    //             let existing_pixel = self.get_pixel(cur);
+    //             let pixel_to_set = if existing_pixel == Pixel::Empty || existing_pixel == empty_map
+    //             {
+    //                 empty_map
+    //             } else {
+    //                 existing_map.unwrap_or(empty_map)
+    //             };
+    //             self.set_pixel(cur, pixel_to_set).unwrap();
+    //         }
+    //     }
+    // }
 
-    pub fn draw_square(
-        &mut self,
-        start_x: i32,
-        end_x_exclusive: i32,
-        start_y: i32,
-        end_y_exclusive: i32,
-        empty_map: Pixel,
-        existing_map: Option<Pixel>,
-    ) {
-        for x in start_x..end_x_exclusive {
-            for y in start_y..end_y_exclusive {
-                let cur = VPoint::new(x, y);
-                if self.pixels.is_point_out_of_bounds(&cur) {
-                    continue;
-                }
+    pub fn add_mine_path(&mut self, mine_paths: Vec<MinePath>) -> VResult<()> {
+        let mut new_points: Vec<VPoint> = mine_paths
+            .iter()
+            .map(|v| &v.links)
+            .flatten()
+            .map(|v| v.area())
+            .flatten()
+            .collect_vec();
 
-                let existing_pixel = self.get_pixel(cur);
-                let pixel_to_set = if existing_pixel == Pixel::Empty || existing_pixel == empty_map
-                {
-                    empty_map
-                } else {
-                    existing_map.unwrap_or(empty_map)
-                };
-                self.set_pixel(cur, pixel_to_set).unwrap();
-            }
+        let old_len = new_points.len();
+        new_points.sort();
+        new_points.dedup();
+        let new_len = new_points.len();
+        if old_len != new_len {
+            warn!(
+                "dedupe mine path from {} to {}",
+                old_len.to_formatted_string(&LOCALE),
+                new_len.to_formatted_string(&LOCALE)
+            )
         }
-    }
 
-    pub fn add_mine_path(&mut self, rails: Vec<MinePath>) {
-        self.rail_paths.extend(rails)
+        self.set_pixels(Pixel::Rail, new_points)?;
+        self.rail_paths.extend(mine_paths);
+        Ok(())
     }
     //
     // pub fn get_rail_TODO(&self) -> impl Iterator<Item = &Rail> {
@@ -567,14 +558,7 @@ fn path_state(out_dir: &Path) -> PathBuf {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct VPixel {
-    starts: Vec<VPoint>,
     pixel: Pixel,
-}
-
-impl VEntityXY for VPixel {
-    fn get_xy(&self) -> &[VPoint] {
-        &self.starts
-    }
 }
 
 impl VPixel {
@@ -590,11 +574,44 @@ impl VPixel {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct VEntity {
     start: VPoint,
-    points: Vec<VPoint>,
 }
 
-impl VEntityXY for VEntity {
-    fn get_xy(&self) -> &[VPoint] {
-        &self.points
+#[cfg(test)]
+mod test {
+    use crate::surface::pixel::Pixel;
+    use crate::surfacev::vsurface::VSurface;
+    use facto_loop_miner_common::log_init_trace;
+    use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
+    use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
+    use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
+    use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
+    use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
+    use std::path::Path;
+    use tracing::info;
+
+    #[test]
+    fn test_basic_surface() {
+        log_init_trace();
+        let mut surface = VSurface::new(50);
+
+        let dummy_link: HopeLink = {
+            let mut hope = RailHopeSingle::new(
+                VPOINT_ZERO,
+                FacDirectionQuarter::North,
+                FacItemOutput::new_null().into_rc(),
+            );
+            hope.add_straight(5);
+            hope.into_links().into_iter().next().unwrap()
+        };
+        surface.set_pixels(Pixel::Rail, dummy_link.area()).unwrap();
+
+        // test overwrite
+        surface
+            .set_pixels(Pixel::EdgeWall, dummy_link.area())
+            .unwrap();
+
+        let test_output_dir = Path::new("work/test-output");
+        info!("writing to {}", test_output_dir.display());
+        surface.save_pixel_img_colorized(&test_output_dir).unwrap()
     }
 }
