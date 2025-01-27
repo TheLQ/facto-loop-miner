@@ -3,38 +3,32 @@ name = "facto-loop-miner"
 version = "0.1.0"
 edition = "2021"
 
-default-run = "main"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 facto-loop-miner-common = { path = "../common" }
 facto-loop-miner-fac-engine = { path = "../fac-engine" }
-image = "0.25.5"
-jemallocator = "0.5.4"
-num-format = "0.4.4"
-num-traits = "0.2.19"
-serde = { version = "1.0.216", features = ["derive"] }
-serde_json = { version = "1.0.133" }
+facto-loop-miner-io = { path = "../io_experiments" }
+#
+tracing = { workspace = true }
+thiserror = { workspace = true }
+num-format = { workspace = true }
+strum = { workspace = true }
+itertools = { workspace = true }
+#
+serde = { workspace = true }
+serde_json = { workspace = true }
 simd-json = { version = "0.13.11", features = ["serde"] }
-
-strum = { version = "0.26.3", features = ["derive"] }
-itertools = "0.12.1"
+#
+mimalloc = "0.1.43"
+jemallocator = "0.5.4"
+#
+image = "0.25.5"
 kiddo = "4.2.1"
 pathfinding = { version = "4.9.1", path = "../../pathfinding" }
 rayon = "1.10.0"
 bitvec = "1.0.1"
 lazy_static = "1.5.0"
-mimalloc = "0.1.43"
-tracing = "0.1.41"
-rcon-client = "0.1.2"
-#rcon-client = { path = "../../rcon-rs" }
-thiserror = "1.0.69"
-regex = "1.11.1"
 crossbeam = "0.8.4"
-clap = { version = "4.5.23", features = ["derive"] }
-bytemuck = { version = "1.20.0", features = ["extern_crate_alloc"] }
+#clap = { version = "4.5.23", features = ["derive"] }
+#bytemuck = { version = "1.20.0", features = ["extern_crate_alloc"] }
 enum-map = "2.7.3"
-facto-loop-miner-io = { path = "../io_experiments" }
-rand = "0.8.5"
 derivative = "2.2.0"

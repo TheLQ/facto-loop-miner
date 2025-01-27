@@ -32,7 +32,6 @@ use crate::surface::pixel::generate_lookup_image;
 use facto_loop_miner_common::log_init_trace;
 use kiddo::float;
 use num_format::Locale;
-use num_traits::PrimInt;
 use std::path::Path;
 
 mod gamedata;
@@ -66,12 +65,4 @@ pub fn inner_main() {
         3 => generate_lookup_image(),
         _ => panic!("wtf"),
     }
-}
-
-/// what is this called?
-pub fn bucket_div<N>(value: N, bucket_size: N) -> N
-where
-    N: PrimInt,
-{
-    (value - (value % bucket_size)) / bucket_size
 }

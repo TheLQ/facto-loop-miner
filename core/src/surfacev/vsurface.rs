@@ -27,7 +27,7 @@ use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::thread::JoinHandle;
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, info, trace};
 
 /// A map of background pixels (eg resources, water) and the large entities on top
 ///

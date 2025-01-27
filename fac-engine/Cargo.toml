@@ -5,25 +5,26 @@ edition = "2024"
 
 [dependencies]
 facto-loop-miner-common = { path = "../common" }
-itertools = "0.13.0"
-num-format = "0.4.4"
+#
+tracing = { workspace = true }
+thiserror = { workspace = true }
+num-format = { workspace = true }
+strum = { workspace = true }
+itertools = { workspace = true }
+#
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_repr = "0.1.19"
+serde-lua-table = { git = "https://github.com/Nerixyz/serde-lua-table.git", tag = "v0.1.2" }
+#
 rand = "0.8.5"
 regex = "1.11.1"
-strum = { version = "0.26.3", features = ["derive"] }
-thiserror = "2.0.7"
-tracing = "0.1.41"
 rcon-client = "0.1.2"
-serde = "1.0.216"
-generic_static = "0.2.0"
 base64ct = { version = "1.6.0", features = ["alloc"] }
 flate2 = "1.0.35"
-serde_json = "1.0.133"
-serde_repr = "0.1.19"
-serde_with = "3.11.0"
 exhaustive = "0.2.2"
 enum-map = "2.7.3"
 unicode-segmentation = "1.12.0"
-serde-lua-table = { git = "https://github.com/Nerixyz/serde-lua-table.git", tag = "v0.1.2" }
 num-traits = "0.2.19"
 
 # managed for core

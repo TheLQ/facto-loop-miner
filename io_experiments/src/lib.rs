@@ -23,6 +23,7 @@ mod io_uring_file_copying;
 use crate::io::read_entire_file_usize_mmap_custom;
 use crate::io_bench::checksum_vec_usize;
 use crate::io_uring::io_uring_main;
+use facto_loop_miner_common::log_init_trace;
 pub use io::{
     get_mebibytes_of_slice_usize, read_entire_file, read_entire_file_varray_mmap_lib,
     write_entire_file,
@@ -36,13 +37,7 @@ use tracing::{info, Level};
 pub const LOCALE: Locale = Locale::en;
 
 pub fn io_experiment_main() {
-    let tracing_format = tracing_subscriber::fmt::format().compact();
-
-    tracing_subscriber::fmt()
-        // .with_max_level(Level::TRACE)
-        .with_max_level(Level::TRACE)
-        .compact()
-        .init();
+    log_init_trace();
 
     tracing::debug!("hello io_experiment");
 

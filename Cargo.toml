@@ -1,8 +1,17 @@
 [workspace]
-members = [ "common","core", "fac-engine", "io_experiments"]
+members = ["common", "core", "fac-engine", "io_experiments"]
 resolver = "2"
 
 default-members = ["core"]
 
 [profile.release]
 lto = "fat"
+
+[workspace.dependencies]
+serde = { version = "1.0.216", features = ["derive"] }
+serde_json = { version = "1.0.133" }
+strum = { version = "0.26.3", features = ["derive"] }
+itertools = "0.13.0"
+num-format = "0.4.4"
+tracing = "0.1.41"
+thiserror = "2.0.7"
