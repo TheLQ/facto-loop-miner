@@ -1,7 +1,6 @@
 use crate::admiral::generators::join_commands;
 use crate::admiral::lua_command::LuaCommand;
 use itertools::Itertools;
-use regex::Regex;
 
 #[derive(Debug)]
 pub struct FacExectionDefine {
@@ -28,8 +27,8 @@ impl LuaCommand for FacExectionDefine {
             .replace('\n', " ")
             .to_string();
 
-        let regex = Regex::new("( \\s+)").unwrap();
-        all_function_chunks = regex.replace_all(&all_function_chunks, " ").to_string();
+        // let regex = Regex::new("( \\s+)").unwrap();
+        // all_function_chunks = regex.replace_all(&all_function_chunks, " ").to_string();
 
         format!(
             r#"

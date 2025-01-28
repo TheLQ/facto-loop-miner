@@ -8,10 +8,13 @@ default-members = ["core"]
 lto = "fat"
 
 [workspace.dependencies]
-serde = { version = "1.0.216", features = ["derive"] }
-serde_json = { version = "1.0.133" }
-strum = { version = "0.26.3", features = ["derive"] }
-itertools = "0.13.0"
-num-format = "0.4.4"
+#
 tracing = "0.1.41"
 thiserror = "2.0.7"
+num-format = "0.4.4"
+strum = { version = "0.26.3", features = ["derive"] }
+enum-map = "2.7.3"
+itertools = "0.13.0"
+#
+serde = { version = "1.0.216", features = ["derive"] }
+serde_json = { version = "1.0.133" }

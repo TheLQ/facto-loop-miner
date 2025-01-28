@@ -1,4 +1,5 @@
 use crate::admiral::lua_command::{DEFAULT_FORCE_VAR, LuaCommand};
+use crate::admiral::trimmer::string_space_shrinker;
 use crate::blueprint::bpfac::infinity::{FacBpFilter, FacBpInfinitySettings};
 use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::blueprint::bpfac::schedule::FacBpSchedule;
@@ -7,7 +8,6 @@ use crate::game_entities::direction::FacDirectionEighth;
 use crate::game_entities::module::FacModule;
 use crate::util::ansi::C_BLOCK_LINE;
 use itertools::Itertools;
-use regex::Regex;
 use std::convert::AsRef;
 
 pub const DEBUG_PRE_COLLISION: bool = true;
@@ -147,10 +147,7 @@ impl FacSurfaceCreateEntity {
                 }} )"
             )
             .replace("\n", " ");
-            let text = Regex::new(r"\s+")
-                .unwrap()
-                .replace_all(&text, " ")
-                .to_string();
+            let text = string_space_shrinker(text);
             self.with_command(text)
         }
     }

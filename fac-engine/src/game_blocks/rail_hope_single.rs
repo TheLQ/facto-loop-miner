@@ -5,7 +5,6 @@ use tracing::trace;
 use crate::blueprint::bpitem::BlueprintItem;
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
 use crate::common::entity::FacEntity;
-use crate::common::varea::VArea;
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
 use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
 use crate::game_entities::direction::{FacDirectionEighth, FacDirectionQuarter};
@@ -390,11 +389,11 @@ impl HopeLink {
                 };
 
                 let mut rail = self.start;
-                for i in 0..5 {
+                for _ in 0..5 {
                     area.extend(rail.area_2x2());
                     rail = rail.move_direction_usz(unrotated, RAIL_STRAIGHT_DIAMETER);
                 }
-                for i in 0..6 {
+                for _ in 0..6 {
                     area.extend(rail.area_2x2());
                     rail = rail.move_direction_usz(self.next_direction, RAIL_STRAIGHT_DIAMETER);
                 }

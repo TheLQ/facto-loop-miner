@@ -9,7 +9,8 @@ pub struct CheckedLuaCommand {
 impl CheckedLuaCommand {
     pub fn new(inner: Box<dyn LuaCommand>) -> Self {
         CheckedLuaCommand {
-            id: rand::random(),
+            // id can be arbitrary?
+            id: 9,
             inner,
         }
     }
