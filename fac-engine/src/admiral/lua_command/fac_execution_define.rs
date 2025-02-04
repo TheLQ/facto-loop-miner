@@ -31,11 +31,10 @@ impl LuaCommand for FacExectionDefine {
         // all_function_chunks = regex.replace_all(&all_function_chunks, " ").to_string();
 
         format!(
-            r#"
+            r"
 function megacall()
 {}
-end rcon.print('facexecution_define')
-        "#,
+end rcon.print('facexecution_define')",
             all_function_chunks
         )
     }

@@ -103,13 +103,13 @@ impl FacBlkBeltTrainUnload {
         );
         let mut belts = [
             FacBlkBettelBelt::new(
-                self.belt_type.clone(),
+                self.belt_type,
                 origin,
                 self.origin_direction,
                 self.output.clone(),
             ),
             FacBlkBettelBelt::new(
-                self.belt_type.clone(),
+                self.belt_type,
                 origin.move_direction_sideways_int(self.origin_direction, 1),
                 self.origin_direction,
                 self.output.clone(),

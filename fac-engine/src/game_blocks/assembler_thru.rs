@@ -107,28 +107,25 @@ impl FacBlkAssemblerThru {
             for y_offset in 0..3 {
                 // lead in empty belt
                 self.output.write(BlueprintItem::new(
-                    FacEntBeltTransport::new(self.belt_type.clone(), direction.clone())
-                        .into_boxed(),
+                    FacEntBeltTransport::new(self.belt_type, direction).into_boxed(),
                     origin.move_xy_usize(cell_x_offset, y_offset),
                 ));
 
                 // going underground
                 self.output.write(BlueprintItem::new(
-                    FacEntBeltUnder::new(self.belt_type.clone(), direction.clone(), utype.clone())
-                        .into_boxed(),
+                    FacEntBeltUnder::new(self.belt_type, direction, utype).into_boxed(),
                     origin.move_xy_usize(cell_x_offset + 1, y_offset),
                 ));
 
                 // inserter
                 let inserter_direction = if is_second_row {
                     // belt goes other way but inserters are in same place
-                    direction.clone()
+                    direction
                 } else {
                     direction.rotate_flip()
                 };
                 self.output.write(BlueprintItem::new(
-                    FacEntInserter::new(self.inserter_input.clone(), inserter_direction)
-                        .into_boxed(),
+                    FacEntInserter::new(self.inserter_input, inserter_direction).into_boxed(),
                     origin.move_xy_usize(cell_x_offset + 2, y_offset),
                 ));
             }
@@ -144,8 +141,7 @@ impl FacBlkAssemblerThru {
             for y_offset in 0..3 {
                 // coming up underground
                 self.output.write(BlueprintItem::new(
-                    FacEntBeltUnder::new(self.belt_type.clone(), direction.clone(), utype.flip())
-                        .into_boxed(),
+                    FacEntBeltUnder::new(self.belt_type, direction, utype.flip()).into_boxed(),
                     origin.move_xy_usize(cell_x_offset, y_offset),
                 ));
             }
@@ -191,8 +187,7 @@ impl FacBlkAssemblerThru {
 
                 // removing inserter
                 self.output.write(BlueprintItem::new(
-                    FacEntInserter::new(self.inserter_output.clone(), side_direction.clone())
-                        .into_boxed(),
+                    FacEntInserter::new(self.inserter_output, side_direction).into_boxed(),
                     origin.move_xy_usize(cell_x_offset + 4, side_y_offset),
                 ));
 
@@ -254,7 +249,7 @@ impl FacBlkAssemblerThru {
     fn generate_belt_turn_for_row(&self, origin: VPoint) {
         let start = origin.move_x_usize(self.cell_width() * self.width);
         FacBlkBettelBelt::u_turn_from_east(
-            &self.belt_type,
+            self.belt_type,
             start,
             CELL_HEIGHT,
             CELL_HEIGHT,
@@ -265,7 +260,7 @@ impl FacBlkAssemblerThru {
     fn generate_belt_turn_for_between(&self, origin: VPoint) {
         let start = origin.move_x_usize(START_BUFFER - CELL_HEIGHT);
         FacBlkBettelBelt::u_turn_from_west(
-            &self.belt_type,
+            self.belt_type,
             start,
             0,
             CELL_HEIGHT,

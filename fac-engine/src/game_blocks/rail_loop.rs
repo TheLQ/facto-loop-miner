@@ -98,7 +98,7 @@ impl FacBlkRailLoop {
             } else {
                 self.delivery_output.clone()
             },
-            inserter: self.inserter_type.clone(),
+            inserter: self.inserter_type,
             fuel_inserter: Some(FacEntInserterType::Basic),
             fuel_inserter_chest: Some(FacEntChestType::Infinity(FacBpInfinitySettings {
                 filters: [FacBpFilter::new_for_item("nuclear-fuel")].to_vec(),
@@ -139,7 +139,7 @@ impl FacBlkRailLoop {
             } else {
                 self.delivery_output.clone()
             },
-            inserter: self.inserter_type.clone(),
+            inserter: self.inserter_type,
             fuel_inserter: None,
             fuel_inserter_chest: None,
             schedule: None,

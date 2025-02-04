@@ -100,7 +100,7 @@ impl FacBlkBeltCombiner {
         // }
     }
 
-    fn place_output_skips(&self, belts_stack: &mut Vec<FacBlkBettelBelt>, clockwise: bool) {
+    fn place_output_skips(&self, belts_stack: &mut [FacBlkBettelBelt], clockwise: bool) {
         // add skips
         for (output_belt_num, [first, last]) in belts_stack.iter_mut().array_chunks().enumerate() {
             let _ = &mut self

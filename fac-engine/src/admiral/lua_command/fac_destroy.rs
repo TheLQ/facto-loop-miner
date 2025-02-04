@@ -57,12 +57,10 @@ impl LuaCommand for FacDestroy {
     fn make_lua(&self) -> String {
         if self.entity_names.is_empty() {
             self.destroy_everything()
+        } else if self.is_tiles {
+            self.destroy_filtered_tiles()
         } else {
-            if self.is_tiles {
-                self.destroy_filtered_tiles()
-            } else {
-                self.destroy_filtered_entities()
-            }
+            self.destroy_filtered_entities()
         }
     }
 }
@@ -103,15 +101,14 @@ end
             .map(|v| format!("\"{}\"", v))
             .join(",");
         format!(
-            r#"
+            r"
 local tiles = game.surfaces[1].find_tiles_filtered{{ 
     area = {area}, 
     name = {{ {filters} }} 
 }}
 for _, tile in ipairs(tiles) do
     game.surfaces[1].set_tiles( {{ {{ name = tile.hidden_tile, position = tile.position }} }} )
-end
-        "#
+end"
         )
         .trim()
         .replace('\n', "")
@@ -129,8 +126,7 @@ end
 local entities = game.surfaces[1].find_entities({area})
 for _, entity in ipairs(entities) do
     entity.destroy()
-end
-        "
+end"
         )
         .trim()
         .replace('\n', "")

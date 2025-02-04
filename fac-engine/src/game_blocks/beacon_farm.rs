@@ -31,8 +31,7 @@ impl<C: FacBlock> FacBlock for FacBlkBeaconFarm<C> {
         ) {
             if pos.ix % zero_cell_size == 0 || pos.iy % zero_cell_size == 0 {
                 self.output.write(BlueprintItem::new(
-                    FacEntBeacon::new([Some(self.module.clone()), Some(self.module.clone())])
-                        .into_boxed(),
+                    FacEntBeacon::new([Some(self.module), Some(self.module)]).into_boxed(),
                     pos.point(),
                 ));
             } else if pos.ix % zero_cell_size == 1 && pos.iy % zero_cell_size == 1 {

@@ -88,11 +88,11 @@ impl FacBlkBettelBelt {
     }
 
     pub fn add_straight(&mut self, length: usize) {
-        self.add_straight_raw(length, false, self.current_direction().clone());
+        self.add_straight_raw(length, false, *self.current_direction());
     }
 
     pub fn add_straight_underground(&mut self, length: usize) {
-        self.add_straight_raw(length, true, self.current_direction().clone());
+        self.add_straight_raw(length, true, *self.current_direction());
     }
 
     pub fn add_turn90(&mut self, clockwise: bool) {
@@ -150,31 +150,23 @@ impl FacBlkBettelBelt {
             FacBlkBettelBeltLinkType::Transport { length } => {
                 let mut new_cursor = self.origin;
                 for i in 0..*length {
-                    new_cursor = self.write_cursor.move_direction_usz(&link.direction, i);
+                    new_cursor = self.write_cursor.move_direction_usz(link.direction, i);
                     output.writei(
-                        FacEntBeltTransport::new(self.btype.clone(), link.direction.clone()),
+                        FacEntBeltTransport::new(self.btype, link.direction),
                         new_cursor,
                     )
                 }
                 // move cursor past the last belt we placed
-                self.write_cursor = new_cursor.move_direction_int(&link.direction, 1);
+                self.write_cursor = new_cursor.move_direction_int(link.direction, 1);
             }
             FacBlkBettelBeltLinkType::Underground { length } => {
                 output.writei(
-                    FacEntBeltUnder::new(
-                        self.btype.clone(),
-                        link.direction.clone(),
-                        FacEntBeltUnderType::Input,
-                    ),
+                    FacEntBeltUnder::new(self.btype, link.direction, FacEntBeltUnderType::Input),
                     self.write_cursor,
                 );
 
                 output.writei(
-                    FacEntBeltUnder::new(
-                        self.btype.clone(),
-                        link.direction.clone(),
-                        FacEntBeltUnderType::Output,
-                    ),
+                    FacEntBeltUnder::new(self.btype, link.direction, FacEntBeltUnderType::Output),
                     self.write_cursor
                         .move_direction_usz(&link.direction, *length + 1),
                 );
@@ -257,7 +249,7 @@ impl FacBlkBettelBelt {
 
         for belt_num in 0..belt_total {
             let mut belt: FacBlkBettelBelt = FacBlkBettelBelt::new(
-                btype.borrow().clone(),
+                *btype.borrow(),
                 origin.move_y_usize(belt_num),
                 FacDirectionQuarter::East,
                 output.clone(),
@@ -283,7 +275,7 @@ impl FacBlkBettelBelt {
 
         for belt_num in 0..belt_total {
             let mut belt: FacBlkBettelBelt = FacBlkBettelBelt::new(
-                btype.borrow().clone(),
+                *btype.borrow(),
                 origin.move_xy_usize(belt_total_0, belt_num),
                 FacDirectionQuarter::West,
                 output.clone(),

@@ -177,8 +177,8 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
 
         // curve 1
         let first_curve_pos = new_origin_fac
-            .move_direction_usz(&cur_direction, 3)
-            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 1));
+            .move_direction_usz(cur_direction, 3)
+            .move_direction_sideways_int(cur_direction, neg_if_false(clockwise, 1));
         let first_curve_direction = cur_direction.to_direction_eighth();
         let first_curve_direction = if clockwise {
             first_curve_direction.rotate_once()
@@ -187,15 +187,15 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
         };
         rails.push(HopeFactoRail {
             position: first_curve_pos,
-            direction: first_curve_direction.clone(),
+            direction: first_curve_direction,
             rtype: FacEntRailType::Curved,
         });
         trace!("first curve {:?}", first_curve_direction);
 
         // middle
         let middle_straight_pos = first_curve_pos
-            .move_direction_usz(&cur_direction, 3)
-            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 3));
+            .move_direction_usz(cur_direction, 3)
+            .move_direction_sideways_int(cur_direction, neg_if_false(clockwise, 3));
         let middle_straight_direction = if clockwise {
             first_curve_direction.rotate_opposite().rotate_opposite()
         } else {
@@ -205,14 +205,14 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
         rails.push(HopeFactoRail {
             // -1,-1 to cancel RailStraight's to_fac offset
             position: middle_straight_pos - VPOINT_ONE,
-            direction: middle_straight_direction.clone(),
+            direction: middle_straight_direction,
             rtype: FacEntRailType::Straight,
         });
 
         // curve 2
         let last_curve_pos = middle_straight_pos
-            .move_direction_usz(&cur_direction, 3)
-            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 3));
+            .move_direction_usz(cur_direction, 3)
+            .move_direction_sideways_int(cur_direction, neg_if_false(clockwise, 3));
         let last_curve_direction = if clockwise {
             middle_straight_direction.rotate_opposite()
         } else {
@@ -221,7 +221,7 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
         trace!("last curve {:?}", middle_straight_direction);
         rails.push(HopeFactoRail {
             position: last_curve_pos,
-            direction: last_curve_direction.clone(),
+            direction: last_curve_direction,
             rtype: FacEntRailType::Curved,
         });
 
@@ -265,8 +265,8 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
 
         // curve 1 (copy of above turn90)
         let first_curve_pos = new_origin_fac
-            .move_direction_usz(&cur_direction, 3)
-            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 1));
+            .move_direction_usz(cur_direction, 3)
+            .move_direction_sideways_int(cur_direction, neg_if_false(clockwise, 1));
         let first_curve_direction = cur_direction.to_direction_eighth();
         let first_curve_direction = if clockwise {
             first_curve_direction.rotate_once()
@@ -281,8 +281,8 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
 
         // middle
         let middle_straight_pos = first_curve_pos
-            .move_direction_usz(&cur_direction, 3)
-            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 3));
+            .move_direction_usz(cur_direction, 3)
+            .move_direction_sideways_int(cur_direction, neg_if_false(clockwise, 3));
         let middle_a_direction = if clockwise {
             first_curve_direction.rotate_opposite().rotate_opposite()
         } else {
@@ -292,29 +292,29 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
 
         let mut next_a_pos = middle_straight_pos;
         let mut last_b_pos = middle_straight_pos
-            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, -2));
+            .move_direction_sideways_int(cur_direction, neg_if_false(clockwise, -2));
         for _ in 0..length {
             rails.push(HopeFactoRail {
                 // -1,-1 to cancel RailStraight's to_fac offset
                 position: next_a_pos - VPOINT_ONE,
-                direction: middle_a_direction.clone(),
+                direction: middle_a_direction,
                 rtype: FacEntRailType::Straight,
             });
-            last_b_pos = next_a_pos.move_direction_usz(&cur_direction, 2);
+            last_b_pos = next_a_pos.move_direction_usz(cur_direction, 2);
             rails.push(HopeFactoRail {
                 // -1,-1 to cancel RailStraight's to_fac offset
                 position: last_b_pos - VPOINT_ONE,
-                direction: middle_b_direction.clone(),
+                direction: middle_b_direction,
                 rtype: FacEntRailType::Straight,
             });
             next_a_pos =
-                last_b_pos.move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 2))
+                last_b_pos.move_direction_sideways_int(cur_direction, neg_if_false(clockwise, 2))
         }
 
         // curve 2 back
         let last_curve_pos = last_b_pos
-            .move_direction_usz(&cur_direction, 3)
-            .move_direction_sideways_int(&cur_direction, neg_if_false(clockwise, 3));
+            .move_direction_usz(cur_direction, 3)
+            .move_direction_sideways_int(cur_direction, neg_if_false(clockwise, 3));
         let last_curve_direction = if clockwise {
             first_curve_direction
                 .rotate_once()
@@ -330,12 +330,12 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
         };
         rails.push(HopeFactoRail {
             position: last_curve_pos,
-            direction: last_curve_direction.clone(),
+            direction: last_curve_direction,
             rtype: FacEntRailType::Curved,
         });
         HopeLink {
             start: new_origin,
-            next_direction: cur_direction.clone(),
+            next_direction: cur_direction,
             rtype: HopeLinkType::Shift45 { clockwise, length },
             rails,
         }
@@ -356,14 +356,14 @@ impl HopeLink {
                 };
                 trace!("unrotated {}", unrotated);
                 self.start
-                    .move_direction_usz(&unrotated, 10)
-                    .move_direction_sideways_int(&unrotated, neg_if_false(*clockwise, 12))
+                    .move_direction_usz(unrotated, 10)
+                    .move_direction_sideways_int(unrotated, neg_if_false(*clockwise, 12))
             }
             HopeLinkType::Shift45 { clockwise, length } => self
                 .start
-                .move_direction_usz(&self.next_direction, 14 + (*length * 2))
+                .move_direction_usz(self.next_direction, 14 + (*length * 2))
                 .move_direction_sideways_int(
-                    &self.next_direction,
+                    self.next_direction,
                     neg_if_false(*clockwise, 6 + (*length as i32 * 2)),
                 ),
         }
@@ -376,7 +376,7 @@ impl HopeLink {
                 for i in 0..*length {
                     let rail = self
                         .start
-                        .move_direction_usz(&self.next_direction, i * RAIL_STRAIGHT_DIAMETER);
+                        .move_direction_usz(self.next_direction, i * RAIL_STRAIGHT_DIAMETER);
                     area.extend(rail.area_2x2());
                 }
             }
@@ -410,11 +410,11 @@ impl HopeFactoRail {
     fn to_fac(&self, res: &FacItemOutput) {
         match self.rtype {
             FacEntRailType::Straight => res.write(BlueprintItem::new(
-                FacEntRailStraight::new(self.direction.clone()).into_boxed(),
+                FacEntRailStraight::new(self.direction).into_boxed(),
                 self.position,
             )),
             FacEntRailType::Curved => res.write(BlueprintItem::new(
-                FacEntRailCurved::new(self.direction.clone()).into_boxed(),
+                FacEntRailCurved::new(self.direction).into_boxed(),
                 self.position,
             )),
         }

@@ -11,7 +11,7 @@ use super::{
     direction::{FacDirectionEighth, FacDirectionQuarter},
 };
 
-#[derive(Debug, Clone, PartialEq, AsRefStr, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, AsRefStr, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FacEntBeltUnderType {
     Input,

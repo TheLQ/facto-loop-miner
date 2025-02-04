@@ -109,9 +109,9 @@ where
     S: Serializer,
 {
     let value = *value;
-    if value.trunc() != value {
-        serializer.serialize_f32(value)
-    } else {
+    if value.trunc() == value {
         serializer.serialize_i32(value as i32)
+    } else {
+        serializer.serialize_f32(value)
     }
 }

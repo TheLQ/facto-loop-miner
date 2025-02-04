@@ -41,9 +41,9 @@ impl LuaCommand for FacSurfaceCreateLua {
             .join(",");
 
         let lua = format!(
-            r#"game.surfaces[1].set_tiles{{ 
+            r"game.surfaces[1].set_tiles{{ 
             {tiles_lua}
-            }}"#,
+            }}",
         );
         lua
     }

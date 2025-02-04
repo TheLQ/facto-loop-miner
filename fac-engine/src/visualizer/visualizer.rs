@@ -4,14 +4,13 @@ use tracing::info;
 
 use crate::blueprint::contents::BlueprintContents;
 
-const STYLE: &str = r#"
+const STYLE: &str = r"
 <style>
 .placed {
     position: absolute;
     border: 1px solid;
 }
-</style>
-"#;
+</style>";
 
 pub fn visualize_blueprint(blueprint: &BlueprintContents) {
     let mut output = STYLE.to_string();

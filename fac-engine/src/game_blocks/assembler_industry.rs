@@ -58,7 +58,7 @@ impl FacBlkIndustry {
     fn place_input_belts(&self, thru_block: &[FacBlkAssemblerThru], origin: VPoint) {
         let _ = &mut self
             .output
-            .context_handle(ContextLevel::Micro, format!("Input Belts"));
+            .context_handle(ContextLevel::Micro, "Input Belts".into());
         let max_width: usize = thru_block
             .iter()
             .map(|v| v.total_point_width())
@@ -84,7 +84,7 @@ impl FacBlkIndustry {
                 );
 
                 // come back from the output side
-                belt.add_straight(max_width + output_padding as usize);
+                belt.add_straight(max_width + output_padding);
 
                 // going down to assembler thru inputs
                 belt.add_straight(cur_total_belts);

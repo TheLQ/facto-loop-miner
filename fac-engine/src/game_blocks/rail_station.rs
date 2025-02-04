@@ -85,7 +85,7 @@ impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
                 origin_after_straight = false;
                 rotation = true;
             }
-        };
+        }
 
         Self::place_electric_initial(&origin, &base_direction, &self.output);
 

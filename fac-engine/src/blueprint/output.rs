@@ -164,12 +164,12 @@ impl FacItemOutput {
                 Color::Purple,
             );
             let key = [item_debug.as_str(), contexts.as_str(), subcontexts.as_str()].concat();
-            if log_info.last_context != key {
+            if log_info.last_context == key {
+                log_info.total_with_context += 1;
+            } else {
                 log_info.last_context = key;
                 log_info.total_with_context = 1;
                 // print!("\n");
-            } else {
-                log_info.total_with_context += 1;
             };
             (contexts, subcontexts, log_info.total_with_context)
         };

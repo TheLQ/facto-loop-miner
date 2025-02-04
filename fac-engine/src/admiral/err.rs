@@ -104,7 +104,7 @@ impl AdmiralError {
 }
 
 pub fn truncate_huge_lua(input: &str) -> String {
-    if input.len() < 300 {
+    if input.len() < 3000 {
         input.to_string()
     } else {
         format!(
