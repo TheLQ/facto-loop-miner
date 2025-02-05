@@ -16,7 +16,7 @@ use facto_loop_miner_fac_engine::tests::belt_tests::{
 use facto_loop_miner_fac_engine::tests::ore_tests::{make_mine, make_mine_and_rail};
 use facto_loop_miner_fac_engine::tests::other_tests::make_solar_bath_test;
 use facto_loop_miner_fac_engine::tests::train_area::make_area_finder;
-use facto_loop_miner_fac_engine::tests::train_loop::make_rail_loop;
+use facto_loop_miner_fac_engine::tests::train_loop_tests::make_rail_loop;
 use facto_loop_miner_fac_engine::tests::train_rails::{
     make_rail_dual_powered, make_rail_dual_turning, make_rail_shift_45, make_rail_spiral_90,
 };
@@ -56,7 +56,7 @@ fn inner_main() -> AdmiralResult<()> {
     };
 
     let command_output = output.clone();
-    match 17 {
+    match 9 {
         1 => make_basic(command_output)?,
         2 => make_assembler_thru(command_output),
         3 => make_belt_bettel(command_output)?,
