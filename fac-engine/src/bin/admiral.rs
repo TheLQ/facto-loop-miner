@@ -1,3 +1,4 @@
+use std::process::ExitCode;
 use std::rc::Rc;
 
 use exhaustive::Exhaustive;
@@ -31,13 +32,15 @@ use facto_loop_miner_fac_engine::{
     game_entities::chest::{FacEntChest, FacEntChestType},
 };
 
-fn main() {
+fn main() -> ExitCode {
     log_init_trace();
     // log_init_debug();
 
     if let Err(e) = inner_main() {
-        let msg = pretty_panic_admiral(e);
-        panic!("⛔⛔⛔ DEAD: {}", msg)
+        pretty_panic_admiral(e);
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
     }
 }
 

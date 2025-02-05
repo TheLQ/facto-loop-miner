@@ -116,10 +116,9 @@ pub fn truncate_huge_lua(input: &str) -> String {
     }
 }
 
-pub fn pretty_panic_admiral(err: AdmiralError) -> String {
+pub fn pretty_panic_admiral(err: AdmiralError) {
     if let Some(cmd) = err.my_command() {
         error!("raw command -- {}", cmd);
     }
-    error!("backtrace -- \n{}", err.my_backtrace());
-    format!("{}", err)
+    error!("⛔⛔⛔ DEAD: {err}\n{}", err.my_backtrace());
 }
