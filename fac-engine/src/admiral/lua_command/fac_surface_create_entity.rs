@@ -10,9 +10,10 @@ use crate::util::ansi::C_BLOCK_LINE;
 use itertools::Itertools;
 use std::convert::AsRef;
 
-pub const DEBUG_PRE_COLLISION: bool = true;
+pub const DEBUG_PRE_COLLISION: bool = false;
 pub const DEBUG_POSITION_EXPECTED: bool = true;
 
+/// Primary lua
 #[derive(Debug)]
 pub struct FacSurfaceCreateEntity {
     pub name: String,
@@ -46,22 +47,22 @@ impl LuaCommand for FacSurfaceCreateEntity {
             });
 
             let direction_param = if let Some(direction) = direction {
-                format!("defines.direction.{}", direction.to_lowercase())
+                format!(", defines.direction.{}", direction.to_lowercase())
             } else {
-                "".to_string()
+                String::new()
             };
 
             lua.push(
                 format!(
                     r#"
-                    if game.surfaces[1].entity_prototype_collides("{name}", {{ {x}, {y} }}, false, {direction_param}) then
+                    if game.surfaces[1].entity_prototype_collides("{name}", {{ {x}, {y} }}, false{direction_param}) then
                         rcon.print("[Admiral] Collision {name} {nice_pos}")           
                     end 
                     "#
                 )
-                .trim()
-                .replace('\n', " ")
-                .replace("    ", ""),
+                    .trim()
+                    .replace('\n', " ")
+                    .replace("    ", ""),
             )
         }
 
@@ -74,9 +75,10 @@ impl LuaCommand for FacSurfaceCreateEntity {
                 r#"game.surfaces[1].create_entity{{ 
                     name="{name}", 
                     position={{ {x}, {y} }}, 
-                    force={DEFAULT_FORCE_VAR},
-                    {params_str}
+                    force={DEFAULT_FORCE_VAR}
+                    {}{params_str}
                 }}"#,
+                if params_str.is_empty() { "" } else { "," }
             )
             .trim()
             .replace('\n', "")
@@ -134,22 +136,18 @@ impl FacSurfaceCreateEntity {
         self.with_command(format!(
             "admiral_create.remove_unfiltered_items = {remove_unfiltered_items}"
         ));
+        let lua_filters = filters
+            .iter()
+            .enumerate()
+            .map(|(i, FacBpFilter { name, count, mode })| {
+                let i = i + /*lua*/1;
+                format!(r#"{{ name = "{name}", count = {count}, mode = "{mode}", index = {i} }}"#)
+            })
+            .join(",");
         self.with_command(format!(
-            "admiral_create.infinity_container_filters  = {{ }}"
+            "admiral_create.infinity_container_filters  = {{ {} }}",
+            string_space_shrinker(lua_filters)
         ));
-        for (i, FacBpFilter { name, count, mode }) in filters.iter().enumerate() {
-            let lua_index = i + 1;
-            let text = format!(
-                "admiral_create.set_infinity_container_filter({lua_index}, {{
-                    name = \"{name}\",
-                    count = {count},
-                    mode = \"{mode}\",
-                }} )"
-            )
-            .replace("\n", " ");
-            let text = string_space_shrinker(text);
-            self.with_command(text)
-        }
     }
 
     pub fn with_command_schedule(&mut self, schedule: &FacBpSchedule) {
@@ -159,7 +157,7 @@ impl FacSurfaceCreateEntity {
             "admiral_create.train.schedule  = {{ current = 1, records = {lua_sched} }}"
         ));
         // TODO: Doesn't work, must be seperate command
-        self.with_command(format!("admiral_create.train.manual_mode = false"));
+        self.with_command("admiral_create.train.manual_mode = false".into());
     }
 
     pub fn with_command_splitter(&mut self, pri: FacEntBeltSplitPriority) {
