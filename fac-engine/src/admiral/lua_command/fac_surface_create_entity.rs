@@ -13,7 +13,7 @@ use std::convert::AsRef;
 pub const DEBUG_PRE_COLLISION: bool = false;
 pub const DEBUG_POSITION_EXPECTED: bool = true;
 
-/// Primary lua
+/// Primary lua generator
 #[derive(Debug)]
 pub struct FacSurfaceCreateEntity {
     pub name: String,
@@ -24,21 +24,12 @@ pub struct FacSurfaceCreateEntity {
 
 impl LuaCommand for FacSurfaceCreateEntity {
     fn make_lua(&self) -> String {
-        let params_str = self
-            .params
-            .iter()
-            .map(|v| {
-                let (key, value) = v.to_param();
-                format!("{}={}", key, value)
-            })
-            .join(",");
-
         let mut lua: Vec<String> = Vec::new();
 
         let name = &self.name;
         let x = self.position.x;
         let y = self.position.y;
-        let nice_pos = self.position.display();
+        let pretty_pos = self.position.display();
 
         if DEBUG_PRE_COLLISION {
             let direction = self.params.iter().find_map(|v| match v {
@@ -54,15 +45,10 @@ impl LuaCommand for FacSurfaceCreateEntity {
 
             lua.push(
                 format!(
-                    r#"
-                    if game.surfaces[1].entity_prototype_collides("{name}", {{ {x}, {y} }}, false{direction_param}) then
-                        rcon.print("[Admiral] Collision {name} {nice_pos}")           
-                    end 
-                    "#
-                )
-                    .trim()
-                    .replace('\n', " ")
-                    .replace("    ", ""),
+                    r#"if game.surfaces[1].entity_prototype_collides("{name}", {{ {x}, {y} }}, false{direction_param}) then
+                        rcon.print("[Admiral] Collision {name} {pretty_pos}")           
+                    end"#
+                ),
             )
         }
 
@@ -70,34 +56,37 @@ impl LuaCommand for FacSurfaceCreateEntity {
             lua.push("local admiral_create =".to_string());
         }
 
-        lua.push(
-            format!(
-                r#"game.surfaces[1].create_entity{{ 
+        let params_str = self
+            .params
+            .iter()
+            .map(|v| {
+                let (key, value) = v.to_param();
+                format!("{}={}", key, value)
+            })
+            .join(",");
+        lua.push(format!(
+            r#"game.surfaces[1].create_entity{{ 
                     name="{name}", 
                     position={{ {x}, {y} }}, 
                     force={DEFAULT_FORCE_VAR}
                     {}{params_str}
                 }}"#,
-                if params_str.is_empty() { "" } else { "," }
-            )
-            .trim()
-            .replace('\n', "")
-            .replace("    ", ""),
-        );
+            if params_str.is_empty() { "" } else { "," }
+        ));
 
         lua.extend_from_slice(&self.commands);
 
         if DEBUG_POSITION_EXPECTED {
             lua.push(format!(
                 r#"if admiral_create == nil then
-                    rcon.print("[Admiral] Inserted {name} at {nice_pos} but was nil")
+                    rcon.print("[Admiral] Inserted {name} at {pretty_pos} but was nil")
                 elseif admiral_create.position.x ~= {x} or admiral_create.position.y ~= {y} then
-                    rcon.print("[Admiral] Inserted {name} at {nice_pos} but was placed at " .. admiral_create.position.x .. "{C_BLOCK_LINE}" .. admiral_create.position.y)
+                    rcon.print("[Admiral] Inserted {name} at {pretty_pos} but was placed at " .. admiral_create.position.x .. "{C_BLOCK_LINE}" .. admiral_create.position.y)
                 end"#
-            ).trim().replace('\n', ""));
+            ));
         }
 
-        lua.join(" ")
+        string_space_shrinker(lua.join(" "))
     }
 }
 
@@ -145,8 +134,7 @@ impl FacSurfaceCreateEntity {
             })
             .join(",");
         self.with_command(format!(
-            "admiral_create.infinity_container_filters  = {{ {} }}",
-            string_space_shrinker(lua_filters)
+            "admiral_create.infinity_container_filters  = {{ {lua_filters} }}",
         ));
     }
 
