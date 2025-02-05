@@ -143,6 +143,8 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
             })
         }
         HopeLink {
+            // start: new_origin
+            //     .move_direction_usz(self.next_direction, (length + 1) * RAIL_STRAIGHT_DIAMETER),
             start: new_origin,
             next_direction: self.next_direction,
             rtype: HopeLinkType::Straight { length },
@@ -464,7 +466,8 @@ mod test {
             hope_long.next_pos()
         };
 
-        let hope_long_bp = hope_long_output.consume_rc().into_blueprint_contents();
+        let hope_long_bp_raw = hope_long_output.consume_rc().into_blueprint_contents();
+        let hope_long_bp = hope_long_bp_raw.fac_entities();
 
         let hope_short_output = FacItemOutput::new_blueprint().into_rc();
         let hope_short_next_pos = {
@@ -478,9 +481,24 @@ mod test {
             hope_short.next_pos()
         };
 
-        let hope_short_bp = hope_short_output.consume_rc().into_blueprint_contents();
+        let hope_short_bp_raw = hope_short_output.consume_rc().into_blueprint_contents();
+        let hope_short_bp = hope_short_bp_raw.fac_entities();
 
-        assert_eq!(hope_long_bp.fac_entities(), hope_short_bp.fac_entities(),);
+        let mut success = true;
+        for i in 0..hope_long_bp.len() {
+            let long = hope_long_bp[i].position.display();
+            let short = hope_short_bp[i].position.display();
+            let compared = if long != short {
+                success = false;
+                "!!!"
+            } else {
+                ""
+            };
+            println!("long {long} short {short} {compared}");
+        }
+        assert!(success);
+
+        // assert_eq!(hope_long_bp.fac_entities(), hope_short_bp.fac_entities(),);
         assert_eq!(hope_long_next_pos, hope_short_next_pos);
     }
 
