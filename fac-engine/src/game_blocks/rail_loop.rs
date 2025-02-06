@@ -108,6 +108,7 @@ impl FacBlkRailLoop {
             is_up: true,
             is_input,
             is_create_train: is_input,
+            is_electric_initial: true,
             schedule: Some(self.new_schedule()),
             output: self.output.clone(),
         };
@@ -147,6 +148,7 @@ impl FacBlkRailLoop {
             is_up: true,
             is_input,
             is_create_train: is_input,
+            is_electric_initial: false,
             output: self.output.clone(),
         };
 

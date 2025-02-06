@@ -62,6 +62,7 @@ pub fn make_mine_and_rail(output: Rc<FacItemOutput>) {
         is_east: true,
         is_up: true,
         is_input: true,
+        is_electric_initial: true,
         output: output.clone(),
     };
     test.generate(VPoint::new(10, 50));

@@ -32,45 +32,36 @@ impl RailHopeDual {
         Self {
             output: output.clone(),
             hopes: [
-                RailHopeSingle::new(origin, origin_direction.clone(), output.clone()),
+                RailHopeSingle::new(origin, origin_direction, output.clone()),
                 RailHopeSingle::new(next_origin, origin_direction, output.clone()),
             ],
         }
     }
 
     pub fn add_straight_section(&mut self) {
+        self.add_straight(15);
         {
             let _ = &mut self
                 .output
-                .context_handle(ContextLevel::Micro, format!("👐Ruby"));
+                .context_handle(ContextLevel::Micro, "👐Ruby".into());
             self.add_electric_next();
-        }
-
-        for (i, rail) in &mut self.hopes.iter_mut().enumerate() {
-            let _ = &mut self
-                .output
-                .context_handle(ContextLevel::Micro, format!("👐Dual-{}", i));
-            rail.add_straight(15);
         }
     }
 
     pub fn add_electric_next(&mut self) {
-        // todo: self.current_direction() causes
-        // cannot borrow `self.electric_larges` as mutable because it is also borrowed as immutable
         let last_link = self.hopes[0].last_link();
         let cur_direction = last_link.next_direction;
 
         let electric_large_pos = last_link
-            .start
+            .next_straight_position()
             .move_direction_sideways_int(cur_direction, -2);
-        self.output.write(BlueprintItem::new(
-            FacEntElectricLarge::new(FacEntElectricLargeType::Big).into_boxed(),
+        self.output.writei(
+            FacEntElectricLarge::new(FacEntElectricLargeType::Big),
             electric_large_pos,
-        ));
+        );
 
         let lamp_pos = electric_large_pos.move_direction_usz(cur_direction, 1);
-        self.output
-            .write(BlueprintItem::new(FacEntLamp::new().into_boxed(), lamp_pos));
+        self.output.writei(FacEntLamp::new(), lamp_pos);
     }
 
     pub(crate) fn next_buildable_point(&self) -> VPoint {
@@ -84,7 +75,10 @@ impl RailHopeDual {
 
 impl RailHopeAppender for RailHopeDual {
     fn add_straight(&mut self, length: usize) {
-        for rail in &mut self.hopes {
+        for (i, rail) in &mut self.hopes.iter_mut().enumerate() {
+            let _ = &mut self
+                .output
+                .context_handle(ContextLevel::Micro, format!("👐Dual-{}", i));
             rail.add_straight(length);
         }
     }
@@ -93,7 +87,6 @@ impl RailHopeAppender for RailHopeDual {
         // let _ = &mut self
         //     .output
         //     .context_handle(ContextLevel::Micro, "👐Dual-Turn".into());
-        self.add_electric_next();
         if clockwise {
             self.hopes[1].add_straight(2);
         } else {
@@ -109,6 +102,7 @@ impl RailHopeAppender for RailHopeDual {
         } else {
             self.hopes[0].add_straight(2);
         }
+        self.add_electric_next();
     }
 
     fn add_shift45(&mut self, _clockwise: bool, _length: usize) {

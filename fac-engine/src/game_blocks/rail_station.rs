@@ -44,6 +44,7 @@ pub struct FacBlkRailStation {
     pub is_up: bool,
     pub is_input: bool,
     pub is_create_train: bool,
+    pub is_electric_initial: bool,
     pub output: Rc<FacItemOutput>,
 }
 
@@ -87,9 +88,11 @@ impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
             }
         }
 
-        Self::place_electric_initial(&origin, &base_direction, &self.output);
+        if self.is_electric_initial {
+            Self::place_electric_initial(&origin, &base_direction, &self.output);
+        }
 
-        let mut hope = RailHopeSingle::new(origin, base_direction.clone(), self.output.clone());
+        let mut hope = RailHopeSingle::new(origin, base_direction, self.output.clone());
 
         {
             let _ = &mut self
@@ -134,7 +137,7 @@ impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
         };
         stop_block.place_train_stop(self.name.clone());
         stop_block.place_side_electrics();
-        stop_block.place_side_inserters(&self.inserter, self.is_input);
+        stop_block.place_side_inserters(self.inserter, self.is_input);
         stop_block.place_rail_signals();
         let mut belts = None;
         match &self.delivery {
@@ -181,7 +184,7 @@ impl FacBlkRailStation {
         base_direction: &FacDirectionQuarter,
         output: &Rc<FacItemOutput>,
     ) {
-        let _ = output.context_handle(ContextLevel::Micro, "🔚Grid-0".into());
+        let _ = &mut output.context_handle(ContextLevel::Micro, "🔚Grid-0".into());
         let electric_start_pos = origin.move_direction_usz(base_direction.rotate_once(), 2);
         output.writei(FacEntElectricLargeType::Big.entity(), electric_start_pos);
     }
@@ -191,7 +194,7 @@ impl FacBlkRailStation {
         base_direction: &FacDirectionQuarter,
         output: &Rc<FacItemOutput>,
     ) {
-        let _ = output.context_handle(ContextLevel::Micro, "🔚Grid-1".into());
+        let _ = &mut output.context_handle(ContextLevel::Micro, "🔚Grid-1".into());
         let electric_start_pos = origin
             .move_direction_usz(base_direction.rotate_once(), 4)
             .move_direction_usz(base_direction.rotate_once().rotate_once(), 6);
@@ -209,7 +212,7 @@ struct FacBlkRailStop {
 }
 
 impl FacBlkRailStop {
-    fn place_side_inserters(&self, inserter: &FacEntInserterType, is_input: bool) {
+    fn place_side_inserters(&self, inserter: FacEntInserterType, is_input: bool) {
         for car in 0..self.wagons {
             let _ = &mut self
                 .output
@@ -229,17 +232,17 @@ impl FacBlkRailStop {
                     let direction = if is_input {
                         direction.rotate_flip()
                     } else {
-                        direction.clone()
+                        direction
                     };
                     let start = self
                         .stop_rail_pos
                         .move_direction_usz(
-                            &self.fill_x_direction,
+                            self.fill_x_direction,
                             /*pre-pole*/ 1 + car_x_offset + exit,
                         )
                         .move_y(centered_y_offset(negative, 1));
                     self.output
-                        .writei(FacEntInserter::new(inserter.clone(), direction), start);
+                        .writei(FacEntInserter::new(inserter, direction), start);
                 }
             }
         }
@@ -373,7 +376,7 @@ impl FacBlkRailStop {
                 inserter_direction
             };
             self.output.writei(
-                FacEntInserter::new(fuel_inserter.clone(), inserter_direction),
+                FacEntInserter::new(*fuel_inserter, inserter_direction),
                 self.get_rolling_point_at_xy(true, roller, 1, 2),
             );
             self.output.writei(

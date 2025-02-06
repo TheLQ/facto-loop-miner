@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::{
     admiral::{
         err::AdmiralResult,
@@ -24,6 +22,7 @@ use crate::{
         infinity_power::FacEntInfinityPower, inserter::FacEntInserterType,
     },
 };
+use std::rc::Rc;
 
 pub fn make_rail_loop(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     let origin = VPOINT_ZERO;
@@ -53,9 +52,17 @@ pub fn make_rail_loop(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         is_start_input: true,
         output: output.clone(),
     });
-    rail_loop.add_turn90(false);
+    rail_loop.add_straight();
+    rail_loop.add_straight();
     rail_loop.add_straight();
     rail_loop.add_turn90(false);
+    rail_loop.add_straight();
+    rail_loop.add_straight();
+    rail_loop.add_straight();
+    rail_loop.add_turn90(false);
+    rail_loop.add_straight();
+    rail_loop.add_straight();
+    rail_loop.add_straight();
     rail_loop.add_base_start_and_end();
 
     output.admiral_execute_command(
