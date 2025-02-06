@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use crate::common::vpoint::VPOINT_TEN;
 use crate::{
     admiral::err::AdmiralResult,
     blueprint::output::FacItemOutput,
@@ -101,4 +102,25 @@ pub fn make_rail_dual_powered(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     }
 
     Ok(())
+}
+
+/// do the electric poles line up?
+pub fn make_rail_gee_for_power(output: Rc<FacItemOutput>) {
+    let mut rail = RailHopeDual::new(VPOINT_TEN, FacDirectionQuarter::East, output);
+    rail.add_straight_section();
+    rail.add_straight_section();
+    rail.add_straight_section();
+    rail.add_turn90(true);
+    rail.add_straight_section();
+    rail.add_straight_section();
+    rail.add_straight_section();
+    rail.add_turn90(true);
+    rail.add_straight_section();
+    rail.add_straight_section();
+    rail.add_turn90(true);
+    rail.add_straight_section();
+    rail.add_straight_section();
+    rail.add_turn90(true);
+    rail.add_straight_section();
+    rail.add_straight_section();
 }

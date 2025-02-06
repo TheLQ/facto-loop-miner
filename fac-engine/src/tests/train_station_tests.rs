@@ -37,6 +37,7 @@ pub fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         // is_up: false,
         is_input: true,
         is_create_train: true,
+        is_electric_initial: true,
         schedule: Some(FacBpSchedule {
             locomotives: Vec::new(),
             schdata: [

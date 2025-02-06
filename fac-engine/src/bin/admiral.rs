@@ -19,7 +19,8 @@ use facto_loop_miner_fac_engine::tests::other_tests::make_solar_bath_test;
 use facto_loop_miner_fac_engine::tests::train_area::make_area_finder;
 use facto_loop_miner_fac_engine::tests::train_loop_tests::make_rail_loop;
 use facto_loop_miner_fac_engine::tests::train_rails::{
-    make_rail_dual_powered, make_rail_dual_turning, make_rail_shift_45, make_rail_spiral_90,
+    make_rail_dual_powered, make_rail_dual_turning, make_rail_gee_for_power, make_rail_shift_45,
+    make_rail_spiral_90,
 };
 use facto_loop_miner_fac_engine::tests::train_station_tests::make_rail_station;
 use facto_loop_miner_fac_engine::{
@@ -51,7 +52,7 @@ fn inner_main() -> AdmiralResult<()> {
     let is_lua = true;
 
     let output = if is_lua {
-        let output = FacItemOutput::new_admiral(client).into_rc();
+        let output = FacItemOutput::new_admiral_dedupe(client).into_rc();
         execute_destroy(output.clone())?;
         output
     } else {
@@ -77,6 +78,7 @@ fn inner_main() -> AdmiralResult<()> {
         15 => make_solar_bath_test(command_output),
         16 => make_mine_and_rail(command_output),
         17 => make_area_finder(command_output),
+        18 => make_rail_gee_for_power(command_output),
         _ => panic!("uihhh"),
     }
     output.flush();
