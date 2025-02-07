@@ -1,3 +1,5 @@
+cargo-features = ["edition2024"]
+
 [package]
 name = "facto-loop-miner-fac-engine"
 version = "0.1.0"
@@ -27,7 +29,7 @@ unicode-segmentation = "1.12.0"
 num-traits = "0.2.19"
 
 # managed for core
-opencv = { version = "0.89.0", default-features = false, features = [
+opencv = { version = "0.94.2", default-features = false, features = [
     "clang-runtime",
     "imgcodecs",
     "imgproc"
