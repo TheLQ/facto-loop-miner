@@ -4,6 +4,7 @@ use crate::state::machine::{Step, StepParams};
 use crate::surfacev::err::VResult;
 use crate::surfacev::mine::{MineBase, MinePath};
 use crate::surfacev::vsurface::VSurface;
+use crate::util::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_TEN, VPOINT_ZERO};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
@@ -46,6 +47,7 @@ fn run_mori(
     end: VPointDirectionQ,
     mine_base: MineBase,
 ) -> VResult<()> {
+    let watch = BasicWatch::start();
     match mori2_start(surface, start.clone(), end.clone()) {
         MoriResult::Route { path, cost } => {
             info!(
@@ -65,5 +67,6 @@ fn run_mori(
             todo!("pathfinding failed")
         }
     }
+    info!("Mori execution {watch}");
     Ok(())
 }

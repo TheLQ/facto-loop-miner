@@ -3,10 +3,11 @@ use crate::state::tuneables::MoriTunables;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, HopeLinkType};
 use serde::{Deserialize, Serialize};
+use tracing::trace;
 // const ANTI_WRONG_BIAS_EFFECT: f32 = 10f32;
 // const RESOURCE_BIAS_EFFECT: f32 = 20f32;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum MoriCostMode {
     Dummy,
     DistanceManhattanOnly,
@@ -22,7 +23,7 @@ pub enum RailAction {
 pub fn calculate_cost_for_link(
     next: &HopeLink,
     segment_points: &PathSegmentPoints,
-    parents: &[HopeLink],
+    parents: &[&HopeLink],
     tune: &MoriTunables,
 ) -> u32 {
     let result = match tune.cost_mode {
@@ -72,7 +73,7 @@ fn distance_by_basic_manhattan(next: &HopeLink, end: &VPointDirectionQ) -> f32 {
 }
 
 fn distance_by_punish_turns(
-    parents: &[HopeLink],
+    parents: &[&HopeLink],
     next: &HopeLink,
     end: &VPointDirectionQ,
     tune: &MoriTunables,
@@ -81,26 +82,20 @@ fn distance_by_punish_turns(
 
     let link_cost: f32 = match next.rtype {
         HopeLinkType::Straight { length } => tune.straight_cost_unit,
-        HopeLinkType::Turn90 { .. } => {
-            let mut cost = tune.turn_cost_unit;
-
-            let num_recent_turns: f32 = parents
-                .iter()
-                .rev()
-                .take(tune.multi_turn_lookback)
-                .map(|link| match link.rtype {
-                    HopeLinkType::Turn90 { .. } => 1.0,
-                    _ => 0.0,
-                })
-                .sum();
-            cost += num_recent_turns * tune.multi_turn_cost_unit;
-
-            cost
-        }
+        HopeLinkType::Turn90 { .. } => tune.turn_cost_unit,
         HopeLinkType::Shift45 { .. } => todo!("shift45"),
     };
 
-    base_distance * link_cost
+    let num_recent_turns: f32 = parents
+        .iter()
+        .map(|link| match link.rtype {
+            HopeLinkType::Turn90 { .. } => 1.0,
+            _ => 0.0,
+        })
+        .sum();
+    let turn_punish = num_recent_turns * tune.multi_turn_cost_unit;
+
+    (base_distance * link_cost) + turn_punish
 }
 
 // fn into_end_landing_bias(next: &Rail, start: &Rail, end: &VPoint, base_distance: f32) -> f32 {

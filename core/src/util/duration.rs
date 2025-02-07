@@ -21,7 +21,7 @@ impl BasicWatch {
         self.end_time = Some(Instant::now())
     }
 
-    fn duration(&self) -> Duration {
+    pub fn duration(&self) -> Duration {
         let end = if let Some(v) = self.end_time {
             v
         } else {

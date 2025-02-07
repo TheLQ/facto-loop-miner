@@ -32,7 +32,7 @@ use num_format::{Locale, ToFormattedString};
 use std::path::{Path, PathBuf};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
-use tracing::{info, Level};
+use tracing::info;
 
 pub const LOCALE: Locale = Locale::en;
 
