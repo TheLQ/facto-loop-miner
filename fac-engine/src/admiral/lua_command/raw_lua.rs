@@ -1,4 +1,5 @@
 use crate::admiral::lua_command::LuaCommand;
+use crate::admiral::trimmer::string_space_shrinker;
 
 #[derive(Debug)]
 pub struct RawLuaCommand {
@@ -7,7 +8,9 @@ pub struct RawLuaCommand {
 
 impl RawLuaCommand {
     pub fn new(lua: String) -> Self {
-        RawLuaCommand { lua }
+        RawLuaCommand {
+            lua: string_space_shrinker(lua),
+        }
     }
 }
 

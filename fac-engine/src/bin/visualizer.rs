@@ -73,6 +73,7 @@ fn basic_build_gen(output: Rc<FacItemOutput>) {
         is_up: true,
         is_input: true,
         is_create_train: true,
+        is_electric_initial: true,
         output,
     };
     station.generate(VPoint::new(5, 5));

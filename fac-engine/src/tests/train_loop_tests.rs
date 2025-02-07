@@ -65,12 +65,9 @@ pub fn make_rail_loop(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     rail_loop.add_straight();
     rail_loop.add_base_start_and_end();
 
-    output.admiral_execute_command(
-        train_boot(VArea::from_arbitrary_points_pair(
-            VPoint::new(-90, -90),
-            VPoint::new(90, 90),
-        ))
-        .into_boxed(),
+    train_boot(
+        VArea::from_arbitrary_points_pair(VPoint::new(-90, -90), VPoint::new(90, 90)),
+        output.clone(),
     )?;
 
     Ok(())
