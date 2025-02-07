@@ -23,7 +23,7 @@ mimalloc = "0.1.43"
 jemallocator = "0.5.4"
 #
 image = "0.25.5"
-kiddo = "4.2.1"
+kiddo = "5.0.3"
 pathfinding = { version = "4.9.1", path = "../../pathfinding" }
 rayon = "1.10.0"
 bitvec = "1.0.1"
