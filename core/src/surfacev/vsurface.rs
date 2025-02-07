@@ -1,3 +1,4 @@
+use crate::opencv::GeneratedMat;
 use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::StepParams;
 use crate::state::tuneables::Tunables;
@@ -256,7 +257,7 @@ impl VSurface {
     // }
     //</editor-fold>
 
-    pub fn to_pixel_cv_image(&self, filter: Option<Pixel>) -> Mat {
+    pub fn to_pixel_cv_image(&self, filter: Option<Pixel>) -> GeneratedMat {
         self.pixels.map_pixel_xy_to_cv(filter)
     }
 

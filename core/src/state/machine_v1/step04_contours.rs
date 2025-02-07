@@ -1,4 +1,6 @@
-use facto_loop_miner_fac_engine::opencv_re::core::{Point, Rect, Vector};
+use facto_loop_miner_fac_engine::opencv_re::core::{
+    Point, Rect, ToInputArray, ToInputOutputArray, Vector,
+};
 use facto_loop_miner_fac_engine::opencv_re::imgcodecs::imwrite;
 use facto_loop_miner_fac_engine::opencv_re::imgproc::{
     bounding_rect, find_contours, rectangle, CHAIN_APPROX_SIMPLE, LINE_8, RETR_EXTERNAL,
@@ -24,7 +26,7 @@ use crate::PixelKdTree;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 
-const WRITE_DEBUG_IMAGE: bool = false;
+// const WRITE_DEBUG_IMAGE: bool = false;
 
 /// For fun, detect resource patches in image with OpenCV.
 pub struct Step04 {}
@@ -47,9 +49,9 @@ impl Step for Step04 {
         let disk_patches = detector(&surface, &params.step_out_dir);
         surface.add_patches(&disk_patches);
 
-        if WRITE_DEBUG_IMAGE {
-            write_surface_with_all_patches_wrapped(&mut surface);
-        }
+        // if WRITE_DEBUG_IMAGE {
+        //     write_surface_with_all_patches_wrapped(&mut surface);
+        // }
 
         for pixel in Pixel::iter_resource() {
             let mut max_width = 0u32;
@@ -129,17 +131,18 @@ impl Step for Step04 {
     }
 }
 
-#[allow(dead_code)]
-fn write_surface_with_all_patches_wrapped(surface: &mut VSurface) {
-    let mut img = surface.to_pixel_cv_image(None);
-    draw_patch_border(
-        &mut img,
-        surface.get_patches_slice().iter().map(|e| e.area.to_rect()),
-    );
-}
+// #[allow(dead_code)]
+// fn write_surface_with_all_patches_wrapped(surface: &mut VSurface) {
+//     let mut img_gen = surface.to_pixel_cv_image(None);
+//     let mut img =
+//     draw_patch_border(
+//         &mut img,
+//         surface.get_patches_slice().iter().map(|e| e.area.to_rect()),
+//     );
+// }
 
-fn write_png(path: &Path, img: &Mat) {
-    tracing::debug!("Wrote debug image {}", path.display());
+fn write_png(path: &Path, img: &impl ToInputArray) {
+    debug!("Wrote debug image {}", path.display());
     imwrite(path.to_str().unwrap(), img, &Vector::new()).unwrap();
 }
 
@@ -154,7 +157,8 @@ fn detector(surface_meta: &VSurface, out_dir: &Path) -> Vec<VPatch> {
 
 fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: Pixel) -> Vec<VPatch> {
     surface_meta.log_pixel_stats("detect_pixel");
-    let mut img = surface_meta.to_pixel_cv_image(Some(pixel));
+    let mut img_gen = surface_meta.to_pixel_cv_image(Some(pixel));
+    let mut img = img_gen.as_mat();
     let size = img.size().unwrap();
     debug!(
         "Read size {}x{} type {}",
@@ -212,7 +216,7 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: Pixel) -> Vec<VP
         .collect()
 }
 
-fn detect_patch_rectangles(base: &Mat) -> Vec<Rect> {
+fn detect_patch_rectangles(base: &impl ToInputArray) -> Vec<Rect> {
     let mut contours: Vector<Vector<Point>> = Vector::default();
     let offset = Point { x: 0, y: 0 };
     // RETR_LIST - May make rectangles inside rectangles, other multiple rectangles at whisps
@@ -423,7 +427,7 @@ fn detect_merge_nearby_patches_slow(
     tracing::debug!("patches with merge replacements {}", patch_rects.len());
 }
 
-fn draw_patch_border(img: &mut Mat, rects: impl Iterator<Item = Rect>) {
+fn draw_patch_border(img: &mut impl ToInputOutputArray, rects: impl Iterator<Item = Rect>) {
     for rect in rects {
         rectangle(img, rect, Pixel::Highlighter.scalar_cv(), 2, LINE_8, 0).unwrap();
     }

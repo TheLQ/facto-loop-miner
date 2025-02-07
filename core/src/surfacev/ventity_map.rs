@@ -1,11 +1,15 @@
+use crate::opencv::GeneratedMat;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{VError, VResult};
+use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::vsurface::VPixel;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::opencv_re::core::Mat;
 use facto_loop_miner_io::varray::{VArray, EMPTY_XY_INDEX};
+use facto_loop_miner_io::{
+    get_mebibytes_of_slice_usize, read_entire_file_varray_mmap_lib, write_entire_file,
+};
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
@@ -14,11 +18,6 @@ use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 use std::path::Path;
 use tracing::debug;
-
-use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
-use facto_loop_miner_io::{
-    get_mebibytes_of_slice_usize, read_entire_file_varray_mmap_lib, write_entire_file,
-};
 
 /// Collection of entities and xy positions they cover
 ///
@@ -467,10 +466,10 @@ impl VEntityMap<VPixel> {
         })
     }
 
-    pub fn map_pixel_xy_to_cv(&self, filter: Option<Pixel>) -> Mat {
+    pub fn map_pixel_xy_to_cv(&self, filter: Option<Pixel>) -> GeneratedMat {
         let metrics = RefCell::new(FastMetrics::new("map_pixel_xy_to_cv".to_string()));
 
-        let output = self.map_xy_entities_to_bigger_u8_vec(|e| {
+        let data = self.map_xy_entities_to_bigger_u8_vec(|e| {
             if let Some(e) = e {
                 if let Some(filter) = filter {
                     if *e.pixel() == filter {
@@ -499,8 +498,12 @@ impl VEntityMap<VPixel> {
         });
         metrics.into_inner().log_final();
         let side_length = self.diameter();
-        Mat::from_slice_rows_cols(&output, side_length, side_length).unwrap()
-        // Mat::new_rows_cols_with_data(side_length, side_length, )
+
+        GeneratedMat {
+            cols: side_length,
+            rows: side_length,
+            data,
+        }
     }
 }
 
