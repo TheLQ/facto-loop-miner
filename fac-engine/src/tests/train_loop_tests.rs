@@ -29,7 +29,7 @@ pub fn make_rail_loop(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
 
     output.write(BlueprintItem::new(
         FacEntInfinityPower::new().into_boxed(),
-        origin.move_xy(4, 2),
+        origin.move_xy(2, 2),
     ));
     let mut rail_loop = FacBlkRailLoop::new(FacBlkRailLoopProps {
         name_prefix: "Basic".into(),

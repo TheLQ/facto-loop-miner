@@ -56,7 +56,7 @@ impl FacBlkRailLoop {
             output,
         }: FacBlkRailLoopProps,
     ) -> Self {
-        Self {
+        let mut new = Self {
             hope: RailHopeDual::new(origin, origin_direction, output.clone()),
             name_prefix,
             wagons,
@@ -67,7 +67,10 @@ impl FacBlkRailLoop {
             origin,
             is_start_input,
             output,
-        }
+        };
+        new.hope
+            .add_electric_next_for_link(origin_direction, origin);
+        new
     }
 
     pub fn add_straight(&mut self) {
@@ -108,7 +111,7 @@ impl FacBlkRailLoop {
             is_up: true,
             is_input,
             is_create_train: is_input,
-            is_electric_initial: true,
+            is_electric_initial: false,
             schedule: Some(self.new_schedule()),
             output: self.output.clone(),
         };

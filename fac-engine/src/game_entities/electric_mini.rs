@@ -34,3 +34,9 @@ impl FacEntElectricMini {
         Self { ptype }
     }
 }
+
+impl FacEntElectricMiniType {
+    pub fn entity(self) -> FacEntElectricMini {
+        FacEntElectricMini::new(self)
+    }
+}

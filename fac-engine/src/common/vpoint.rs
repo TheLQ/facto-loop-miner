@@ -305,7 +305,7 @@ impl VPoint {
     /// In VPoint Integer, we must "if flip add_one else add_zero" which is... annoying
     /// In VPoint converted float, (10 - 0.5).floor() = 9 (good), but (10 + 0.5).floor(10)
     ///
-    /// In float we can consistiently add or subtract 0.5 then backconvert to VPoint
+    /// In float we can consistently add or subtract 0.5 then backconvert to VPoint
     pub fn move_factorio_style_direction(
         &self,
         direction: FacDirectionQuarter,

@@ -84,7 +84,7 @@ impl RailHopeSingle {
     }
 
     // with internal init
-    fn appender_link(&self) -> &HopeLink {
+    pub(crate) fn appender_link(&self) -> &HopeLink {
         self.links.last().unwrap_or(&self.init_link)
     }
 
