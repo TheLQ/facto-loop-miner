@@ -9,7 +9,7 @@ pub struct FacExectionDefine {
 
 impl LuaCommand for FacExectionDefine {
     fn make_lua(&self) -> String {
-        let mut all_function_chunks = self
+        let all_function_chunks = self
             .commands
             .iter()
             .chunks(75)
@@ -24,11 +24,7 @@ impl LuaCommand for FacExectionDefine {
                 inner_function
             })
             .join("\n")
-            .replace('\n', " ")
             .to_string();
-
-        // let regex = Regex::new("( \\s+)").unwrap();
-        // all_function_chunks = regex.replace_all(&all_function_chunks, " ").to_string();
 
         format!(
             r"

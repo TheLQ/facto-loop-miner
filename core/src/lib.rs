@@ -35,17 +35,17 @@ use num_format::Locale;
 use std::path::Path;
 
 mod gamedata;
-pub mod navigator;
+mod navigator;
 mod opencv;
-pub mod simd;
-pub mod simd_diff;
-pub mod state;
-pub mod surface;
-pub mod surfacev;
-pub mod util;
+mod simd;
+mod simd_diff;
+mod state;
+mod surface;
+mod surfacev;
+mod util;
 
 // pub type PixelKdTree = KdTree<f32, 2usize>;
-pub type PixelKdTree = float::kdtree::KdTree<f32, usize, 2usize, 32, u32>;
+type PixelKdTree = float::kdtree::KdTree<f32, usize, 2usize, 32, u32>;
 
 // TODO: Remove now duplicated
 pub const LOCALE: Locale = Locale::en;

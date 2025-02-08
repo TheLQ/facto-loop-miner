@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
+use strum::AsRefStr;
 use tracing::trace;
 
 use crate::blueprint::bpitem::BlueprintItem;
@@ -30,7 +31,7 @@ pub struct HopeLink {
     pub rails: Vec<HopeFactoRail>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, AsRefStr)]
 pub enum FacEntRailType {
     Straight,
     Curved,
@@ -423,15 +424,6 @@ impl HopeFactoRail {
     }
 }
 
-impl FacEntRailType {
-    fn to_facto_name(&self) -> &str {
-        match self {
-            Self::Curved => "curved-rail",
-            Self::Straight => "straight-rail",
-        }
-    }
-}
-
 fn neg_if_false(flag: bool, value: i32) -> i32 {
     if flag { value } else { -value }
 }
@@ -512,11 +504,15 @@ mod test {
         drop(hope);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
-        compare_output(bpcontents, links, [
-            (FacBpPosition::new(14.0, 12.0), "curved-rail"),
-            (FacBpPosition::new(17.0, 15.0), "straight-rail"),
-            (FacBpPosition::new(20.0, 18.0), "curved-rail"),
-        ])
+        compare_output(
+            bpcontents,
+            links,
+            [
+                (FacBpPosition::new(14.0, 12.0), "curved-rail"),
+                (FacBpPosition::new(17.0, 15.0), "straight-rail"),
+                (FacBpPosition::new(20.0, 18.0), "curved-rail"),
+            ],
+        )
     }
 
     #[test]
@@ -529,11 +525,15 @@ mod test {
         drop(hope);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
-        compare_output(bpcontents, links, [
-            (FacBpPosition::new(14.0, 10.0), "curved-rail"),
-            (FacBpPosition::new(17.0, 7.0), "straight-rail"),
-            (FacBpPosition::new(20.0, 4.0), "curved-rail"),
-        ])
+        compare_output(
+            bpcontents,
+            links,
+            [
+                (FacBpPosition::new(14.0, 10.0), "curved-rail"),
+                (FacBpPosition::new(17.0, 7.0), "straight-rail"),
+                (FacBpPosition::new(20.0, 4.0), "curved-rail"),
+            ],
+        )
     }
 
     #[test]
@@ -547,13 +547,17 @@ mod test {
         drop(hope);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
-        compare_output(bpcontents, links, [
-            (FacBpPosition::new(14.0, 10.0), "curved-rail"),
-            (FacBpPosition::new(17.0, 7.0), "straight-rail"),
-            (FacBpPosition::new(19.0, 7.0), "straight-rail"),
-            (FacBpPosition::new(22.0, 4.0), "curved-rail"),
-            (FacBpPosition::new(27.0, 3.0), "straight-rail"),
-        ])
+        compare_output(
+            bpcontents,
+            links,
+            [
+                (FacBpPosition::new(14.0, 10.0), "curved-rail"),
+                (FacBpPosition::new(17.0, 7.0), "straight-rail"),
+                (FacBpPosition::new(19.0, 7.0), "straight-rail"),
+                (FacBpPosition::new(22.0, 4.0), "curved-rail"),
+                (FacBpPosition::new(27.0, 3.0), "straight-rail"),
+            ],
+        )
     }
 
     #[test]
@@ -567,13 +571,17 @@ mod test {
         drop(hope);
 
         let bpcontents = output.consume_rc().into_blueprint_contents();
-        compare_output(bpcontents, links, [
-            (FacBpPosition::new(14.0, 12.0), "curved-rail"),
-            (FacBpPosition::new(17.0, 15.0), "straight-rail"),
-            (FacBpPosition::new(19.0, 15.0), "straight-rail"),
-            (FacBpPosition::new(22.0, 18.0), "curved-rail"),
-            (FacBpPosition::new(27.0, 19.0), "straight-rail"),
-        ])
+        compare_output(
+            bpcontents,
+            links,
+            [
+                (FacBpPosition::new(14.0, 12.0), "curved-rail"),
+                (FacBpPosition::new(17.0, 15.0), "straight-rail"),
+                (FacBpPosition::new(19.0, 15.0), "straight-rail"),
+                (FacBpPosition::new(22.0, 18.0), "curved-rail"),
+                (FacBpPosition::new(27.0, 19.0), "straight-rail"),
+            ],
+        )
     }
 
     // panic!(
@@ -605,7 +613,7 @@ mod test {
                 rtype: link_type,
                 direction: _,
             } = &links_rails[i];
-            let link_type_name = link_type.to_facto_name();
+            let link_type_name = link_type.as_ref();
 
             println!(
                 "actual {} expected {} {}",

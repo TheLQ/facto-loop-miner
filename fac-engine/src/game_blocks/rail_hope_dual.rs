@@ -1,14 +1,11 @@
 use std::rc::Rc;
 
-use crate::blueprint::bpitem::BlueprintItem;
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
-use crate::common::entity::FacEntity;
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
 use crate::game_blocks::rail_hope::RailHopeAppender;
-use crate::game_blocks::rail_hope_single::{HopeLink, HopeLinkType, RailHopeSingle};
+use crate::game_blocks::rail_hope_single::RailHopeSingle;
 use crate::game_entities::direction::FacDirectionQuarter;
 use crate::game_entities::electric_large::{FacEntElectricLarge, FacEntElectricLargeType};
-use crate::game_entities::electric_mini::{FacEntElectricMini, FacEntElectricMiniType};
 use crate::game_entities::lamp::FacEntLamp;
 use crate::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER;
 
@@ -28,15 +25,13 @@ impl RailHopeDual {
             origin_direction.rotate_opposite(),
             RAIL_STRAIGHT_DIAMETER * 2,
         );
-        let mut new = Self {
+        Self {
             output: output.clone(),
             hopes: [
                 RailHopeSingle::new(origin, origin_direction, output.clone()),
                 RailHopeSingle::new(next_origin, origin_direction, output.clone()),
             ],
-        };
-        // new.add_electric_next();
-        new
+        }
     }
 
     pub fn add_straight_section(&mut self) {
