@@ -8,12 +8,11 @@ use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
+use facto_loop_miner_fac_engine::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
 use num_format::ToFormattedString;
 use pathfinding::prelude::{astar, astar_mori};
 use std::time::Duration;
 use tracing::{info, warn};
-
-const STRAIGHT_STEP_SIZE: usize = 1;
 
 /// Pathfinder v1.2, Mori Calliope💀
 ///
@@ -101,11 +100,13 @@ impl PathSegmentPoints {
 
 fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeLink {
     let mut hope = RailHopeSingle::new(
-        *start.point(),
+        start
+            .point()
+            .move_direction_int(start.direction(), -RAIL_STRAIGHT_DIAMETER_I32),
         *start.direction(),
         FacItemOutput::new_null().into_rc(),
     );
-    hope.add_straight(STRAIGHT_STEP_SIZE);
+    hope.add_straight(1);
     let links = hope.into_links();
     links.into_iter().next().unwrap()
 }
@@ -122,7 +123,7 @@ fn successors(
 
     let watch = BasicWatch::start();
     let nexts = [
-        into_buildable_link(surface, head.add_straight(STRAIGHT_STEP_SIZE)),
+        into_buildable_link(surface, head.add_straight(tune.straight_section_size)),
         into_buildable_link(surface, head.add_turn90(false)),
         into_buildable_link(surface, head.add_turn90(true)),
     ];

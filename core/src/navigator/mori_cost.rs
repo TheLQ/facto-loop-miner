@@ -3,7 +3,6 @@ use crate::state::tuneables::MoriTunables;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, HopeLinkType};
 use serde::{Deserialize, Serialize};
-use tracing::trace;
 // const ANTI_WRONG_BIAS_EFFECT: f32 = 10f32;
 // const RESOURCE_BIAS_EFFECT: f32 = 20f32;
 
@@ -12,12 +11,6 @@ pub enum MoriCostMode {
     Dummy,
     DistanceManhattanOnly,
     Complete,
-}
-
-pub enum RailAction {
-    TurnLeft,
-    TurnRight,
-    Straight,
 }
 
 pub fn calculate_cost_for_link(

@@ -8,6 +8,7 @@ pub struct Tunables {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MoriTunables {
+    pub straight_section_size: usize,
     pub cost_mode: MoriCostMode,
     pub straight_cost_unit: f32,
     pub turn_cost_unit: f32,
@@ -20,9 +21,10 @@ pub struct MoriTunables {
 impl Default for MoriTunables {
     fn default() -> Self {
         Self {
+            straight_section_size: 1,
             cost_mode: MoriCostMode::Complete,
             straight_cost_unit: 1.0,
-            turn_cost_unit: 40.0,
+            turn_cost_unit: 32.0,
             multi_turn_lookback: usize::MAX,
             // todo: turn cost unit might be better
             multi_turn_cost_unit: 0.0,
