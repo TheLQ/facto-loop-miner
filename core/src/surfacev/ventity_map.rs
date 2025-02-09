@@ -14,8 +14,9 @@ use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::cell::RefCell;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
+use std::hint::black_box;
 use std::path::Path;
 use tracing::debug;
 
@@ -35,7 +36,7 @@ pub struct VEntityMap<E> {
 
 impl<E> VEntityMap<E>
 where
-    E: Clone + Eq + Hash,
+    E: Clone + Eq + Hash + Debug,
 {
     pub fn new(radius: u32) -> Self {
         let res = VEntityMap {
@@ -441,6 +442,35 @@ where
     }
 
     //</editor-fold>
+
+    pub fn validate(&self) {
+        let mut checks = 0;
+        for (xy_i, entity_index) in self.xy_to_entity.as_slice().iter().enumerate() {
+            if *entity_index == EMPTY_XY_INDEX {
+                continue;
+            }
+            let entity_pos_all = &self
+                .entity_to_xy
+                .get(*entity_index)
+                .unwrap_or_else(|| panic!("fail on entity_index {entity_index}"));
+            let as_point = self.index_to_xy(xy_i);
+            assert!(entity_pos_all.contains(&as_point));
+            assert!(*entity_index < self.entities.len());
+            checks += 1;
+        }
+        for (entity_index, points) in self.entity_to_xy.iter().enumerate() {
+            for point in points {
+                let xy = self.point_to_index(point);
+                assert_eq!(*self.xy_to_entity.as_slice().get(xy).unwrap(), entity_index);
+                checks += 1;
+            }
+            assert!(entity_index < self.entities.len());
+            if points.is_empty() {
+                tracing::warn!("empty {:?}", self.entities[entity_index])
+            }
+        }
+        debug!("validate {checks} checks");
+    }
 }
 
 impl<E> Display for VEntityMap<E> {

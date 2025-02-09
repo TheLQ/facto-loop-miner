@@ -26,6 +26,7 @@ impl Step for Step20 {
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let mut surface = VSurface::load_from_last_step(&params)?;
+        surface.validate();
 
         let base = MineBase {
             patch_indexes: Vec::new(),

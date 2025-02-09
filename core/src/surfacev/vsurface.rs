@@ -41,6 +41,7 @@ pub struct VSurface {
     patches: Vec<VPatch>,
     #[serde(default)]
     rail_paths: Vec<MinePath>,
+    #[serde(skip)]
     tunables: Tunables,
 }
 
@@ -513,6 +514,33 @@ impl VSurface {
     //         .starts
     //         .extend(background_points.into_iter())
     // }
+
+    /// Anti-entropy
+    pub fn validate(&self) {
+        self.pixels.validate();
+        self.validate_patches();
+    }
+
+    fn validate_patches(&self) {
+        if self.patches.is_empty() {
+            panic!("no patches to validate")
+        }
+        let mut checks = 0;
+        let mut points_history: Vec<&VPoint> = Vec::new();
+        for patch in &self.patches {
+            for point in &patch.pixel_indexes {
+                if points_history.contains(&point) {
+                    panic!("dupe {patch:?}");
+                }
+                points_history.push(point);
+
+                let pixel = self.pixels.get_entity_by_point(point).unwrap();
+                assert_eq!(pixel.pixel, patch.resource);
+                checks += 1;
+            }
+        }
+        debug!("validate {checks} checks");
+    }
 }
 
 impl Display for VSurface {
@@ -577,7 +605,7 @@ fn path_state(out_dir: &Path) -> PathBuf {
 
 //</editor-fold>
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 pub(crate) struct VPixel {
     pixel: Pixel,
 }
