@@ -17,7 +17,7 @@ itertools = { workspace = true }
 #
 serde = { workspace = true }
 serde_json = { workspace = true }
-simd-json = { version = "0.14.3", features = ["serde"] }
+simd-json = { workspace = true }
 #
 mimalloc = "0.1.43"
 jemallocator = "0.5.4"

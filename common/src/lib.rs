@@ -1,3 +1,5 @@
+pub mod err_utils;
+
 use std::env;
 
 use num_format::Locale;

@@ -1,9 +1,10 @@
+use facto_loop_miner_common::err_utils::{xbt, IOECSerdeSimd, IOECStd, IOEC};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_io::err::VIoError;
 use itertools::Itertools;
 use std::backtrace::Backtrace;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tracing::error;
 
@@ -16,17 +17,17 @@ pub enum VError {
         positions: Vec<VPoint>,
         backtrace: Backtrace,
     },
-    #[error("IoError {path} {e}")]
+    #[error("IoError {path} {err}")]
     IoError {
         path: String,
-        e: io::Error,
+        err: io::Error,
         backtrace: Backtrace,
     },
     #[error("UnknownName {name}")]
     UnknownName { name: String, backtrace: Backtrace },
-    #[error("SimdJsonFail {e} for {path}")]
+    #[error("SimdJsonFail {err} for {path}")]
     SimdJsonFail {
-        e: simd_json::Error,
+        err: simd_json::Error,
         path: String,
         backtrace: Backtrace,
     },
@@ -48,18 +49,22 @@ impl VError {
         }
     }
 
+    pub fn ioec(path: impl Into<PathBuf>) -> IOEC<Self> {
+        IOEC::new(path.into())
+    }
+
     pub fn simd_json(path: &Path) -> impl FnOnce(simd_json::Error) -> Self + '_ {
-        |e| VError::SimdJsonFail {
-            e,
+        |err| VError::SimdJsonFail {
+            err,
             path: path.to_string_lossy().to_string(),
             backtrace: Backtrace::capture(),
         }
     }
 
-    /// Use like `read().map_err(VError::io_error)`
-    pub fn io_error(path: &Path) -> impl FnOnce(io::Error) -> Self + '_ {
-        |e| VError::IoError {
-            e,
+    // Use like `read().map_err(VError::io_error)`
+    fn io_error(path: &Path) -> impl FnOnce(io::Error) -> Self + '_ {
+        |err| VError::IoError {
+            err,
             path: path.to_string_lossy().to_string(),
             backtrace: Backtrace::capture(),
         }
@@ -68,4 +73,24 @@ impl VError {
 
 fn positions_to_strings(positions: &[VPoint]) -> String {
     positions.iter().map(VPoint::display).join(",")
+}
+
+impl From<IOECStd> for VError {
+    fn from(IOECStd { path, err }: IOECStd) -> Self {
+        Self::IoError {
+            path: path.to_string_lossy().to_string(),
+            err,
+            backtrace: xbt(),
+        }
+    }
+}
+
+impl From<IOECSerdeSimd> for VError {
+    fn from(IOECSerdeSimd { path, err }: IOECSerdeSimd) -> Self {
+        Self::SimdJsonFail {
+            path: path.to_string_lossy().to_string(),
+            err,
+            backtrace: xbt(),
+        }
+    }
 }
