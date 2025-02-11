@@ -2,7 +2,7 @@ use crate::navigator::mori::{mori2_start, MoriResult};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::err::VResult;
-use crate::surfacev::mine::{MineBase, MinePath};
+use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -28,7 +28,7 @@ impl Step for Step20 {
         let mut surface = VSurface::load_from_last_step(&params)?;
         surface.validate();
 
-        let base = MineBase {
+        let base = MineLocation {
             patch_indexes: Vec::new(),
             area: VArea::from_arbitrary_points([VPOINT_ZERO, VPOINT_TEN]),
         };
@@ -46,7 +46,7 @@ fn run_mori(
     surface: &mut VSurface,
     start: VPointDirectionQ,
     end: VPointDirectionQ,
-    mine_base: MineBase,
+    mine_base: MineLocation,
 ) -> VResult<()> {
     let watch = BasicWatch::start();
     match mori2_start(surface, start.clone(), end.clone()) {

@@ -6,6 +6,7 @@ use opencv::core::Point;
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::borrow::Borrow;
+use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
@@ -332,6 +333,26 @@ impl VPoint {
     //     }
     //     self.move_direction_sideways_usz(direction, desired_x_corrected)
     // }
+
+    // pub fn sort_by_direction_fn(
+    //     direction: FacDirectionQuarter,
+    // ) -> impl FnMut(&VPoint, &VPoint) -> Ordering {
+    //     move |left, right| match direction {
+    //         FacDirectionQuarter::East => left.x.cmp(&right.x),
+    //         _ => unimplemented!(),
+    //     }
+    // }
+
+    pub fn sort_by_direction(
+        direction: FacDirectionQuarter,
+        left: VPoint,
+        right: VPoint,
+    ) -> Ordering {
+        match direction {
+            FacDirectionQuarter::East => left.x.cmp(&right.x),
+            _ => unimplemented!(),
+        }
+    }
 
     // pub fn move_xy_u32(&self, x_steps: u32, y_steps: u32) -> Self {
     //     self.move_xy(x_steps as i32, y_steps as i32)

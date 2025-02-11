@@ -16,7 +16,6 @@ use std::backtrace::Backtrace;
 use std::cell::RefCell;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
-use std::hint::black_box;
 use std::path::Path;
 use tracing::debug;
 

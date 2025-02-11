@@ -4,13 +4,13 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct MinePath {
-    pub mine_base: MineBase,
+    pub mine_base: MineLocation,
     pub links: Vec<HopeLink>,
     pub cost: u32,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize)]
-pub struct MineBase {
+pub struct MineLocation {
     pub patch_indexes: Vec<usize>,
     pub area: VArea,
 }

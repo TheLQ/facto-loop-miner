@@ -3,7 +3,7 @@ use crate::game_entities::direction::FacDirectionQuarter;
 use std::fmt::{Display, Formatter};
 
 /// aka a Vector
-#[derive(Clone)]
+#[derive(Clone, Copy, Debug)]
 pub struct VPointDirectionQ(pub VPoint, pub FacDirectionQuarter);
 
 impl VPointDirectionQ {

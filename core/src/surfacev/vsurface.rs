@@ -93,11 +93,12 @@ impl VSurface {
     fn _load_state_sequential(out_dir: &Path) -> VResult<Self> {
         let mut read_watch = BasicWatch::start();
         let path = path_state(out_dir);
+        let ioec = VError::ioec(&path);
         let mut data = read_entire_file(&path, true)?;
         read_watch.stop();
 
         let load_watch = BasicWatch::start();
-        let surface = simd_json::serde::from_slice(&mut data).map_err(VError::simd_json(&path))?;
+        let surface = simd_json::serde::from_slice(&mut data).map_err(ioec.simd())?;
         info!(
             "Loading state JSON read {} deserialize {} from {}",
             read_watch,
@@ -111,9 +112,10 @@ impl VSurface {
         trace!("start state thread");
         let total_watch = BasicWatch::start();
         let path = path_state(out_dir);
-        let reader = BufReader::new(File::open(&path).map_err(VError::io_error(&path))?);
+        let ioec = VError::ioec(&path);
+        let reader = BufReader::new(File::open(&path).map_err(ioec.io())?);
 
-        let surface = simd_json::serde::from_reader(reader).map_err(VError::simd_json(&path))?;
+        let surface = simd_json::serde::from_reader(reader).map_err(ioec.simd())?;
         info!(
             "Loading state JSON in {} from {}",
             total_watch,

@@ -4,13 +4,12 @@ use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
 use facto_loop_miner_fac_engine::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
 use num_format::ToFormattedString;
-use pathfinding::prelude::{astar, astar_mori};
+use pathfinding::prelude::astar_mori;
 use std::time::Duration;
 use tracing::{info, warn};
 

@@ -3,7 +3,19 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Tunables {
+    crop: CropTunables,
     mori: MoriTunables,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CropTunables {
+    radius: usize,
+}
+
+impl Default for CropTunables {
+    fn default() -> Self {
+        Self { radius: 1000 }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
