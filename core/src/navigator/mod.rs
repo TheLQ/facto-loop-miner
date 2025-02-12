@@ -2,8 +2,8 @@
 pub mod mori;
 pub mod mori_cost;
 // pub mod path_executor;
-pub mod path_grouper;
-// pub mod path_planner;
+pub mod mine_permutate;
+pub mod mine_selector;
 pub mod path_side;
 pub mod resource_cloud;
 // pub mod shinri;

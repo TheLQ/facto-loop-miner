@@ -1,4 +1,4 @@
-use crate::navigator::path_side::{BaseSource, BaseSourceEighth};
+use crate::navigator::path_side::BaseSource;
 use crate::state::machine_v1::{CENTRAL_BASE_TILES, REMOVE_RESOURCE_BASE_TILES};
 use crate::surface::patch::map_vpatch_to_kdtree;
 use crate::surface::pixel::Pixel;
@@ -12,10 +12,7 @@ use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use kiddo::{Manhattan, NearestNeighbour};
-use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
-use std::rc::Rc;
-use std::sync::Mutex;
 use tracing::{debug, error, info, trace, warn};
 
 const MAX_PATCHES: usize = 200;
@@ -70,14 +67,6 @@ pub fn get_mine_bases_by_batch(
     // ordered_patches
 
     let mine_batches = patches_by_cross_sign_expanding(patch_groups, base_source);
-    // let mut result = Vec::new();
-    // {
-    //     let mut iter = mine_batches.into_iter();
-    //     while let Some(v) = iter.next() {
-    //
-    //     }
-    // }
-    // let mine_batches = result;
 
     let mut result = Vec::new();
     for (index, mine_batch) in mine_batches.into_iter().enumerate() {
@@ -335,7 +324,7 @@ fn patches_by_radial_base_corner(surface: &VSurface, resource: Pixel) -> Vec<&VP
         .collect()
 }
 
-pub fn base_bottom_right_corner() -> VPoint {
+fn base_bottom_right_corner() -> VPoint {
     VPoint::new(CENTRAL_BASE_TILES, CENTRAL_BASE_TILES)
 }
 
