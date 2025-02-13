@@ -41,26 +41,12 @@ impl BaseSourceEighth {
         }
     }
 
-    // pub fn peek_add(&self, pos_add: usize) -> VPoint {
-    //     self.get_for_pos(self.next + pos_add as i32)
-    // }
-
-    pub fn pos(&self) -> i32 {
-        self.next
-    }
-
-    // pub fn peek_add_vec(&self, pos_add: usize) -> Vec<VPoint> {
-    //     let result = Vec::with_capacity(pos_add);
-    //
-    //     result
-    // }
-
-    pub fn get_for_pos(&self, pos: i32) -> VPointDirectionQ {
+    fn get_for_index(&self, index: i32) -> VPointDirectionQ {
         const LOOP_STEP: i32 = 8;
         let pos = self
             .origin
             .point()
-            .move_direction_sideways_int(self.origin.direction(), self.sign * LOOP_STEP);
+            .move_direction_sideways_int(self.origin.direction(), self.sign * LOOP_STEP * index);
         VPointDirectionQ(pos, *self.origin.direction())
     }
 }
@@ -68,7 +54,7 @@ impl BaseSourceEighth {
 impl Iterator for BaseSourceEighth {
     type Item = VPointDirectionQ;
     fn next(&mut self) -> Option<Self::Item> {
-        let result = self.get_for_pos(self.next);
+        let result = self.get_for_index(self.next);
         self.next += 1;
         Some(result)
     }
