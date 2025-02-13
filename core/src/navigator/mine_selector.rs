@@ -7,7 +7,7 @@ use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::VSurface;
 use crate::TILES_PER_CHUNK;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_TEN};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
@@ -17,28 +17,27 @@ use tracing::{debug, error, info, trace, warn};
 
 const MAX_PATCHES: usize = 200;
 
-pub struct MineBaseBatch {
+pub struct MineSelectBatch {
     pub mines: Vec<MineLocation>,
     pub base_sources: Vec<VPointDirectionQ>,
 }
 
-pub enum MineBaseBatchResult {
-    Success { batches: Vec<MineBaseBatch> },
-    EmptyBatch { batch: MineBaseBatch },
+pub enum MineSelectBatchResult {
+    Success { batches: Vec<MineSelectBatch> },
+    EmptyBatch { batch: MineSelectBatch },
 }
 
-impl MineBaseBatchResult {
-    pub fn into_success(self) -> Option<Vec<MineBaseBatch>> {
+impl MineSelectBatchResult {
+    pub fn into_success(self) -> Option<Vec<MineSelectBatch>> {
         match self {
-            MineBaseBatchResult::Success { batches } => Some(batches),
-            MineBaseBatchResult::EmptyBatch { .. } => None,
+            MineSelectBatchResult::Success { batches } => Some(batches),
+            MineSelectBatchResult::EmptyBatch { .. } => None,
         }
     }
 }
 
-pub const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
-pub const RESPLIT_LAST_COUNT_LESS_THAN_THRESHOLD: usize = 3;
-pub const PERPENDICULAR_SCAN_WIDTH: i32 = 20;
+const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
+const PERPENDICULAR_SCAN_WIDTH: i32 = 20;
 
 /// Input:
 ///  - Raw patch list
@@ -47,10 +46,9 @@ pub const PERPENDICULAR_SCAN_WIDTH: i32 = 20;
 ///  - Order patch groups starting from center
 ///  - Assign base sources
 ///  - Split groups if needed because too huge creates too many possibilities later
-pub fn get_mine_bases_by_batch(
-    surface: &VSurface,
-    base_source: &mut BaseSource,
-) -> MineBaseBatchResult {
+pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
+    let base_source = &mut BaseSource::new(VPointDirectionQ(VPOINT_TEN, FacDirectionQuarter::East));
+
     let patch_groups = group_nearby_patches(
         surface,
         &[Pixel::IronOre, Pixel::CopperOre, Pixel::Stone, Pixel::Coal],
@@ -75,7 +73,7 @@ pub fn get_mine_bases_by_batch(
         let batch_mines_len = mine_batch.mines.len();
         if mine_batch.mines.is_empty() {
             error!("bad batch at {}", index);
-            return MineBaseBatchResult::EmptyBatch { batch: mine_batch };
+            // return MineSelectBatchResult::EmptyBatch { batch: mine_batch };
         } else if batch_mines_len > MAXIMUM_MINE_COUNT_PER_BATCH {
             let mut divisor = 2;
             while batch_mines_len / divisor > MAXIMUM_MINE_COUNT_PER_BATCH {
@@ -83,12 +81,13 @@ pub fn get_mine_bases_by_batch(
                 warn!("increasing divisor to {divisor} total {batch_mines_len}")
             }
             let chunk_size = batch_mines_len / divisor;
+            debug!("index {index} split {batch_mines_len} by {divisor}");
 
             let mut base_sources = mine_batch.base_sources;
             for chunk in &mine_batch.mines.into_iter().chunks(chunk_size) {
                 let mines: Vec<MineLocation> = chunk.into_iter().collect();
                 let base_sources = base_sources.drain(0..mines.len()).collect();
-                result.push(MineBaseBatch {
+                result.push(MineSelectBatch {
                     mines,
                     base_sources,
                 });
@@ -97,27 +96,22 @@ pub fn get_mine_bases_by_batch(
             result.push(mine_batch);
         }
     }
-    MineBaseBatchResult::Success { batches: result }
+    MineSelectBatchResult::Success { batches: result }
 }
 
 /// Second grouping pass (after opencv), now by grouping different resource patches
-pub fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineLocation> {
+fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineLocation> {
     let patches: Vec<&VPatch> = surface
         .get_patches_slice()
         .iter()
         .filter(|patch| resources.contains(&patch.resource))
-        .filter(|patch| {
-            !patch
-                .area
-                .start
-                .is_within_center_radius(REMOVE_RESOURCE_BASE_TILES as u32)
-        })
         .collect();
     let patch_range = 0..patches.len();
 
     // group patches by nearby
     let mut groups: Vec<Vec<&VPatch>> = Vec::new();
     for patch in &patches {
+        // todo: this was a performance boost. Needs to re-benchmark
         let processed_patches = groups.iter().flatten().cloned().collect_vec();
         if processed_patches.contains(patch) {
             // already in a group
@@ -203,7 +197,7 @@ fn recursive_near_patches<'a>(
 fn patches_by_cross_sign_expanding(
     mut mines: Vec<MineLocation>,
     base_source: &mut BaseSource,
-) -> Vec<MineBaseBatch> {
+) -> Vec<MineSelectBatch> {
     let bounding_area =
         VArea::from_arbitrary_points(mines.iter().flat_map(|v| v.area.get_corner_points()));
     let cross_sides: [VPointDirectionQ; 1] = [
@@ -232,7 +226,7 @@ fn patches_by_cross_sign_expanding(
             }
 
             let scan_end = {
-                let mut pos = *cross_side.point();
+                let mut pos = scan_start;
                 // move up again to complete box height
                 // this is the only way to be generic. not a hot path though
                 for _ in 0..PERPENDICULAR_SCAN_WIDTH {
@@ -259,12 +253,15 @@ fn patches_by_cross_sign_expanding(
 
             let search_area = VArea::from_arbitrary_points_pair(scan_start, scan_end);
             let mut found_mines: Vec<MineLocation> = mines
-                .extract_if(0..usize::MAX, |mine| {
-                    // search_area.contains_point(&mine.area.start)
-                    //     || search_area.contains_point(&mine.area.point_bottom_left())
-                    search_area.contains_point(&mine.area.point_center())
+                .extract_if(0..mines.len(), |mine| {
+                    search_area.contains_point(&mine.area.start)
+                        || search_area.contains_point(&mine.area.point_bottom_left())
                 })
                 .collect();
+            if found_mines.is_empty() {
+                // might just be unlucky with small scan areas
+                continue;
+            }
             found_mines.sort_by(|left, right| {
                 VPoint::sort_by_direction(
                     *cross_side.direction(),
@@ -285,7 +282,7 @@ fn patches_by_cross_sign_expanding(
             };
 
             let found_mines_len = found_mines.len();
-            batches.push(MineBaseBatch {
+            batches.push(MineSelectBatch {
                 mines: found_mines,
                 base_sources: base_source_eighth.take(found_mines_len).collect(),
             });
@@ -329,7 +326,7 @@ fn base_bottom_right_corner() -> VPoint {
 }
 
 impl MineLocation {
-    pub fn get_vpatches<'a>(&self, surface: &'a VSurface) -> Vec<&'a VPatch> {
+    fn get_vpatches<'a>(&self, surface: &'a VSurface) -> Vec<&'a VPatch> {
         self.patch_indexes
             .iter()
             .map(|patch_index| &surface.get_patches_slice()[*patch_index])
