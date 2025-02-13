@@ -218,9 +218,11 @@ impl VSurface {
         for (i, pixel) in entities.enumerate() {
             let color = &pixel.color();
             let start = i * color.len();
-            output[start] = color[2];
-            output[start + 1] = color[1];
-            output[start + 2] = color[0];
+            // todo: thought only opencv was reversed?
+            // output[start] = color[2];
+            // output[start + 1] = color[1];
+            // output[start + 2] = color[0];
+            output[start..(start + 3)].copy_from_slice(color);
         }
         trace!(
             "built entity array of {} in {}",
@@ -228,7 +230,6 @@ impl VSurface {
             build_watch
         );
 
-        // &out_dir.join(format!("{}full.png", name_prefix))
         let size = self.pixels.diameter() as u32;
         save_png(&pixel_map_path, &output, size, size);
         Ok(())
