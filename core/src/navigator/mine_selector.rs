@@ -24,7 +24,7 @@ pub struct MineSelectBatch {
 
 pub enum MineSelectBatchResult {
     Success { batches: Vec<MineSelectBatch> },
-    EmptyBatch { batch: MineSelectBatch },
+    EmptyBatch,
 }
 
 impl MineSelectBatchResult {
@@ -65,6 +65,9 @@ pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
     // ordered_patches
 
     let mine_batches = patches_by_cross_sign_expanding(patch_groups, base_source);
+    if mine_batches.is_empty() {
+        return MineSelectBatchResult::EmptyBatch;
+    }
 
     let mut result = Vec::new();
     for (index, mine_batch) in mine_batches.into_iter().enumerate() {
@@ -73,7 +76,6 @@ pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
         let batch_mines_len = mine_batch.mines.len();
         if mine_batch.mines.is_empty() {
             error!("bad batch at {}", index);
-            // return MineSelectBatchResult::EmptyBatch { batch: mine_batch };
         } else if batch_mines_len > MAXIMUM_MINE_COUNT_PER_BATCH {
             let mut divisor = 2;
             while batch_mines_len / divisor > MAXIMUM_MINE_COUNT_PER_BATCH {
