@@ -277,6 +277,16 @@ impl VSurface {
         self.pixels.diameter()
     }
 
+    pub fn point_top_left(&self) -> VPoint {
+        let radius = self.get_radius_i32();
+        VPoint::new(-radius, -radius)
+    }
+
+    pub fn point_bottom_right(&self) -> VPoint {
+        let radius = self.get_radius_i32();
+        VPoint::new(radius, radius)
+    }
+
     pub fn get_pixel(&self, point: impl Borrow<VPoint>) -> Pixel {
         match self.pixels.get_entity_by_point(point.borrow()) {
             Some(e) => e.pixel,
@@ -376,21 +386,21 @@ impl VSurface {
         metrics.log_final();
     }
 
-    // pub fn draw_square_area(
-    //     &mut self,
-    //     area: &VArea,
-    //     empty_map: Pixel,
-    //     existing_map: Option<Pixel>,
-    // ) {
-    //     self.draw_square(
-    //         area.start.x(),
-    //         area.end_x_exclusive(),
-    //         area.start.y(),
-    //         area.end_y_exclusive(),
-    //         empty_map,
-    //         existing_map,
-    //     )
-    // }
+    pub fn draw_square_area(&mut self, area: &VArea, empty_map: Pixel) {
+        let mut empty_pos = Vec::new();
+        for point in area.get_points() {
+            assert!(
+                !self.pixels.is_point_out_of_bounds(&point),
+                "Area point {} is out of bounds {area:?}",
+                point.display()
+            );
+            let existing_pixel = self.get_pixel(point);
+            if existing_pixel == Pixel::Empty {
+                empty_pos.push(point);
+            }
+        }
+        self.set_pixels(empty_map, empty_pos).unwrap();
+    }
     //
     // pub fn draw_square_around_point(
     //     &mut self,
@@ -409,15 +419,15 @@ impl VSurface {
     //     )
     // }
 
-    // pub fn draw_square(
+    // fn draw_square(
     //     &mut self,
     //     start_x: i32,
     //     end_x_exclusive: i32,
     //     start_y: i32,
     //     end_y_exclusive: i32,
     //     empty_map: Pixel,
-    //     existing_map: Option<Pixel>,
     // ) {
+    //     let mut empty_pos = Vec::new();
     //     for x in start_x..end_x_exclusive {
     //         for y in start_y..end_y_exclusive {
     //             let cur = VPoint::new(x, y);
@@ -426,15 +436,12 @@ impl VSurface {
     //             }
     //
     //             let existing_pixel = self.get_pixel(cur);
-    //             let pixel_to_set = if existing_pixel == Pixel::Empty || existing_pixel == empty_map
-    //             {
-    //                 empty_map
-    //             } else {
-    //                 existing_map.unwrap_or(empty_map)
-    //             };
-    //             self.set_pixel(cur, pixel_to_set).unwrap();
+    //             if existing_pixel == Pixel::Empty {
+    //                 empty_pos.push(cur);
+    //             }
     //         }
     //     }
+    //     self.set_pixels(empty_map, empty_pos).unwrap();
     // }
 
     pub fn add_mine_path(&mut self, mine_paths: Vec<MinePath>) -> VResult<()> {

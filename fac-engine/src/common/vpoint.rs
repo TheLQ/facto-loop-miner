@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
-use std::fmt::{Debug, Display};
+use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 /// Core XY Point. Entity origin is top left, not Factorio's center
@@ -354,21 +354,31 @@ impl VPoint {
         }
     }
 
+    pub fn trim_max(&self, other: impl Borrow<VPoint>) -> Self {
+        let other = other.borrow();
+        VPoint::new(self.x().max(other.x()), self.y().max(other.y()))
+    }
+
+    pub fn trim_min(&self, other: impl Borrow<VPoint>) -> Self {
+        let other = other.borrow();
+        VPoint::new(self.x().min(other.x()), self.y().min(other.y()))
+    }
+
     // pub fn move_xy_u32(&self, x_steps: u32, y_steps: u32) -> Self {
     //     self.move_xy(x_steps as i32, y_steps as i32)
     // }
 
-    // fn move_round2_down(&self) -> Self {
-    //     self.move_round_down(2)
-    // }
+    pub const fn move_round2_down(&self) -> Self {
+        self.move_round_down(2)
+    }
 
     // fn move_round3_down(&self) -> Self {
     //     self.move_round_down(3)
     // }
 
-    pub const fn move_round16_down(&self) -> Self {
-        self.move_round_down(16)
-    }
+    // pub const fn move_round16_down(&self) -> Self {
+    //     self.move_round_down(16)
+    // }
 
     const fn move_round_down(&self, size: i32) -> Self {
         VPoint {
@@ -377,9 +387,9 @@ impl VPoint {
         }
     }
 
-    pub const fn move_round16_up(&self) -> Self {
-        self.move_round_up(16)
-    }
+    // pub const fn move_round16_up(&self) -> Self {
+    //     self.move_round_up(16)
+    // }
 
     const fn move_round_up(&self, size: i32) -> Self {
         let x_rem = self.x % size;
@@ -443,6 +453,12 @@ impl VPoint {
 
     pub fn display(&self) -> String {
         display_any_pos(self.x(), self.y())
+    }
+}
+
+impl Display for VPoint {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.display())
     }
 }
 

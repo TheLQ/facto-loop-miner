@@ -1,6 +1,9 @@
+use crate::navigator::mine_permutate::get_possible_routes_for_batch;
+use crate::navigator::mine_selector::select_mines_and_sources;
 use crate::navigator::mori::{mori2_start, MoriResult};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
+use crate::surface::pixel::Pixel;
 use crate::surfacev::err::VResult;
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::VSurface;
@@ -26,7 +29,27 @@ impl Step for Step20 {
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let mut surface = VSurface::load_from_last_step(&params)?;
-        surface.validate();
+        // surface.validate();
+
+        let select_batches = select_mines_and_sources(&mut surface)
+            .into_success()
+            .unwrap();
+        // for mine_batch in mines {
+        //     for mine in mine_batch.mines {
+        //         surface.draw_square_area(&mine.area, Pixel::MineNoTouch);
+        //     }
+        // }
+        for batch in select_batches {
+            let plans = get_possible_routes_for_batch(&surface, batch);
+            for plan in plans {
+                // will dupe
+                for route in &plan.routes {
+                    surface
+                        .set_pixels(Pixel::Highlighter, vec![*route.destination.point()])
+                        .unwrap();
+                }
+            }
+        }
 
         let base = MineLocation {
             patch_indexes: Vec::new(),

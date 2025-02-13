@@ -38,8 +38,8 @@ impl FacDestroy {
         let area = area.borrow();
         let start_x = area.start.x();
         let start_y = area.start.y();
-        let end_x = area.point_bottom_left().x();
-        let end_y = area.point_bottom_left().y();
+        let end_x = area.point_bottom_right().x();
+        let end_y = area.point_bottom_right().y();
         Self {
             area: format!("{{ {{ {start_x}, {start_y} }} , {{ {end_x}, {end_y} }} }}"),
             entity_names,

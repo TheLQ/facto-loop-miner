@@ -101,12 +101,12 @@ impl VArea {
         )
     }
 
-    pub fn point_bottom_left(&self) -> VPoint {
+    pub fn point_bottom_right(&self) -> VPoint {
         VPoint::new(self.end_x_exclusive(), self.end_y_exclusive())
     }
 
     pub fn get_corner_points(&self) -> [VPoint; 2] {
-        [self.start, self.point_bottom_left()]
+        [self.start, self.point_bottom_right()]
     }
 
     pub fn normalize_even_8x8(&self) -> Self {
@@ -120,13 +120,13 @@ impl VArea {
         };
         new.start.assert_even_8x8_position();
 
-        let bottom_left = new.point_bottom_left();
+        let bottom_left = new.point_bottom_right();
         let x_adjust = 8 - (bottom_left.x() % 8);
         let y_adjust = 8 - (bottom_left.y() % 8);
         new.width = (new.width as i32 + x_adjust) as u32;
         new.height = (new.height as i32 + y_adjust) as u32;
 
-        new.point_bottom_left().assert_even_8x8_position();
+        new.point_bottom_right().assert_even_8x8_position();
         new
     }
 

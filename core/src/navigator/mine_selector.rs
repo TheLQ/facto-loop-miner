@@ -257,7 +257,7 @@ fn patches_by_cross_sign_expanding(
             let mut found_mines: Vec<MineLocation> = mines
                 .extract_if(0..mines.len(), |mine| {
                     search_area.contains_point(&mine.area.start)
-                        || search_area.contains_point(&mine.area.point_bottom_left())
+                        || search_area.contains_point(&mine.area.point_bottom_right())
                 })
                 .collect();
             if found_mines.is_empty() {
@@ -293,39 +293,35 @@ fn patches_by_cross_sign_expanding(
     batches
 }
 
-fn patches_by_radial_base_corner(surface: &VSurface, resource: Pixel) -> Vec<&VPatch> {
-    let patches: Vec<&VPatch> = surface
-        .get_patches_slice()
-        .iter()
-        // remove inner base patches
-        .filter(|p| {
-            !p.area
-                .start
-                .is_within_center_radius(REMOVE_RESOURCE_BASE_TILES as u32)
-        })
-        // temporary left of box only
-        .filter(|p| {
-            (-REMOVE_RESOURCE_BASE_TILES..REMOVE_RESOURCE_BASE_TILES).contains(&p.area.start.y())
-                && p.area.start.x() > REMOVE_RESOURCE_BASE_TILES
-        })
-        .filter(|v| v.resource == resource)
-        .collect();
-    let cloud = map_vpatch_to_kdtree(patches.iter());
-
-    let base_corner = base_bottom_right_corner();
-    let nearest: Vec<NearestNeighbour<f32, usize>> =
-        cloud.nearest_n::<Manhattan>(&base_corner.to_slice_f32(), MAX_PATCHES);
-    debug!("found {} from {}", nearest.len(), cloud.size());
-
-    nearest
-        .iter()
-        .map(|neighbor| patches[neighbor.item])
-        .collect()
-}
-
-fn base_bottom_right_corner() -> VPoint {
-    VPoint::new(CENTRAL_BASE_TILES, CENTRAL_BASE_TILES)
-}
+// fn patches_by_radial_base_corner(surface: &VSurface, resource: Pixel) -> Vec<&VPatch> {
+//     let patches: Vec<&VPatch> = surface
+//         .get_patches_slice()
+//         .iter()
+//         // remove inner base patches
+//         .filter(|p| {
+//             !p.area
+//                 .start
+//                 .is_within_center_radius(REMOVE_RESOURCE_BASE_TILES as u32)
+//         })
+//         // temporary left of box only
+//         .filter(|p| {
+//             (-REMOVE_RESOURCE_BASE_TILES..REMOVE_RESOURCE_BASE_TILES).contains(&p.area.start.y())
+//                 && p.area.start.x() > REMOVE_RESOURCE_BASE_TILES
+//         })
+//         .filter(|v| v.resource == resource)
+//         .collect();
+//     let cloud = map_vpatch_to_kdtree(patches.iter());
+//
+//     let base_corner = base_bottom_right_corner();
+//     let nearest: Vec<NearestNeighbour<f32, usize>> =
+//         cloud.nearest_n::<Manhattan>(&base_corner.to_slice_f32(), MAX_PATCHES);
+//     debug!("found {} from {}", nearest.len(), cloud.size());
+//
+//     nearest
+//         .iter()
+//         .map(|neighbor| patches[neighbor.item])
+//         .collect()
+// }
 
 impl MineLocation {
     fn get_vpatches<'a>(&self, surface: &'a VSurface) -> Vec<&'a VPatch> {
