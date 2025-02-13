@@ -1,8 +1,8 @@
 use crate::surface::pixel::Pixel;
-use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use crate::surfacev::vsurface::VSurface;
 use derivative::Derivative;
+use facto_loop_miner_fac_engine::common::varea::VArea;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::opencv_re::core::Rect;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -52,17 +52,17 @@ impl VPatch {
         }
     }
 
-    pub fn normalize_patch_even_8x8(&self) -> Self {
-        let mut new = self.clone();
-        new.area = self.area.normalize_even_8x8();
-        new
-    }
+    // pub fn normalize_patch_even_8x8(&self) -> Self {
+    //     let mut new = self.clone();
+    //     new.area = self.area.normalize_even_8x8();
+    //     new
+    // }
 
     pub fn get_surface_patch_index(&self, surface: &VSurface) -> usize {
         surface
             .get_patches_slice()
             .iter()
-            .position(|surface_patch| *self == *surface_patch)
+            .position(|surface_patch| self == surface_patch)
             .unwrap()
     }
 }

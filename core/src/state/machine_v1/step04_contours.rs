@@ -211,7 +211,7 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: Pixel) -> Vec<VP
             // recreate bounding area
             let patch_area = VArea::from_arbitrary_points(&points);
 
-            VPatch::new(patch_area, pixel, points).normalize_patch_even_8x8()
+            VPatch::new(patch_area, pixel, points)
         })
         .collect()
 }
