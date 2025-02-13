@@ -19,21 +19,22 @@ impl VArea {
         }
     }
 
-    pub fn from_arbitrary_points_pair(a: impl Borrow<VPoint>, b: impl Borrow<VPoint>) -> VArea {
-        let a = a.borrow();
-        let b = b.borrow();
-
-        let x_min = a.x().min(b.x());
-        let x_max = a.x().max(b.x());
-        let y_min = a.y().min(b.y());
-        let y_max = a.y().max(b.y());
-
-        let start = VPoint::new(x_min, y_min);
-        VArea {
-            start,
-            width: (x_max - start.x()).try_into().unwrap(),
-            height: (y_max - start.y()).try_into().unwrap(),
-        }
+    pub fn from_arbitrary_points_pair<P: Borrow<VPoint>>(a: P, b: P) -> VArea {
+        // let a = a.borrow();
+        // let b = b.borrow();
+        //
+        // let x_min = a.x().min(b.x());
+        // let x_max = a.x().max(b.x());
+        // let y_min = a.y().min(b.y());
+        // let y_max = a.y().max(b.y());
+        //
+        // let start = VPoint::new(x_min, y_min);
+        // VArea {
+        //     start,
+        //     width: (x_max - start.x()).try_into().unwrap(),
+        //     height: (y_max - start.y()).try_into().unwrap(),
+        // }
+        Self::from_arbitrary_points([a, b])
     }
 
     pub fn from_arbitrary_points(points: impl IntoIterator<Item = impl Borrow<VPoint>>) -> VArea {
@@ -136,5 +137,36 @@ impl VArea {
             self.start.x() + (self.width as i32 / 2),
             self.start.y() + (self.height as i32 / 2),
         )
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::common::varea::VArea;
+    use crate::common::vpoint::VPoint;
+
+    #[test]
+    fn test_area_inclusive() {
+        let area = VArea::from_arbitrary_points_pair(VPoint::new(2, 2), VPoint::new(4, 4));
+        assert!(!area.contains_point(&VPoint::new(0, 0)));
+        assert!(!area.contains_point(&VPoint::new(1, 1)));
+        assert!(area.contains_point(&VPoint::new(2, 2)));
+        assert!(area.contains_point(&VPoint::new(3, 3)));
+        assert!(area.contains_point(&VPoint::new(4, 4)));
+        assert!(!area.contains_point(&VPoint::new(5, 5)));
+        assert!(!area.contains_point(&VPoint::new(6, 6)));
+
+        let [start, end] = area.get_corner_points();
+        assert_eq!(start, VPoint::new(2, 2));
+        assert_eq!(end, VPoint::new(4, 4));
+
+        let points = area.get_points();
+        assert!(!points.contains(&VPoint::new(0, 0)));
+        assert!(!points.contains(&VPoint::new(1, 1)));
+        assert!(points.contains(&VPoint::new(2, 2)));
+        assert!(points.contains(&VPoint::new(3, 3)));
+        assert!(points.contains(&VPoint::new(4, 4)));
+        assert!(!points.contains(&VPoint::new(5, 5)));
+        assert!(!points.contains(&VPoint::new(6, 6)));
     }
 }
