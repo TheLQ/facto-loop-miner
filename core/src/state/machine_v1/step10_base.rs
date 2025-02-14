@@ -35,7 +35,7 @@ impl Step for Step10 {
 }
 
 fn draw_mega_box(surface: &mut VSurface, tunables: &BaseTunables) -> VResult<()> {
-    let base_tiles = tunables.resource_clear_chunks.as_tiles_u32();
+    let base_tiles = tunables.base_chunks.as_tiles_u32();
     let box_points = points_in_centered_box(base_tiles, VPOINT_ZERO)
         .into_iter()
         .filter(|v| !v.is_within_center_radius(base_tiles as u32 - 50))

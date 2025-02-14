@@ -46,7 +46,7 @@ impl FastMetrics {
         }
 
         tracing::debug!(
-            "-- Metrics {} in {} since creation --",
+            r#"-- Metrics "{}" in {} since creation --"#,
             self.log_prefix,
             self.start
         );

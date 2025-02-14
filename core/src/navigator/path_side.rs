@@ -7,6 +7,7 @@ pub struct BaseSource {
 
 impl BaseSource {
     pub fn new(origin: VPointDirectionQ) -> Self {
+        origin.point().assert_even_position();
         Self {
             positive: BaseSourceEighth::new(origin, 1),
             negative: BaseSourceEighth::new(origin, -1),

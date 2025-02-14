@@ -1,5 +1,5 @@
 use crate::navigator::path_side::BaseSource;
-use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
+use crate::state::tuneables::BaseTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vpatch::VPatch;
@@ -50,7 +50,14 @@ const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 ///  - Assign base sources
 ///  - Split groups if needed because too huge creates too many possibilities later
 pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
-    let base_source = &mut BaseSource::new(VPointDirectionQ(VPOINT_TEN, FacDirectionQuarter::East));
+    let offset_from_base = 10;
+    let base_source = &mut BaseSource::new(VPointDirectionQ(
+        VPoint::new(
+            surface.tunables().base.base_chunks.as_tiles_i32() + offset_from_base,
+            0,
+        ),
+        FacDirectionQuarter::East,
+    ));
 
     let patch_groups = group_nearby_patches(
         surface,
@@ -67,7 +74,8 @@ pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
     // };
     // ordered_patches
 
-    let mine_batches = patches_by_cross_sign_expanding(patch_groups, base_source);
+    let mine_batches =
+        patches_by_cross_sign_expanding(patch_groups, base_source, &surface.tunables().base);
     if mine_batches.is_empty() {
         return MineSelectBatchResult::EmptyBatch;
     }
@@ -198,16 +206,19 @@ fn recursive_near_patches<'a>(
 fn patches_by_cross_sign_expanding(
     mut mines: Vec<MineLocation>,
     base_source: &mut BaseSource,
+    base_tunables: &BaseTunables,
 ) -> Vec<MineSelectBatch> {
     let bounding_area =
         VArea::from_arbitrary_points(mines.iter().flat_map(|v| v.area.get_corner_points()));
+
     let cross_sides: [VPointDirectionQ; 1] = [
         // Rail::new_straight(
         //     VPoint::new(REMOVE_RESOURCE_BASE_TILES, 0),
         //     RailDirection::Right,
         // )
         VPointDirectionQ(
-            VPoint::new(REMOVE_RESOURCE_BASE_TILES, 0),
+            // todo: this assumes dream of both east and west building
+            VPoint::new(base_tunables.base_chunks.as_tiles_i32(), 0),
             FacDirectionQuarter::East,
         ),
     ];

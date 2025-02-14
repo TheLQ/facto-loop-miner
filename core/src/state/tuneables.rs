@@ -74,7 +74,7 @@ impl MoriTunables {
 }
 
 /// A Factorio chunk
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 #[repr(transparent)]
 pub struct ChunkValue(usize);
@@ -86,5 +86,9 @@ impl ChunkValue {
 
     pub fn as_tiles_u32(&self) -> u32 {
         self.as_tiles() as u32
+    }
+
+    pub fn as_tiles_i32(&self) -> i32 {
+        self.as_tiles() as i32
     }
 }
