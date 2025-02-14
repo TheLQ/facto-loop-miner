@@ -141,10 +141,17 @@ impl Clone for VArray {
                 backing_path,
                 is_dirty,
             } => {
-                if *is_dirty {
-                    panic!("Cannot clone dirty mmap");
+                // if *is_dirty {
+                //     panic!("Cannot clone dirty mmap");
+                // }
+                // read_entire_file_varray_mmap_lib(backing_path).unwrap()
+                VArray {
+                    inner: BackingMemory::RegularOldeVec {
+                        vec: Vec::clone(vec),
+                        // stay false, safe to clone
+                        is_dirty: false,
+                    },
                 }
-                read_entire_file_varray_mmap_lib(backing_path).unwrap()
             }
         }
     }

@@ -6,7 +6,6 @@ use num_format::ToFormattedString;
 use std::fmt::Display;
 
 /// Strings are slow apparently at billions of entries. Solution: Enums!
-#[derive(Default)]
 pub struct FastMetrics {
     log_prefix: String,
     entity_metrics: EnumMap<FastMetric, u32>,
@@ -17,7 +16,8 @@ impl FastMetrics {
     pub fn new(log_prefix: String) -> Self {
         FastMetrics {
             log_prefix,
-            ..Default::default()
+            entity_metrics: EnumMap::default(),
+            start: BasicWatch::start(),
         }
     }
 

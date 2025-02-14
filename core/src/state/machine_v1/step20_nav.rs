@@ -6,8 +6,10 @@ use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::VSurface;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use itertools::Itertools;
 use std::borrow::Borrow;
-use tracing::info;
+use tracing::{error, info};
 
 pub(crate) struct Step20;
 
@@ -26,9 +28,7 @@ impl Step for Step20 {
         let mut surface = VSurface::load_from_last_step(&params)?;
         // surface.validate();
 
-        let select_batches = select_mines_and_sources(&mut surface)
-            .into_success()
-            .unwrap();
+        let select_batches = select_mines_and_sources(&surface).into_success().unwrap();
 
         let mut num_mines_metrics = Metrics::new("mine_batch_size");
         for batch in &select_batches {
@@ -37,7 +37,7 @@ impl Step for Step20 {
         }
         num_mines_metrics.log_final();
 
-        debug_draw_base_sources(&mut surface, &select_batches);
+        // debug_draw_base_sources(&mut surface, &select_batches);
 
         draw_no_touching_zone(&mut surface, &select_batches);
 
@@ -48,9 +48,10 @@ impl Step for Step20 {
         // }
 
         for (batch_index, batch) in select_batches.into_iter().enumerate() {
-            process_batch(&mut surface, batch, batch_index);
+            let found = process_batch(&mut surface, batch, batch_index);
 
-            if 1 + 1 == 2 {
+            // if 1 + 1 == 2 {
+            if batch_index > 10 {
                 break;
             }
         }
@@ -107,6 +108,16 @@ fn draw_no_touching_zone(surface: &mut VSurface, batches: &[MineSelectBatch]) {
             surface.draw_square_area(&mine.area, Pixel::MineNoTouch);
         }
     }
+
+    // stop routes going backwards right behind the start
+    let radius = surface.get_radius_i32();
+    let anti_backside_x = batches[0].base_sources[0].point().x() - 1;
+    let anti_backside_points = (-(radius - 1)..radius)
+        .map(|i| VPoint::new(anti_backside_x, i))
+        .collect_vec();
+    surface
+        .set_pixels(Pixel::MineNoTouch, anti_backside_points)
+        .unwrap()
 }
 
 fn debug_draw_base_sources(
@@ -140,7 +151,7 @@ fn debug_draw_planned_destinations(
     surface.set_pixels(Pixel::Highlighter, pixels).unwrap();
 }
 
-fn process_batch(surface: &mut VSurface, batch: MineSelectBatch, batch_index: usize) {
+fn process_batch(surface: &mut VSurface, batch: MineSelectBatch, batch_index: usize) -> bool {
     let num_mines = batch.mines.len();
 
     let mut planned_combinations = get_possible_routes_for_batch(surface, batch);
@@ -170,12 +181,14 @@ fn process_batch(surface: &mut VSurface, batch: MineSelectBatch, batch_index: us
             for path in paths {
                 surface.add_mine_path(path).unwrap();
             }
+            true
         }
         MineRouteCombinationPathResult::Failure {
             found_paths,
             failing_mine,
         } => {
-            panic!("failed to pathfind")
+            error!("failed to pathfind");
+            false
         }
     }
 }

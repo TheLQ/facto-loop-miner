@@ -29,7 +29,7 @@ use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::thread::JoinHandle;
-use tracing::{debug, info, trace};
+use tracing::{debug, info, trace, warn};
 
 /// A map of background pixels (eg resources, water) and the large entities on top
 ///
@@ -456,7 +456,7 @@ impl VSurface {
         new_points.dedup();
         let new_len = new_points.len();
         if old_len != new_len {
-            panic!(
+            warn!(
                 "pixel {} dedupe mine path from {} to {}",
                 pixel.as_ref(),
                 old_len.to_formatted_string(&LOCALE),

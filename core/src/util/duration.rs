@@ -33,16 +33,14 @@ impl BasicWatch {
 
 impl Display for BasicWatch {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} ms",
-            self.duration().as_millis().to_formatted_string(&LOCALE)
-        )
+        BasicWatchResult(self.duration()).fmt(f)
     }
 }
 
-impl Default for BasicWatch {
-    fn default() -> Self {
-        Self::start()
+pub struct BasicWatchResult(pub Duration);
+
+impl Display for BasicWatchResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}ms", self.0.as_millis().to_formatted_string(&LOCALE))
     }
 }

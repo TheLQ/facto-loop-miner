@@ -107,8 +107,8 @@ impl VPoint {
     }
 
     pub fn assert_even_position(&self) {
-        assert_eq!(self.x % 2, 0, "x={} is not even", self.x);
-        assert_eq!(self.y % 2, 0, "y={} is not even", self.y);
+        assert_eq!(self.x % 2, 0, "x={} is not even for {self}", self.x);
+        assert_eq!(self.y % 2, 0, "y={} is not even for {self}", self.y);
     }
 
     pub fn assert_even_8x8_position(&self) {

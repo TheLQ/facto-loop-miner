@@ -4,6 +4,7 @@ use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
+use facto_loop_miner_fac_engine::constants::TILES_PER_CHUNK;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
 use itertools::Itertools;
@@ -56,7 +57,12 @@ pub fn get_possible_routes_for_batch(
     let fixed_radius = surface.get_radius_i32();
     let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
         VPoint::new(0, -fixed_radius),
-        VPoint::new(fixed_radius, fixed_radius),
+        // Must give spacing from Edge, because hope_link.area() can extend past it.
+        // range checks are disabled for theoretical performance
+        VPoint::new(
+            fixed_radius - TILES_PER_CHUNK as i32,
+            fixed_radius - TILES_PER_CHUNK as i32,
+        ),
     );
 
     let routes =

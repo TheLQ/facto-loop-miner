@@ -23,24 +23,25 @@ pub fn execute_route_batch(
 ) -> MineRouteCombinationPathResult {
     let total_planned_combinations = planned_combinations.len();
 
-    // At this point
-    //  - Surface is modified from disk with no-touching-zones + other changes
-    //  - Each thread needs to copy and modify its own Surface to work through a combination
-    //
-    // The mmap'd backed VArray can be re-mmap'd very quickly via clone
-    // HOWEVER disk and memory must be the same / is_dirty=false / memory is unmodified
-    // Caller will write our output result to the surface, then we repeat this safe/load
-    let temp_executor_path = PathBuf::from("work/temp_executor");
-    if let Err(err) = create_dir(&temp_executor_path) {
-        debug!("recreating temp dir {}", temp_executor_path.display());
-        remove_dir_all(&temp_executor_path).unwrap();
-        create_dir(&temp_executor_path).unwrap();
-    } else {
-        debug!("created temp dir {}", temp_executor_path.display());
-    }
-    surface.save(&temp_executor_path).unwrap();
-    let execution_surface = VSurface::load(&temp_executor_path).unwrap();
-    // let execution_surface = surface;
+    // TODO: This isn't actually saving time
+    // // At this point
+    // //  - Surface is modified from disk with no-touching-zones + other changes
+    // //  - Each thread needs to copy and modify its own Surface to work through a combination
+    // //
+    // // The mmap'd backed VArray can be re-mmap'd very quickly via clone
+    // // HOWEVER disk and memory must be the same / is_dirty=false / memory is unmodified
+    // // Caller will write our output result to the surface, then we repeat this safe/load
+    // let temp_executor_path = PathBuf::from("work/temp_executor");
+    // if let Err(err) = create_dir(&temp_executor_path) {
+    //     debug!("recreating temp dir {}", temp_executor_path.display());
+    //     remove_dir_all(&temp_executor_path).unwrap();
+    //     create_dir(&temp_executor_path).unwrap();
+    // } else {
+    //     debug!("created temp dir {}", temp_executor_path.display());
+    // }
+    // surface.save(&temp_executor_path).unwrap();
+    // let execution_surface = &VSurface::load(&temp_executor_path).unwrap();
+    let execution_surface = surface;
 
     // debug: Get all the original patches
     // ???
@@ -76,6 +77,16 @@ pub fn execute_route_batch(
             })
             .collect()
     });
+    // let route_results = planned_combinations
+    //     .into_iter()
+    //     .map(|route_combination| {
+    //         execute_route_combination(
+    //             &execution_surface,
+    //             route_combination,
+    //             total_planned_combinations,
+    //         )
+    //     })
+    //     .collect_vec();
 
     debug!("Executed {total_planned_combinations} route combinations in {routing_watch}");
 

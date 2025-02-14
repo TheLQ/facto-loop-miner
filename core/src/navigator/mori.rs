@@ -1,7 +1,7 @@
 use crate::navigator::mori_cost::calculate_cost_for_link;
 use crate::state::tuneables::MoriTunables;
 use crate::surfacev::vsurface::VSurface;
-use crate::util::duration::BasicWatch;
+use crate::util::duration::{BasicWatch, BasicWatchResult};
 use crate::LOCALE;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -38,29 +38,45 @@ pub fn mori2_start(
 
     let mut watch_data = WatchData::default();
 
+    let total_watch = BasicWatch::start();
+    let mut successor_sum = Duration::default();
+    let mut res_sum = Duration::default();
     let pathfind = astar_mori(
-        &start_link,
+        start_link,
         |_redundant_head, path, cost| {
-            successors(
+            let watch = BasicWatch::start();
+            let res = successors(
                 surface,
                 endpoints,
+                _redundant_head,
                 &path,
                 finding_limiter,
                 tunables,
                 &mut watch_data,
-            )
+            );
+            successor_sum += watch.duration();
+            res
         },
         |_p| 1,
-        |p| p == &end_link,
+        |p| {
+            // let watch = BasicWatch::start();
+            let res = p == &end_link;
+            // res_sum += watch.duration();
+            res
+        },
     );
 
     let success = pathfind.is_some();
+
     warn!(
-        "executions {} found {} nexts {}ms cost {}ms success {success}",
+        "executions {} found {} nexts {} cost {} summed {} res {} total {} success {success}",
         watch_data.executions.to_formatted_string(&LOCALE),
         watch_data.found_successors.to_formatted_string(&LOCALE),
-        watch_data.nexts.as_millis().to_formatted_string(&LOCALE),
-        watch_data.cost.as_millis().to_formatted_string(&LOCALE)
+        BasicWatchResult(watch_data.nexts),
+        BasicWatchResult(watch_data.cost),
+        BasicWatchResult(successor_sum),
+        BasicWatchResult(res_sum),
+        total_watch
     );
 
     match pathfind {
@@ -123,23 +139,24 @@ fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeLink {
 fn successors(
     surface: &VSurface,
     segment_points: &PathSegmentPoints,
+    head: &HopeLink,
     path: &[&HopeLink],
     finding_limiter: &VArea,
     tune: &MoriTunables,
     watch_data: &mut WatchData,
 ) -> Vec<(HopeLink, u32)> {
     watch_data.executions += 1;
-    let head = path.first().unwrap();
+    // let head = path.first().unwrap();
 
     let watch = BasicWatch::start();
     let nexts = [
         into_buildable_link(
             surface,
-            &finding_limiter,
+            finding_limiter,
             head.add_straight(tune.straight_section_size),
         ),
-        into_buildable_link(surface, &finding_limiter, head.add_turn90(false)),
-        into_buildable_link(surface, &finding_limiter, head.add_turn90(true)),
+        into_buildable_link(surface, finding_limiter, head.add_turn90(false)),
+        into_buildable_link(surface, finding_limiter, head.add_turn90(true)),
     ];
     watch_data.nexts += watch.duration();
 
@@ -163,9 +180,6 @@ fn into_buildable_link(
 ) -> Option<HopeLink> {
     if !finding_limiter.contains_point(&new_link.next_straight_position()) {
         return None;
-    }
-    if true {
-        return Some(new_link);
     }
     let area = new_link.area();
     if surface.is_points_free_unchecked(&area) {
