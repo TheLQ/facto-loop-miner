@@ -7,6 +7,11 @@ edition = "2024"
 #
 num-format = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 #
 simd-json = { workspace = true }
+#
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing-log = "0.2.0"
+#chrono = { version = "0.4.39", default-features = false, features = ["std"] }
+chrono = { version = "0.4.39" }
+nu-ansi-term = "0.50.1"

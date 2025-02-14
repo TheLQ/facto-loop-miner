@@ -1,12 +1,12 @@
-pub mod err_utils;
-
+use chrono::Local;
+use nu_ansi_term::{Color, Style};
 use std::env;
-
-use num_format::Locale;
-use tracing_subscriber::fmt::Layer;
+use tracing::{Event, Level, Subscriber};
+use tracing_log::NormalizeEvent;
+use tracing_subscriber::fmt::format::Writer;
+use tracing_subscriber::fmt::{FmtContext, FormatEvent, FormatFields};
+use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::{EnvFilter, Registry, prelude::*};
-
-pub const LOCALE: Locale = Locale::en;
 
 const TRACE_NO_ADMIRAL_NETWORK: &str = "trace,\
 facto_loop_miner_fac_engine::admiral::executor::client=debug,\
@@ -29,8 +29,56 @@ fn log_init_internal(default_env: &str) {
     let env_layer = EnvFilter::builder().parse(env_var).expect("bad env");
     let subscriber = subscriber.with(env_layer);
 
-    let filter_layer = Layer::default().compact();
-    let subscriber = subscriber.with(filter_layer);
+    // let print_layer = tracing_subscriber::fmt::Layer::default().compact();
+    let print_layer = tracing_subscriber::fmt::Layer::default().event_format(LoopFormatter);
+    let subscriber = subscriber.with(print_layer);
 
     subscriber.init()
+}
+
+// kustom Formatter because the compact formatter a) isn't configurable and b) not compact enough
+struct LoopFormatter;
+
+impl<S, N> FormatEvent<S, N> for LoopFormatter
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+    N: for<'a> FormatFields<'a> + 'static,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut f: Writer<'_>,
+        event: &Event<'_>,
+    ) -> std::fmt::Result {
+        let normalized_meta = event.normalized_metadata();
+        let meta = normalized_meta.as_ref().unwrap_or_else(|| event.metadata());
+
+        let time = Local::now();
+        write!(f, "{}", time.time().format("%H:%M:%S%.6f"))?;
+
+        let level = match *event.metadata().level() {
+            Level::TRACE => Color::Purple.paint("TRACE"),
+            Level::DEBUG => Color::Blue.paint("DEBUG"),
+            Level::INFO => Color::Green.paint("INFO "),
+            Level::WARN => Color::Yellow.paint("WARN "),
+            Level::ERROR => Color::Red.paint("ERROR"),
+        };
+        write!(f, "{level} ")?;
+
+        let dimmed = Style::new().dimmed();
+        let target_raw = meta.target();
+        let target = match target_raw.split_once(":") {
+            Some(("facto_loop_miner", path)) => &format!("core{path}"),
+            Some(("facto_loop_miner_io", path)) => &format!("io{path}"),
+            Some(_) | None => match target_raw {
+                "facto_loop_miner" => "core",
+                _ => target_raw,
+            },
+        };
+        write!(f, "{}{} ", dimmed.paint(target), dimmed.paint(":"))?;
+
+        ctx.format_fields(f.by_ref(), event)?;
+
+        writeln!(f)
+    }
 }
