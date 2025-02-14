@@ -1,5 +1,4 @@
 use crate::navigator::mine_selector::MineSelectBatch;
-use crate::navigator::path_side::BaseSourceEighth;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;

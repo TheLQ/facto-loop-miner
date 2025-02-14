@@ -1,6 +1,5 @@
 use crate::navigator::path_side::BaseSource;
-use crate::state::machine_v1::{CENTRAL_BASE_TILES, REMOVE_RESOURCE_BASE_TILES};
-use crate::surface::patch::map_vpatch_to_kdtree;
+use crate::state::machine_v1::REMOVE_RESOURCE_BASE_TILES;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vpatch::VPatch;
@@ -11,9 +10,9 @@ use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_TEN};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
-use kiddo::{Manhattan, NearestNeighbour};
+use kiddo::NearestNeighbour;
 use simd_json::prelude::ArrayTrait;
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, trace, warn};
 
 const MAX_PATCHES: usize = 200;
 
