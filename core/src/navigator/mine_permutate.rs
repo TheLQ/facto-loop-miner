@@ -146,8 +146,7 @@ impl MineChoices {
         // centered top
         {
             let mut centered_point = VPoint::new(mine_area.point_center().x(), mine_area.start.y());
-            // Go back up width of rail + inner-rail space
-            centered_point = centered_point.move_round2_down() + VPOINT_ONE;
+            centered_point = centered_point.move_round2_down();
 
             if !surface.is_point_out_of_bounds(&centered_point) {
                 destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::East));
@@ -159,8 +158,7 @@ impl MineChoices {
                 mine_area.point_center().x(),
                 mine_area.point_bottom_right().y(),
             );
-            // Go back up width of rail + inner-rail space
-            centered_point = centered_point.move_round2_down() + VPOINT_ONE;
+            centered_point = centered_point.move_round2_down();
 
             if !surface.is_point_out_of_bounds(&centered_point) {
                 destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::East));
