@@ -41,7 +41,6 @@ pub struct VSurface {
     patches: Vec<VPatch>,
     #[serde(default)]
     rail_paths: Vec<MinePath>,
-    #[serde(skip)]
     tunables: Tunables,
 }
 
@@ -54,7 +53,7 @@ impl VSurface {
             // entities: VEntityMap::new(radius),
             patches: Vec::new(),
             rail_paths: Vec::new(),
-            tunables: Tunables::default(),
+            tunables: Tunables::new(),
         }
     }
 
@@ -248,9 +247,9 @@ impl VSurface {
     /// Created after loosing so much run data
     fn save_tuning_parameters(&self, out_dir: &Path) -> VResult<()> {
         let tuning_path = out_dir.join("tuning-params.json");
-        let output =
-            simd_json::to_vec_pretty(&self.tunables).map_err(VError::simd_json(&tuning_path))?;
-        std::fs::write(&tuning_path, &output).map_err(VIoError::io_error(&tuning_path))?;
+        let ioec = VError::ioec(&tuning_path);
+        let output = simd_json::to_vec_pretty(&self.tunables).map_err(ioec.simd())?;
+        std::fs::write(&tuning_path, &output).map_err(ioec.io())?;
 
         Ok(())
     }
@@ -524,6 +523,10 @@ impl VSurface {
     //         .starts
     //         .extend(background_points.into_iter())
     // }
+
+    pub fn tunables(&self) -> &Tunables {
+        &self.tunables
+    }
 
     /// Anti-entropy
     pub fn validate(&self) {

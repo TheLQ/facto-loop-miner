@@ -1,4 +1,3 @@
-use crate::surface::pixel::Pixel;
 use crate::LOCALE;
 use itertools::Itertools;
 use num_format::ToFormattedString;

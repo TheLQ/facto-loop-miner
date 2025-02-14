@@ -10,9 +10,7 @@ use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_TEN};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
-use kiddo::NearestNeighbour;
-use simd_json::prelude::ArrayTrait;
-use tracing::{debug, error, trace, warn};
+use tracing::{debug, error, warn};
 
 const MAX_PATCHES: usize = 200;
 

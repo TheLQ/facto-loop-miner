@@ -31,7 +31,7 @@ pub fn mori2_start(
     let start_link = new_straight_link_from_vd(&endpoints.start);
     let end_link = new_straight_link_from_vd(&endpoints.end);
 
-    let tunables = MoriTunables::default();
+    let tunables = &surface.tunables().mori;
     info!("tunables {:?}", tunables);
 
     let mut watch_data = WatchData::default();
@@ -39,7 +39,7 @@ pub fn mori2_start(
     let pathfind = astar_mori(
         &start_link,
         |_redundant_head, path, cost| {
-            successors(surface, endpoints, &path, &tunables, &mut watch_data)
+            successors(surface, endpoints, &path, tunables, &mut watch_data)
         },
         |_p| 1,
         |p| p == &end_link,

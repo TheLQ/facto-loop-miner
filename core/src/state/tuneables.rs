@@ -1,10 +1,19 @@
 use crate::navigator::mori_cost::MoriCostMode;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Tunables {
-    crop: CropTunables,
-    mori: MoriTunables,
+    pub crop: CropTunables,
+    pub mori: MoriTunables,
+}
+
+impl Tunables {
+    pub fn new() -> Self {
+        Self {
+            crop: CropTunables::new(),
+            mori: MoriTunables::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -12,8 +21,8 @@ pub struct CropTunables {
     radius: usize,
 }
 
-impl Default for CropTunables {
-    fn default() -> Self {
+impl CropTunables {
+    fn new() -> Self {
         Self { radius: 1000 }
     }
 }
@@ -30,8 +39,8 @@ pub struct MoriTunables {
     pub axis_cost_unit: f32,
 }
 
-impl Default for MoriTunables {
-    fn default() -> Self {
+impl MoriTunables {
+    fn new() -> Self {
         Self {
             straight_section_size: 1,
             cost_mode: MoriCostMode::Complete,

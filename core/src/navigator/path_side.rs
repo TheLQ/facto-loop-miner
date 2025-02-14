@@ -1,4 +1,3 @@
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 
 pub struct BaseSource {
