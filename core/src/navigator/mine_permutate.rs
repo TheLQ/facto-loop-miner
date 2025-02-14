@@ -2,7 +2,7 @@ use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ONE};
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
@@ -51,7 +51,16 @@ pub fn get_possible_routes_for_batch(
         total_combinations_permut
     );
 
-    let routes = build_routes_from_destinations(mine_combinations, base_sources);
+    // Limit pathing to the entire right half of the map
+    // todo: autogen this somewhere
+    let fixed_radius = surface.get_radius_i32();
+    let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
+        VPoint::new(0, -fixed_radius),
+        VPoint::new(fixed_radius, fixed_radius),
+    );
+
+    let routes =
+        build_routes_from_destinations(mine_combinations, base_sources, fixed_finding_limiter);
     routes
 }
 
@@ -59,6 +68,7 @@ pub struct PlannedRoute {
     pub location: MineLocation,
     pub destination: VPointDirectionQ,
     pub base_source: VPointDirectionQ,
+    pub finding_limiter: VArea,
 }
 
 pub struct PlannedBatch {
@@ -115,6 +125,7 @@ fn find_all_permutations(input_combinations: Vec<Vec<PartialEntry>>) -> Vec<Vec<
 fn build_routes_from_destinations(
     input_combinations: Vec<Vec<PartialEntry>>,
     base_sources: Vec<VPointDirectionQ>,
+    fixed_finding_limiter: VArea,
 ) -> Vec<PlannedBatch> {
     let mut batches: Vec<PlannedBatch> = Vec::new();
     for combination in input_combinations {
@@ -130,6 +141,7 @@ fn build_routes_from_destinations(
                 destination,
                 location,
                 base_source: *base_sources.next().unwrap(),
+                finding_limiter: fixed_finding_limiter.clone(),
             })
         }
         batches.push(PlannedBatch { routes });

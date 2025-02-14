@@ -1,3 +1,4 @@
+use crate::navigator::mine_executor::{execute_route_batch, MineRouteCombinationPathResult};
 use crate::navigator::mine_permutate::{get_possible_routes_for_batch, PlannedBatch};
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
 use crate::state::err::XMachineResult;
@@ -48,6 +49,10 @@ impl Step for Step20 {
 
         for (batch_index, batch) in select_batches.into_iter().enumerate() {
             process_batch(&mut surface, batch, batch_index);
+
+            if 1 + 1 == 2 {
+                break;
+            }
         }
 
         surface.save(&params.step_out_dir)?;
@@ -137,14 +142,40 @@ fn debug_draw_planned_destinations(
 
 fn process_batch(surface: &mut VSurface, batch: MineSelectBatch, batch_index: usize) {
     let num_mines = batch.mines.len();
-    let batches = get_possible_routes_for_batch(surface, batch);
-    let num_per_batch_routes_min = batches.iter().map(|v| v.routes.len()).min().unwrap();
-    let num_per_batch_routes_max = batches.iter().map(|v| v.routes.len()).max().unwrap();
-    let num_routes_total: usize = batches.iter().map(|v| v.routes.len()).sum();
-    let num_batches = batches.len();
+
+    let mut planned_combinations = get_possible_routes_for_batch(surface, batch);
+
+    let num_per_batch_routes_min = planned_combinations
+        .iter()
+        .map(|v| v.routes.len())
+        .min()
+        .unwrap();
+    let num_per_batch_routes_max = planned_combinations
+        .iter()
+        .map(|v| v.routes.len())
+        .max()
+        .unwrap();
+    let num_routes_total: usize = planned_combinations.iter().map(|v| v.routes.len()).sum();
+    let num_batches = planned_combinations.len();
     info!(
         "batch #{batch_index} with {num_mines} mines created {num_batches} combinations \
                 with total routes {num_routes_total} \
                 each in range {num_per_batch_routes_min} {num_per_batch_routes_max}"
     );
+
+    let planned_combinations = vec![planned_combinations.remove(0)];
+    let res = execute_route_batch(surface, planned_combinations);
+    match res {
+        MineRouteCombinationPathResult::Success { paths } => {
+            for path in paths {
+                surface.add_mine_path(path).unwrap();
+            }
+        }
+        MineRouteCombinationPathResult::Failure {
+            found_paths,
+            failing_mine,
+        } => {
+            panic!("failed to pathfind")
+        }
+    }
 }

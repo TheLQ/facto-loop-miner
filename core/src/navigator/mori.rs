@@ -4,6 +4,7 @@ use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
+use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
@@ -23,6 +24,7 @@ pub fn mori2_start(
     surface: &VSurface,
     start: VPointDirectionQ,
     end: VPointDirectionQ,
+    finding_limiter: &VArea,
 ) -> MoriResult {
     let pathfind_watch = BasicWatch::start();
 
@@ -32,21 +34,29 @@ pub fn mori2_start(
     let end_link = new_straight_link_from_vd(&endpoints.end);
 
     let tunables = &surface.tunables().mori;
-    info!("tunables {:?}", tunables);
+    // info!("tunables {:?}", tunables);
 
     let mut watch_data = WatchData::default();
 
     let pathfind = astar_mori(
         &start_link,
         |_redundant_head, path, cost| {
-            successors(surface, endpoints, &path, tunables, &mut watch_data)
+            successors(
+                surface,
+                endpoints,
+                &path,
+                finding_limiter,
+                tunables,
+                &mut watch_data,
+            )
         },
         |_p| 1,
         |p| p == &end_link,
     );
 
+    let success = pathfind.is_some();
     warn!(
-        "executions {} found {} nexts {}ms cost {}ms",
+        "executions {} found {} nexts {}ms cost {}ms success {success}",
         watch_data.executions.to_formatted_string(&LOCALE),
         watch_data.found_successors.to_formatted_string(&LOCALE),
         watch_data.nexts.as_millis().to_formatted_string(&LOCALE),
@@ -114,6 +124,7 @@ fn successors(
     surface: &VSurface,
     segment_points: &PathSegmentPoints,
     path: &[&HopeLink],
+    finding_limiter: &VArea,
     tune: &MoriTunables,
     watch_data: &mut WatchData,
 ) -> Vec<(HopeLink, u32)> {
@@ -122,9 +133,13 @@ fn successors(
 
     let watch = BasicWatch::start();
     let nexts = [
-        into_buildable_link(surface, head.add_straight(tune.straight_section_size)),
-        into_buildable_link(surface, head.add_turn90(false)),
-        into_buildable_link(surface, head.add_turn90(true)),
+        into_buildable_link(
+            surface,
+            &finding_limiter,
+            head.add_straight(tune.straight_section_size),
+        ),
+        into_buildable_link(surface, &finding_limiter, head.add_turn90(false)),
+        into_buildable_link(surface, &finding_limiter, head.add_turn90(true)),
     ];
     watch_data.nexts += watch.duration();
 
@@ -141,7 +156,14 @@ fn successors(
     successors
 }
 
-fn into_buildable_link(surface: &VSurface, new_link: HopeLink) -> Option<HopeLink> {
+fn into_buildable_link(
+    surface: &VSurface,
+    finding_limiter: &VArea,
+    new_link: HopeLink,
+) -> Option<HopeLink> {
+    if !finding_limiter.contains_point(&new_link.next_straight_position()) {
+        return None;
+    }
     if true {
         return Some(new_link);
     }

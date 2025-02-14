@@ -1,18 +1,13 @@
-use crate::navigator::mori::{mori_start, write_rail, Rail};
-use crate::navigator::path_grouper::MineBase;
-use crate::navigator::path_planner::{
-    MineRouteCombination, MineRouteCombinationBatch, MineRouteEndpoints,
-};
-use crate::navigator::PathingResult;
+use crate::navigator::mine_permutate::{PlannedBatch, PlannedRoute};
+use crate::navigator::mori::{mori2_start, MoriResult};
+use crate::surfacev::mine::MinePath;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
-use facto_loop_miner_fac_engine::common::varea::VArea;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{create_dir, remove_dir_all};
 use std::path::PathBuf;
@@ -24,27 +19,28 @@ pub const MINE_FRONT_RAIL_STEPS: usize = 6;
 /// Given thousands of possible route combinations, execute in parallel and find the best
 pub fn execute_route_batch(
     surface: &VSurface,
-    route_batch: MineRouteCombinationBatch,
+    planned_combinations: Vec<PlannedBatch>,
 ) -> MineRouteCombinationPathResult {
-    let batch_size = route_batch.combinations.len();
+    let total_planned_combinations = planned_combinations.len();
 
-    info!("Executing {} route combination batch", batch_size);
-
-    // The backing entity_array files can be re-mmap'd very quickly via clone
+    // At this point
+    //  - Surface is modified from disk with no-touching-zones + other changes
+    //  - Each thread needs to copy and modify its own Surface to work through a combination
+    //
+    // The mmap'd backed VArray can be re-mmap'd very quickly via clone
     // HOWEVER disk and memory must be the same / is_dirty=false / memory is unmodified
     // Caller will write our output result to the surface, then we repeat this safe/load
-    // export DIR=/mnt/huge1g/surface_work; mkdir $DIR; chown vu-desk-1000:vg-desk-1000 $DIR
-    // let path = PathBuf::from("/mnt/huge1g/surface_work");
-    let path = PathBuf::from("work/temp_scan");
-    if let Err(err) = create_dir(&path) {
-        debug!("recreating temp dir {}", path.display());
-        remove_dir_all(&path).unwrap();
-        create_dir(&path).unwrap();
+    let temp_executor_path = PathBuf::from("work/temp_executor");
+    if let Err(err) = create_dir(&temp_executor_path) {
+        debug!("recreating temp dir {}", temp_executor_path.display());
+        remove_dir_all(&temp_executor_path).unwrap();
+        create_dir(&temp_executor_path).unwrap();
     } else {
-        debug!("created temp dir {}", path.display());
+        debug!("created temp dir {}", temp_executor_path.display());
     }
-    surface.save(&path).unwrap();
-    let execution_surface = VSurface::load(&path).unwrap();
+    surface.save(&temp_executor_path).unwrap();
+    let execution_surface = VSurface::load(&temp_executor_path).unwrap();
+    // let execution_surface = surface;
 
     // debug: Get all the original patches
     // ???
@@ -63,29 +59,25 @@ pub fn execute_route_batch(
         default_threads, num_threads
     );
     let wrapping_pool = rayon::ThreadPoolBuilder::new()
+        .thread_name(|i| format!("exe{i:02}"))
         .num_threads(num_threads)
         .build()
         .unwrap();
 
     let route_results: Vec<MineRouteCombinationPathResult> = wrapping_pool.install(|| {
-        route_batch
-            .combinations
+        planned_combinations
             .into_par_iter()
             .map(|route_combination| {
                 execute_route_combination(
                     &execution_surface,
-                    &route_batch.planned_search_area,
                     route_combination,
-                    batch_size,
+                    total_planned_combinations,
                 )
             })
             .collect()
     });
 
-    debug!(
-        "Executed {} route combinations in {}",
-        batch_size, routing_watch
-    );
+    debug!("Executed {total_planned_combinations} route combinations in {routing_watch}");
 
     let mut best_path: Option<MineRouteCombinationPathResult> = None;
     let mut lowest_cost = u32::MAX;
@@ -94,13 +86,10 @@ pub fn execute_route_batch(
     let mut failure_found_paths_count: HashMap<usize, u32> = HashMap::new();
     for route_result in route_results {
         match &route_result {
-            MineRouteCombinationPathResult::Success {
-                paths,
-                route_combination,
-            } => {
+            MineRouteCombinationPathResult::Success { paths } => {
                 success_count += 1;
 
-                let total_cost = paths.iter().fold(0, |total, path| total + path.cost);
+                let total_cost = paths.iter().map(|v| v.cost).sum();
                 if total_cost < lowest_cost {
                     lowest_cost = total_cost;
                     best_path = Some(route_result);
@@ -128,8 +117,7 @@ pub fn execute_route_batch(
         .map(|(k, v)| format!("{}:{}", k, v))
         .join("|");
     info!(
-        "Route batch of {} combinations had {} success, cost range {} to {}, failure {}, thread oversubscribe {}",
-        batch_size,
+        "Route batch of {total_planned_combinations} combinations had {} success, cost range {} to {}, failure {}, thread oversubscribe {}",
         success_count,
         highest_cost.to_formatted_string(&LOCALE),
         lowest_cost.to_formatted_string(&LOCALE),
@@ -146,16 +134,15 @@ static FAIL_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 fn execute_route_combination(
     surface: &VSurface,
-    search_area: &VArea,
-    route_combination: MineRouteCombination,
-    batch_size: usize,
+    route_combination: PlannedBatch,
+    total_planned_combinations: usize,
 ) -> MineRouteCombinationPathResult {
     let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
     if my_counter % 100 == 0 {
         info!(
             "Processed {} of {} combinations, success {} fail {}",
             my_counter.to_formatted_string(&LOCALE),
-            batch_size.to_formatted_string(&LOCALE),
+            total_planned_combinations.to_formatted_string(&LOCALE),
             SUCCESS_COUNTER
                 .load(Ordering::Relaxed)
                 .to_formatted_string(&LOCALE),
@@ -165,85 +152,82 @@ fn execute_route_combination(
         )
     }
 
-    // let watch = BasicWatch::start();
+    let watch = BasicWatch::start();
     let mut working_surface = (*surface).clone();
-    // info!("Cloned surface in {}", watch);
+    info!("Cloned surface in {}", watch);
 
     let mut found_paths = Vec::new();
-    for mine_endpoint in &route_combination.routes {
-        let extended_entry_rails =
-            match extend_rail_end(&working_surface, search_area, &mine_endpoint.entry_rail) {
-                Some(v) => v,
-                None => {
-                    // This was valid during first pass but now another Rail is on-top of it
-                    FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
-                    return MineRouteCombinationPathResult::Failure {
-                        found_paths,
-                        failing_mine: mine_endpoint.clone(),
-                    };
-                }
-            };
+    for route in route_combination.routes {
+        // let extended_entry_rails =
+        //     match extend_rail_end(&working_surface, search_area, &mine_endpoint.entry_rail) {
+        //         Some(v) => v,
+        //         None => {
+        //             // This was valid during first pass but now another Rail is on-top of it
+        //             FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
+        //             return MineRouteCombinationPathResult::Failure {
+        //                 found_paths,
+        //                 failing_mine: mine_endpoint.clone(),
+        //             };
+        //         }
+        //     };
 
-        let route_result = mori_start(
+        let route_result = mori2_start(
             &working_surface,
-            mine_endpoint.base_rail.clone(),
-            mine_endpoint.entry_rail.clone(),
-            search_area,
+            route.base_source,
+            route.destination,
+            &route.finding_limiter,
         );
         match route_result {
-            PathingResult::Route { mut path, cost } => {
-                path.extend(extended_entry_rails);
+            MoriResult::Route { path, cost } => {
+                // path.extend(extended_entry_rails);
 
-                write_rail(&mut working_surface, &path).unwrap();
-                found_paths.push(MinePath {
-                    mine_base: mine_endpoint.mine.clone(),
-                    rail: path,
+                let path = MinePath {
+                    links: path,
                     cost,
-                });
+                    mine_base: route.location,
+                };
+                found_paths.push(path.clone());
+                working_surface.add_mine_path(path).unwrap();
             }
-            PathingResult::FailingDebug(debug_rail) => {
+            MoriResult::FailingDebug(debug_rail) => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
                 return MineRouteCombinationPathResult::Failure {
                     found_paths,
-                    failing_mine: mine_endpoint.clone(),
+                    failing_mine: route,
                 };
             }
         }
     }
     SUCCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
-    MineRouteCombinationPathResult::Success {
-        paths: found_paths,
-        route_combination,
-    }
+    MineRouteCombinationPathResult::Success { paths: found_paths }
 }
 
 //
-pub fn extend_rail_end(
-    surface: &VSurface,
-    search_area: &VArea,
-    mine_rail: &Rail,
-) -> Option<Vec<Rail>> {
-    let mut rails: Vec<Rail> = Vec::new();
-    let mut last_rail = &mine_rail
-        .clone()
-        .into_buildable_simple(surface, search_area)?;
-    for i in 0..MINE_FRONT_RAIL_STEPS {
-        let rail = last_rail
-            .move_forward_step()
-            .into_buildable_simple(surface, search_area)?;
-        rails.push(rail);
-        last_rail = rails.last().unwrap();
-    }
-    Some(rails)
-}
+// pub fn extend_rail_end(
+//     surface: &VSurface,
+//     search_area: &VArea,
+//     mine_rail: &Rail,
+// ) -> Option<Vec<Rail>> {
+//     let mut rails: Vec<Rail> = Vec::new();
+//     let mut last_rail = &mine_rail
+//         .clone()
+//         .into_buildable_simple(surface, search_area)?;
+//     for i in 0..MINE_FRONT_RAIL_STEPS {
+//         let rail = last_rail
+//             .move_forward_step()
+//             .into_buildable_simple(surface, search_area)?;
+//         rails.push(rail);
+//         last_rail = rails.last().unwrap();
+//     }
+//     Some(rails)
+// }
 
 pub enum MineRouteCombinationPathResult {
     Success {
         paths: Vec<MinePath>,
-        route_combination: MineRouteCombination,
     },
     Failure {
         found_paths: Vec<MinePath>,
-        failing_mine: MineRouteEndpoints,
+        failing_mine: PlannedRoute,
     },
 }

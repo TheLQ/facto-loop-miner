@@ -65,6 +65,19 @@ where
         };
         write!(f, "{level} ")?;
 
+        let current_thread = std::thread::current();
+        match current_thread.name() {
+            Some("main") => {
+                // this is noise normally
+            }
+            Some(name) => {
+                write!(f, "[{}] ", name)?;
+            }
+            None => {
+                write!(f, "[u{:0>2?}] ", current_thread.id())?;
+            }
+        }
+
         let dimmed = Style::new().dimmed();
         let target_raw = meta.target();
         let target = match target_raw.split_once(":") {

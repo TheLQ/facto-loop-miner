@@ -20,6 +20,7 @@ use image::{ExtendedColorType, ImageEncoder};
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
+use simd_json::prelude::ArrayTrait;
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -444,16 +445,11 @@ impl VSurface {
     //     self.set_pixels(empty_map, empty_pos).unwrap();
     // }
 
-    pub fn add_mine_path(&mut self, mine_paths: Vec<MinePath>) -> VResult<()> {
+    pub fn add_mine_path(&mut self, mine_path: MinePath) -> VResult<()> {
         let pixel = Pixel::Rail;
 
-        let mut new_points: Vec<VPoint> = mine_paths
-            .iter()
-            .map(|v| &v.links)
-            .flatten()
-            .map(|v| v.area())
-            .flatten()
-            .collect_vec();
+        let mut new_points: Vec<VPoint> =
+            mine_path.links.iter().flat_map(|v| v.area()).collect_vec();
 
         let old_len = new_points.len();
         new_points.sort();
@@ -470,16 +466,12 @@ impl VSurface {
 
         self.set_pixels(pixel, new_points)?;
 
-        // add markers for start points
-        let start_points: Vec<VPoint> = mine_paths
-            .iter()
-            .map(|v| &v.links)
-            .flatten()
-            .map(|v| v.start)
-            .collect_vec();
-        self.set_pixels(Pixel::EdgeWall, start_points)?;
+        // todo
+        // // add markers for start points
+        // let start_points: Vec<VPoint> = mine_path.links.iter().map(|v| v.start).collect_vec();
+        // self.set_pixels(Pixel::EdgeWall, start_points)?;
 
-        self.rail_paths.extend(mine_paths);
+        self.rail_paths.push(mine_path);
         Ok(())
     }
     //

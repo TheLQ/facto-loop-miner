@@ -122,16 +122,17 @@ impl Clone for VArray {
     fn clone(&self) -> Self {
         match &self.inner {
             BackingMemory::RegularOldeVec { vec, is_dirty } => {
-                if *is_dirty {
-                    panic!("Already dirty regular vec from mmap");
-                }
-                VArray {
-                    inner: BackingMemory::RegularOldeVec {
-                        vec: Vec::clone(vec),
-                        // stay false, safe to clone
-                        is_dirty: false,
-                    },
-                }
+                unimplemented!("does anything actually do this?")
+                // if *is_dirty {
+                //     panic!("Already dirty regular vec from mmap");
+                // }
+                // VArray {
+                //     inner: BackingMemory::RegularOldeVec {
+                //         vec: Vec::clone(vec),
+                //         // stay false, safe to clone
+                //         is_dirty: false,
+                //     },
+                // }
             }
             BackingMemory::Mmap {
                 mmap,

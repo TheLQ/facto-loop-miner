@@ -6,7 +6,7 @@ use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::VSurface;
 use crate::TILES_PER_CHUNK;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_TEN};
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
