@@ -1,9 +1,11 @@
 use crate::navigator::mori_cost::MoriCostMode;
+use crate::TILES_PER_CHUNK;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Tunables {
     pub crop: CropTunables,
+    pub base: BaseTunables,
     pub mori: MoriTunables,
 }
 
@@ -11,6 +13,7 @@ impl Tunables {
     pub fn new() -> Self {
         Self {
             crop: CropTunables::new(),
+            base: BaseTunables::new(),
             mori: MoriTunables::new(),
         }
     }
@@ -24,6 +27,21 @@ pub struct CropTunables {
 impl CropTunables {
     fn new() -> Self {
         Self { radius: 1000 }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BaseTunables {
+    pub base_chunks: ChunkValue,
+    pub resource_clear_chunks: ChunkValue,
+}
+
+impl BaseTunables {
+    fn new() -> Self {
+        Self {
+            base_chunks: ChunkValue(2),
+            resource_clear_chunks: ChunkValue(15),
+        }
     }
 }
 
@@ -52,5 +70,21 @@ impl MoriTunables {
             direction_cost_unit: 10.0,
             axis_cost_unit: 5.0,
         }
+    }
+}
+
+/// A Factorio chunk
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+#[repr(transparent)]
+pub struct ChunkValue(usize);
+
+impl ChunkValue {
+    pub fn as_tiles(&self) -> usize {
+        self.0 * TILES_PER_CHUNK
+    }
+
+    pub fn as_tiles_u32(&self) -> u32 {
+        self.as_tiles() as u32
     }
 }

@@ -41,6 +41,7 @@ pub struct VSurface {
     patches: Vec<VPatch>,
     #[serde(default)]
     rail_paths: Vec<MinePath>,
+    #[serde(skip, default = "Tunables::new")]
     tunables: Tunables,
 }
 

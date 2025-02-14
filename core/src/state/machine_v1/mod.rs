@@ -15,9 +15,6 @@ mod step20_nav;
 // mod step21_demark;
 mod step99_death;
 
-pub use step10_base::CENTRAL_BASE_TILES;
-pub use step10_base::REMOVE_RESOURCE_BASE_TILES;
-
 pub fn new_v1_machine() -> Machine {
     Machine {
         steps: Vec::from([
