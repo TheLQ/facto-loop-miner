@@ -41,15 +41,16 @@ pub fn mori2_start(
     let total_watch = BasicWatch::start();
     let mut successor_sum = Duration::default();
     let mut res_sum = Duration::default();
+    // ::<_, _, _, _, _, _, _, ParentProcessor>
     let pathfind = astar_mori(
         start_link,
-        |_redundant_head, path, cost| {
+        |head, processor, cost| {
             let watch = BasicWatch::start();
             let res = successors(
                 surface,
                 endpoints,
-                _redundant_head,
-                &path,
+                head,
+                processor,
                 finding_limiter,
                 tunables,
                 &mut watch_data,
@@ -63,6 +64,9 @@ pub fn mori2_start(
             let res = p == &end_link;
             // res_sum += watch.duration();
             res
+        },
+        |processor, cur_link| {
+            processor.total_links += 1;
         },
     );
 
@@ -87,6 +91,12 @@ pub fn mori2_start(
         //     MoriResult::FailingDebug(entries)
         // }
     }
+}
+
+#[derive(Default)]
+pub(crate) struct ParentProcessor {
+    // parent_turns: usize,
+    total_links: usize,
 }
 
 #[derive(Default)]
@@ -140,13 +150,19 @@ fn successors(
     surface: &VSurface,
     segment_points: &PathSegmentPoints,
     head: &HopeLink,
-    path: &[&HopeLink],
+    // path: &[&HopeLink],
+    processor: &ParentProcessor,
     finding_limiter: &VArea,
     tune: &MoriTunables,
     watch_data: &mut WatchData,
 ) -> Vec<(HopeLink, u32)> {
     watch_data.executions += 1;
     // let head = path.first().unwrap();
+
+    if processor.total_links > 500 {
+        // warn!("too many links");
+        return Vec::new();
+    }
 
     let watch = BasicWatch::start();
     let nexts = [
@@ -163,7 +179,7 @@ fn successors(
     let watch = BasicWatch::start();
     let mut successors = Vec::with_capacity(3);
     for next in nexts.into_iter().flatten() {
-        let cost = calculate_cost_for_link(&next, segment_points, path, tune);
+        let cost = calculate_cost_for_link(&next, segment_points, processor, tune);
         successors.push((next, cost));
     }
     watch_data.cost += watch.duration();

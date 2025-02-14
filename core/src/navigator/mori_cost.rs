@@ -1,4 +1,4 @@
-use crate::navigator::mori::PathSegmentPoints;
+use crate::navigator::mori::{ParentProcessor, PathSegmentPoints};
 use crate::state::tuneables::MoriTunables;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, HopeLinkType};
@@ -16,7 +16,7 @@ pub enum MoriCostMode {
 pub fn calculate_cost_for_link(
     next: &HopeLink,
     segment_points: &PathSegmentPoints,
-    parents: &[&HopeLink],
+    processor: &ParentProcessor,
     tune: &MoriTunables,
 ) -> u32 {
     let result = match tune.cost_mode {
@@ -25,7 +25,7 @@ pub fn calculate_cost_for_link(
             distance_by_basic_manhattan(next, &segment_points.end)
         }
         MoriCostMode::Complete => {
-            distance_by_punish_turns(parents, next, &segment_points.end, tune)
+            distance_by_punish_turns(processor, next, &segment_points.end, tune)
         } // MoriCostMode::Complete => into_end_landing_bias(
           //     next,
           //     start,
@@ -66,7 +66,7 @@ fn distance_by_basic_manhattan(next: &HopeLink, end: &VPointDirectionQ) -> u32 {
 }
 
 fn distance_by_punish_turns(
-    parents: &[&HopeLink],
+    processor: &ParentProcessor,
     next: &HopeLink,
     end: &VPointDirectionQ,
     tune: &MoriTunables,
@@ -79,16 +79,16 @@ fn distance_by_punish_turns(
         HopeLinkType::Shift45 { .. } => todo!("shift45"),
     };
 
-    let num_recent_turns: u32 = parents
-        .iter()
-        .map(|link| match link.rtype {
-            HopeLinkType::Turn90 { .. } => 1,
-            _ => 0,
-        })
-        .sum();
-    let turn_punish = num_recent_turns * tune.multi_turn_cost_unit;
+    // let num_recent_turns: u32 = parents
+    //     .iter()
+    //     .map(|link| match link.rtype {
+    //         HopeLinkType::Turn90 { .. } => 1,
+    //         _ => 0,
+    //     })
+    //     .sum();
+    // let turn_punish = num_recent_turns * tune.multi_turn_cost_unit;
 
-    (base_distance * link_cost) + turn_punish
+    (base_distance * link_cost) //+ turn_punish
 }
 
 // fn into_end_landing_bias(next: &Rail, start: &Rail, end: &VPoint, base_distance: f32) -> f32 {
