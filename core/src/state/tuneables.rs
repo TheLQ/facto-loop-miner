@@ -49,12 +49,12 @@ impl BaseTunables {
 pub struct MoriTunables {
     pub straight_section_size: usize,
     pub cost_mode: MoriCostMode,
-    pub straight_cost_unit: f32,
-    pub turn_cost_unit: f32,
+    pub straight_cost_unit: u32,
+    pub turn_cost_unit: u32,
     pub multi_turn_lookback: usize,
-    pub multi_turn_cost_unit: f32,
-    pub direction_cost_unit: f32,
-    pub axis_cost_unit: f32,
+    pub multi_turn_cost_unit: u32,
+    pub direction_cost_unit: u32,
+    pub axis_cost_unit: u32,
 }
 
 impl MoriTunables {
@@ -62,13 +62,13 @@ impl MoriTunables {
         Self {
             straight_section_size: 1,
             cost_mode: MoriCostMode::Complete,
-            straight_cost_unit: 1.0,
-            turn_cost_unit: 32.0,
+            straight_cost_unit: 1,
+            turn_cost_unit: 32,
             multi_turn_lookback: usize::MAX,
             // todo: turn cost unit might be better
-            multi_turn_cost_unit: 0.0,
-            direction_cost_unit: 10.0,
-            axis_cost_unit: 5.0,
+            multi_turn_cost_unit: 0,
+            direction_cost_unit: 10,
+            axis_cost_unit: 5,
         }
     }
 }

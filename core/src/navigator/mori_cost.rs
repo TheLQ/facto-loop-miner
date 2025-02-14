@@ -20,7 +20,7 @@ pub fn calculate_cost_for_link(
     tune: &MoriTunables,
 ) -> u32 {
     let result = match tune.cost_mode {
-        MoriCostMode::Dummy => 5.0,
+        MoriCostMode::Dummy => 5,
         MoriCostMode::DistanceManhattanOnly => {
             distance_by_basic_manhattan(next, &segment_points.end)
         }
@@ -33,7 +33,7 @@ pub fn calculate_cost_for_link(
           //     distance_by_punish_turns(parents_compare, next, end),
           // ),
     };
-    result as u32
+    result
 
     // // block it closer to base
     // let anti_wrong = if distance < 400.0 {
@@ -61,8 +61,8 @@ pub fn calculate_cost_for_link(
     //
 }
 
-fn distance_by_basic_manhattan(next: &HopeLink, end: &VPointDirectionQ) -> f32 {
-    next.next_straight_position().distance_to(&end.0) as f32
+fn distance_by_basic_manhattan(next: &HopeLink, end: &VPointDirectionQ) -> u32 {
+    next.next_straight_position().distance_to(&end.0)
 }
 
 fn distance_by_punish_turns(
@@ -70,20 +70,20 @@ fn distance_by_punish_turns(
     next: &HopeLink,
     end: &VPointDirectionQ,
     tune: &MoriTunables,
-) -> f32 {
+) -> u32 {
     let base_distance = distance_by_basic_manhattan(next, end);
 
-    let link_cost: f32 = match next.rtype {
+    let link_cost: u32 = match next.rtype {
         HopeLinkType::Straight { length } => tune.straight_cost_unit,
         HopeLinkType::Turn90 { .. } => tune.turn_cost_unit,
         HopeLinkType::Shift45 { .. } => todo!("shift45"),
     };
 
-    let num_recent_turns: f32 = parents
+    let num_recent_turns: u32 = parents
         .iter()
         .map(|link| match link.rtype {
-            HopeLinkType::Turn90 { .. } => 1.0,
-            _ => 0.0,
+            HopeLinkType::Turn90 { .. } => 1,
+            _ => 0,
         })
         .sum();
     let turn_punish = num_recent_turns * tune.multi_turn_cost_unit;
