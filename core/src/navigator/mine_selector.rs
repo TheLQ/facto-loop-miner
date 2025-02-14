@@ -37,7 +37,13 @@ impl MineSelectBatchResult {
 }
 
 const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
-const PERPENDICULAR_SCAN_WIDTH: i32 = 20;
+/// at 3000 crop
+/// - 20 generates mostly 1, 2, some 3
+/// - 40 generates slightly more 3
+/// - 80 generates way less 1, more 2, good 3,4
+/// - 160 generates mostly 3 - very good
+/// - 220 generates 10 batch, too big
+const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 
 /// Input:
 ///  - Raw patch list
@@ -128,9 +134,6 @@ fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineLoca
         let mut new_group = Vec::new();
         new_group.push(*patch);
         recursive_near_patches(patch, &remaining_patches, &mut new_group);
-        if new_group.len() != 1 {
-            info!("group of {}", new_group.len());
-        }
         groups.push(new_group);
     }
 
@@ -146,7 +149,7 @@ fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineLoca
     let mut result = Vec::new();
     for patch_group in groups {
         if patch_group.len() != 1 {
-            trace!("Merging patch group of {:?}", patch_group);
+            // trace!("Merging patch group of {:?}", patch_group);
 
             // Externally we use the index in the VSurface Patches slice
             let patch_group_indexes = patch_group
@@ -162,10 +165,9 @@ fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineLoca
                 patch_indexes: patch_group_indexes,
                 area,
             });
-            // panic!("TODO: Broken area");
         } else {
             let patch = patch_group[0];
-            trace!("Single patch group {:?}", patch);
+            // trace!("Single patch group {:?}", patch);
             result.push(MineLocation {
                 patch_indexes: vec![patch.get_surface_patch_index(surface)],
                 area: patch.area.clone(),
@@ -271,9 +273,9 @@ fn patches_by_cross_sign_expanding(
                     right.area.start,
                 )
             });
-            for mine in &found_mines {
-                trace!("batch for mine {:?}", mine);
-            }
+            // for mine in &found_mines {
+            //     trace!("batch for mine {:?}", mine);
+            // }
 
             // TODO: Support multiple sides
             let base_source_eighth = if scan_index > 0 {
@@ -322,12 +324,3 @@ fn patches_by_cross_sign_expanding(
 //         .map(|neighbor| patches[neighbor.item])
 //         .collect()
 // }
-
-impl MineLocation {
-    fn get_vpatches<'a>(&self, surface: &'a VSurface) -> Vec<&'a VPatch> {
-        self.patch_indexes
-            .iter()
-            .map(|patch_index| &surface.get_patches_slice()[*patch_index])
-            .collect()
-    }
-}

@@ -11,14 +11,13 @@ use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
 use tracing::info;
 
-/// Solve 2 core problems
-/// - Get an ordered list of patches to navigate to
-/// - (!) Provide multiple possible solutions when, due to patching problems,
-///   - We cannot reach a patch anymore and must discard it
-///   - Another corner creates a more optimal/lower-cost path
-///   - Different order creates a more optimal/lower-cost path
-///
-/// Total paths = N * ____
+/// Input
+///  - Single batch of mines to be routed together
+/// Output
+///  - Each mine has 4 destinations
+///  - Batch has 4^n possible combinations
+///  - Combinations can be permutated generated n! combinations
+///  - Every combination is sourced from the same list of base sources
 pub fn get_possible_routes_for_batch(
     surface: &VSurface,
     MineSelectBatch {
@@ -33,17 +32,17 @@ pub fn get_possible_routes_for_batch(
     let mine_choice_len = mine_choices.len();
     let mine_choice_destinations_len: usize =
         mine_choices.iter().map(|v| v.destinations.len()).sum();
-    info!(
-        "Expanded {} mines with {} destinations to...",
-        mine_choice_len, mine_choice_destinations_len,
-    );
+    // info!(
+    //     "Expanded {} mines with {} destinations to...",
+    //     mine_choice_len, mine_choice_destinations_len,
+    // );
 
     let mine_combinations = find_all_combinations(mine_choices);
     let total_combinations_base = mine_combinations.len();
-    info!("generated {} combinations", total_combinations_base);
+    // info!("generated {} combinations", total_combinations_base);
     let mine_combinations = find_all_permutations(mine_combinations);
     let total_combinations_permut = mine_combinations.len();
-    info!("generated {} permutations", total_combinations_permut);
+    // info!("generated {} permutations", total_combinations_permut);
 
     info!(
         "Expanded {} mines with {} destinations to {} combinations then {} permutated",
@@ -150,7 +149,6 @@ impl MineChoices {
             let mut centered_point = VPoint::new(mine_area.point_center().x(), mine_area.start.y());
             // Go back up width of rail + inner-rail space
             centered_point = centered_point.move_round2_down() + VPOINT_ONE;
-            tracing::trace!("testing top left     {centered_point} from {mine_area:?}");
 
             if !surface.is_point_out_of_bounds(&centered_point) {
                 destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::East));
@@ -164,7 +162,6 @@ impl MineChoices {
             );
             // Go back up width of rail + inner-rail space
             centered_point = centered_point.move_round2_down() + VPOINT_ONE;
-            tracing::trace!("testing bottom right {centered_point} from {mine_area:?}");
 
             if !surface.is_point_out_of_bounds(&centered_point) {
                 destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::East));
@@ -173,7 +170,7 @@ impl MineChoices {
         };
 
         // remove out of bounds
-        // destinations.retain(|rail| !surface.is_point_out_of_bounds(&rail.0));
+        destinations.retain(|rail| !surface.is_point_out_of_bounds(&rail.0));
         assert!(
             !destinations.is_empty(),
             "stripped all possible destinations from {location:?} in {surface}"

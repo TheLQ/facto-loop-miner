@@ -62,12 +62,3 @@ impl Metrics {
         metric.log_final();
     }
 }
-
-#[allow(non_camel_case_types)]
-#[derive(Debug)]
-enum MetricName {
-    PixelCvMapper_Empty,
-    PixelCvMapper_NotEmpty,
-    PixelCvMapper_FilterEmpty,
-    PixelCvMapper_Filter(Pixel),
-}

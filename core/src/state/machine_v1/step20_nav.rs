@@ -3,6 +3,7 @@ use crate::navigator::mine_selector::select_mines_and_sources;
 use crate::navigator::mori::{mori2_start, MoriResult};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
+use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::VResult;
 use crate::surfacev::mine::{MineLocation, MinePath};
@@ -34,18 +35,42 @@ impl Step for Step20 {
         let select_batches = select_mines_and_sources(&mut surface)
             .into_success()
             .unwrap();
+
+        let mut num_mines_metrics = Metrics::new("mine_batch_size");
+        for batch in &select_batches {
+            let total = batch.mines.len();
+            num_mines_metrics.increment(format!("{total}"));
+        }
+        // info!("processed {} mines");
+        num_mines_metrics.log_final();
+
+        // if 1 + 1 == 2 {
+        //     return Ok(());
+        // }
+
         // for mine_batch in mines {
         //     for mine in mine_batch.mines {
         //         surface.draw_square_area(&mine.area, Pixel::MineNoTouch);
         //     }
         // }
-        for batch in select_batches {
-            let plans = get_possible_routes_for_batch(&surface, batch);
-            for plan in plans {
+        for (batch_index, batch) in select_batches.into_iter().enumerate() {
+            let num_mines = batch.mines.len();
+            let batches = get_possible_routes_for_batch(&surface, batch);
+            let num_per_batch_routes_min = batches.iter().map(|v| v.routes.len()).min().unwrap();
+            let num_per_batch_routes_max = batches.iter().map(|v| v.routes.len()).max().unwrap();
+            let num_routes_total: usize = batches.iter().map(|v| v.routes.len()).sum();
+            let num_batches = batches.len();
+            info!(
+                "batch #{batch_index} with {num_mines} mines created {num_batches} combinations \
+                with total routes {num_routes_total} \
+                each in range {num_per_batch_routes_min} {num_per_batch_routes_max}"
+            );
+
+            for plan in &batches {
                 // will dupe
                 for route in &plan.routes {
                     surface
-                        .set_pixels(Pixel::Highlighter, vec![*route.destination.point()])
+                        .set_pixels(Pixel::Highlighter, vec![*route.base_source.point()])
                         .unwrap();
                 }
             }

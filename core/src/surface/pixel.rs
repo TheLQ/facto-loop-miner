@@ -41,6 +41,7 @@ pub enum Pixel {
     EdgeWall = 200,
     Rail = 225,
     Highlighter = 250,
+    MineNoTouch = 251,
 }
 
 impl Pixel {
@@ -68,6 +69,8 @@ impl Pixel {
             Pixel::EdgeWall => [0xBD, 0x5F, 0x5F],
             Pixel::Rail => [0xB9, 0x7A, 0x57],
             Pixel::Highlighter => [0x3C, 0xB6, 0xDE],
+            // 53E1FF
+            Pixel::MineNoTouch => [0x53, 0xE1, 0xFF],
         }
     }
 
