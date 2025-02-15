@@ -18,7 +18,7 @@ use facto_loop_miner_fac_engine::tests::ore_tests::{make_mine, make_mine_and_rai
 use facto_loop_miner_fac_engine::tests::other_tests::make_solar_bath_test;
 use facto_loop_miner_fac_engine::tests::train_area::make_area_finder;
 use facto_loop_miner_fac_engine::tests::train_loop_tests::make_rail_loop;
-use facto_loop_miner_fac_engine::tests::train_rails::{
+use facto_loop_miner_fac_engine::tests::train_rail_tests::{
     make_rail_dual_powered, make_rail_dual_turning, make_rail_gee_for_power, make_rail_shift_45,
     make_rail_spiral_90,
 };
