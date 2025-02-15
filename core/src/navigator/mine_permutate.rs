@@ -36,8 +36,10 @@ pub fn get_possible_routes_for_batch(
     //     "Expanded {} mines with {} destinations to...",
     //     mine_choice_len, mine_choice_destinations_len,
     // );
+    assert!(!mine_choices.is_empty(), "nope");
 
     let mine_combinations = find_all_combinations(mine_choices);
+    assert!(!mine_combinations.is_empty(), "nope");
     let total_combinations_base = mine_combinations.len();
     // info!("generated {} combinations", total_combinations_base);
     let mine_combinations = find_all_permutations(mine_combinations);
@@ -109,7 +111,9 @@ fn find_all_combinations(mines_choices: Vec<MineChoices>) -> Vec<Vec<PartialEntr
                 })
             }
         }
-        routes.push(route);
+        if !route.is_empty() {
+            routes.push(route);
+        }
     }
     routes
 }
@@ -168,7 +172,7 @@ impl MineChoices {
 
             if !surface.is_point_out_of_bounds(&centered_point) {
                 destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::East));
-                destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::West));
+                // destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::West));
             }
         };
         {
@@ -180,7 +184,7 @@ impl MineChoices {
 
             if !surface.is_point_out_of_bounds(&centered_point) {
                 destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::East));
-                destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::West));
+                // destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::West));
             }
         };
 

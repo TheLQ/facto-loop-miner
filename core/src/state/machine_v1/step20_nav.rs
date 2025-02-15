@@ -1,15 +1,21 @@
-use crate::navigator::mine_executor::{execute_route_batch, MineRouteCombinationPathResult};
-use crate::navigator::mine_permutate::{get_possible_routes_for_batch, PlannedBatch};
+use crate::navigator::mine_executor::{
+    execute_route_batch, FailingMeta, MineRouteCombinationPathResult,
+};
+use crate::navigator::mine_permutate::{get_possible_routes_for_batch, PlannedBatch, PlannedRoute};
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
+use crate::surfacev::mine::MinePath;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use itertools::Itertools;
 use std::borrow::Borrow;
-use tracing::{error, info};
+use std::collections::HashMap;
+use std::path::Path;
+use tracing::{error, info, trace};
 
 pub(crate) struct Step20;
 
@@ -48,7 +54,11 @@ impl Step for Step20 {
         // }
 
         for (batch_index, batch) in select_batches.into_iter().enumerate() {
-            let found = process_batch(&mut surface, batch, batch_index);
+            let found = process_batch(&mut surface, batch, batch_index, &params.step_out_dir);
+            if !found {
+                error!("KILLING EARLY");
+                break;
+            }
 
             // if 1 + 1 == 2 {
             if batch_index > 10 {
@@ -151,7 +161,13 @@ fn debug_draw_planned_destinations(
     surface.set_pixels(Pixel::Highlighter, pixels).unwrap();
 }
 
-fn process_batch(surface: &mut VSurface, batch: MineSelectBatch, batch_index: usize) -> bool {
+fn process_batch(
+    surface: &mut VSurface,
+    batch: MineSelectBatch,
+    batch_index: usize,
+    step_out_dir: &Path,
+) -> bool {
+    trace!("---");
     let num_mines = batch.mines.len();
 
     let mut planned_combinations = get_possible_routes_for_batch(surface, batch);
@@ -178,16 +194,68 @@ fn process_batch(surface: &mut VSurface, batch: MineSelectBatch, batch_index: us
     let res = execute_route_batch(surface, planned_combinations);
     match res {
         MineRouteCombinationPathResult::Success { paths } => {
+            info!("pushing {} new mine paths", paths.len());
+            assert!(!paths.is_empty(), "Success but no paths!!!!");
             for path in paths {
                 surface.add_mine_path(path).unwrap();
             }
             true
         }
         MineRouteCombinationPathResult::Failure {
-            found_paths,
-            failing_mine,
+            meta:
+                FailingMeta {
+                    found_paths,
+                    failing_routes,
+                    failing_dump,
+                    failing_all,
+                },
         } => {
             error!("failed to pathfind");
+            for path in found_paths {
+                surface
+                    .add_mine_path_with_pixel(path, Pixel::Highlighter)
+                    .unwrap();
+            }
+
+            let (trigger_mine, rest) = failing_routes.split_first().unwrap();
+            surface.draw_square_area_replacing(
+                &trigger_mine.location.area,
+                Pixel::MineNoTouch,
+                Pixel::Highlighter,
+            );
+            for entry in rest {
+                surface.draw_square_area_replacing(
+                    &entry.location.area,
+                    Pixel::MineNoTouch,
+                    Pixel::EdgeWall,
+                );
+            }
+
+            // // very busy dump
+            // let mut pixels = Vec::new();
+            // for dump_link in failing_dump {
+            //     pixels.extend(dump_link.area());
+            // }
+            // surface.set_pixels(Pixel::Water, pixels).unwrap();
+            // // then the targets
+            // let mut pixels = Vec::new();
+            // for locations in failing_routes {
+            //     pixels.push(*locations.base_source.point());
+            //     pixels.push(*locations.destination.point());
+            // }
+            // surface.set_pixels(Pixel::SteelChest, pixels).unwrap();
+
+            // let mut all_pos = failing_all.iter().map(|v| v.next_straight_position()).collect_vec();
+            trace!("dumping {}", failing_all.len());
+            let mut compressed: HashMap<VPoint, usize> = HashMap::new();
+            for each in failing_all {
+                let val = compressed.entry(each.next_straight_position()).or_default();
+                *val += 1;
+            }
+            surface
+                .save_pixel_img_colorized_grad(step_out_dir, compressed)
+                .unwrap();
+
             false
         }
     }

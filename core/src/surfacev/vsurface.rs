@@ -10,6 +10,7 @@ use crate::surfacev::ventity_map::VEntityMap;
 use crate::surfacev::vpatch::VPatch;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
+use colorgrad::{Gradient, GradientBuilder, LinearGradient};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::opencv_re::core::Mat;
@@ -236,6 +237,57 @@ impl VSurface {
         Ok(())
     }
 
+    pub(crate) fn save_pixel_img_colorized_grad(
+        &self,
+        out_dir: &Path,
+        compressed: HashMap<VPoint, usize>,
+    ) -> VResult<()> {
+        let build_watch = BasicWatch::start();
+        let pixel_map_path = out_dir.join("pixel-map-grad.png");
+        debug!("Saving RGB dump image to {}", pixel_map_path.display());
+
+        let max_count = *compressed.values().max().unwrap() as f32;
+        let index_to_compressed: HashMap<usize, (VPoint, f32)> = compressed
+            .into_iter()
+            .flat_map(|(pos, count)| pos.area_2x2().map(|v| (v, count)))
+            .map(|(pos, count)| {
+                (
+                    self.pixels.point_to_index(&pos),
+                    (pos, count as f32 / max_count),
+                )
+            })
+            .collect();
+        let colorgrad = colorgrad::preset::spectral();
+
+        let entities = self.pixels.iter_xy_pixels();
+        let mut output: Vec<u8> = vec![0; self.pixels.xy_array_length_from_radius() * 4];
+        for (i, pixel) in entities.enumerate() {
+            let color = if let Some((_, count)) = index_to_compressed.get(&i) {
+                colorgrad.at(*count).to_rgba8()
+            } else {
+                let raw = pixel.color();
+                [raw[0], raw[1], raw[2], 0xFF]
+            };
+            let start = i * color.len();
+            output[start..(start + 4)].copy_from_slice(&color);
+        }
+        trace!(
+            "built entity array of {} in {}",
+            output.len().to_formatted_string(&LOCALE),
+            build_watch
+        );
+
+        let size = self.pixels.diameter() as u32;
+        save_png_with_space(
+            &pixel_map_path,
+            &output,
+            size,
+            size,
+            ExtendedColorType::Rgba8,
+        );
+        Ok(())
+    }
+
     fn save_entity_buffers(&self, out_dir: &Path) -> VResult<()> {
         let pixel_path = path_pixel_xy_indexes(out_dir);
         self.pixels.save_xy_file(&pixel_path)?;
@@ -402,6 +454,22 @@ impl VSurface {
         }
         self.set_pixels(empty_map, empty_pos).unwrap();
     }
+
+    pub fn draw_square_area_replacing(&mut self, area: &VArea, search: Pixel, replace: Pixel) {
+        let mut found_pos = Vec::new();
+        for point in area.get_points() {
+            assert!(
+                !self.pixels.is_point_out_of_bounds(&point),
+                "Area point {} is out of bounds {area:?}",
+                point.display()
+            );
+            let existing_pixel = self.get_pixel(point);
+            if existing_pixel == search {
+                found_pos.push(point);
+            }
+        }
+        self.set_pixels(replace, found_pos).unwrap();
+    }
     //
     // pub fn draw_square_around_point(
     //     &mut self,
@@ -446,8 +514,10 @@ impl VSurface {
     // }
 
     pub fn add_mine_path(&mut self, mine_path: MinePath) -> VResult<()> {
-        let pixel = Pixel::Rail;
+        self.add_mine_path_with_pixel(mine_path, Pixel::Rail)
+    }
 
+    pub fn add_mine_path_with_pixel(&mut self, mine_path: MinePath, pixel: Pixel) -> VResult<()> {
         let mut new_points: Vec<VPoint> =
             mine_path.links.iter().flat_map(|v| v.area()).collect_vec();
 
@@ -577,6 +647,10 @@ fn display_patches(patches: &Vec<VPatch>) -> String {
 //<editor-fold desc="io common">
 
 fn save_png(path: &Path, rgb: &[u8], width: u32, height: u32) {
+    save_png_with_space(path, rgb, width, height, ExtendedColorType::Rgb8)
+}
+
+fn save_png_with_space(path: &Path, rgb: &[u8], width: u32, height: u32, space: ExtendedColorType) {
     let watch = BasicWatch::start();
     let file = File::create(path).unwrap();
     let writer = BufWriter::new(&file);
@@ -585,9 +659,7 @@ fn save_png(path: &Path, rgb: &[u8], width: u32, height: u32) {
     // Custom takes 0.121 seconds to save
     // Default takes 2.4 seconds to save
     let encoder = PngEncoder::new_with_quality(writer, CompressionType::Fast, FilterType::NoFilter);
-    encoder
-        .write_image(rgb, width, height, ExtendedColorType::Rgb8)
-        .unwrap();
+    encoder.write_image(rgb, width, height, space).unwrap();
     let size = file.metadata().unwrap().len();
     debug!(
         "Saved {} byte image to {} in {}",

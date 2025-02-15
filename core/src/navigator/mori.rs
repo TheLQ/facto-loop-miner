@@ -70,7 +70,7 @@ pub fn mori2_start(
         },
     );
 
-    let success = pathfind.is_some();
+    let success = pathfind.is_ok();
 
     warn!(
         "executions {} found {} nexts {} cost {} summed {} res {} total {} success {success}",
@@ -84,12 +84,13 @@ pub fn mori2_start(
     );
 
     match pathfind {
-        Some((path, cost)) => MoriResult::Route { path, cost },
-        None => MoriResult::FailingDebug(Vec::new()),
-        // Err((inner_map, parents)) => {
-        //     let entries = parents.into_iter().map(|(node, _v)| node).collect();
-        //     MoriResult::FailingDebug(entries)
-        // }
+        Ok((path, cost)) => MoriResult::Route { path, cost },
+        Err((dump, all)) => {
+            MoriResult::FailingDebug(dump.into_iter().map(|(v, (i, r))| v).collect(), all)
+        } // Err((inner_map, parents)) => {
+          //     let entries = parents.into_iter().map(|(node, _v)| node).collect();
+          //     MoriResult::FailingDebug(entries)
+          // }
     }
 }
 
@@ -114,7 +115,7 @@ pub struct PathSegmentPoints {
 
 pub enum MoriResult {
     Route { path: Vec<HopeLink>, cost: u32 },
-    FailingDebug(Vec<HopeLink>),
+    FailingDebug(Vec<HopeLink>, Vec<HopeLink>),
 }
 
 impl MoriResult {

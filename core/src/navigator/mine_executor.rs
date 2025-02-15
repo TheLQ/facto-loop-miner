@@ -4,6 +4,7 @@ use crate::surfacev::mine::MinePath;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use rayon::iter::IntoParallelIterator;
@@ -12,6 +13,7 @@ use std::collections::HashMap;
 use std::fs::{create_dir, remove_dir_all};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use strum::AsRefStr;
 use tracing::{debug, info};
 
 pub const MINE_FRONT_RAIL_STEPS: usize = 6;
@@ -70,7 +72,7 @@ pub fn execute_route_batch(
             .into_par_iter()
             .map(|route_combination| {
                 execute_route_combination(
-                    &execution_surface,
+                    execution_surface,
                     route_combination,
                     total_planned_combinations,
                 )
@@ -109,16 +111,28 @@ pub fn execute_route_batch(
                     highest_cost = total_cost;
                 }
             }
-            MineRouteCombinationPathResult::Failure {
-                found_paths,
-                failing_mine,
-            } => {
-                *failure_found_paths_count
-                    .entry(found_paths.len())
-                    .or_insert(0) += 1;
-                if best_path.is_none() {
-                    best_path = Some(route_result);
-                }
+            MineRouteCombinationPathResult::Failure { meta } => {
+                let found_len = meta.found_paths.len();
+                *failure_found_paths_count.entry(found_len).or_insert(0) += 1;
+                let total_cost: u32 = meta.found_paths.iter().map(|v| v.cost).sum();
+
+                best_path = match best_path {
+                    Some(MineRouteCombinationPathResult::Failure { meta: prev_meta }) => {
+                        let prev_total_cost: u32 =
+                            prev_meta.found_paths.iter().map(|v| v.cost).sum();
+                        let prev_found_len = prev_meta.found_paths.len();
+                        if found_len > prev_found_len
+                            || (found_len == prev_found_len && total_cost < prev_total_cost)
+                        {
+                            Some(route_result)
+                        } else {
+                            // keep, but recreate since we spread it out already
+                            Some(MineRouteCombinationPathResult::Failure { meta: prev_meta })
+                        }
+                    }
+                    Some(success) => Some(success),
+                    None => Some(route_result),
+                };
             }
         }
     }
@@ -127,16 +141,18 @@ pub fn execute_route_batch(
         .sorted_by_key(|(k, _v)| *k)
         .map(|(k, v)| format!("{}:{}", k, v))
         .join("|");
+    let res = best_path.unwrap();
     info!(
-        "Route batch of {total_planned_combinations} combinations had {} success, cost range {} to {}, failure {}, thread oversubscribe {}",
+        "Route batch of {total_planned_combinations} combinations had {} success, cost range {} to {}, failure {}, thread oversubscribe {}, res {}", 
         success_count,
         highest_cost.to_formatted_string(&LOCALE),
         lowest_cost.to_formatted_string(&LOCALE),
         failure_found_paths_count_debug,
-        THREAD_OVERSUBSCRIBE_PERCENT
+        THREAD_OVERSUBSCRIBE_PERCENT,
+        res.as_ref(),
     );
 
-    best_path.unwrap()
+    res
 }
 
 static TOTAL_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -168,7 +184,14 @@ fn execute_route_combination(
     info!("Cloned surface in {}", watch);
 
     let mut found_paths = Vec::new();
+    let mut failing_meta = FailingMeta::default();
     for route in route_combination.routes {
+        // in failure mode, consume the rest of the routes
+        if !failing_meta.failing_routes.is_empty() {
+            failing_meta.failing_routes.push(route);
+            continue;
+        }
+
         // let extended_entry_rails =
         //     match extend_rail_end(&working_surface, search_area, &mine_endpoint.entry_rail) {
         //         Some(v) => v,
@@ -200,17 +223,20 @@ fn execute_route_combination(
                 found_paths.push(path.clone());
                 working_surface.add_mine_path(path).unwrap();
             }
-            MoriResult::FailingDebug(debug_rail) => {
+            MoriResult::FailingDebug(debug_rail, debug_all) => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
-                return MineRouteCombinationPathResult::Failure {
-                    found_paths,
-                    failing_mine: route,
-                };
+                failing_meta.failing_routes.push(route);
+                failing_meta.failing_dump = debug_rail;
+                failing_meta.failing_all = debug_all;
             }
         }
     }
-    SUCCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
-    MineRouteCombinationPathResult::Success { paths: found_paths }
+    if failing_meta.failing_routes.is_empty() {
+        SUCCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
+        MineRouteCombinationPathResult::Success { paths: found_paths }
+    } else {
+        MineRouteCombinationPathResult::Failure { meta: failing_meta }
+    }
 }
 
 //
@@ -233,12 +259,16 @@ fn execute_route_combination(
 //     Some(rails)
 // }
 
+#[derive(AsRefStr)]
 pub enum MineRouteCombinationPathResult {
-    Success {
-        paths: Vec<MinePath>,
-    },
-    Failure {
-        found_paths: Vec<MinePath>,
-        failing_mine: PlannedRoute,
-    },
+    Success { paths: Vec<MinePath> },
+    Failure { meta: FailingMeta },
+}
+
+#[derive(Default)]
+pub struct FailingMeta {
+    pub found_paths: Vec<MinePath>,
+    pub failing_routes: Vec<PlannedRoute>,
+    pub failing_dump: Vec<HopeLink>,
+    pub failing_all: Vec<HopeLink>,
 }

@@ -148,7 +148,6 @@ impl Clone for VArray {
                 VArray {
                     inner: BackingMemory::RegularOldeVec {
                         vec: Vec::clone(vec),
-                        // stay false, safe to clone
                         is_dirty: false,
                     },
                 }
