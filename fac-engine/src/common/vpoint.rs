@@ -193,22 +193,22 @@ impl VPoint {
         }
     }
 
-    pub fn move_direction_half(&self, direction: impl Borrow<FacDirectionQuarter>) -> Self {
-        match direction.borrow() {
-            FacDirectionQuarter::North => {
-                self.move_y(-((self.y() as f32 + 0.5).floor() as i32 - self.y()))
-            }
-            FacDirectionQuarter::South => {
-                self.move_y((self.y() as f32 + 0.5).floor() as i32 - self.y())
-            }
-            FacDirectionQuarter::East => {
-                self.move_x((self.x() as f32 + 0.5).floor() as i32 - self.x())
-            }
-            FacDirectionQuarter::West => {
-                self.move_x(-((self.x() as f32 + 0.5).floor() as i32 - self.x()))
-            }
-        }
-    }
+    // pub fn move_direction_half(&self, direction: impl Borrow<FacDirectionQuarter>) -> Self {
+    //     match direction.borrow() {
+    //         FacDirectionQuarter::North => {
+    //             self.move_y(-((self.y() as f32 + 0.5).floor() as i32 - self.y()))
+    //         }
+    //         FacDirectionQuarter::South => {
+    //             self.move_y((self.y() as f32 + 0.5).floor() as i32 - self.y())
+    //         }
+    //         FacDirectionQuarter::East => {
+    //             self.move_x((self.x() as f32 + 0.5).floor() as i32 - self.x())
+    //         }
+    //         FacDirectionQuarter::West => {
+    //             self.move_x(-((self.x() as f32 + 0.5).floor() as i32 - self.x()))
+    //         }
+    //     }
+    // }
 
     pub fn move_direction_usz(
         &self,
@@ -251,6 +251,26 @@ impl VPoint {
         steps: usize,
     ) -> Self {
         self.move_direction_sideways_int(direction, steps as i32)
+    }
+
+    pub fn move_direction_sideways_axis_int(
+        &self,
+        direction: impl Borrow<FacDirectionQuarter>,
+        steps: i32,
+    ) -> Self {
+        // cardinal directions are "north == up == -1" not "north == +1"
+        match direction.borrow() {
+            FacDirectionQuarter::North | FacDirectionQuarter::South => self.move_x(steps),
+            FacDirectionQuarter::East | FacDirectionQuarter::West => self.move_y(steps),
+        }
+    }
+
+    pub fn move_direction_sideways_axis_usz(
+        &self,
+        direction: impl Borrow<FacDirectionQuarter>,
+        steps: usize,
+    ) -> Self {
+        self.move_direction_sideways_axis_int(direction, steps as i32)
     }
 
     // pub fn move_between_entity_centers(

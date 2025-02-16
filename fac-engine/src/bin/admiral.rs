@@ -20,7 +20,7 @@ use facto_loop_miner_fac_engine::tests::train_area::make_area_finder;
 use facto_loop_miner_fac_engine::tests::train_loop_tests::make_rail_loop;
 use facto_loop_miner_fac_engine::tests::train_rail_tests::{
     make_rail_dual_powered, make_rail_dual_turning, make_rail_gee_for_power, make_rail_shift_45,
-    make_rail_spiral_90,
+    make_rail_spiral_90, make_rail_step_sketch_single,
 };
 use facto_loop_miner_fac_engine::tests::train_station_tests::make_rail_station;
 use facto_loop_miner_fac_engine::{
@@ -60,7 +60,7 @@ fn inner_main() -> AdmiralResult<()> {
     };
 
     let command_output = output.clone();
-    match 9 {
+    match 19 {
         1 => make_basic(command_output)?,
         2 => make_assembler_thru(command_output),
         3 => make_belt_bettel(command_output)?,
@@ -79,6 +79,7 @@ fn inner_main() -> AdmiralResult<()> {
         16 => make_mine_and_rail(command_output),
         17 => make_area_finder(command_output),
         18 => make_rail_gee_for_power(command_output),
+        19 => make_rail_step_sketch_single(command_output),
         _ => panic!("uihhh"),
     }
     output.flush();

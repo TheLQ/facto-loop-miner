@@ -1,8 +1,9 @@
-use enum_map::EnumMap;
-use std::{cell::RefCell, rc::Rc};
-use tracing::{debug, trace};
-use unicode_segmentation::UnicodeSegmentation;
-
+use super::{
+    bpfac::{entity::FacBpEntity, position::FacBpPosition, tile::FacBpTile},
+    bpitem::BlueprintItem,
+    contents::BlueprintContents,
+};
+use crate::admiral::err::pretty_panic_admiral;
 use crate::{
     admiral::{
         err::AdmiralResult,
@@ -14,15 +15,13 @@ use crate::{
         C_BLOCK_LINE, C_FULL_BLOCK, Color, ansi_color, ansi_erase_line, ansi_previous_line,
     },
 };
-
-use super::{
-    bpfac::{entity::FacBpEntity, position::FacBpPosition, tile::FacBpTile},
-    bpitem::BlueprintItem,
-    contents::BlueprintContents,
-};
+use enum_map::EnumMap;
+use std::{cell::RefCell, rc::Rc};
+use tracing::{debug, trace};
+use unicode_segmentation::UnicodeSegmentation;
 
 const FLAG_ENABLE_LINE_REWRITE: bool = false;
-const CACHE_SIZE: usize = 1;
+const CACHE_SIZE: usize = 1000;
 
 /// Middleware between entity output and blueprint/lua output
 /// Instead of generating everything "post", obscuring errors and logic
@@ -372,7 +371,7 @@ impl FacItemOutputData {
                 // Vec::push() does not normally fail
                 // For API sanity, do not make every FacBlk need to pass up the error
                 if let Err(e) = res {
-                    panic!("⛔⛔⛔ Write failed {}", e);
+                    pretty_panic_admiral(e);
                 }
             }
             FacItemOutputType::Blueprint(inner) => {
@@ -430,7 +429,7 @@ fn dedupe_position(
             ) {
                 // initially dedupe
             } else {
-                panic!("dupe {:?}", blueprint);
+                tracing::warn!("dupe {:?}", blueprint);
             }
         } else {
             dedupe.push(bppos.clone());

@@ -20,3 +20,10 @@ impl Display for VPointDirectionQ {
         write!(f, "{:?}-{}", self.0, self.1)
     }
 }
+
+#[cfg(test)] // this API is poor outside of tests
+impl From<(VPoint, FacDirectionQuarter)> for VPointDirectionQ {
+    fn from(value: (VPoint, FacDirectionQuarter)) -> Self {
+        Self(value.0, value.1)
+    }
+}
