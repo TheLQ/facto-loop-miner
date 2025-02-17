@@ -23,20 +23,17 @@ pub fn log_init_debug() {
 }
 
 fn log_init_internal(default_env: &str) {
-    let subscriber = Registry::default();
-
     let env_var = env::var(EnvFilter::DEFAULT_ENV).unwrap_or_else(|_| default_env.into());
     let env_layer = EnvFilter::builder().parse(env_var).expect("bad env");
-    let subscriber = subscriber.with(env_layer);
 
     // let print_layer = tracing_subscriber::fmt::Layer::default().compact();
     let print_layer = tracing_subscriber::fmt::Layer::default().event_format(LoopFormatter);
-    let subscriber = subscriber.with(print_layer);
 
-    subscriber.init()
+    Registry::default().with(env_layer).with(print_layer).init()
 }
 
-// kustom Formatter because the compact formatter a) isn't configurable and b) not compact enough
+/// kustom Formatter because the compact formatter is not configurably compact enough
+/// Sadly needs a lot re-implemented
 struct LoopFormatter;
 
 impl<S, N> FormatEvent<S, N> for LoopFormatter
@@ -53,9 +50,11 @@ where
         let normalized_meta = event.normalized_metadata();
         let meta = normalized_meta.as_ref().unwrap_or_else(|| event.metadata());
 
+        // Time without gigantic date, when we only run for at max hours
         let time = Local::now();
         write!(f, "{}", time.time().format("%H:%M:%S%.6f"))?;
 
+        // Copied from tracing-subscriber
         let level = match *event.metadata().level() {
             Level::TRACE => Color::Purple.paint("TRACE"),
             Level::DEBUG => Color::Blue.paint("DEBUG"),
@@ -65,6 +64,7 @@ where
         };
         write!(f, "{level} ")?;
 
+        // Mostly copied from tracing-subscriber
         let current_thread = std::thread::current();
         match current_thread.name() {
             Some("main") => {
@@ -78,20 +78,21 @@ where
             }
         }
 
+        // Compress gigantic crate names
         let dimmed = Style::new().dimmed();
         let target_raw = meta.target();
-        let target = match target_raw.split_once(":") {
-            Some(("facto_loop_miner", path)) => &format!("core{path}"),
-            Some(("facto_loop_miner_io", path)) => &format!("io{path}"),
-            Some(_) | None => match target_raw {
-                "facto_loop_miner" => "core",
-                _ => target_raw,
-            },
+        let target = match target_raw.split_once(":").unwrap_or((target_raw, "")) {
+            ("facto_loop_miner", path) => &format!("core{path}"),
+            ("facto_loop_miner_io", path) => &format!("io{path}"),
+            ("facto_loop_miner_fac_engine", path) => &format!("engine{path}"),
+            _ => target_raw,
         };
         write!(f, "{}{} ", dimmed.paint(target), dimmed.paint(":"))?;
 
+        // Hope this does spans
         ctx.format_fields(f.by_ref(), event)?;
 
+        // newline
         writeln!(f)
     }
 }
