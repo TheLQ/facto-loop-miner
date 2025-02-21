@@ -2,6 +2,7 @@ use super::{
     bpfac::{entity::FacBpEntity, tile::FacBpTile},
     bpitem::BlueprintItem,
 };
+use crate::blueprint::bpfac::blueprint::FacBpBlueprintWrapper;
 
 pub struct BlueprintContents {
     items: Vec<BlueprintItem>,
@@ -37,5 +38,9 @@ impl BlueprintContents {
 
     pub fn consume(self) -> (Vec<BlueprintItem>, Vec<FacBpEntity>) {
         (self.items, self.fac_entities)
+    }
+
+    pub fn into_bp(self) -> FacBpBlueprintWrapper {
+        self.into()
     }
 }

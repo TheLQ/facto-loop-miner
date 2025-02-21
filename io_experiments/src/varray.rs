@@ -1,4 +1,3 @@
-use crate::read_entire_file_varray_mmap_lib;
 use memmap2::MmapMut;
 use std::fs::File;
 use std::mem::ManuallyDrop;

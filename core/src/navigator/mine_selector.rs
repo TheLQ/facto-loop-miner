@@ -8,11 +8,10 @@ use crate::TILES_PER_CHUNK;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::DUAL_RAIL_STEP_I32;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use tracing::{debug, error, warn};
-
-const MAX_PATCHES: usize = 200;
 
 pub struct MineSelectBatch {
     pub mines: Vec<MineLocation>,
@@ -50,12 +49,10 @@ const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 ///  - Assign base sources
 ///  - Split groups if needed because too huge creates too many possibilities later
 pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
-    let offset_from_base = 10;
+    let mut offset_x_from_base = surface.tunables().base.base_chunks.as_tiles_i32();
+    offset_x_from_base -= offset_x_from_base % DUAL_RAIL_STEP_I32;
     let base_source = &mut BaseSource::new(VPointDirectionQ(
-        VPoint::new(
-            surface.tunables().base.base_chunks.as_tiles_i32() + offset_from_base,
-            0,
-        ),
+        VPoint::new(offset_x_from_base, 0),
         FacDirectionQuarter::East,
     ));
 
@@ -164,7 +161,9 @@ fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineLoca
 
             let area = VArea::from_arbitrary_points(
                 patch_group.iter().flat_map(|patch| &patch.pixel_indexes),
-            );
+            )
+            .normalize_step_rail(5)
+            .normalize_within_radius(surface.get_radius_i32() - 1);
 
             result.push(MineLocation {
                 patch_indexes: patch_group_indexes,
@@ -175,7 +174,10 @@ fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineLoca
             // trace!("Single patch group {:?}", patch);
             result.push(MineLocation {
                 patch_indexes: vec![patch.get_surface_patch_index(surface)],
-                area: patch.area.clone(),
+                area: patch
+                    .area
+                    .normalize_step_rail(5)
+                    .normalize_within_radius(surface.get_radius_i32() - 1),
             })
         }
     }

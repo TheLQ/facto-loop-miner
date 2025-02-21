@@ -1,5 +1,6 @@
 use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::err::{FError, FResult};
+use crate::game_blocks::rail_hope_dual::DUAL_RAIL_STEP_I32;
 use crate::game_entities::direction::FacDirectionQuarter;
 use crate::util::ansi::C_BLOCK_LINE;
 use opencv::core::Point;
@@ -111,22 +112,38 @@ impl VPoint {
         assert_eq!(self.y % 2, 0, "y={} is not even for {self}", self.y);
     }
 
-    pub fn assert_even_8x8_position(&self) {
-        self.assert_even_position();
-        assert_eq!(self.x % 8, 0, "x={} is not 8", self.x);
-        assert_eq!(self.y % 8, 0, "y={} is not 8", self.y);
+    pub fn assert_step_rail(&self) {
+        // self.assert_even_position();
+        assert_eq!(
+            self.x % DUAL_RAIL_STEP_I32,
+            0,
+            "x={} is not {DUAL_RAIL_STEP_I32} for {self}",
+            self.x
+        );
+        assert_eq!(
+            self.y % DUAL_RAIL_STEP_I32,
+            0,
+            "y={} is not {DUAL_RAIL_STEP_I32} for {self}",
+            self.y
+        );
     }
+
+    // pub fn assert_even_8x8_position(&self) {
+    //     self.assert_even_position();
+    //     assert_eq!(self.x % 8, 0, "x={} is not 8", self.x);
+    //     assert_eq!(self.y % 8, 0, "y={} is not 8", self.y);
+    // }
 
     pub fn assert_odd_position(&self) {
         assert_eq!((self.x - 1) % 2, 0, "x={} is not odd", self.x);
         assert_eq!((self.y - 1) % 2, 0, "y={} is not odd", self.y);
     }
 
-    pub fn assert_odd_8x8_position(&self) {
-        self.assert_odd_position();
-        assert_eq!((self.x - 1) % 8, 0, "x={} is not 8", self.x);
-        assert_eq!((self.y - 1) % 8, 0, "y={} is not 8", self.y);
-    }
+    // pub fn assert_odd_8x8_position(&self) {
+    //     self.assert_odd_position();
+    //     assert_eq!((self.x - 1) % 8, 0, "x={} is not 8", self.x);
+    //     assert_eq!((self.y - 1) % 8, 0, "y={} is not 8", self.y);
+    // }
 
     pub fn assert_odd_16x16_position(&self) {
         self.assert_odd_position();
@@ -388,43 +405,25 @@ impl VPoint {
     //     self.move_xy(x_steps as i32, y_steps as i32)
     // }
 
-    pub const fn move_round2_down(&self) -> Self {
-        self.move_round_down(2)
+    pub const fn move_round_rail_down(&self) -> Self {
+        self.move_round_down(DUAL_RAIL_STEP_I32)
     }
-
-    // fn move_round3_down(&self) -> Self {
-    //     self.move_round_down(3)
-    // }
-
-    // pub const fn move_round16_down(&self) -> Self {
-    //     self.move_round_down(16)
-    // }
 
     const fn move_round_down(&self, size: i32) -> Self {
         VPoint {
-            x: self.x - (self.x % size),
-            y: self.y - (self.y % size),
+            x: self.x - (self.x.rem_euclid(size)),
+            y: self.y - (self.y.rem_euclid(size)),
         }
     }
 
-    // pub const fn move_round16_up(&self) -> Self {
-    //     self.move_round_up(16)
-    // }
+    pub const fn move_round_rail_up(&self) -> Self {
+        self.move_round_up(DUAL_RAIL_STEP_I32)
+    }
 
     const fn move_round_up(&self, size: i32) -> Self {
-        let x_rem = self.x % size;
-        let y_rem = self.y % size;
         VPoint {
-            x: if x_rem != 0 {
-                self.x + (size - x_rem)
-            } else {
-                self.x
-            },
-            y: if y_rem != 0 {
-                self.y + (size - y_rem)
-            } else {
-                self.y
-            },
+            x: self.x + (self.x.rem_euclid(size)),
+            y: self.y + (self.y.rem_euclid(size)),
         }
     }
 

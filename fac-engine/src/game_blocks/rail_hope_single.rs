@@ -372,6 +372,10 @@ impl HopeLink {
         }
     }
 
+    pub fn add_turn90_single_section(&self, clockwise: bool) -> Self {
+        self.add_straight(7).add_turn90(clockwise).add_straight(8)
+    }
+
     pub fn area(&self) -> Vec<VPoint> {
         let mut area = Vec::new();
         match &self.rtype {
@@ -435,6 +439,7 @@ mod test {
     use crate::blueprint::bpfac::position::FacBpPosition;
     use crate::blueprint::contents::BlueprintContents;
     use crate::common::vpoint::VPOINT_TEN;
+    use crate::game_blocks::rail_hope_dual::DUAL_RAIL_STEP;
     use crate::{
         blueprint::output::FacItemOutput, common::vpoint::VPOINT_ZERO,
         game_blocks::rail_hope::RailHopeAppender, game_entities::direction::FacDirectionQuarter,
@@ -667,5 +672,15 @@ mod test {
 
         assert!(is_success, "not success");
         assert_eq!(entities_len, expected.len(), "diff len");
+    }
+
+    #[test]
+    fn step_test() {
+        let output = FacItemOutput::new_null().into_rc();
+        let mut rail = RailHopeSingle::new(VPOINT_ZERO, FacDirectionQuarter::East, output);
+        // rail.add_straight(DUAL_RAIL_STEP);
+        // rail.next_pos().assert_step_rail();
+        todo!()
+        // rail.rail.next_pos().assert_step_rail();
     }
 }

@@ -1,4 +1,5 @@
 use crate::common::vpoint::VPoint;
+use crate::game_blocks::rail_hope_dual::DUAL_RAIL_STEP_I32;
 use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
@@ -20,20 +21,6 @@ impl VArea {
     }
 
     pub fn from_arbitrary_points_pair<P: Borrow<VPoint>>(a: P, b: P) -> VArea {
-        // let a = a.borrow();
-        // let b = b.borrow();
-        //
-        // let x_min = a.x().min(b.x());
-        // let x_max = a.x().max(b.x());
-        // let y_min = a.y().min(b.y());
-        // let y_max = a.y().max(b.y());
-        //
-        // let start = VPoint::new(x_min, y_min);
-        // VArea {
-        //     start,
-        //     width: (x_max - start.x()).try_into().unwrap(),
-        //     height: (y_max - start.y()).try_into().unwrap(),
-        // }
         Self::from_arbitrary_points([a, b])
     }
 
@@ -84,11 +71,11 @@ impl VArea {
         points
     }
 
-    pub fn end_x_exclusive(&self) -> i32 {
+    fn end_x_exclusive(&self) -> i32 {
         self.start.x() + self.width as i32
     }
 
-    pub fn end_y_exclusive(&self) -> i32 {
+    fn end_y_exclusive(&self) -> i32 {
         self.start.y() + self.height as i32
     }
 
@@ -109,31 +96,67 @@ impl VArea {
         [self.start, self.point_bottom_right()]
     }
 
-    pub fn normalize_even_8x8(&self) -> Self {
-        let x_adjust = self.start.x() % 8;
-        let y_adjust = self.start.y() % 8;
+    pub fn normalize_step_rail(&self, padding: u32) -> Self {
+        let padding_i32 = padding as i32;
+        let x_adjust = self.start.x().rem_euclid(DUAL_RAIL_STEP_I32);
+        let y_adjust = self.start.y().rem_euclid(DUAL_RAIL_STEP_I32);
 
         let mut new = VArea {
             start: self.start.move_xy(-x_adjust, -y_adjust),
             height: (self.height as i32 + y_adjust) as u32,
             width: (self.width as i32 + x_adjust) as u32,
         };
-        new.start.assert_even_8x8_position();
+        new.start.assert_step_rail();
 
         let bottom_left = new.point_bottom_right();
-        let x_adjust = 8 - (bottom_left.x() % 8);
-        let y_adjust = 8 - (bottom_left.y() % 8);
+        let x_adjust = DUAL_RAIL_STEP_I32 - (bottom_left.x().rem_euclid(DUAL_RAIL_STEP_I32));
+        let y_adjust = DUAL_RAIL_STEP_I32 - (bottom_left.y().rem_euclid(DUAL_RAIL_STEP_I32));
         new.width = (new.width as i32 + x_adjust) as u32;
         new.height = (new.height as i32 + y_adjust) as u32;
 
-        new.point_bottom_right().assert_even_8x8_position();
+        new.point_bottom_right().assert_step_rail();
+
+        new.start = new.start.move_xy(padding_i32, padding_i32);
+        new.width -= padding;
+        new.height -= padding;
+
         new
+    }
+
+    pub fn normalize_within_radius(&self, radius: i32) -> Self {
+        let mut next = self.clone();
+
+        {
+            let x_adjust = -radius - self.start.x();
+            if x_adjust > 0 {
+                next.start = next.start.move_x(x_adjust);
+                next.width -= x_adjust as u32;
+            }
+        }
+        {
+            let y_adjust = -radius - self.start.y();
+            if y_adjust > 0 {
+                next.start = next.start.move_y(y_adjust);
+                next.height -= y_adjust as u32;
+            }
+        }
+        {
+            let x_adjust = self.point_bottom_right().x() - radius;
+            if x_adjust > 0 {
+                next.width -= x_adjust as u32;
+            }
+        }
+        {
+            let y_adjust = self.point_bottom_right().y() - radius;
+            if y_adjust > 0 {
+                next.height -= y_adjust as u32;
+            }
+        }
+        next
     }
 
     pub fn point_center(&self) -> VPoint {
         VPoint::new(
-            // (self.end_x_exclusive() - self.start.x()) / 2,
-            // (self.end_y_exclusive() - self.start.y()) / 2,
             self.start.x() + (self.width as i32 / 2),
             self.start.y() + (self.height as i32 / 2),
         )
@@ -143,7 +166,8 @@ impl VArea {
 #[cfg(test)]
 mod test {
     use crate::common::varea::VArea;
-    use crate::common::vpoint::VPoint;
+    use crate::common::vpoint::{VPOINT_ONE, VPOINT_TEN, VPOINT_ZERO, VPoint};
+    use crate::game_blocks::rail_hope_dual::DUAL_RAIL_STEP_I32;
 
     #[test]
     fn test_area_inclusive() {
@@ -168,5 +192,53 @@ mod test {
         assert!(points.contains(&VPoint::new(4, 4)));
         assert!(!points.contains(&VPoint::new(5, 5)));
         assert!(!points.contains(&VPoint::new(6, 6)));
+    }
+
+    #[test]
+    fn test_normalize_rail_inside() {
+        let area = VArea::from_arbitrary_points_pair(VPOINT_ONE, VPOINT_TEN).normalize_step_rail(0);
+        assert_eq!(area.start, VPOINT_ZERO);
+        assert_eq!(
+            area.point_bottom_right(),
+            VPoint::new(DUAL_RAIL_STEP_I32, DUAL_RAIL_STEP_I32)
+        );
+    }
+
+    #[test]
+    fn test_normalize_rail_partial() {
+        let area = VArea::from_arbitrary_points_pair(VPoint::new(-1, -1), VPOINT_TEN)
+            .normalize_step_rail(0);
+        assert_eq!(
+            area.start,
+            VPoint::new(-DUAL_RAIL_STEP_I32, -DUAL_RAIL_STEP_I32)
+        );
+        assert_eq!(
+            area.point_bottom_right(),
+            VPoint::new(DUAL_RAIL_STEP_I32, DUAL_RAIL_STEP_I32)
+        );
+    }
+
+    #[test]
+    fn test_normalize_radius_outside() {
+        let area = VArea::from_arbitrary_points_pair(VPoint::new(-5, -5), VPOINT_TEN)
+            .normalize_within_radius(4);
+        assert_eq!(area.start, VPoint::new(-4, -4));
+        assert_eq!(area.point_bottom_right(), VPoint::new(4, 4));
+    }
+
+    #[test]
+    fn test_normalize_radius_partial() {
+        let area = VArea::from_arbitrary_points_pair(VPoint::new(-5, -5), VPOINT_ONE)
+            .normalize_within_radius(4);
+        assert_eq!(area.start, VPoint::new(-4, -4));
+        assert_eq!(area.point_bottom_right(), VPOINT_ONE);
+    }
+
+    #[test]
+    fn test_normalize_radius_inside() {
+        let area = VArea::from_arbitrary_points_pair(VPoint::new(-2, -2), VPoint::new(2, 2))
+            .normalize_within_radius(4);
+        assert_eq!(area.start, VPoint::new(-2, -2));
+        assert_eq!(area.point_bottom_right(), VPoint::new(2, 2));
     }
 }

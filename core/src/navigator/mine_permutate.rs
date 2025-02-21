@@ -168,7 +168,12 @@ impl MineChoices {
         // centered top
         {
             let mut centered_point = VPoint::new(mine_area.point_center().x(), mine_area.start.y());
-            centered_point = centered_point.move_round2_down();
+            centered_point = centered_point.move_round_rail_down();
+
+            // let y_diff = centered_point.y() - location.area.start.y();
+            // if y_diff > 20 {
+            //     tracing::warn!("diff {y_diff}")
+            // }
 
             if !surface.is_point_out_of_bounds(&centered_point) {
                 destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::East));
@@ -180,7 +185,7 @@ impl MineChoices {
                 mine_area.point_center().x(),
                 mine_area.point_bottom_right().y(),
             );
-            centered_point = centered_point.move_round2_down();
+            centered_point = centered_point.move_round_rail_up();
 
             if !surface.is_point_out_of_bounds(&centered_point) {
                 destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::East));

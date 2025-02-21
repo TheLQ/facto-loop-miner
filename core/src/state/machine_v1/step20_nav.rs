@@ -43,12 +43,16 @@ impl Step for Step20 {
         }
         num_mines_metrics.log_final();
 
-        // debug_draw_base_sources(&mut surface, &select_batches);
-
         draw_no_touching_zone(&mut surface, &select_batches);
 
         // if 1 + 1 == 2 {
-        //     debug_draw_base_sources(&mut surface, select_batches);
+        //     debug_draw_base_sources(&mut surface, &select_batches);
+        //
+        //     let mut plans = Vec::new();
+        //     for batch in select_batches {
+        //         plans.append(&mut get_possible_routes_for_batch(&surface, batch));
+        //     }
+        //     debug_draw_planned_destinations(&mut surface, plans);
         //     surface.save(&params.step_out_dir)?;
         //     return Ok(());
         // }

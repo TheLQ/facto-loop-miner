@@ -7,6 +7,9 @@ use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::{
+    DUAL_RAIL_STEP, DUAL_RAIL_STEP_I32,
+};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
 use facto_loop_miner_fac_engine::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
 use num_format::ToFormattedString;
@@ -64,6 +67,7 @@ pub fn mori2_start(
             let res = p == &end_link;
             // res_sum += watch.duration();
             res
+            // p.start.distance_bird(&end_link.start) < 5.0
         },
         |processor, cur_link| {
             processor.total_links += 1;
@@ -129,8 +133,8 @@ impl MoriResult {
 
 impl PathSegmentPoints {
     fn validate_positions(&self) {
-        // self.start.point().assert_odd_16x16_position();
-        // self.end.point().assert_odd_16x16_position();
+        self.start.point().assert_step_rail();
+        self.end.point().assert_step_rail();
     }
 }
 
@@ -138,13 +142,15 @@ fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeLink {
     let mut hope = RailHopeSingle::new(
         start
             .point()
-            .move_direction_int(start.direction(), -RAIL_STRAIGHT_DIAMETER_I32),
+            .move_direction_int(start.direction(), -DUAL_RAIL_STEP_I32),
         *start.direction(),
         FacItemOutput::new_null().into_rc(),
     );
-    hope.add_straight(1);
+    hope.add_straight(DUAL_RAIL_STEP);
     let links = hope.into_links();
-    links.into_iter().next().unwrap()
+    let link = links.into_iter().next().unwrap();
+    link.start.assert_step_rail();
+    link
 }
 
 fn successors(
@@ -167,11 +173,7 @@ fn successors(
 
     let watch = BasicWatch::start();
     let nexts = [
-        into_buildable_link(
-            surface,
-            finding_limiter,
-            head.add_straight(tune.straight_section_size),
-        ),
+        into_buildable_link(surface, finding_limiter, head.add_straight(DUAL_RAIL_STEP)),
         into_buildable_link(surface, finding_limiter, head.add_turn90(false)),
         into_buildable_link(surface, finding_limiter, head.add_turn90(true)),
     ];
@@ -198,6 +200,7 @@ fn into_buildable_link(
     if !finding_limiter.contains_point(&new_link.next_straight_position()) {
         return None;
     }
+    new_link.start.assert_step_rail();
     let area = new_link.area();
     if surface.is_points_free_unchecked(&area) {
         Some(new_link)

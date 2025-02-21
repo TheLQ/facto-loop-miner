@@ -11,6 +11,7 @@ use crate::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER;
 
 /// A 4 way intersection is 13 rails wide square.  
 pub const DUAL_RAIL_STEP: usize = STRAIGHT_RAIL_STEP * 2;
+pub const DUAL_RAIL_STEP_I32: i32 = DUAL_RAIL_STEP as i32;
 const STRAIGHT_RAIL_STEP: usize = 13;
 
 /// The dreamed Side-by-side rail generator
@@ -135,14 +136,42 @@ mod test {
     use crate::common::vpoint::{VPOINT_ZERO, VPoint};
     use crate::common::vpoint_direction::VPointDirectionQ;
     use crate::game_blocks::rail_hope::RailHopeAppender;
-    use crate::game_blocks::rail_hope_dual::{DUAL_RAIL_STEP, RailHopeDual};
+    use crate::game_blocks::rail_hope_dual::{DUAL_RAIL_STEP, DUAL_RAIL_STEP_I32, RailHopeDual};
     use crate::game_entities::direction::FacDirectionQuarter;
-    use crate::game_entities::rail_straight::{RAIL_STRAIGHT_DIAMETER, RAIL_STRAIGHT_DIAMETER_I32};
+    use crate::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
+
+    #[test]
+    fn step_vpoint_straight() {
+        let output = FacItemOutput::new_null().into_rc();
+
+        let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output);
+        rail.add_straight_section();
+        assert_eq!(
+            rail.next_buildable_point(),
+            VPoint::new(DUAL_RAIL_STEP_I32, 0),
+        );
+    }
+
+    #[test]
+    fn step_vpoint_turn() {
+        let output = FacItemOutput::new_blueprint().into_rc();
+
+        let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output.clone());
+        rail.add_turn90(true);
+        rail.add_turn90(false);
+        let next_point = rail.next_buildable_point();
+        output.flush();
+        drop(rail);
+        assert_eq!(
+            next_point,
+            VPoint::new(DUAL_RAIL_STEP_I32, DUAL_RAIL_STEP_I32),
+            "bp {}",
+            output.consume_rc().into_blueprint_string().unwrap()
+        );
+    }
 
     #[test]
     fn congruent_line() {
-        // let output = FacItemOutput::new_null().into_rc();
-
         let mut a = dual_gen((VPOINT_ZERO, FacDirectionQuarter::East), |rail| {
             rail.add_straight(4);
         });

@@ -2,7 +2,6 @@ use crate::common::vpoint::VPOINT_TEN;
 use crate::game_blocks::rail_hope_dual::DUAL_RAIL_STEP;
 use crate::game_entities::electric_mini::FacEntElectricMiniType;
 use crate::game_entities::lamp::FacEntLamp;
-use crate::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER;
 use crate::{
     admiral::err::AdmiralResult,
     blueprint::output::FacItemOutput,
@@ -160,8 +159,8 @@ pub fn make_rail_step_sketch_single(output: Rc<FacItemOutput>) {
     // rail.add_straight(STEP);
 
     let offset_start = step_starts.remove(0);
-    make_rail_step_letter_c(offset_start, output);
-    // make_rail_step_letter_c_with_s(offset_start, output);
+    // make_rail_step_letter_c(offset_start, output);
+    make_rail_step_letter_c_with_s(offset_start, output);
 }
 
 fn make_rail_step_letter_o(offset_start: VPoint, output: Rc<FacItemOutput>) {

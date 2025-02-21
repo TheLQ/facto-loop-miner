@@ -4,6 +4,8 @@ use super::{
     contents::BlueprintContents,
 };
 use crate::admiral::err::pretty_panic_admiral;
+use crate::blueprint::converter::encode_blueprint_to_string_auto_index;
+use crate::err::FResult;
 use crate::{
     admiral::{
         err::AdmiralResult,
@@ -263,6 +265,17 @@ impl FacItemOutput {
                 panic!("not a blueprint")
             }
         }
+    }
+
+    pub fn into_blueprint_string(self) -> FResult<String> {
+        let odata = self.odata.into_inner();
+        let bp = match odata.otype {
+            FacItemOutputType::Blueprint(inner) => inner,
+            FacItemOutputType::AdmiralClient(_) | FacItemOutputType::Null => {
+                panic!("not a blueprint")
+            }
+        };
+        encode_blueprint_to_string_auto_index(bp.into_bp())
     }
 }
 

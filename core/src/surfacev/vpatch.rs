@@ -3,7 +3,6 @@ use crate::surfacev::vsurface::VSurface;
 use derivative::Derivative;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::opencv_re::core::Rect;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
@@ -33,28 +32,28 @@ impl VPatch {
         }
     }
 
-    pub fn new_from_rect(rect: Rect, resource: Pixel, pixel_indexes: Vec<VPoint>) -> Self {
-        if !resource.is_resource() {
-            panic!("not a resource {:?}", resource);
-        }
-        // assert!(
-        //     rect.width < ALERT && rect.height < ALERT,
-        //     "rect probably too big {:?}",
-        //     rect
-        // );
-        if rect.width > ALERT || rect.height > ALERT {
-            warn!("rect probably too big {:?}", rect);
-        }
-        VPatch {
-            resource,
-            area: VArea::from_rect(&rect),
-            pixel_indexes,
-        }
-    }
+    // pub fn new_from_rect(rect: Rect, resource: Pixel, pixel_indexes: Vec<VPoint>) -> Self {
+    //     if !resource.is_resource() {
+    //         panic!("not a resource {:?}", resource);
+    //     }
+    //     // assert!(
+    //     //     rect.width < ALERT && rect.height < ALERT,
+    //     //     "rect probably too big {:?}",
+    //     //     rect
+    //     // );
+    //     if rect.width > ALERT || rect.height > ALERT {
+    //         warn!("rect probably too big {:?}", rect);
+    //     }
+    //     VPatch {
+    //         resource,
+    //         area: VArea::from_rect(&rect),
+    //         pixel_indexes,
+    //     }
+    // }
 
-    // pub fn normalize_patch_even_8x8(&self) -> Self {
+    // pub fn normalize_step_rail(&self) -> Self {
     //     let mut new = self.clone();
-    //     new.area = self.area.normalize_even_8x8();
+    //     new.area = self.area.normalize_step_rail();
     //     new
     // }
 
