@@ -1,13 +1,14 @@
-use std::rc::Rc;
-
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
-use crate::game_blocks::rail_hope::RailHopeAppender;
-use crate::game_blocks::rail_hope_single::RailHopeSingle;
+use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
+use crate::game_blocks::rail_hope_single::{HopeLink, HopeLinkType, RailHopeSingle};
 use crate::game_entities::direction::FacDirectionQuarter;
 use crate::game_entities::electric_large::{FacEntElectricLarge, FacEntElectricLargeType};
 use crate::game_entities::lamp::FacEntLamp;
 use crate::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER;
+use serde::{Deserialize, Serialize};
+use std::mem::MaybeUninit;
+use std::rc::Rc;
 
 /// A 4 way intersection is 13 rails wide square.  
 pub const DUAL_RAIL_STEP: usize = STRAIGHT_RAIL_STEP * 2;
@@ -18,6 +19,18 @@ const STRAIGHT_RAIL_STEP: usize = 13;
 pub struct RailHopeDual {
     hopes: [RailHopeSingle; 2],
     output: Rc<FacItemOutput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct HopeDualLink {
+    links: [BackingLink; 2],
+    // rtype: HopeLinkType,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+enum BackingLink {
+    Straight(HopeLink),
+    Turn90([HopeLink; 3]),
 }
 
 impl RailHopeDual {
@@ -94,39 +107,78 @@ impl RailHopeDual {
 
 impl RailHopeAppender for RailHopeDual {
     fn add_straight(&mut self, length: usize) {
-        for (i, rail) in &mut self.hopes.iter_mut().enumerate() {
-            let _ = &mut self
-                .output
-                .context_handle(ContextLevel::Micro, format!("👐Dual-{}", i));
-            rail.add_straight(length);
-        }
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Micro, format!("👐Dual-{}", 0));
+        todo!()
     }
 
     fn add_turn90(&mut self, clockwise: bool) {
         let _ = &mut self
             .output
             .context_handle(ContextLevel::Micro, "👐Dual-Turn".into());
-        if clockwise {
-            self.hopes[1].add_straight(2);
-        } else {
-            self.hopes[0].add_straight(2);
-        }
-
-        for rail in &mut self.hopes {
-            rail.add_turn90(clockwise);
-        }
-
-        if clockwise {
-            self.hopes[1].add_straight(2);
-        } else {
-            self.hopes[0].add_straight(2);
-        }
-        self.add_electric_next();
+        todo!()
+        // self.add_electric_next();
     }
 
-    fn add_shift45(&mut self, _clockwise: bool, _length: usize) {
+    fn add_shift45(&mut self, clockwise: bool, length: usize) {
+        todo!()
+    }
+}
+
+impl RailHopeAppenderExt<HopeDualLink> for HopeDualLink {
+    fn add_straight(&self, length: usize) -> HopeDualLink {
+        HopeDualLink {
+            links: self
+                .dual_appendable_links()
+                .map(|v| BackingLink::Straight(v.add_straight(length))),
+        }
+    }
+
+    fn add_turn90(&self, clockwise: bool) -> HopeDualLink {
+        let links = self.dual_appendable_links();
+        if clockwise {
+            HopeDualLink {
+                links: [
+                    BackingLink::Straight(links[0].add_turn90(clockwise)),
+                    create_turn_link_from(links[1], clockwise),
+                ],
+            }
+        } else {
+            HopeDualLink {
+                links: [
+                    create_turn_link_from(links[0], clockwise),
+                    BackingLink::Straight(links[1].add_turn90(clockwise)),
+                ],
+            }
+        }
+    }
+
+    fn add_shift45(&self, _clockwise: bool, _length: usize) -> HopeDualLink {
         unimplemented!()
     }
+}
+
+impl HopeDualLink {
+    fn dual_appendable_links(&self) -> [&HopeLink; 2] {
+        [
+            match &self.links[0] {
+                BackingLink::Straight(link) => link,
+                BackingLink::Turn90([_, _, link]) => link,
+            },
+            match &self.links[1] {
+                BackingLink::Straight(link) => link,
+                BackingLink::Turn90([_, _, link]) => link,
+            },
+        ]
+    }
+}
+
+fn create_turn_link_from(link: &HopeLink, clockwise: bool) -> BackingLink {
+    let first = link.add_straight(2);
+    let middle = first.add_turn90(clockwise);
+    let last = middle.add_straight(2);
+    BackingLink::Turn90([first, middle, last])
 }
 
 #[cfg(test)]

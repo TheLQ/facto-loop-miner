@@ -278,7 +278,7 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
         };
         rails.push(HopeFactoRail {
             position: first_curve_pos,
-            direction: first_curve_direction.clone(),
+            direction: first_curve_direction,
             rtype: FacEntRailType::Curved,
         });
 
@@ -439,7 +439,6 @@ mod test {
     use crate::blueprint::bpfac::position::FacBpPosition;
     use crate::blueprint::contents::BlueprintContents;
     use crate::common::vpoint::VPOINT_TEN;
-    use crate::game_blocks::rail_hope_dual::DUAL_RAIL_STEP;
     use crate::{
         blueprint::output::FacItemOutput, common::vpoint::VPOINT_ZERO,
         game_blocks::rail_hope::RailHopeAppender, game_entities::direction::FacDirectionQuarter,
@@ -655,18 +654,6 @@ mod test {
             //         "!!!"
             //     }
             // );
-
-            println!(
-                "actual {} link expected {}   {}",
-                name,
-                link_type_name,
-                if name == link_type_name {
-                    ""
-                } else {
-                    is_success = false;
-                    "!!!"
-                }
-            );
             println!()
         }
 
