@@ -68,18 +68,29 @@ mod test {
 
     #[test]
     fn basic_test() {
-        log_init_trace();
-        let input = "  first second  \n  next  line  ".to_string();
-
         let expected = "first second  next line";
-        let actual = string_space_shrinker(input.clone());
-        assert_eq!(format!("|{expected}|"), format!("|{actual}|"))
+
+        assert_eq!(
+            string_space_shrinker("  first second  \n  next  line  "),
+            expected
+        );
+        assert_eq!(
+            string_space_shrinker("  first second \nnext  line"),
+            expected
+        );
+        assert_eq!(string_space_shrinker("first second\nnext line  "), expected);
     }
 
     #[test]
     fn good_test() {
-        log_init_trace();
         let input = "i'm a teapot".to_string();
+        let actual = string_space_shrinker(input.clone());
+        assert_eq!(format!("|{input}|"), format!("|{actual}|"))
+    }
+
+    #[test]
+    fn none_test() {
+        let input = "teapot".to_string();
         let actual = string_space_shrinker(input.clone());
         assert_eq!(format!("|{input}|"), format!("|{actual}|"))
     }
