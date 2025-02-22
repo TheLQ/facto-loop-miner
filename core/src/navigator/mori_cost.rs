@@ -1,6 +1,7 @@
 use crate::navigator::mori::{ParentProcessor, PathSegmentPoints};
 use crate::state::tuneables::MoriTunables;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, HopeLinkType};
 use serde::{Deserialize, Serialize};
 // const ANTI_WRONG_BIAS_EFFECT: f32 = 10f32;
@@ -14,7 +15,7 @@ pub enum MoriCostMode {
 }
 
 pub fn calculate_cost_for_link(
-    next: &HopeLink,
+    next: &impl RailHopeLink,
     segment_points: &PathSegmentPoints,
     processor: &ParentProcessor,
     tune: &MoriTunables,
@@ -61,19 +62,19 @@ pub fn calculate_cost_for_link(
     //
 }
 
-fn distance_by_basic_manhattan(next: &HopeLink, end: &VPointDirectionQ) -> u32 {
-    next.next_straight_position().distance_to(&end.0)
+fn distance_by_basic_manhattan(next: &impl RailHopeLink, end: &VPointDirectionQ) -> u32 {
+    next.pos_next().distance_to(&end.0)
 }
 
 fn distance_by_punish_turns(
     processor: &ParentProcessor,
-    next: &HopeLink,
+    next: &impl RailHopeLink,
     end: &VPointDirectionQ,
     tune: &MoriTunables,
 ) -> u32 {
     let base_distance = distance_by_basic_manhattan(next, end);
 
-    let link_cost: u32 = match next.rtype {
+    let link_cost: u32 = match next.link_type() {
         HopeLinkType::Straight { length } => tune.straight_cost_unit,
         HopeLinkType::Turn90 { .. } => tune.turn_cost_unit,
         HopeLinkType::Shift45 { .. } => todo!("shift45"),

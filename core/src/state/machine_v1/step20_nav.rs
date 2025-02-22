@@ -10,6 +10,7 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MinePath;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use itertools::Itertools;
 use std::borrow::Borrow;
@@ -253,7 +254,7 @@ fn process_batch(
             trace!("dumping {}", failing_all.len());
             let mut compressed: HashMap<VPoint, usize> = HashMap::new();
             for each in failing_all {
-                let val = compressed.entry(each.next_straight_position()).or_default();
+                let val = compressed.entry(each.pos_next()).or_default();
                 *val += 1;
             }
             surface

@@ -1,5 +1,5 @@
 use crate::common::vpoint::VPOINT_TEN;
-use crate::game_blocks::rail_hope_dual::DUAL_RAIL_STEP;
+use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use crate::game_entities::electric_mini::FacEntElectricMiniType;
 use crate::game_entities::lamp::FacEntLamp;
 use crate::{
@@ -130,8 +130,8 @@ pub fn make_rail_gee_for_power(output: Rc<FacItemOutput>) {
 
 pub fn make_rail_step_sketch_single(output: Rc<FacItemOutput>) {
     let mut step_starts = vec![VPOINT_ZERO];
-    step_starts.push(*step_starts.last().unwrap() - VPoint::new(0, DUAL_RAIL_STEP as i32));
-    step_starts.push(*step_starts.last().unwrap() - VPoint::new(0, DUAL_RAIL_STEP as i32));
+    step_starts.push(*step_starts.last().unwrap() - VPoint::new(0, SECTION_POINTS_I32));
+    step_starts.push(*step_starts.last().unwrap() - VPoint::new(0, SECTION_POINTS_I32));
 
     // let mut rail = RailHopeDual::new(
     //     step_starts.remove(0),
@@ -190,7 +190,7 @@ fn make_rail_step_letter_c(offset_start: VPoint, output: Rc<FacItemOutput>) {
     rail.add_straight_section();
     output.writei(FacEntLamp::new(), offset_start);
 
-    let offset_start = offset_start.move_y_usize(DUAL_RAIL_STEP * 2);
+    let offset_start = offset_start.move_y(SECTION_POINTS_I32);
     let mut rail = RailHopeDual::new(offset_start, FacDirectionQuarter::East, output.clone());
     rail.add_straight_section();
     rail.add_turn90(false);
@@ -203,33 +203,33 @@ fn make_rail_step_letter_c(offset_start: VPoint, output: Rc<FacItemOutput>) {
 fn make_rail_step_letter_c_with_s(offset_start: VPoint, output: Rc<FacItemOutput>) {
     let mut rail = RailHopeDual::new(offset_start, FacDirectionQuarter::East, output.clone());
     rail.add_straight_section();
-    let mut next = rail.next_buildable_point();
+    let mut next = rail.pos_next();
     info!("next {}", next);
     let mut last = next;
 
     rail.add_turn90(true);
-    next = rail.next_buildable_point();
+    next = rail.pos_next();
     info!("next {} diff {}", next, last - next);
     last = next;
 
     rail.add_straight_section();
-    next = rail.next_buildable_point();
+    next = rail.pos_next();
     info!("next {} diff {}", next, last - next);
     last = next;
 
     rail.add_turn90(true);
-    next = rail.next_buildable_point();
+    next = rail.pos_next();
     info!("next {} diff {}", next, last - next);
     last = next;
 
     rail.add_straight_section();
-    next = rail.next_buildable_point();
+    next = rail.pos_next();
     info!("next {} diff {}", next, last - next);
     last = next;
 
     output.writei(FacEntLamp::new(), offset_start);
 
-    let offset_start = offset_start.move_y_usize(DUAL_RAIL_STEP);
+    let offset_start = offset_start.move_y(SECTION_POINTS_I32);
     let mut rail = RailHopeDual::new(offset_start, FacDirectionQuarter::East, output.clone());
     rail.add_turn90(false);
     rail.add_turn90(true);

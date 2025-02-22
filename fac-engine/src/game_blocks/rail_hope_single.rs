@@ -7,7 +7,7 @@ use crate::blueprint::bpitem::BlueprintItem;
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
 use crate::common::entity::FacEntity;
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
-use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
+use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
 use crate::game_entities::direction::{FacDirectionEighth, FacDirectionQuarter};
 use crate::game_entities::rail_curved::FacEntRailCurved;
 use crate::game_entities::rail_straight::{FacEntRailStraight, RAIL_STRAIGHT_DIAMETER};
@@ -52,6 +52,10 @@ pub enum HopeLinkType {
     Shift45 { clockwise: bool, length: usize },
 }
 
+/// A 4 way intersection is 13 rails wide square.
+const SECTION_STEP: usize = 13;
+pub(crate) const SECTION_POINTS_I32: i32 = (SECTION_STEP * RAIL_STRAIGHT_DIAMETER) as i32;
+
 impl RailHopeSingle {
     pub fn new(
         origin: VPoint,
@@ -71,10 +75,6 @@ impl RailHopeSingle {
         }
     }
 
-    pub fn links(&self) -> &[HopeLink] {
-        &self.links
-    }
-
     pub fn into_links(self) -> Vec<HopeLink> {
         self.links
     }
@@ -87,10 +87,6 @@ impl RailHopeSingle {
     // with internal init
     pub(crate) fn appender_link(&self) -> &HopeLink {
         self.links.last().unwrap_or(&self.init_link)
-    }
-
-    pub fn next_pos(&self) -> VPoint {
-        self.last_link().next_straight_position()
     }
 
     fn push_link(&mut self, new_link: HopeLink) {
@@ -110,6 +106,10 @@ impl RailHopeAppender for RailHopeSingle {
         self.push_link(new_link)
     }
 
+    fn add_straight_section(&mut self) {
+        todo!()
+    }
+
     fn add_turn90(&mut self, clockwise: bool) {
         let _ = &mut self.output.context_handle(
             ContextLevel::Micro,
@@ -127,11 +127,15 @@ impl RailHopeAppender for RailHopeSingle {
         let new_link = self.appender_link().add_shift45(clockwise, length);
         self.push_link(new_link)
     }
+
+    fn pos_next(&self) -> VPoint {
+        self.last_link().pos_next()
+    }
 }
 
-impl RailHopeAppenderExt<HopeLink> for HopeLink {
+impl RailHopeLink for HopeLink {
     fn add_straight(&self, length: usize) -> HopeLink {
-        let new_origin = self.next_straight_position();
+        let new_origin = self.pos_next();
         trace!("writing direction {}", self.next_direction);
 
         let mut rails = Vec::new();
@@ -151,6 +155,10 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
             rtype: HopeLinkType::Straight { length },
             rails,
         }
+    }
+
+    fn add_straight_section(&self) -> HopeLink {
+        self.add_straight(SECTION_STEP)
     }
 
     fn add_turn90(&self, clockwise: bool) -> HopeLink {
@@ -174,7 +182,7 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
         let cur_direction = self.next_direction;
         trace!("cur direction {}", cur_direction);
         // 1,1 to cancel RailStraight's to_fac offset
-        let new_origin = self.next_straight_position();
+        let new_origin = self.pos_next();
         let new_origin_fac = new_origin + VPOINT_ONE;
         let mut rails = Vec::new();
 
@@ -262,7 +270,7 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
         let cur_direction = self.next_direction;
         trace!("cur direction {}", cur_direction);
         // 1,1 to cancel RailStraight's to_fac offset
-        let new_origin = self.next_straight_position();
+        let new_origin = self.pos_next();
         let new_origin_fac = new_origin + VPOINT_ONE;
         let mut rails = Vec::new();
 
@@ -343,10 +351,16 @@ impl RailHopeAppenderExt<HopeLink> for HopeLink {
             rails,
         }
     }
-}
 
-impl HopeLink {
-    pub fn next_straight_position(&self) -> VPoint {
+    fn link_type(&self) -> &HopeLinkType {
+        &self.rtype
+    }
+
+    fn pos_start(&self) -> VPoint {
+        self.start
+    }
+
+    fn pos_next(&self) -> VPoint {
         match &self.rtype {
             HopeLinkType::Straight { length } => self
                 .start
@@ -372,11 +386,7 @@ impl HopeLink {
         }
     }
 
-    pub fn add_turn90_single_section(&self, clockwise: bool) -> Self {
-        self.add_straight(7).add_turn90(clockwise).add_straight(8)
-    }
-
-    pub fn area(&self) -> Vec<VPoint> {
+    fn area(&self) -> Vec<VPoint> {
         let mut area = Vec::new();
         match &self.rtype {
             HopeLinkType::Straight { length } => {
@@ -410,6 +420,12 @@ impl HopeLink {
             }
         }
         area
+    }
+}
+
+impl HopeLink {
+    pub fn add_turn90_single_section(&self, clockwise: bool) -> Self {
+        self.add_straight(7).add_turn90(clockwise).add_straight(8)
     }
 }
 
@@ -459,7 +475,7 @@ mod test {
             hope_long.add_straight(3);
             hope_long.add_straight(6);
 
-            hope_long.next_pos()
+            hope_long.pos_next()
         };
 
         let hope_long_bp_raw = hope_long_output.consume_rc().into_blueprint_contents();
@@ -474,7 +490,7 @@ mod test {
             );
             hope_short.add_straight(11);
 
-            hope_short.next_pos()
+            hope_short.pos_next()
         };
 
         let hope_short_bp_raw = hope_short_output.consume_rc().into_blueprint_contents();
@@ -661,13 +677,12 @@ mod test {
         assert_eq!(entities_len, expected.len(), "diff len");
     }
 
-    #[test]
-    fn step_test() {
-        let output = FacItemOutput::new_null().into_rc();
-        let mut rail = RailHopeSingle::new(VPOINT_ZERO, FacDirectionQuarter::East, output);
-        // rail.add_straight(DUAL_RAIL_STEP);
-        // rail.next_pos().assert_step_rail();
-        todo!()
-        // rail.rail.next_pos().assert_step_rail();
-    }
+    // #[test]
+    // fn step_test() {
+    //     let output = FacItemOutput::new_null().into_rc();
+    //     let mut rail = RailHopeSingle::new(VPOINT_ZERO, FacDirectionQuarter::East, output);
+    //     rail.add_straight_section();
+    //     rail.pos_next().assert_step_rail();
+    //     // rail.pos_start().assert_step_rail();
+    // }
 }

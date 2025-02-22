@@ -1,6 +1,6 @@
 use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::err::{FError, FResult};
-use crate::game_blocks::rail_hope_dual::DUAL_RAIL_STEP_I32;
+use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use crate::game_entities::direction::FacDirectionQuarter;
 use crate::util::ansi::C_BLOCK_LINE;
 use opencv::core::Point;
@@ -115,15 +115,15 @@ impl VPoint {
     pub fn assert_step_rail(&self) {
         // self.assert_even_position();
         assert_eq!(
-            self.x % DUAL_RAIL_STEP_I32,
+            self.x % SECTION_POINTS_I32,
             0,
-            "x={} is not {DUAL_RAIL_STEP_I32} for {self}",
+            "x={} is not {SECTION_POINTS_I32} for {self}",
             self.x
         );
         assert_eq!(
-            self.y % DUAL_RAIL_STEP_I32,
+            self.y % SECTION_POINTS_I32,
             0,
-            "y={} is not {DUAL_RAIL_STEP_I32} for {self}",
+            "y={} is not {SECTION_POINTS_I32} for {self}",
             self.y
         );
     }
@@ -406,7 +406,7 @@ impl VPoint {
     // }
 
     pub const fn move_round_rail_down(&self) -> Self {
-        self.move_round_down(DUAL_RAIL_STEP_I32)
+        self.move_round_down(SECTION_POINTS_I32)
     }
 
     const fn move_round_down(&self, size: i32) -> Self {
@@ -417,7 +417,7 @@ impl VPoint {
     }
 
     pub const fn move_round_rail_up(&self) -> Self {
-        self.move_round_up(DUAL_RAIL_STEP_I32)
+        self.move_round_up(SECTION_POINTS_I32)
     }
 
     const fn move_round_up(&self, size: i32) -> Self {

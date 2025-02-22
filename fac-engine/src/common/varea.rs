@@ -1,5 +1,5 @@
 use crate::common::vpoint::VPoint;
-use crate::game_blocks::rail_hope_dual::DUAL_RAIL_STEP_I32;
+use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
@@ -98,8 +98,8 @@ impl VArea {
 
     pub fn normalize_step_rail(&self, padding: u32) -> Self {
         let padding_i32 = padding as i32;
-        let x_adjust = self.start.x().rem_euclid(DUAL_RAIL_STEP_I32);
-        let y_adjust = self.start.y().rem_euclid(DUAL_RAIL_STEP_I32);
+        let x_adjust = self.start.x().rem_euclid(SECTION_POINTS_I32);
+        let y_adjust = self.start.y().rem_euclid(SECTION_POINTS_I32);
 
         let mut new = VArea {
             start: self.start.move_xy(-x_adjust, -y_adjust),
@@ -109,8 +109,8 @@ impl VArea {
         new.start.assert_step_rail();
 
         let bottom_left = new.point_bottom_right();
-        let x_adjust = DUAL_RAIL_STEP_I32 - (bottom_left.x().rem_euclid(DUAL_RAIL_STEP_I32));
-        let y_adjust = DUAL_RAIL_STEP_I32 - (bottom_left.y().rem_euclid(DUAL_RAIL_STEP_I32));
+        let x_adjust = SECTION_POINTS_I32 - (bottom_left.x().rem_euclid(SECTION_POINTS_I32));
+        let y_adjust = SECTION_POINTS_I32 - (bottom_left.y().rem_euclid(SECTION_POINTS_I32));
         new.width = (new.width as i32 + x_adjust) as u32;
         new.height = (new.height as i32 + y_adjust) as u32;
 
@@ -167,7 +167,7 @@ impl VArea {
 mod test {
     use crate::common::varea::VArea;
     use crate::common::vpoint::{VPOINT_ONE, VPOINT_TEN, VPOINT_ZERO, VPoint};
-    use crate::game_blocks::rail_hope_dual::DUAL_RAIL_STEP_I32;
+    use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 
     #[test]
     fn test_area_inclusive() {
@@ -200,7 +200,7 @@ mod test {
         assert_eq!(area.start, VPOINT_ZERO);
         assert_eq!(
             area.point_bottom_right(),
-            VPoint::new(DUAL_RAIL_STEP_I32, DUAL_RAIL_STEP_I32)
+            VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32)
         );
     }
 
@@ -210,11 +210,11 @@ mod test {
             .normalize_step_rail(0);
         assert_eq!(
             area.start,
-            VPoint::new(-DUAL_RAIL_STEP_I32, -DUAL_RAIL_STEP_I32)
+            VPoint::new(-SECTION_POINTS_I32, -SECTION_POINTS_I32)
         );
         assert_eq!(
             area.point_bottom_right(),
-            VPoint::new(DUAL_RAIL_STEP_I32, DUAL_RAIL_STEP_I32)
+            VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32)
         );
     }
 

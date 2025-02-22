@@ -1,23 +1,23 @@
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
-use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
+use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
 use crate::game_blocks::rail_hope_single::{HopeLink, HopeLinkType, RailHopeSingle};
 use crate::game_entities::direction::FacDirectionQuarter;
 use crate::game_entities::electric_large::{FacEntElectricLarge, FacEntElectricLargeType};
 use crate::game_entities::lamp::FacEntLamp;
 use crate::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER;
 use serde::{Deserialize, Serialize};
-use std::mem::MaybeUninit;
 use std::rc::Rc;
 
 /// A 4 way intersection is 13 rails wide square.  
-pub const DUAL_RAIL_STEP: usize = STRAIGHT_RAIL_STEP * 2;
-pub const DUAL_RAIL_STEP_I32: i32 = DUAL_RAIL_STEP as i32;
-const STRAIGHT_RAIL_STEP: usize = 13;
+// pub const DUAL_RAIL_STEP: usize = STRAIGHT_RAIL_STEP * 2;
+// pub const DUAL_RAIL_STEP_I32: i32 = DUAL_RAIL_STEP as i32;
+// const STRAIGHT_RAIL_STEP: usize = 13;
 
 /// The dreamed Side-by-side rail generator
 pub struct RailHopeDual {
-    hopes: [RailHopeSingle; 2],
+    links: Vec<HopeDualLink>,
+    init_link: HopeDualLink,
     output: Rc<FacItemOutput>,
 }
 
@@ -60,26 +60,19 @@ impl RailHopeDual {
         }
         Self {
             output: output.clone(),
-            hopes,
-        }
-    }
-
-    pub fn add_straight_section(&mut self) {
-        self.add_straight(STRAIGHT_RAIL_STEP);
-        {
-            let _ = &mut self
-                .output
-                .context_handle(ContextLevel::Micro, "👐Ruby".into());
-            self.add_electric_next();
+            links: Vec::new(),
+            init_link: HopeDualLink {
+                links: hopes.map(|v| BackingLink::Straight(v.appender_link().clone())),
+            },
         }
     }
 
     pub fn add_electric_next(&mut self) {
-        let last_link = self.hopes[0].appender_link();
-        self.add_electric_next_for_link(
-            last_link.next_direction,
-            last_link.next_straight_position(),
-        );
+        // let last_link = self.hopes[0].appender_link();
+        // self.add_electric_next_for_link(
+        //     last_link.next_direction,
+        //     last_link.next_straight_position(),
+        // );
     }
 
     pub fn add_electric_next_for_link(&mut self, direction: FacDirectionQuarter, pos: VPoint) {
@@ -96,12 +89,21 @@ impl RailHopeDual {
         );
     }
 
-    pub(crate) fn next_buildable_point(&self) -> VPoint {
-        self.hopes[0].next_pos()
+    pub fn into_links(self) -> Vec<HopeDualLink> {
+        self.links
+    }
+
+    pub(crate) fn appender_link(&self) -> &HopeDualLink {
+        self.links.last().unwrap_or(&self.init_link)
+    }
+
+    fn tracking_single_link(&self) -> &HopeLink {
+        let dual = self.links.last().unwrap();
+        dual.links[0].to_appendable_link()
     }
 
     pub(crate) fn current_direction(&self) -> &FacDirectionQuarter {
-        &self.hopes[0].last_link().next_direction
+        &self.tracking_single_link().next_direction
     }
 }
 
@@ -110,28 +112,52 @@ impl RailHopeAppender for RailHopeDual {
         let _ = &mut self
             .output
             .context_handle(ContextLevel::Micro, format!("👐Dual-{}", 0));
-        todo!()
+        let new_link = self.appender_link().add_straight(length);
+        self.links.push(new_link)
+    }
+
+    fn add_straight_section(&mut self) {
+        let _ = &mut self
+            .output
+            .context_handle(ContextLevel::Micro, "👐Ruby".into());
+        let new_link = self.appender_link().add_straight_section();
+        self.links.push(new_link)
+        // self.add_electric_next();
     }
 
     fn add_turn90(&mut self, clockwise: bool) {
         let _ = &mut self
             .output
             .context_handle(ContextLevel::Micro, "👐Dual-Turn".into());
-        todo!()
+        let new_link = self.appender_link().add_turn90(clockwise);
+        self.links.push(new_link)
         // self.add_electric_next();
     }
 
     fn add_shift45(&mut self, clockwise: bool, length: usize) {
-        todo!()
+        let new_link = self.appender_link().add_shift45(clockwise, length);
+        self.links.push(new_link)
+    }
+
+    fn pos_next(&self) -> VPoint {
+        self.links[0].pos_next()
     }
 }
 
-impl RailHopeAppenderExt<HopeDualLink> for HopeDualLink {
+impl RailHopeLink for HopeDualLink {
     fn add_straight(&self, length: usize) -> HopeDualLink {
         HopeDualLink {
             links: self
                 .dual_appendable_links()
                 .map(|v| BackingLink::Straight(v.add_straight(length))),
+        }
+    }
+
+    fn add_straight_section(&self) -> HopeDualLink {
+        HopeDualLink {
+            links: self
+                .dual_appendable_links()
+                .map(|v| BackingLink::Straight(v.add_straight_section())),
         }
     }
 
@@ -157,21 +183,74 @@ impl RailHopeAppenderExt<HopeDualLink> for HopeDualLink {
     fn add_shift45(&self, _clockwise: bool, _length: usize) -> HopeDualLink {
         unimplemented!()
     }
+
+    fn link_type(&self) -> &HopeLinkType {
+        match &self.links {
+            [BackingLink::Turn90([_, link, _]), _] | [_, BackingLink::Turn90([_, link, _])] => {
+                link.link_type()
+            }
+            [BackingLink::Straight(link), _] => link.link_type(),
+        }
+    }
+
+    fn pos_start(&self) -> VPoint {
+        self.links[0].to_appendable_link().pos_start()
+    }
+
+    fn pos_next(&self) -> VPoint {
+        self.links[0].to_appendable_link().pos_next()
+    }
+
+    fn area(&self) -> Vec<VPoint> {
+        // self.links.iter().flat_map(|v| match v {
+        //     BackingLink::Straight(link) => [link],
+        //     BackingLink::Turn90(links) => (links),
+        // })
+        // self.links
+        let mut res = Vec::new();
+        for link in &self.links {
+            match link {
+                BackingLink::Straight(link) => res.extend(link.area()),
+                BackingLink::Turn90(links) => {
+                    for sub in links {
+                        res.extend(sub.area())
+                    }
+                }
+            }
+        }
+        res
+    }
+}
+
+impl BackingLink {
+    fn to_appendable_link(&self) -> &HopeLink {
+        match &self {
+            BackingLink::Straight(link) => link,
+            BackingLink::Turn90([_, _, link]) => link,
+        }
+    }
 }
 
 impl HopeDualLink {
     fn dual_appendable_links(&self) -> [&HopeLink; 2] {
         [
-            match &self.links[0] {
-                BackingLink::Straight(link) => link,
-                BackingLink::Turn90([_, _, link]) => link,
-            },
-            match &self.links[1] {
-                BackingLink::Straight(link) => link,
-                BackingLink::Turn90([_, _, link]) => link,
-            },
+            self.links[0].to_appendable_link(),
+            self.links[1].to_appendable_link(),
         ]
     }
+}
+
+pub fn duals_into_single_vec(links: impl IntoIterator<Item = HopeDualLink>) -> Vec<HopeLink> {
+    let mut res = Vec::new();
+    for dual in links {
+        for single in dual.links {
+            match single {
+                BackingLink::Straight(link) => res.push(link),
+                BackingLink::Turn90(links) => res.extend(links),
+            }
+        }
+    }
+    res
 }
 
 fn create_turn_link_from(link: &HopeLink, clockwise: bool) -> BackingLink {
@@ -187,8 +266,9 @@ mod test {
     use crate::blueprint::output::FacItemOutput;
     use crate::common::vpoint::{VPOINT_ZERO, VPoint};
     use crate::common::vpoint_direction::VPointDirectionQ;
-    use crate::game_blocks::rail_hope::RailHopeAppender;
-    use crate::game_blocks::rail_hope_dual::{DUAL_RAIL_STEP, DUAL_RAIL_STEP_I32, RailHopeDual};
+    use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
+    use crate::game_blocks::rail_hope_dual::RailHopeDual;
+    use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
     use crate::game_entities::direction::FacDirectionQuarter;
     use crate::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
 
@@ -197,11 +277,17 @@ mod test {
         let output = FacItemOutput::new_null().into_rc();
 
         let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output);
+        assert_eq!(rail.appender_link().pos_start(), VPOINT_ZERO);
         rail.add_straight_section();
+
+        let target_point = VPoint::new(SECTION_POINTS_I32, 0);
         assert_eq!(
-            rail.next_buildable_point(),
-            VPoint::new(DUAL_RAIL_STEP_I32, 0),
+            rail.tracking_single_link().pos_start(),
+            VPOINT_ZERO,
+            "{:?}",
+            rail.appender_link()
         );
+        assert_eq!(rail.pos_next(), target_point, "{:?}", rail.appender_link());
     }
 
     #[test]
@@ -210,16 +296,19 @@ mod test {
 
         let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output.clone());
         rail.add_turn90(true);
-        rail.add_turn90(false);
-        let next_point = rail.next_buildable_point();
-        output.flush();
-        drop(rail);
+        // rail.add_turn90(false);
+
+        assert_eq!(rail.links.len(), 1);
+        let link = rail.into_links().remove(0);
+        assert_eq!(link.pos_start(), VPOINT_ZERO, "{link:?}");
         assert_eq!(
-            next_point,
-            VPoint::new(DUAL_RAIL_STEP_I32, DUAL_RAIL_STEP_I32),
-            "bp {}",
-            output.consume_rc().into_blueprint_string().unwrap()
+            link.pos_next(),
+            VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32),
+            "{link:?}"
         );
+
+        // "bp {}",
+        // output.consume_rc().into_blueprint_string().unwrap()
     }
 
     #[test]
@@ -248,21 +337,21 @@ mod test {
         // let output = FacItemOutput::new_null().into_rc();
 
         let mut a = dual_gen((VPOINT_ZERO, FacDirectionQuarter::East), |rail| {
-            rail.add_straight(DUAL_RAIL_STEP);
+            rail.add_straight_section();
             rail.add_turn90(true);
-            rail.add_straight(DUAL_RAIL_STEP);
+            rail.add_straight_section();
         });
         a.sort();
 
         let mut b = dual_gen(
             (
-                VPOINT_ZERO.move_y_usize(DUAL_RAIL_STEP * 2),
+                VPOINT_ZERO.move_y(SECTION_POINTS_I32),
                 FacDirectionQuarter::East,
             ),
             |rail| {
-                rail.add_straight(DUAL_RAIL_STEP);
+                rail.add_straight_section();
                 rail.add_turn90(false);
-                rail.add_straight(DUAL_RAIL_STEP);
+                rail.add_straight_section();
             },
         );
         b.sort();

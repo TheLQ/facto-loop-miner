@@ -64,7 +64,6 @@ fn is_newline(cur_char: u8) -> bool {
 #[cfg(test)]
 mod test {
     use crate::admiral::trimmer::string_space_shrinker;
-    use facto_loop_miner_common::log_init_trace;
 
     #[test]
     fn basic_test() {

@@ -155,7 +155,7 @@ impl FacBlkRailLoop {
             output: self.output.clone(),
         };
 
-        let mut origin = self.hope.next_buildable_point();
+        let mut origin = self.hope.pos_next();
         match self.hope.current_direction() {
             FacDirectionQuarter::East => {
                 origin = origin.move_y(-4);

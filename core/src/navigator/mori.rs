@@ -6,16 +6,15 @@ use crate::LOCALE;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeAppenderExt};
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::{
-    DUAL_RAIL_STEP, DUAL_RAIL_STEP_I32,
+    duals_into_single_vec, HopeDualLink, RailHopeDual, DUAL_RAIL_STEP, DUAL_RAIL_STEP_I32,
 };
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
-use facto_loop_miner_fac_engine::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
 use std::time::Duration;
-use tracing::{info, warn};
+use tracing::warn;
 
 /// Pathfinder v1.2, Mori Calliope💀
 ///
@@ -88,13 +87,14 @@ pub fn mori2_start(
     );
 
     match pathfind {
-        Ok((path, cost)) => MoriResult::Route { path, cost },
-        Err((dump, all)) => {
-            MoriResult::FailingDebug(dump.into_iter().map(|(v, (i, r))| v).collect(), all)
-        } // Err((inner_map, parents)) => {
-          //     let entries = parents.into_iter().map(|(node, _v)| node).collect();
-          //     MoriResult::FailingDebug(entries)
-          // }
+        Ok((path, cost)) => MoriResult::Route {
+            path: duals_into_single_vec(path),
+            cost,
+        },
+        Err((dump, all)) => MoriResult::FailingDebug(
+            duals_into_single_vec(dump.into_iter().map(|(v, (i, r))| v)),
+            duals_into_single_vec(all),
+        ),
     }
 }
 
@@ -138,8 +138,8 @@ impl PathSegmentPoints {
     }
 }
 
-fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeLink {
-    let mut hope = RailHopeSingle::new(
+fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeDualLink {
+    let mut hope = RailHopeDual::new(
         start
             .point()
             .move_direction_int(start.direction(), -DUAL_RAIL_STEP_I32),
@@ -149,20 +149,20 @@ fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeLink {
     hope.add_straight(DUAL_RAIL_STEP);
     let links = hope.into_links();
     let link = links.into_iter().next().unwrap();
-    link.start.assert_step_rail();
+    link.pos_next().assert_step_rail();
     link
 }
 
 fn successors(
     surface: &VSurface,
     segment_points: &PathSegmentPoints,
-    head: &HopeLink,
+    head: &HopeDualLink,
     // path: &[&HopeLink],
     processor: &ParentProcessor,
     finding_limiter: &VArea,
     tune: &MoriTunables,
     watch_data: &mut WatchData,
-) -> Vec<(HopeLink, u32)> {
+) -> Vec<(HopeDualLink, u32)> {
     watch_data.executions += 1;
     // let head = path.first().unwrap();
 
@@ -173,7 +173,7 @@ fn successors(
 
     let watch = BasicWatch::start();
     let nexts = [
-        into_buildable_link(surface, finding_limiter, head.add_straight(DUAL_RAIL_STEP)),
+        into_buildable_link(surface, finding_limiter, head.add_straight_section()),
         into_buildable_link(surface, finding_limiter, head.add_turn90(false)),
         into_buildable_link(surface, finding_limiter, head.add_turn90(true)),
     ];
@@ -195,12 +195,12 @@ fn successors(
 fn into_buildable_link(
     surface: &VSurface,
     finding_limiter: &VArea,
-    new_link: HopeLink,
-) -> Option<HopeLink> {
-    if !finding_limiter.contains_point(&new_link.next_straight_position()) {
+    new_link: HopeDualLink,
+) -> Option<HopeDualLink> {
+    if !finding_limiter.contains_point(&new_link.pos_next()) {
         return None;
     }
-    new_link.start.assert_step_rail();
+    new_link.pos_start().assert_step_rail();
     let area = new_link.area();
     if surface.is_points_free_unchecked(&area) {
         Some(new_link)
