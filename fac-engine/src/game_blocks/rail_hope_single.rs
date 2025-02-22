@@ -1,4 +1,6 @@
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use strum::AsRefStr;
 use tracing::trace;
@@ -446,6 +448,47 @@ impl HopeFactoRail {
 
 fn neg_if_false(flag: bool, value: i32) -> i32 {
     if flag { value } else { -value }
+}
+
+impl Display for HopeLink {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            start,
+            rtype,
+            next_direction,
+            rails,
+        } = self;
+        write!(
+            f,
+            "{rtype} {start} {next_direction:>5} = {}",
+            rails.iter().map(|v| format!("[{v}]")).join(",")
+        )
+    }
+}
+
+impl Display for HopeLinkType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HopeLinkType::Straight { length } => write!(f, "Straight-{length}"),
+            HopeLinkType::Turn90 { clockwise } => {
+                write!(f, "Turn90-{}", if *clockwise { "clw" } else { "ccw" })
+            }
+            HopeLinkType::Shift45 { clockwise, length } => todo!(),
+        }
+    }
+}
+
+impl Display for HopeFactoRail {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            rtype,
+            position,
+            direction,
+        } = self;
+        let rtype = rtype.as_ref();
+        let direction = direction.as_ref();
+        write!(f, "{rtype:>8} {position} {direction:>9}")
+    }
 }
 
 #[cfg(test)]

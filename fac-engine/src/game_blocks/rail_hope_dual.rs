@@ -7,6 +7,7 @@ use crate::game_entities::electric_large::{FacEntElectricLarge, FacEntElectricLa
 use crate::game_entities::lamp::FacEntLamp;
 use crate::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
 /// A 4 way intersection is 13 rails wide square.  
@@ -29,8 +30,8 @@ pub struct HopeDualLink {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 enum BackingLink {
-    Straight(HopeLink),
-    Turn90([HopeLink; 3]),
+    Single(HopeLink),
+    MultiTurn([HopeLink; 3]),
 }
 
 impl RailHopeDual {
@@ -62,7 +63,7 @@ impl RailHopeDual {
             output: output.clone(),
             links: Vec::new(),
             init_link: HopeDualLink {
-                links: hopes.map(|v| BackingLink::Straight(v.appender_link().clone())),
+                links: hopes.map(|v| BackingLink::Single(v.appender_link().clone())),
             },
         }
     }
@@ -149,7 +150,7 @@ impl RailHopeLink for HopeDualLink {
         HopeDualLink {
             links: self
                 .dual_appendable_links()
-                .map(|v| BackingLink::Straight(v.add_straight(length))),
+                .map(|v| BackingLink::Single(v.add_straight(length))),
         }
     }
 
@@ -157,7 +158,7 @@ impl RailHopeLink for HopeDualLink {
         HopeDualLink {
             links: self
                 .dual_appendable_links()
-                .map(|v| BackingLink::Straight(v.add_straight_section())),
+                .map(|v| BackingLink::Single(v.add_straight_section())),
         }
     }
 
@@ -166,7 +167,7 @@ impl RailHopeLink for HopeDualLink {
         if clockwise {
             HopeDualLink {
                 links: [
-                    BackingLink::Straight(links[0].add_turn90(clockwise)),
+                    BackingLink::Single(links[0].add_turn90(clockwise)),
                     create_turn_link_from(links[1], clockwise),
                 ],
             }
@@ -174,7 +175,7 @@ impl RailHopeLink for HopeDualLink {
             HopeDualLink {
                 links: [
                     create_turn_link_from(links[0], clockwise),
-                    BackingLink::Straight(links[1].add_turn90(clockwise)),
+                    BackingLink::Single(links[1].add_turn90(clockwise)),
                 ],
             }
         }
@@ -186,10 +187,9 @@ impl RailHopeLink for HopeDualLink {
 
     fn link_type(&self) -> &HopeLinkType {
         match &self.links {
-            [BackingLink::Turn90([_, link, _]), _] | [_, BackingLink::Turn90([_, link, _])] => {
-                link.link_type()
-            }
-            [BackingLink::Straight(link), _] => link.link_type(),
+            [BackingLink::MultiTurn([_, link, _]), _]
+            | [_, BackingLink::MultiTurn([_, link, _])] => link.link_type(),
+            [BackingLink::Single(link), _] => link.link_type(),
         }
     }
 
@@ -210,8 +210,8 @@ impl RailHopeLink for HopeDualLink {
         let mut res = Vec::new();
         for link in &self.links {
             match link {
-                BackingLink::Straight(link) => res.extend(link.area()),
-                BackingLink::Turn90(links) => {
+                BackingLink::Single(link) => res.extend(link.area()),
+                BackingLink::MultiTurn(links) => {
                     for sub in links {
                         res.extend(sub.area())
                     }
@@ -225,8 +225,8 @@ impl RailHopeLink for HopeDualLink {
 impl BackingLink {
     fn to_appendable_link(&self) -> &HopeLink {
         match &self {
-            BackingLink::Straight(link) => link,
-            BackingLink::Turn90([_, _, link]) => link,
+            BackingLink::Single(link) => link,
+            BackingLink::MultiTurn([_, _, link]) => link,
         }
     }
 }
@@ -245,8 +245,8 @@ pub fn duals_into_single_vec(links: impl IntoIterator<Item = HopeDualLink>) -> V
     for dual in links {
         for single in dual.links {
             match single {
-                BackingLink::Straight(link) => res.push(link),
-                BackingLink::Turn90(links) => res.extend(links),
+                BackingLink::Single(link) => res.push(link),
+                BackingLink::MultiTurn(links) => res.extend(links),
             }
         }
     }
@@ -257,7 +257,31 @@ fn create_turn_link_from(link: &HopeLink, clockwise: bool) -> BackingLink {
     let first = link.add_straight(2);
     let middle = first.add_turn90(clockwise);
     let last = middle.add_straight(2);
-    BackingLink::Turn90([first, middle, last])
+    BackingLink::MultiTurn([first, middle, last])
+}
+
+impl Display for HopeDualLink {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self.links {
+            [
+                BackingLink::MultiTurn([outer_start, outer_turn, outer_end]),
+                BackingLink::Single(inner_turn),
+            ]
+            | [
+                BackingLink::Single(inner_turn),
+                BackingLink::MultiTurn([outer_start, outer_turn, outer_end]),
+            ] => {
+                write!(
+                    f,
+                    "Inner-   {inner_turn}\nOuterSta-{outer_start}\nOuterTur-{outer_turn}\nOuterEnd-{outer_end}"
+                )
+            }
+            [BackingLink::Single(inner), BackingLink::Single(outer)] => {
+                write!(f, "Inner-{inner}\nOuter-{outer}")
+            }
+            [BackingLink::MultiTurn(_), BackingLink::MultiTurn(_)] => unimplemented!(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -300,11 +324,11 @@ mod test {
 
         assert_eq!(rail.links.len(), 1);
         let link = rail.into_links().remove(0);
-        assert_eq!(link.pos_start(), VPOINT_ZERO, "{link:?}");
+        assert_eq!(link.pos_start(), VPOINT_ZERO, "{link}");
         assert_eq!(
             link.pos_next(),
             VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32),
-            "{link:?}"
+            "\n{link}"
         );
 
         // "bp {}",
