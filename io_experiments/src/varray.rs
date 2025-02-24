@@ -5,31 +5,21 @@ use std::path::{Path, PathBuf};
 
 enum BackingMemory {
     RegularOldeVec {
-        vec: Vec<usize>,
+        data: Box<[usize]>,
         is_dirty: bool,
     },
     Mmap {
         mmap: MmapMut,
-        vec: ManuallyDrop<Vec<usize>>,
-        backing_file: File,
+        /// Owned by mmap
+        data: ManuallyDrop<Box<[usize]>>,
         backing_path: PathBuf,
         is_dirty: bool,
     },
 }
 
-impl Default for BackingMemory {
-    fn default() -> Self {
-        BackingMemory::RegularOldeVec {
-            vec: Vec::new(),
-            is_dirty: false,
-        }
-    }
-}
-
 pub const EMPTY_XY_INDEX: usize = usize::MAX;
-pub const CACHED_MMAP_PATH_PREFIX: &str = "recached_mmap";
 
-// Light wrapper around Vec. Memory map backed Vec's must live as long as the Mmap
+/// Gigantic memory-map or Slice backed storage
 #[derive(Default)]
 pub struct VArray {
     inner: BackingMemory,
@@ -39,7 +29,7 @@ impl VArray {
     pub fn new_length(size: usize) -> Self {
         VArray {
             inner: BackingMemory::RegularOldeVec {
-                vec: vec![EMPTY_XY_INDEX; size],
+                data: vec![EMPTY_XY_INDEX; size].into_boxed_slice(),
                 is_dirty: false,
             },
         }
@@ -49,13 +39,12 @@ impl VArray {
         path: &Path,
         file: File,
         backing_memory_map: MmapMut,
-        xy_to_entity: ManuallyDrop<Vec<usize>>,
+        xy_to_entity: ManuallyDrop<Box<[usize]>>,
     ) -> Self {
         VArray {
             inner: BackingMemory::Mmap {
                 mmap: backing_memory_map,
-                vec: xy_to_entity,
-                backing_file: file,
+                data: xy_to_entity,
                 backing_path: path.to_path_buf(),
                 is_dirty: false,
             },
@@ -64,17 +53,17 @@ impl VArray {
 
     pub fn as_slice(&self) -> &[usize] {
         match &self.inner {
-            BackingMemory::RegularOldeVec { vec, .. } => vec.as_slice(),
-            BackingMemory::Mmap { vec, .. } => vec.as_slice(),
+            BackingMemory::RegularOldeVec { data, .. } => data,
+            BackingMemory::Mmap { data, .. } => data,
         }
     }
 
     pub fn as_mut_slice(&mut self) -> &mut [usize] {
         match &mut self.inner {
-            BackingMemory::RegularOldeVec { vec, .. } => vec.as_mut_slice(),
-            BackingMemory::Mmap { vec, is_dirty, .. } => {
+            BackingMemory::RegularOldeVec { data, .. } => data,
+            BackingMemory::Mmap { data, is_dirty, .. } => {
                 *is_dirty = true;
-                vec.as_mut_slice()
+                data
             }
         }
     }
@@ -83,44 +72,15 @@ impl VArray {
     pub fn len(&self) -> usize {
         self.as_slice().len()
     }
-
-    pub fn cache_buffers_for_cloning(&mut self) {
-        // match &self.inner {
-        //     BackingMemory::RegularOldeVec { .. } => {}
-        //     BackingMemory::Mmap { path, .. } => {
-        //         let temp_file = tempfile::tempfile().unwrap();
-        //         let new_path = if path.starts_with(CACHED_MMAP_PATH_PREFIX) {
-        //             // reconstruct path with
-        //             let mut path_parts = path.components();
-        //             let mut new_path = PathBuf::new();
-        //             new_path.push(path_parts.next().unwrap());
-        //
-        //             let count_raw = path_parts.next().unwrap().as_os_str();
-        //             let count = usize::from_str(&count_raw.to_string_lossy()).unwrap() + 1;
-        //             new_path.push(count.to_string());
-        //             for part in path_parts {
-        //                 new_path.push(part);
-        //             }
-        //             new_path
-        //         } else {
-        //             let mut new_path = PathBuf::new();
-        //             new_path.push(CACHED_MMAP_PATH_PREFIX);
-        //             new_path.push("0");
-        //             new_path.join(path)
-        //         };
-        //
-        //         let new_array =
-        //             read_entire_file_varray_mmap_lib_for_file(&new_path, temp_file).unwrap();
-        //         self.inner = new_array.inner;
-        //     }
-        // }
-    }
 }
 
 impl Clone for VArray {
     fn clone(&self) -> Self {
         match &self.inner {
-            BackingMemory::RegularOldeVec { vec, is_dirty } => {
+            BackingMemory::RegularOldeVec {
+                data: vec,
+                is_dirty,
+            } => {
                 unimplemented!("does anything actually do this?")
                 // if *is_dirty {
                 //     panic!("Already dirty regular vec from mmap");
@@ -135,8 +95,7 @@ impl Clone for VArray {
             }
             BackingMemory::Mmap {
                 mmap,
-                vec,
-                backing_file,
+                data,
                 backing_path,
                 is_dirty,
             } => {
@@ -146,11 +105,21 @@ impl Clone for VArray {
                 // read_entire_file_varray_mmap_lib(backing_path).unwrap()
                 VArray {
                     inner: BackingMemory::RegularOldeVec {
-                        vec: Vec::clone(vec),
+                        data: ManuallyDrop::into_inner(data.clone()),
                         is_dirty: false,
                     },
                 }
             }
+        }
+    }
+}
+
+// purely for serde deserialize
+impl Default for BackingMemory {
+    fn default() -> Self {
+        BackingMemory::RegularOldeVec {
+            data: Vec::new().into_boxed_slice(),
+            is_dirty: false,
         }
     }
 }

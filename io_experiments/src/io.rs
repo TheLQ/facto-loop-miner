@@ -1,14 +1,14 @@
-use std::fs::File;
-use std::io::{Read, Write};
-use std::mem::{transmute, ManuallyDrop};
-use std::os::fd::AsRawFd;
-use std::path::Path;
-use std::{io, mem, ptr, slice};
-
 use crate::err::{VIoError, VIoResult};
 use crate::varray::VArray;
 use libc::munmap;
 use memmap2::{Mmap, MmapOptions};
+use std::fs::File;
+use std::io::{Read, Write};
+use std::mem::{transmute, ManuallyDrop};
+use std::ops::DerefMut;
+use std::os::fd::AsRawFd;
+use std::path::Path;
+use std::{io, mem, ptr, slice};
 use tracing::{debug, info};
 
 pub const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
@@ -300,10 +300,9 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
     };
     debug!("mapped {}", path.display());
 
-    // View mmap as a Vec
-    let xy_array_u8 = unsafe { slice::from_raw_parts_mut(mmap.as_mut_ptr(), xy_array_len_u8) };
-
-    debug!("from raw parts {}", path.display());
+    // Pull the underlying slice
+    let xy_array_u8: &mut [u8] = mmap.deref_mut();
+    assert_eq!(xy_array_u8.len(), xy_array_len_u8);
 
     // Build usize Vec viewing the same memory with proper aligned access
     // Docs state the outer slices should be empty in real world environments
@@ -313,17 +312,15 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
     assert_eq!(xy_array_suffix.len(), 0, "suffix big");
     assert_eq!(xy_array_aligned.len(), xy_array_len_u64, "aligned size");
 
-    let xy_array_u64 = unsafe {
-        ManuallyDrop::new(Vec::from_raw_parts(
-            xy_array_aligned.as_mut_ptr(),
-            xy_array_len_u64,
-            xy_array_len_u64,
-        ))
-    };
+    // We have a fixed-size slice
+    let xy_array_u64: Box<[usize]> = unsafe { Box::from_raw(xy_array_aligned) };
 
-    debug!("reviewed {}", path.display());
-
-    Ok(VArray::from_mmap(path, file, mmap, xy_array_u64))
+    Ok(VArray::from_mmap(
+        path,
+        file,
+        mmap,
+        ManuallyDrop::new(xy_array_u64),
+    ))
 }
 
 pub fn read_entire_file_mmap_copy(path: &Path) -> VIoResult<Vec<usize>> {
