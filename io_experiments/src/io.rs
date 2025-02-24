@@ -312,7 +312,7 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
     assert_eq!(xy_array_suffix.len(), 0, "suffix big");
     assert_eq!(xy_array_aligned.len(), xy_array_len_u64, "aligned size");
 
-    // We have a fixed-size slice
+    // Create an ergonomic boxed slice instead of a lifetime slice
     let xy_array_u64: Box<[usize]> = unsafe { Box::from_raw(xy_array_aligned) };
 
     Ok(VArray::from_mmap(
