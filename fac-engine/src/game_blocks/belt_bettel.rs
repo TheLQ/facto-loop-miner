@@ -193,8 +193,8 @@ impl FacBlkBettelBelt {
         self.links.push(link);
     }
 
-    pub fn belt_for_splitter(&self) -> FacBlkBettelBelt {
-        let Self {
+    pub fn belt_for_splitter(
+        Self {
             btype,
             links,
             origin: _,
@@ -202,7 +202,8 @@ impl FacBlkBettelBelt {
             output,
             write_cursor,
             dummy_nav_mode,
-        } = self;
+        }: &Self,
+    ) -> FacBlkBettelBelt {
         if let FacBlkBettelBeltLink {
             direction,
             ltype:
