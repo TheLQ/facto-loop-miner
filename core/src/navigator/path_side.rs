@@ -1,5 +1,5 @@
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::DUAL_RAIL_STEP_I32;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 
 pub struct BaseSource {
     positive: BaseSourceEighth,
@@ -43,7 +43,7 @@ impl BaseSourceEighth {
     }
 
     fn get_for_index(&self, index: i32) -> VPointDirectionQ {
-        const LOOP_STEP: i32 = DUAL_RAIL_STEP_I32;
+        const LOOP_STEP: i32 = SECTION_POINTS_I32;
         let pos = self
             .origin
             .point()

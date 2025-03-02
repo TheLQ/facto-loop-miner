@@ -60,4 +60,4 @@ pub fn ansi_erase_line() -> String {
 
 // https://www.compart.com/en/unicode/block/U+2580
 pub const C_FULL_BLOCK: &str = "\u{2588}";
-pub const C_BLOCK_LINE: char = '\u{1FB72}';
+pub const C_BLOCK_LINE: char = '\u{007C}';

@@ -14,6 +14,25 @@ use crate::{
 use std::rc::Rc;
 use tracing::info;
 
+pub fn make_rail_basic_dual(output: Rc<FacItemOutput>) {
+    let my_output = output.clone();
+
+    let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output.clone());
+    // rail.add_straight_section();
+    rail.add_turn90(true);
+    // rail.add_turn90(false);
+
+    my_output.writei(FacEntLamp::new(), VPOINT_ZERO);
+    my_output.writei(FacEntLamp::new(), rail.pos_next());
+
+    let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output.clone());
+    rail.add_straight_section();
+
+    let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output.clone());
+    rail.add_turn90(false);
+    my_output.writei(FacEntLamp::new(), rail.pos_next());
+}
+
 pub fn make_rail_spiral_90(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     let origin: VPoint = VPOINT_ZERO;
     for clockwise in [

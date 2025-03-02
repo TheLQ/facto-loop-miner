@@ -13,6 +13,7 @@ use crate::LOCALE;
 use colorgrad::{Gradient, GradientBuilder, LinearGradient};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::opencv_re::core::Mat;
 use facto_loop_miner_io::err::VIoError;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
@@ -307,11 +308,6 @@ impl VSurface {
 
         Ok(())
     }
-
-    // pub fn cache_buffers_for_cloning(&mut self) {
-    //     self.pixels.cache_buffers_for_cloning();
-    //     self.entities.cache_buffers_for_cloning();
-    // }
     //</editor-fold>
 
     pub fn to_pixel_cv_image(&self, filter: Option<Pixel>) -> GeneratedMat {
@@ -684,7 +680,7 @@ fn path_state(out_dir: &Path) -> PathBuf {
 //</editor-fold>
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
-pub(crate) struct VPixel {
+pub(super) struct VPixel {
     pixel: Pixel,
 }
 
@@ -706,7 +702,7 @@ mod test {
     use facto_loop_miner_common::log_init_trace;
     use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
     use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
-    use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeAppender;
+    use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
     use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
     use std::path::Path;

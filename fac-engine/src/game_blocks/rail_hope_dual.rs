@@ -24,8 +24,9 @@ pub struct RailHopeDual {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct HopeDualLink {
-    links: [BackingLink; 2],
-    // rtype: HopeLinkType,
+    singles: [BackingLink; 2],
+    start: VPoint,
+    end: VPoint,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -42,15 +43,16 @@ impl RailHopeDual {
     ) -> Self {
         // move on axis, not rotation, to give every direction the same starting point
         // and maintain intersection
-        let next_origin = origin.move_direction_sideways_axis_int(
-            origin_direction,
-            -((RAIL_STRAIGHT_DIAMETER * 2) as i32),
-        );
-        let mut hopes = [
-            RailHopeSingle::new(origin, origin_direction, output.clone()),
-            RailHopeSingle::new(next_origin, origin_direction, output.clone()),
-        ];
+        let top_origin = origin
+            .move_direction_sideways_axis_int(origin_direction, RAIL_STRAIGHT_DIAMETER as i32);
+        let bottom_origin = origin
+            .move_direction_sideways_axis_int(origin_direction, -(RAIL_STRAIGHT_DIAMETER as i32));
 
+        // Generate links with Rail Singles
+        let mut hopes = [
+            RailHopeSingle::new(top_origin, origin_direction, output.clone()),
+            RailHopeSingle::new(bottom_origin, origin_direction, output.clone()),
+        ];
         match origin_direction {
             FacDirectionQuarter::East | FacDirectionQuarter::North => {}
             FacDirectionQuarter::West | FacDirectionQuarter::South => {
@@ -59,11 +61,15 @@ impl RailHopeDual {
                 // maintain
             }
         }
+        let singles = hopes.map(|v| BackingLink::Single(v.appender_link().clone()));
+
         Self {
             output: output.clone(),
             links: Vec::new(),
             init_link: HopeDualLink {
-                links: hopes.map(|v| BackingLink::Single(v.appender_link().clone())),
+                singles,
+                start: origin,
+                end: origin,
             },
         }
     }
@@ -94,17 +100,22 @@ impl RailHopeDual {
         self.links
     }
 
-    pub(crate) fn appender_link(&self) -> &HopeDualLink {
+    fn appender_link(&self) -> &HopeDualLink {
         self.links.last().unwrap_or(&self.init_link)
     }
 
     fn tracking_single_link(&self) -> &HopeLink {
         let dual = self.links.last().unwrap();
-        dual.links[0].to_appendable_link()
+        dual.singles[0].to_appendable_link()
     }
 
-    pub(crate) fn current_direction(&self) -> &FacDirectionQuarter {
+    pub(super) fn current_direction(&self) -> &FacDirectionQuarter {
         &self.tracking_single_link().next_direction
+    }
+
+    fn push_link(&mut self, new_link: HopeDualLink) {
+        new_link.write_output(&self.output);
+        self.links.push(new_link)
     }
 }
 
@@ -114,15 +125,15 @@ impl RailHopeAppender for RailHopeDual {
             .output
             .context_handle(ContextLevel::Micro, format!("👐Dual-{}", 0));
         let new_link = self.appender_link().add_straight(length);
-        self.links.push(new_link)
+        self.push_link(new_link);
     }
 
     fn add_straight_section(&mut self) {
         let _ = &mut self
             .output
-            .context_handle(ContextLevel::Micro, "👐Ruby".into());
+            .context_handle(ContextLevel::Micro, "👐DualSection".into());
         let new_link = self.appender_link().add_straight_section();
-        self.links.push(new_link)
+        self.push_link(new_link);
         // self.add_electric_next();
     }
 
@@ -131,7 +142,7 @@ impl RailHopeAppender for RailHopeDual {
             .output
             .context_handle(ContextLevel::Micro, "👐Dual-Turn".into());
         let new_link = self.appender_link().add_turn90(clockwise);
-        self.links.push(new_link)
+        self.push_link(new_link);
         // self.add_electric_next();
     }
 
@@ -141,42 +152,74 @@ impl RailHopeAppender for RailHopeDual {
     }
 
     fn pos_next(&self) -> VPoint {
-        self.links[0].pos_next()
+        self.links.last().unwrap().pos_next()
     }
 }
 
 impl RailHopeLink for HopeDualLink {
     fn add_straight(&self, length: usize) -> HopeDualLink {
+        let singles = self
+            .dual_appendable_links()
+            .map(|v| BackingLink::Single(v.add_straight(length)));
+
+        let start = self.end;
+        let end = singles[0]
+            .to_appendable_link()
+            .pos_next()
+            .midpoint(singles[1].to_appendable_link().pos_next());
         HopeDualLink {
-            links: self
-                .dual_appendable_links()
-                .map(|v| BackingLink::Single(v.add_straight(length))),
+            singles,
+            start,
+            end,
         }
     }
 
     fn add_straight_section(&self) -> HopeDualLink {
+        let singles = self
+            .dual_appendable_links()
+            .map(|v| BackingLink::Single(v.add_straight_section()));
+
+        let start = self.end;
+        let end = singles[0]
+            .to_appendable_link()
+            .pos_next()
+            .midpoint(singles[1].to_appendable_link().pos_next());
         HopeDualLink {
-            links: self
-                .dual_appendable_links()
-                .map(|v| BackingLink::Single(v.add_straight_section())),
+            singles,
+            start,
+            end,
         }
     }
 
     fn add_turn90(&self, clockwise: bool) -> HopeDualLink {
         let links = self.dual_appendable_links();
         if clockwise {
+            let turn_links = create_turn_link_from(links[1], clockwise);
+            let last_link = &turn_links[2];
+            let end = last_link
+                .pos_next()
+                .move_direction_sideways_axis_int(last_link.next_direction, -3);
             HopeDualLink {
-                links: [
+                singles: [
                     BackingLink::Single(links[0].add_turn90(clockwise)),
-                    create_turn_link_from(links[1], clockwise),
+                    BackingLink::MultiTurn(turn_links),
                 ],
+                start: self.pos_next(),
+                end,
             }
         } else {
+            let turn_links = create_turn_link_from(links[0], clockwise);
+            let last_link = &turn_links[2];
+            let end = last_link
+                .pos_next()
+                .move_direction_sideways_axis_int(last_link.next_direction, -3);
             HopeDualLink {
-                links: [
-                    create_turn_link_from(links[0], clockwise),
+                singles: [
+                    BackingLink::MultiTurn(turn_links),
                     BackingLink::Single(links[1].add_turn90(clockwise)),
                 ],
+                start: self.pos_next(),
+                end,
             }
         }
     }
@@ -186,7 +229,7 @@ impl RailHopeLink for HopeDualLink {
     }
 
     fn link_type(&self) -> &HopeLinkType {
-        match &self.links {
+        match &self.singles {
             [BackingLink::MultiTurn([_, link, _]), _]
             | [_, BackingLink::MultiTurn([_, link, _])] => link.link_type(),
             [BackingLink::Single(link), _] => link.link_type(),
@@ -194,11 +237,11 @@ impl RailHopeLink for HopeDualLink {
     }
 
     fn pos_start(&self) -> VPoint {
-        self.links[0].to_appendable_link().pos_start()
+        self.start
     }
 
     fn pos_next(&self) -> VPoint {
-        self.links[0].to_appendable_link().pos_next()
+        self.end
     }
 
     fn area(&self) -> Vec<VPoint> {
@@ -208,7 +251,7 @@ impl RailHopeLink for HopeDualLink {
         // })
         // self.links
         let mut res = Vec::new();
-        for link in &self.links {
+        for link in &self.singles {
             match link {
                 BackingLink::Single(link) => res.extend(link.area()),
                 BackingLink::MultiTurn(links) => {
@@ -234,16 +277,29 @@ impl BackingLink {
 impl HopeDualLink {
     fn dual_appendable_links(&self) -> [&HopeLink; 2] {
         [
-            self.links[0].to_appendable_link(),
-            self.links[1].to_appendable_link(),
+            self.singles[0].to_appendable_link(),
+            self.singles[1].to_appendable_link(),
         ]
+    }
+
+    fn write_output(&self, output: &FacItemOutput) {
+        for link in &self.singles {
+            match link {
+                BackingLink::Single(link) => link.write_output(output),
+                BackingLink::MultiTurn(links) => {
+                    for sub in links {
+                        sub.write_output(output)
+                    }
+                }
+            }
+        }
     }
 }
 
 pub fn duals_into_single_vec(links: impl IntoIterator<Item = HopeDualLink>) -> Vec<HopeLink> {
     let mut res = Vec::new();
     for dual in links {
-        for single in dual.links {
+        for single in dual.singles {
             match single {
                 BackingLink::Single(link) => res.push(link),
                 BackingLink::MultiTurn(links) => res.extend(links),
@@ -253,16 +309,16 @@ pub fn duals_into_single_vec(links: impl IntoIterator<Item = HopeDualLink>) -> V
     res
 }
 
-fn create_turn_link_from(link: &HopeLink, clockwise: bool) -> BackingLink {
+fn create_turn_link_from(link: &HopeLink, clockwise: bool) -> [HopeLink; 3] {
     let first = link.add_straight(2);
     let middle = first.add_turn90(clockwise);
     let last = middle.add_straight(2);
-    BackingLink::MultiTurn([first, middle, last])
+    [first, middle, last]
 }
 
 impl Display for HopeDualLink {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &self.links {
+        match &self.singles {
             [
                 BackingLink::MultiTurn([outer_start, outer_turn, outer_end]),
                 BackingLink::Single(inner_turn),
@@ -306,12 +362,12 @@ mod test {
 
         let target_point = VPoint::new(SECTION_POINTS_I32, 0);
         assert_eq!(
-            rail.tracking_single_link().pos_start(),
+            rail.appender_link().pos_start(),
             VPOINT_ZERO,
-            "{:?}",
+            "{}",
             rail.appender_link()
         );
-        assert_eq!(rail.pos_next(), target_point, "{:?}", rail.appender_link());
+        assert_eq!(rail.pos_next(), target_point, "{}", rail.appender_link());
     }
 
     #[test]
@@ -320,15 +376,17 @@ mod test {
 
         let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output.clone());
         rail.add_turn90(true);
+        output.flush();
         // rail.add_turn90(false);
 
         assert_eq!(rail.links.len(), 1);
         let link = rail.into_links().remove(0);
-        assert_eq!(link.pos_start(), VPOINT_ZERO, "{link}");
+        assert_eq!(link.pos_start(), VPOINT_ZERO, "\n{link}");
         assert_eq!(
             link.pos_next(),
             VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32),
-            "\n{link}"
+            "bp {}\n{link}",
+            output.consume_rc().into_blueprint_string().unwrap()
         );
 
         // "bp {}",

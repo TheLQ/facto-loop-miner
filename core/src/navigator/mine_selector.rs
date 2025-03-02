@@ -8,7 +8,7 @@ use crate::TILES_PER_CHUNK;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::DUAL_RAIL_STEP_I32;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use tracing::{debug, error, warn};
@@ -50,7 +50,7 @@ const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 ///  - Split groups if needed because too huge creates too many possibilities later
 pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
     let mut offset_x_from_base = surface.tunables().base.base_chunks.as_tiles_i32();
-    offset_x_from_base -= offset_x_from_base % DUAL_RAIL_STEP_I32;
+    offset_x_from_base -= offset_x_from_base % SECTION_POINTS_I32;
     let base_source = &mut BaseSource::new(VPointDirectionQ(
         VPoint::new(offset_x_from_base, 0),
         FacDirectionQuarter::East,

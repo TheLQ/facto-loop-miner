@@ -8,9 +8,9 @@ use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::{
-    duals_into_single_vec, HopeDualLink, RailHopeDual, DUAL_RAIL_STEP, DUAL_RAIL_STEP_I32,
+    duals_into_single_vec, HopeDualLink, RailHopeDual,
 };
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, SECTION_POINTS_I32};
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
 use std::time::Duration;
@@ -60,7 +60,7 @@ pub fn mori2_start(
             successor_sum += watch.duration();
             res
         },
-        |_p| 1,
+        |_p| 0,
         |p| {
             // let watch = BasicWatch::start();
             let res = p == &end_link;
@@ -142,11 +142,11 @@ fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeDualLink {
     let mut hope = RailHopeDual::new(
         start
             .point()
-            .move_direction_int(start.direction(), -DUAL_RAIL_STEP_I32),
+            .move_direction_int(start.direction(), -SECTION_POINTS_I32),
         *start.direction(),
         FacItemOutput::new_null().into_rc(),
     );
-    hope.add_straight(DUAL_RAIL_STEP);
+    hope.add_straight_section();
     let links = hope.into_links();
     let link = links.into_iter().next().unwrap();
     link.pos_next().assert_step_rail();

@@ -27,8 +27,8 @@ pub struct RailHopeSingle {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct HopeLink {
-    pub start: VPoint,
-    pub rtype: HopeLinkType,
+    start: VPoint,
+    rtype: HopeLinkType,
     pub next_direction: FacDirectionQuarter,
     pub rails: Vec<HopeFactoRail>,
 }
@@ -55,8 +55,9 @@ pub enum HopeLinkType {
 }
 
 /// A 4 way intersection is 13 rails wide square.
-const SECTION_STEP: usize = 13;
-pub(crate) const SECTION_POINTS_I32: i32 = (SECTION_STEP * RAIL_STRAIGHT_DIAMETER) as i32;
+/// but real turn in 8
+const SECTION_STEP: usize = 8;
+pub const SECTION_POINTS_I32: i32 = (SECTION_STEP * RAIL_STRAIGHT_DIAMETER) as i32;
 
 impl RailHopeSingle {
     pub fn new(
@@ -87,14 +88,12 @@ impl RailHopeSingle {
     }
 
     // with internal init
-    pub(crate) fn appender_link(&self) -> &HopeLink {
+    pub(super) fn appender_link(&self) -> &HopeLink {
         self.links.last().unwrap_or(&self.init_link)
     }
 
     fn push_link(&mut self, new_link: HopeLink) {
-        for rail in &new_link.rails {
-            rail.to_fac(&self.output);
-        }
+        new_link.write_output(&self.output);
         self.links.push(new_link)
     }
 }
@@ -429,10 +428,16 @@ impl HopeLink {
     pub fn add_turn90_single_section(&self, clockwise: bool) -> Self {
         self.add_straight(7).add_turn90(clockwise).add_straight(8)
     }
+
+    pub(super) fn write_output(&self, output: &FacItemOutput) {
+        for rail in &self.rails {
+            rail.write_output(output);
+        }
+    }
 }
 
 impl HopeFactoRail {
-    fn to_fac(&self, res: &FacItemOutput) {
+    fn write_output(&self, res: &FacItemOutput) {
         match self.rtype {
             FacEntRailType::Straight => res.write(BlueprintItem::new(
                 FacEntRailStraight::new(self.direction).into_boxed(),
@@ -469,7 +474,7 @@ impl Display for HopeLink {
 impl Display for HopeLinkType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            HopeLinkType::Straight { length } => write!(f, "Straight-{length}"),
+            HopeLinkType::Straight { length } => write!(f, "Straight#{length}"),
             HopeLinkType::Turn90 { clockwise } => {
                 write!(f, "Turn90-{}", if *clockwise { "clw" } else { "ccw" })
             }

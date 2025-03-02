@@ -351,7 +351,7 @@ impl FacItemOutputData {
     }
 
     fn flush_cache(&mut self) {
-        let FacItemOutputData {
+        let Self {
             otype,
             dedupe,
             cache,

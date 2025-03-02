@@ -323,80 +323,112 @@ mod test {
 
     #[test]
     fn split_north_clw() {
-        test_split(FacDirectionQuarter::North, true, &[
-            FacBpPosition::new(10.5, 10.5),
-            FacBpPosition::new(11.0, 9.5),
-            FacBpPosition::new(10.5, 8.5),
-        ]);
+        test_split(
+            FacDirectionQuarter::North,
+            true,
+            &[
+                FacBpPosition::new(10.5, 10.5),
+                FacBpPosition::new(11.0, 9.5),
+                FacBpPosition::new(10.5, 8.5),
+            ],
+        );
     }
 
     #[test]
     fn split_north_ccw() {
-        test_split(FacDirectionQuarter::North, false, &[
-            FacBpPosition::new(10.5, 10.5),
-            FacBpPosition::new(10.0, 9.5),
-            FacBpPosition::new(10.5, 8.5),
-        ]);
+        test_split(
+            FacDirectionQuarter::North,
+            false,
+            &[
+                FacBpPosition::new(10.5, 10.5),
+                FacBpPosition::new(10.0, 9.5),
+                FacBpPosition::new(10.5, 8.5),
+            ],
+        );
     }
 
     // south
 
     #[test]
     fn split_south_clw() {
-        test_split(FacDirectionQuarter::South, true, &[
-            FacBpPosition::new(10.5, 10.5),
-            FacBpPosition::new(10.0, 11.5),
-            FacBpPosition::new(10.5, 12.5),
-        ]);
+        test_split(
+            FacDirectionQuarter::South,
+            true,
+            &[
+                FacBpPosition::new(10.5, 10.5),
+                FacBpPosition::new(10.0, 11.5),
+                FacBpPosition::new(10.5, 12.5),
+            ],
+        );
     }
 
     #[test]
     fn split_south_ccw() {
-        test_split(FacDirectionQuarter::South, false, &[
-            FacBpPosition::new(10.5, 10.5),
-            FacBpPosition::new(11.0, 11.5),
-            FacBpPosition::new(10.5, 12.5),
-        ]);
+        test_split(
+            FacDirectionQuarter::South,
+            false,
+            &[
+                FacBpPosition::new(10.5, 10.5),
+                FacBpPosition::new(11.0, 11.5),
+                FacBpPosition::new(10.5, 12.5),
+            ],
+        );
     }
 
     // east
 
     #[test]
     fn split_east_clk() {
-        test_split(FacDirectionQuarter::East, true, &[
-            FacBpPosition::new(10.5, 10.5),
-            FacBpPosition::new(11.5, 11.0),
-            FacBpPosition::new(12.5, 10.5),
-        ]);
+        test_split(
+            FacDirectionQuarter::East,
+            true,
+            &[
+                FacBpPosition::new(10.5, 10.5),
+                FacBpPosition::new(11.5, 11.0),
+                FacBpPosition::new(12.5, 10.5),
+            ],
+        );
     }
 
     #[test]
     fn split_east_ccw() {
-        test_split(FacDirectionQuarter::East, false, &[
-            FacBpPosition::new(10.5, 10.5),
-            FacBpPosition::new(11.5, 10.0),
-            FacBpPosition::new(12.5, 10.5),
-        ]);
+        test_split(
+            FacDirectionQuarter::East,
+            false,
+            &[
+                FacBpPosition::new(10.5, 10.5),
+                FacBpPosition::new(11.5, 10.0),
+                FacBpPosition::new(12.5, 10.5),
+            ],
+        );
     }
 
     // east
 
     #[test]
     fn split_west_clk() {
-        test_split(FacDirectionQuarter::West, true, &[
-            FacBpPosition::new(10.5, 10.5),
-            FacBpPosition::new(9.5, 10.0),
-            FacBpPosition::new(8.5, 10.5),
-        ]);
+        test_split(
+            FacDirectionQuarter::West,
+            true,
+            &[
+                FacBpPosition::new(10.5, 10.5),
+                FacBpPosition::new(9.5, 10.0),
+                FacBpPosition::new(8.5, 10.5),
+            ],
+        );
     }
 
     #[test]
     fn split_west_ccw() {
-        test_split(FacDirectionQuarter::West, false, &[
-            FacBpPosition::new(10.5, 10.5),
-            FacBpPosition::new(9.5, 11.0),
-            FacBpPosition::new(8.5, 10.5),
-        ]);
+        test_split(
+            FacDirectionQuarter::West,
+            false,
+            &[
+                FacBpPosition::new(10.5, 10.5),
+                FacBpPosition::new(9.5, 11.0),
+                FacBpPosition::new(8.5, 10.5),
+            ],
+        );
     }
 
     //
