@@ -350,15 +350,14 @@ impl FacItemOutputData {
         self.flush_cache();
     }
 
-    fn flush_cache(
-        Self {
+    fn flush_cache(&mut self) {
+        let FacItemOutputData {
             otype,
             dedupe,
             cache,
             total_write,
             contexts: _,
-        }: &mut Self,
-    ) {
+        } = self;
         match otype {
             FacItemOutputType::AdmiralClient(inner) => {
                 let mut lua_commands = Vec::new();
