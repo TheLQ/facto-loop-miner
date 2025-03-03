@@ -1,7 +1,6 @@
 #![feature(int_roundings)]
 #![feature(error_generic_member_access)]
 #![feature(iter_array_chunks)]
-#![feature(num_midpoint_signed)]
 // // super pendantic
 // #![warn(clippy::all, clippy::pedantic)]
 // #![allow(clippy::missing_panics_doc)]

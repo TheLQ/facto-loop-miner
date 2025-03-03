@@ -1,6 +1,7 @@
 [workspace]
 members = ["common", "core", "fac-engine", "io_experiments"]
-resolver = "2"
+resolver = "3"
+edition = "2024"
 
 default-members = ["core"]
 

@@ -2,7 +2,6 @@
 #![feature(array_chunks)]
 #![feature(portable_simd)]
 #![feature(error_generic_member_access)]
-#![feature(extract_if)]
 //
 // lints
 //
