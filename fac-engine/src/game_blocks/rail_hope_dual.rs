@@ -10,11 +10,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
-/// A 4 way intersection is 13 rails wide square.  
-// pub const DUAL_RAIL_STEP: usize = STRAIGHT_RAIL_STEP * 2;
-// pub const DUAL_RAIL_STEP_I32: i32 = DUAL_RAIL_STEP as i32;
-// const STRAIGHT_RAIL_STEP: usize = 13;
-
 /// The dreamed Side-by-side rail generator
 pub struct RailHopeDual {
     links: Vec<HopeDualLink>,
@@ -198,7 +193,13 @@ impl RailHopeLink for HopeDualLink {
             let last_link = &turn_links[2];
             let end = last_link
                 .pos_next()
-                .move_direction_sideways_axis_int(last_link.next_direction, -3);
+                .move_direction_sideways_axis_int(last_link.next_direction, 0);
+            match last_link.link_type() {
+                HopeLinkType::Straight { .. } => {
+                    println!("is straight fish")
+                }
+                other => panic!("not straight {other}"),
+            }
             HopeDualLink {
                 singles: [
                     BackingLink::Single(links[0].add_turn90(clockwise)),
@@ -210,9 +211,15 @@ impl RailHopeLink for HopeDualLink {
         } else {
             let turn_links = create_turn_link_from(links[0], clockwise);
             let last_link = &turn_links[2];
+            match last_link.link_type() {
+                HopeLinkType::Straight { .. } => {
+                    println!("is straight chicken")
+                }
+                other => panic!("not straight {other}"),
+            }
             let end = last_link
                 .pos_next()
-                .move_direction_sideways_axis_int(last_link.next_direction, -3);
+                .move_direction_sideways_axis_int(last_link.next_direction, 0);
             HopeDualLink {
                 singles: [
                     BackingLink::MultiTurn(turn_links),
@@ -347,51 +354,261 @@ mod test {
     use crate::common::vpoint::{VPOINT_ZERO, VPoint};
     use crate::common::vpoint_direction::VPointDirectionQ;
     use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
-    use crate::game_blocks::rail_hope_dual::RailHopeDual;
+    use crate::game_blocks::rail_hope_dual::{HopeDualLink, RailHopeDual};
     use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
     use crate::game_entities::direction::FacDirectionQuarter;
     use crate::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
+    use std::vec::IntoIter;
+
+    fn do_simple_test<F>(
+        source_direction: FacDirectionQuarter,
+        mut actions: F,
+    ) -> (IntoIter<HopeDualLink>, String)
+    where
+        F: FnMut(&mut RailHopeDual),
+    {
+        let output = FacItemOutput::new_blueprint().into_rc();
+
+        let mut rail = RailHopeDual::new(VPOINT_ZERO, source_direction, output.clone());
+        actions(&mut rail);
+        output.flush();
+
+        let links = rail.links.clone().into_iter();
+        drop(rail);
+        let output_bp = output.consume_rc().into_blueprint_string().unwrap();
+
+        (links, output_bp)
+    }
+
+    //////////////////////////
 
     #[test]
-    fn step_vpoint_straight() {
-        let output = FacItemOutput::new_null().into_rc();
-
-        let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output);
-        assert_eq!(rail.appender_link().pos_start(), VPOINT_ZERO);
-        rail.add_straight_section();
-
+    fn step_east_straight() {
         let target_point = VPoint::new(SECTION_POINTS_I32, 0);
-        assert_eq!(
-            rail.appender_link().pos_start(),
-            VPOINT_ZERO,
-            "{}",
-            rail.appender_link()
-        );
-        assert_eq!(rail.pos_next(), target_point, "{}", rail.appender_link());
+
+        let (mut links, output_bp) = do_simple_test(FacDirectionQuarter::East, |rail| {
+            assert_eq!(rail.appender_link().pos_start(), VPOINT_ZERO);
+            rail.add_straight_section();
+            assert_eq!(rail.pos_next(), target_point, "{}", rail.appender_link());
+        });
+
+        let link = links.next().unwrap();
+        assert_eq!(link.pos_start(), VPOINT_ZERO, "bp {output_bp}\n{link}",);
+        assert_eq!(link.pos_next(), target_point, "bp {output_bp}\n{link}",);
+
+        assert_eq!(links.next(), None);
     }
 
     #[test]
-    fn step_vpoint_turn() {
-        let output = FacItemOutput::new_blueprint().into_rc();
+    fn step_east_turn_clw() {
+        let (mut links, output_bp) = do_simple_test(FacDirectionQuarter::East, |rail| {
+            rail.add_turn90(true); //
+        });
 
-        let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output.clone());
-        rail.add_turn90(true);
-        output.flush();
-        // rail.add_turn90(false);
+        let link = links.next().unwrap();
+        assert_eq!(link.pos_start(), VPOINT_ZERO, "bp {output_bp}\n{link}",);
+        assert_eq!(
+            link.pos_next(),
+            VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32),
+            "bp {output_bp}\n{link}",
+        );
 
-        assert_eq!(rail.links.len(), 1);
-        let link = rail.into_links().remove(0);
+        assert_eq!(links.next(), None);
+    }
+
+    #[test]
+    fn step_east_turn_cww() {
+        let (mut links, output_bp) = do_simple_test(FacDirectionQuarter::East, |rail| {
+            rail.add_turn90(false); //
+        });
+
+        let link = links.next().unwrap();
+        assert_eq!(link.pos_start(), VPOINT_ZERO, "\n{link}");
+        assert_eq!(
+            link.pos_next(),
+            VPoint::new(SECTION_POINTS_I32, -SECTION_POINTS_I32),
+            "bp {output_bp}\n{link}",
+        );
+
+        assert_eq!(links.next(), None);
+    }
+
+    //////////////////////////
+
+    #[test]
+    fn step_south_straight() {
+        let target_point = VPoint::new(0, SECTION_POINTS_I32);
+
+        let (mut links, output_bp) = do_simple_test(FacDirectionQuarter::South, |rail| {
+            assert_eq!(rail.appender_link().pos_start(), VPOINT_ZERO);
+            rail.add_straight_section();
+            assert_eq!(rail.pos_next(), target_point, "{}", rail.appender_link());
+        });
+
+        let link = links.next().unwrap();
+        assert_eq!(link.pos_start(), VPOINT_ZERO, "bp {output_bp}\n{link}",);
+        assert_eq!(link.pos_next(), target_point, "bp {output_bp}\n{link}",);
+
+        assert_eq!(links.next(), None);
+    }
+
+    #[test]
+    fn step_south_turn_clw() {
+        let (mut links, output_bp) = do_simple_test(FacDirectionQuarter::South, |rail| {
+            rail.add_turn90(true); //
+        });
+
+        let link = links.next().unwrap();
+        assert_eq!(link.pos_start(), VPOINT_ZERO, "bp {output_bp}\n{link}",);
+        assert_eq!(
+            link.pos_next(),
+            VPoint::new(-SECTION_POINTS_I32, SECTION_POINTS_I32),
+            "bp {output_bp}\n{link}",
+        );
+
+        assert_eq!(links.next(), None);
+    }
+
+    #[test]
+    fn step_south_turn_cww() {
+        let (mut links, output_bp) = do_simple_test(FacDirectionQuarter::South, |rail| {
+            rail.add_turn90(false); //
+        });
+
+        let link = links.next().unwrap();
         assert_eq!(link.pos_start(), VPOINT_ZERO, "\n{link}");
         assert_eq!(
             link.pos_next(),
             VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32),
-            "bp {}\n{link}",
-            output.consume_rc().into_blueprint_string().unwrap()
+            "bp {output_bp}\n{link}",
         );
 
-        // "bp {}",
-        // output.consume_rc().into_blueprint_string().unwrap()
+        assert_eq!(links.next(), None);
     }
+
+    //////////////////////////
+
+    #[test]
+    fn step_east_straight_then_turn_clw() {
+        let (mut links, output_bp) = do_simple_test(FacDirectionQuarter::East, |rail| {
+            rail.add_straight_section();
+            rail.add_turn90(true);
+        });
+
+        let link = links.next().unwrap();
+        assert_eq!(link.pos_start(), VPOINT_ZERO, "\n{link}");
+        assert_eq!(
+            link.pos_next(),
+            VPoint::new(SECTION_POINTS_I32, 0),
+            "bp {output_bp}\n{link}",
+        );
+
+        let link = links.next().unwrap();
+        assert_eq!(
+            link.pos_start(),
+            VPoint::new(SECTION_POINTS_I32, 0),
+            "bp {output_bp}\n{link}",
+        );
+        assert_eq!(
+            link.pos_next(),
+            VPoint::new(SECTION_POINTS_I32 * 2, SECTION_POINTS_I32),
+            "bp {output_bp}\n{link}",
+        );
+
+        assert_eq!(links.next(), None);
+    }
+
+    #[test]
+    fn step_south_straight_then_turn_clw() {
+        let (mut links, output_bp) = do_simple_test(FacDirectionQuarter::South, |rail| {
+            rail.add_straight_section();
+            rail.add_turn90(true);
+        });
+
+        let link = links.next().unwrap();
+        assert_eq!(link.pos_start(), VPOINT_ZERO, "\n{link}");
+        assert_eq!(
+            link.pos_next(),
+            VPoint::new(0, SECTION_POINTS_I32),
+            "bp {output_bp}\n{link}",
+        );
+
+        let link = links.next().unwrap();
+        assert_eq!(
+            link.pos_start(),
+            VPoint::new(0, SECTION_POINTS_I32),
+            "bp {output_bp}\n{link}",
+        );
+        assert_eq!(
+            link.pos_next(),
+            VPoint::new(-SECTION_POINTS_I32, SECTION_POINTS_I32 * 2),
+            "bp {output_bp}\n{link}",
+        );
+
+        assert_eq!(links.next(), None);
+    }
+
+    #[test]
+    fn step_turn_clw_then_clw_again() {
+        let (mut links, output_bp) = do_simple_test(FacDirectionQuarter::East, |rail| {
+            rail.add_turn90(true);
+            rail.add_turn90(true);
+        });
+
+        let link = links.next().unwrap();
+        assert_eq!(link.pos_start(), VPOINT_ZERO, "\n{link}");
+        assert_eq!(
+            link.pos_next(),
+            VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32),
+            "bp {output_bp}\n{link}",
+        );
+
+        let link = links.next().unwrap();
+        assert_eq!(
+            link.pos_start(),
+            VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32),
+            "bp {output_bp}\n{link}",
+        );
+        assert_eq!(
+            link.pos_next(),
+            VPoint::new(0, SECTION_POINTS_I32 * 2),
+            "bp {output_bp}\n{link}",
+        );
+
+        assert_eq!(links.next(), None);
+    }
+
+    #[test]
+    fn step_turn_clw_then_ccw() {
+        let (mut links, output_bp) = do_simple_test(FacDirectionQuarter::East, |rail| {
+            rail.add_turn90(true);
+            rail.add_turn90(false);
+        });
+
+        let link = links.next().unwrap();
+        assert_eq!(link.pos_start(), VPOINT_ZERO, "\n{link}");
+        assert_eq!(
+            link.pos_next(),
+            VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32),
+            "bp {output_bp}\n{link}",
+        );
+
+        let link = links.next().unwrap();
+        assert_eq!(
+            link.pos_start(),
+            VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32),
+            "bp {output_bp}\n{link}",
+        );
+        assert_eq!(
+            link.pos_next(),
+            VPoint::new(SECTION_POINTS_I32 * 2, SECTION_POINTS_I32 * 2),
+            "bp {output_bp}\n{link}",
+        );
+
+        assert_eq!(links.next(), None);
+    }
+
+    //////////////////////////
 
     #[test]
     fn congruent_line() {

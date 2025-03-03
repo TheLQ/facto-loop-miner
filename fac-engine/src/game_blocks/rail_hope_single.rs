@@ -56,7 +56,7 @@ pub enum HopeLinkType {
 
 /// A 4 way intersection is 13 rails wide square.
 /// but real turn in 8
-const SECTION_STEP: usize = 8;
+const SECTION_STEP: usize = 7;
 pub const SECTION_POINTS_I32: i32 = (SECTION_STEP * RAIL_STRAIGHT_DIAMETER) as i32;
 
 impl RailHopeSingle {
