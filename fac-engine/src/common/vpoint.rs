@@ -427,8 +427,8 @@ impl VPoint {
 
     const fn move_round_up(&self, size: i32) -> Self {
         VPoint {
-            x: self.x + (self.x.rem_euclid(size)),
-            y: self.y + (self.y.rem_euclid(size)),
+            x: self.x + (size - self.x.rem_euclid(size)),
+            y: self.y + (size - self.y.rem_euclid(size)),
         }
     }
 

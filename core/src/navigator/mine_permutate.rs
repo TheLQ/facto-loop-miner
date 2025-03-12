@@ -9,7 +9,7 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
 use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
-use tracing::info;
+use tracing::{info, trace};
 
 /// Input
 ///  - Single batch of mines to be routed together
@@ -169,6 +169,7 @@ impl MineChoices {
         {
             let mut centered_point = VPoint::new(mine_area.point_center().x(), mine_area.start.y());
             centered_point = centered_point.move_round_rail_down();
+            centered_point.assert_step_rail();
 
             // let y_diff = centered_point.y() - location.area.start.y();
             // if y_diff > 20 {
@@ -186,6 +187,7 @@ impl MineChoices {
                 mine_area.point_bottom_right().y(),
             );
             centered_point = centered_point.move_round_rail_up();
+            centered_point.assert_step_rail();
 
             if !surface.is_point_out_of_bounds(&centered_point) {
                 destinations.push(VPointDirectionQ(centered_point, FacDirectionQuarter::East));
