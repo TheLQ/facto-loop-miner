@@ -23,7 +23,7 @@ use tracing::{debug, trace};
 use unicode_segmentation::UnicodeSegmentation;
 
 const FLAG_ENABLE_LINE_REWRITE: bool = false;
-const CACHE_SIZE: usize = 1000;
+const CACHE_SIZE: usize = 1;
 
 /// Middleware between entity output and blueprint/lua output
 /// Instead of generating everything "post", obscuring errors and logic

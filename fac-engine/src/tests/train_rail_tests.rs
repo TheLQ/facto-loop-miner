@@ -1,5 +1,7 @@
 use crate::common::vpoint::VPOINT_TEN;
+use crate::game_blocks::rail_hope::RailHopeLink;
 use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
+use crate::game_blocks::rail_hope_soda::{HopeSodaLink, sodas_to_rails};
 use crate::game_entities::electric_mini::FacEntElectricMiniType;
 use crate::game_entities::lamp::FacEntLamp;
 use crate::{
@@ -12,25 +14,28 @@ use crate::{
     game_entities::direction::FacDirectionQuarter,
 };
 use std::rc::Rc;
+use strum::VariantArray;
 use tracing::info;
 
 pub fn make_rail_basic_dual(output: Rc<FacItemOutput>) {
     let my_output = output.clone();
 
-    let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output.clone());
-    // rail.add_straight_section();
-    rail.add_turn90(true);
-    // rail.add_turn90(false);
-
     my_output.writei(FacEntLamp::new(), VPOINT_ZERO);
-    my_output.writei(FacEntLamp::new(), rail.pos_next());
 
     let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output.clone());
     rail.add_straight_section();
 
     let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output.clone());
+    rail.add_turn90(true);
+    my_output.writei(FacEntLamp::new(), rail.pos_next());
     rail.add_turn90(false);
     my_output.writei(FacEntLamp::new(), rail.pos_next());
+
+    // let mut rail = RailHopeDual::new(VPOINT_ZERO, FacDirectionQuarter::East, output.clone());
+    // rail.add_turn90(false);
+    // my_output.writei(FacEntLamp::new(), rail.pos_next());
+    // rail.add_turn90(true);
+    // my_output.writei(FacEntLamp::new(), rail.pos_next());
 }
 
 pub fn make_rail_spiral_90(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
@@ -261,4 +266,36 @@ fn make_rail_step_letter_c_with_s(offset_start: VPoint, output: Rc<FacItemOutput
     rail.add_straight_section();
     rail.add_turn90(true);
     output.writei(FacEntElectricMiniType::Small.entity(), offset_start);
+}
+
+pub fn make_soda(output: Rc<FacItemOutput>) {
+    let source = HopeSodaLink::new_soda_straight(VPOINT_TEN, FacDirectionQuarter::East);
+    let then = source.add_turn90(true);
+    let after = then.add_straight_section();
+    // let sodas = [source, then, after];
+    let sodas = [then];
+
+    for soda in &sodas {
+        output.writei(FacEntLamp::new(), soda.pos_start());
+    }
+
+    for rail in sodas_to_rails(sodas) {
+        rail.write_output(&output);
+    }
+}
+
+pub fn make_soda_plus(output: Rc<FacItemOutput>) {
+    for direction in FacDirectionQuarter::VARIANTS {
+        // for direction in &[FacDirectionQuarter::West] {
+        for clockwise in [true, false] {
+            info!("direction {direction} clockwise {clockwise}");
+            let source = HopeSodaLink::new_soda_turn(VPOINT_TEN, *direction, clockwise);
+            for rail in sodas_to_rails([source]) {
+                rail.write_output(&output);
+            }
+        }
+        // if 1 + 1 == 2 {
+        //     break;
+        // }
+    }
 }

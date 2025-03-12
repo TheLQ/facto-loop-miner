@@ -189,41 +189,41 @@ impl RailHopeLink for HopeDualLink {
     fn add_turn90(&self, clockwise: bool) -> HopeDualLink {
         let links = self.dual_appendable_links();
         if clockwise {
-            let turn_links = create_turn_link_from(links[1], clockwise);
+            let turn_links = create_turn_link_from(links[1], clockwise, false);
             let last_link = &turn_links[2];
             let end = last_link
                 .pos_next()
                 .move_direction_sideways_axis_int(last_link.next_direction, 0);
-            match last_link.link_type() {
-                HopeLinkType::Straight { .. } => {
-                    println!("is straight fish")
-                }
-                other => panic!("not straight {other}"),
-            }
+            // match last_link.link_type() {
+            //     HopeLinkType::Straight { .. } => {
+            //         println!("is straight fish")
+            //     }
+            //     other => panic!("not straight {other}"),
+            // }
             HopeDualLink {
                 singles: [
-                    BackingLink::Single(links[0].add_turn90(clockwise)),
+                    BackingLink::MultiTurn(create_turn_link_from(links[0], clockwise, true)),
                     BackingLink::MultiTurn(turn_links),
                 ],
                 start: self.pos_next(),
                 end,
             }
         } else {
-            let turn_links = create_turn_link_from(links[0], clockwise);
+            let turn_links = create_turn_link_from(links[0], clockwise, false);
             let last_link = &turn_links[2];
-            match last_link.link_type() {
-                HopeLinkType::Straight { .. } => {
-                    println!("is straight chicken")
-                }
-                other => panic!("not straight {other}"),
-            }
+            // match last_link.link_type() {
+            //     HopeLinkType::Straight { .. } => {
+            //         println!("is straight chicken")
+            //     }
+            //     other => panic!("not straight {other}"),
+            // }
             let end = last_link
                 .pos_next()
                 .move_direction_sideways_axis_int(last_link.next_direction, 0);
             HopeDualLink {
                 singles: [
                     BackingLink::MultiTurn(turn_links),
-                    BackingLink::Single(links[1].add_turn90(clockwise)),
+                    BackingLink::MultiTurn(create_turn_link_from(links[1], clockwise, true)),
                 ],
                 start: self.pos_next(),
                 end,
@@ -316,10 +316,11 @@ pub fn duals_into_single_vec(links: impl IntoIterator<Item = HopeDualLink>) -> V
     res
 }
 
-fn create_turn_link_from(link: &HopeLink, clockwise: bool) -> [HopeLink; 3] {
-    let first = link.add_straight(2);
+fn create_turn_link_from(link: &HopeLink, clockwise: bool, is_single: bool) -> [HopeLink; 3] {
+    let padding = if is_single { 1 } else { 3 };
+    let first = link.add_straight(padding);
     let middle = first.add_turn90(clockwise);
-    let last = middle.add_straight(2);
+    let last = middle.add_straight(padding);
     [first, middle, last]
 }
 
@@ -489,10 +490,11 @@ mod test {
     //////////////////////////
 
     #[test]
-    fn step_east_straight_then_turn_clw() {
+    fn step_east_straight_then_turn_clw_then_straight() {
         let (mut links, output_bp) = do_simple_test(FacDirectionQuarter::East, |rail| {
             rail.add_straight_section();
             rail.add_turn90(true);
+            rail.add_straight_section();
         });
 
         let link = links.next().unwrap();
@@ -512,6 +514,18 @@ mod test {
         assert_eq!(
             link.pos_next(),
             VPoint::new(SECTION_POINTS_I32 * 2, SECTION_POINTS_I32),
+            "bp {output_bp}\n{link}",
+        );
+
+        let link = links.next().unwrap();
+        assert_eq!(
+            link.pos_start(),
+            VPoint::new(SECTION_POINTS_I32 * 2, SECTION_POINTS_I32),
+            "bp {output_bp}\n{link}",
+        );
+        assert_eq!(
+            link.pos_next(),
+            VPoint::new(SECTION_POINTS_I32 * 2, SECTION_POINTS_I32 * 2),
             "bp {output_bp}\n{link}",
         );
 

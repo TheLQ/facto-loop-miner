@@ -12,6 +12,7 @@ pub mod mine_ore;
 pub mod rail_hope;
 pub mod rail_hope_dual;
 pub mod rail_hope_single;
+pub mod rail_hope_soda;
 pub mod rail_loop;
 pub mod rail_station;
 pub mod robo_farm;

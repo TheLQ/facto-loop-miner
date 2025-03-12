@@ -29,8 +29,8 @@ pub struct RailHopeSingle {
 pub struct HopeLink {
     start: VPoint,
     rtype: HopeLinkType,
-    pub next_direction: FacDirectionQuarter,
-    pub rails: Vec<HopeFactoRail>,
+    pub(super) next_direction: FacDirectionQuarter,
+    pub(super) rails: Vec<HopeFactoRail>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, AsRefStr)]
@@ -425,6 +425,15 @@ impl RailHopeLink for HopeLink {
 }
 
 impl HopeLink {
+    pub(super) fn new_single(origin: VPoint, direction: FacDirectionQuarter) -> Self {
+        Self {
+            start: origin,
+            next_direction: direction,
+            rtype: HopeLinkType::Straight { length: 0 },
+            rails: Vec::new(),
+        }
+    }
+
     pub fn add_turn90_single_section(&self, clockwise: bool) -> Self {
         self.add_straight(7).add_turn90(clockwise).add_straight(8)
     }
@@ -437,7 +446,7 @@ impl HopeLink {
 }
 
 impl HopeFactoRail {
-    fn write_output(&self, res: &FacItemOutput) {
+    pub fn write_output(&self, res: &FacItemOutput) {
         match self.rtype {
             FacEntRailType::Straight => res.write(BlueprintItem::new(
                 FacEntRailStraight::new(self.direction).into_boxed(),
