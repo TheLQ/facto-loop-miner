@@ -12,7 +12,7 @@ use uring_sys2::{
     io_uring_cqe, io_uring_cqe_get_data64, io_uring_cqe_seen, io_uring_get_sqe,
     io_uring_prep_read_fixed, io_uring_register_buffers, io_uring_register_files, io_uring_sqe,
     io_uring_sqe_set_data64, io_uring_sqe_set_flags, io_uring_unregister_buffers,
-    io_uring_unregister_files, io_uring_wait_cqe, IOSQE_FIXED_FILE_BIT,
+    io_uring_unregister_files, io_uring_wait_cqe,
 };
 
 use crate::err::{VIoError, VIoResult};
@@ -194,7 +194,10 @@ impl IoUringFileCopying {
             offset as u64,
             buf_index as libc::c_int,
         );
-        io_uring_sqe_set_flags(sqe_ptr, IOSQE_FIXED_FILE_BIT);
+        // io_uring_sqe_set_flags(sqe_ptr, IOSQE_FIXED_FILE_BIT);
+        if 1 + 1 == 2 {
+            todo!();
+        }
         io_uring_sqe_set_data64(sqe_ptr, buf_index as u64);
         self.backing_buf_ring_data[buf_index].result_offset = offset;
         self.backing_buf_ring_data[buf_index].backing_result_cursor = self.result_cursor;

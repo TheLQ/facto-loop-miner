@@ -5,7 +5,6 @@
 //
 // lints
 //
-#![allow(unused_variables)]
 // #![allow(dead_code)]
 // todo: This is for something() { Ok(()) } , only testing
 #![allow(clippy::unnecessary_wraps)]

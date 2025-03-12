@@ -14,7 +14,7 @@ itertools = { workspace = true }
 libc = "0.2.168"
 memmap2 = "0.9.5"
 #uring-sys2 = { git = "https://github.com/topecongiro/uring-sys.git" }
-#uring-sys2 = "0.9.1"
+#uring-sys2 = "0.10.0"
 uring-sys2 = { path = "../../uring-sys" }
 
 [features]
