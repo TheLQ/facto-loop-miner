@@ -235,7 +235,7 @@ impl RailHopeLink for HopeDualLink {
         unimplemented!()
     }
 
-    fn link_type(&self) -> &HopeLinkType {
+    fn link_type(&self) -> HopeLinkType {
         match &self.singles {
             [BackingLink::MultiTurn([_, link, _]), _]
             | [_, BackingLink::MultiTurn([_, link, _])] => link.link_type(),

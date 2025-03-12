@@ -10,6 +10,7 @@ use crate::blueprint::output::{ContextLevel, FacItemOutput};
 use crate::common::entity::FacEntity;
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
 use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
+use crate::game_blocks::rail_hope_soda::{SODA_RAILS_NUM, SODA_SIZE};
 use crate::game_entities::direction::{FacDirectionEighth, FacDirectionQuarter};
 use crate::game_entities::rail_curved::FacEntRailCurved;
 use crate::game_entities::rail_straight::{FacEntRailStraight, RAIL_STRAIGHT_DIAMETER};
@@ -54,10 +55,7 @@ pub enum HopeLinkType {
     Shift45 { clockwise: bool, length: usize },
 }
 
-/// A 4 way intersection is 13 rails wide square.
-/// but real turn in 8
-const SECTION_STEP: usize = 7;
-pub const SECTION_POINTS_I32: i32 = (SECTION_STEP * RAIL_STRAIGHT_DIAMETER) as i32;
+pub const SECTION_POINTS_I32: i32 = SODA_SIZE;
 
 impl RailHopeSingle {
     pub fn new(
@@ -159,7 +157,7 @@ impl RailHopeLink for HopeLink {
     }
 
     fn add_straight_section(&self) -> HopeLink {
-        self.add_straight(SECTION_STEP)
+        self.add_straight(SODA_RAILS_NUM)
     }
 
     fn add_turn90(&self, clockwise: bool) -> HopeLink {
@@ -353,8 +351,8 @@ impl RailHopeLink for HopeLink {
         }
     }
 
-    fn link_type(&self) -> &HopeLinkType {
-        &self.rtype
+    fn link_type(&self) -> HopeLinkType {
+        self.rtype.clone()
     }
 
     fn pos_start(&self) -> VPoint {

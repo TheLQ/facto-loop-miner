@@ -9,23 +9,25 @@ use std::borrow::Borrow;
 /// Define as a grid of "Soda" (aka block, but term is overloaded)
 /// with limited information: centerpoint and direction.
 /// Radically simpler movement API.
+#[derive(Eq, PartialEq, Hash, Clone)]
 pub struct HopeSodaLink {
     stype: SodaType,
     source_direction: FacDirectionQuarter,
     center: VPoint,
 }
 
+#[derive(Eq, PartialEq, Hash, Clone)]
 enum SodaType {
     Straight,
     Turn90 { clockwise: bool },
 }
 
-const SODA_RAILS_NUM: usize = 13;
+pub(super) const SODA_RAILS_NUM: usize = 13;
 const SODA_CENTER_OFFSET_I32: i32 = 13;
-const SODA_SIZE: i32 = SODA_CENTER_OFFSET_I32 * 2;
+pub(super) const SODA_SIZE: i32 = SODA_CENTER_OFFSET_I32 * 2;
 
 impl HopeSodaLink {
-    pub(crate) fn new_soda_straight(center: VPoint, source_direction: FacDirectionQuarter) -> Self {
+    pub fn new_soda_straight(center: VPoint, source_direction: FacDirectionQuarter) -> Self {
         Self {
             stype: SodaType::Straight,
             center,
@@ -105,6 +107,19 @@ impl HopeSodaLink {
 
         output
     }
+
+    pub fn corners(&self) -> [VPoint; 4] {
+        [
+            self.center
+                .move_xy(-SODA_CENTER_OFFSET_I32, -SODA_CENTER_OFFSET_I32),
+            self.center
+                .move_xy(-SODA_CENTER_OFFSET_I32, SODA_CENTER_OFFSET_I32),
+            self.center
+                .move_xy(SODA_CENTER_OFFSET_I32, -SODA_CENTER_OFFSET_I32),
+            self.center
+                .move_xy(SODA_CENTER_OFFSET_I32, SODA_CENTER_OFFSET_I32),
+        ]
+    }
 }
 
 impl RailHopeLink for HopeSodaLink {
@@ -134,8 +149,13 @@ impl RailHopeLink for HopeSodaLink {
         todo!()
     }
 
-    fn link_type(&self) -> &HopeLinkType {
-        todo!()
+    fn link_type(&self) -> HopeLinkType {
+        match self.stype {
+            SodaType::Straight => HopeLinkType::Straight {
+                length: SODA_RAILS_NUM,
+            },
+            SodaType::Turn90 { clockwise } => HopeLinkType::Turn90 { clockwise },
+        }
     }
 
     fn pos_start(&self) -> VPoint {
@@ -143,7 +163,8 @@ impl RailHopeLink for HopeSodaLink {
     }
 
     fn pos_next(&self) -> VPoint {
-        todo!()
+        // todo: this normally means "current" but doesn't make sense at all here
+        self.center
     }
 
     fn area(&self) -> Vec<VPoint> {
@@ -159,6 +180,12 @@ fn create_turn_link_from(link: &HopeLink, clockwise: bool) -> [HopeLink; 3] {
     let middle = first.add_turn90(clockwise);
     let last = middle.add_straight(2);
     [first, middle, last]
+}
+
+pub fn sodas_to_links(
+    input: impl IntoIterator<Item = impl Borrow<HopeSodaLink>>,
+) -> impl Iterator<Item = HopeLink> {
+    input.into_iter().flat_map(|v| v.borrow().links_for_soda())
 }
 
 pub fn sodas_to_rails(

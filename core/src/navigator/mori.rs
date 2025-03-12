@@ -11,6 +11,9 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::{
     duals_into_single_vec, HopeDualLink, RailHopeDual,
 };
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, SECTION_POINTS_I32};
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{
+    sodas_to_links, sodas_to_rails, HopeSodaLink,
+};
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
 use std::time::Duration;
@@ -88,12 +91,15 @@ pub fn mori2_start(
 
     match pathfind {
         Ok((path, cost)) => MoriResult::Route {
-            path: duals_into_single_vec(path),
+            // path: duals_into_single_vec(path),
+            path: sodas_to_links(path).collect(),
             cost,
         },
         Err((dump, all)) => MoriResult::FailingDebug(
-            duals_into_single_vec(dump.into_iter().map(|(v, (i, r))| v)),
-            duals_into_single_vec(all),
+            // duals_into_single_vec(dump.into_iter().map(|(v, (i, r))| v)),
+            // duals_into_single_vec(all),
+            Vec::new(),
+            Vec::new(),
         ),
     }
 }
@@ -138,38 +144,27 @@ impl PathSegmentPoints {
     }
 }
 
-fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeDualLink {
-    let mut hope = RailHopeDual::new(
-        start
-            .point()
-            .move_direction_int(start.direction(), -SECTION_POINTS_I32),
-        *start.direction(),
-        FacItemOutput::new_null().into_rc(),
-    );
-    hope.add_straight_section();
-    let links = hope.into_links();
-    let link = links.into_iter().next().unwrap();
-    link.pos_next().assert_step_rail();
-    link
+fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeSodaLink {
+    HopeSodaLink::new_soda_straight(start.0, start.1)
 }
 
 fn successors(
     surface: &VSurface,
     segment_points: &PathSegmentPoints,
-    head: &HopeDualLink,
+    head: &HopeSodaLink,
     // path: &[&HopeLink],
     processor: &ParentProcessor,
     finding_limiter: &VArea,
     tune: &MoriTunables,
     watch_data: &mut WatchData,
-) -> Vec<(HopeDualLink, u32)> {
+) -> Vec<(HopeSodaLink, u32)> {
     watch_data.executions += 1;
     // let head = path.first().unwrap();
 
-    if processor.total_links > 500 {
-        // warn!("too many links");
-        return Vec::new();
-    }
+    // if processor.total_links > 200 {
+    //     // warn!("too many links");
+    //     return Vec::new();
+    // }
 
     let watch = BasicWatch::start();
     let nexts = [
@@ -195,9 +190,14 @@ fn successors(
 fn into_buildable_link(
     surface: &VSurface,
     finding_limiter: &VArea,
-    new_link: HopeDualLink,
-) -> Option<HopeDualLink> {
-    if !finding_limiter.contains_point(&new_link.pos_next()) {
+    new_link: HopeSodaLink,
+) -> Option<HopeSodaLink> {
+    // todo: fix the limiter and just check center
+    if !new_link
+        .corners()
+        .iter()
+        .all(|v| finding_limiter.contains_point(v))
+    {
         return None;
     }
     new_link.pos_start().assert_step_rail();

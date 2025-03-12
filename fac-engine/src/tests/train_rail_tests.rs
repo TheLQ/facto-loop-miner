@@ -272,8 +272,8 @@ pub fn make_soda(output: Rc<FacItemOutput>) {
     let source = HopeSodaLink::new_soda_straight(VPOINT_TEN, FacDirectionQuarter::East);
     let then = source.add_turn90(true);
     let after = then.add_straight_section();
-    // let sodas = [source, then, after];
-    let sodas = [then];
+    let sodas = [source, then, after];
+    // let sodas = [then];
 
     for soda in &sodas {
         output.writei(FacEntLamp::new(), soda.pos_start());
@@ -294,8 +294,5 @@ pub fn make_soda_plus(output: Rc<FacItemOutput>) {
                 rail.write_output(&output);
             }
         }
-        // if 1 + 1 == 2 {
-        //     break;
-        // }
     }
 }

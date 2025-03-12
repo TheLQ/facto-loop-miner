@@ -22,7 +22,7 @@ pub trait RailHopeLink {
 
     fn add_shift45(&self, clockwise: bool, length: usize) -> Self;
 
-    fn link_type(&self) -> &HopeLinkType;
+    fn link_type(&self) -> HopeLinkType;
 
     fn pos_start(&self) -> VPoint;
 
