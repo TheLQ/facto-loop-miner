@@ -289,10 +289,9 @@ fn patches_by_cross_sign_expanding(
 
             // TODO: Support multiple sides
             let base_source_eighth = if scan_index > 0 {
-                // TODO: While going positive we get a... negative position?
-                base_source.negative()
-            } else {
                 base_source.positive()
+            } else {
+                base_source.negative()
             };
 
             let found_mines_len = found_mines.len();
