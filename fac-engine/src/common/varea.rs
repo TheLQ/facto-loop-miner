@@ -3,23 +3,15 @@ use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
+use std::ops::Rem;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct VArea {
-    pub start: VPoint,
-    pub width: u32,
-    pub height: u32,
+    top_left: VPoint,
+    bottom_right: VPoint,
 }
 
 impl VArea {
-    pub fn from_rect(rect: &Rect) -> Self {
-        VArea {
-            start: VPoint::new(rect.x, rect.y),
-            height: rect.height.try_into().unwrap(),
-            width: rect.width.try_into().unwrap(),
-        }
-    }
-
     pub fn from_arbitrary_points_pair<P: Borrow<VPoint>>(a: P, b: P) -> VArea {
         Self::from_arbitrary_points([a, b])
     }
@@ -37,130 +29,75 @@ impl VArea {
             y_max = y_max.max(borrowed_point.y());
         }
 
-        let start = VPoint::new(x_min, y_min);
         VArea {
-            start,
-            width: (x_max - start.x()).try_into().unwrap(),
-            height: (y_max - start.y()).try_into().unwrap(),
-        }
-    }
-
-    pub fn to_rect(&self) -> Rect {
-        Rect {
-            x: self.start.x(),
-            y: self.start.y(),
-            width: self.width as i32,
-            height: self.height as i32,
+            top_left: VPoint::new(x_min, y_min),
+            bottom_right: VPoint::new(x_max, y_max),
         }
     }
 
     pub fn contains_point(&self, target: &VPoint) -> bool {
-        target.x() >= self.start.x()
-            && target.x() <= self.end_x_exclusive()
-            && target.y() >= self.start.y()
-            && target.y() <= self.end_y_exclusive()
+        target.x() >= self.top_left.x()
+            && target.x() <= self.bottom_right.x()
+            && target.y() >= self.top_left.y()
+            && target.y() <= self.bottom_right.y()
     }
 
     pub fn get_points(&self) -> Vec<VPoint> {
         let mut points = Vec::new();
-        for point_x in self.start.x()..=self.end_x_exclusive() {
-            for point_y in self.start.y()..=self.end_y_exclusive() {
+        for point_x in self.top_left.x()..=self.bottom_right.x() {
+            for point_y in self.top_left.y()..=self.bottom_right.y() {
                 points.push(VPoint::new(point_x, point_y));
             }
         }
         points
     }
 
-    fn end_x_exclusive(&self) -> i32 {
-        self.start.x() + self.width as i32
+    pub fn desugar(&self) -> VAreaSugar {
+        VAreaSugar {
+            start_x: self.top_left.x(),
+            start_y: self.top_left.y(),
+            end_x: self.bottom_right.x(),
+            end_y: self.bottom_right.y(),
+        }
     }
 
-    fn end_y_exclusive(&self) -> i32 {
-        self.start.y() + self.height as i32
-    }
-
-    pub fn desugar(&self) -> (i32, i32, i32, i32) {
-        (
-            self.start.x(),
-            self.end_x_exclusive(),
-            self.start.y(),
-            self.end_y_exclusive(),
-        )
+    pub fn point_top_left(&self) -> VPoint {
+        self.top_left
     }
 
     pub fn point_bottom_right(&self) -> VPoint {
-        VPoint::new(self.end_x_exclusive(), self.end_y_exclusive())
-    }
-
-    pub fn get_corner_points(&self) -> [VPoint; 2] {
-        [self.start, self.point_bottom_right()]
-    }
-
-    pub fn normalize_step_rail(&self, padding: u32) -> Self {
-        let padding_i32 = padding as i32;
-        let x_adjust = self.start.x().rem_euclid(SECTION_POINTS_I32);
-        let y_adjust = self.start.y().rem_euclid(SECTION_POINTS_I32);
-
-        let mut new = VArea {
-            start: self.start.move_xy(-x_adjust, -y_adjust),
-            height: (self.height as i32 + y_adjust) as u32,
-            width: (self.width as i32 + x_adjust) as u32,
-        };
-        new.start.assert_step_rail();
-
-        let bottom_left = new.point_bottom_right();
-        let x_adjust = SECTION_POINTS_I32 - (bottom_left.x().rem_euclid(SECTION_POINTS_I32));
-        let y_adjust = SECTION_POINTS_I32 - (bottom_left.y().rem_euclid(SECTION_POINTS_I32));
-        new.width = (new.width as i32 + x_adjust) as u32;
-        new.height = (new.height as i32 + y_adjust) as u32;
-
-        new.point_bottom_right().assert_step_rail();
-
-        new.start = new.start.move_xy(padding_i32, padding_i32);
-        new.width -= padding;
-        new.height -= padding;
-
-        new
-    }
-
-    pub fn normalize_within_radius(&self, radius: i32) -> Self {
-        let mut next = self.clone();
-
-        {
-            let x_adjust = -radius - self.start.x();
-            if x_adjust > 0 {
-                next.start = next.start.move_x(x_adjust);
-                next.width -= x_adjust as u32;
-            }
-        }
-        {
-            let y_adjust = -radius - self.start.y();
-            if y_adjust > 0 {
-                next.start = next.start.move_y(y_adjust);
-                next.height -= y_adjust as u32;
-            }
-        }
-        {
-            let x_adjust = self.point_bottom_right().x() - radius;
-            if x_adjust > 0 {
-                next.width -= x_adjust as u32;
-            }
-        }
-        {
-            let y_adjust = self.point_bottom_right().y() - radius;
-            if y_adjust > 0 {
-                next.height -= y_adjust as u32;
-            }
-        }
-        next
+        self.bottom_right
     }
 
     pub fn point_center(&self) -> VPoint {
-        VPoint::new(
-            self.start.x() + (self.width as i32 / 2),
-            self.start.y() + (self.height as i32 / 2),
-        )
+        self.top_left.midpoint(self.bottom_right)
     }
+
+    pub fn get_corner_points(&self) -> [VPoint; 2] {
+        [self.top_left, self.bottom_right]
+    }
+
+    pub fn normalize_step_rail(&self, padding: u32) -> Self {
+        let padding_point = VPoint::new(padding as i32, padding as i32);
+        VArea {
+            top_left: self.top_left.move_round_rail_down() - padding_point,
+            bottom_right: self.bottom_right.move_round_rail_up() + padding_point,
+        }
+    }
+
+    pub fn normalize_within_radius(&self, radius: i32) -> Self {
+        VArea {
+            top_left: self.top_left.trim_max(VPoint::new(-radius, -radius)),
+            bottom_right: self.bottom_right.trim_min(VPoint::new(radius, radius)),
+        }
+    }
+}
+
+pub struct VAreaSugar {
+    pub start_x: i32,
+    pub start_y: i32,
+    pub end_x: i32,
+    pub end_y: i32,
 }
 
 #[cfg(test)]
@@ -197,7 +134,7 @@ mod test {
     #[test]
     fn test_normalize_rail_inside() {
         let area = VArea::from_arbitrary_points_pair(VPOINT_ONE, VPOINT_TEN).normalize_step_rail(0);
-        assert_eq!(area.start, VPOINT_ZERO);
+        assert_eq!(area.point_top_left(), VPOINT_ZERO);
         assert_eq!(
             area.point_bottom_right(),
             VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32)
@@ -209,7 +146,7 @@ mod test {
         let area = VArea::from_arbitrary_points_pair(VPoint::new(-1, -1), VPOINT_TEN)
             .normalize_step_rail(0);
         assert_eq!(
-            area.start,
+            area.point_top_left(),
             VPoint::new(-SECTION_POINTS_I32, -SECTION_POINTS_I32)
         );
         assert_eq!(
@@ -222,23 +159,23 @@ mod test {
     fn test_normalize_radius_outside() {
         let area = VArea::from_arbitrary_points_pair(VPoint::new(-5, -5), VPOINT_TEN)
             .normalize_within_radius(4);
-        assert_eq!(area.start, VPoint::new(-4, -4));
-        assert_eq!(area.point_bottom_right(), VPoint::new(4, 4));
+        assert_eq!(area.point_top_left(), VPoint::new(-4, -4), "{:?}", area);
+        assert_eq!(area.point_bottom_right(), VPoint::new(4, 4), "{:?}", area);
     }
 
     #[test]
     fn test_normalize_radius_partial() {
         let area = VArea::from_arbitrary_points_pair(VPoint::new(-5, -5), VPOINT_ONE)
             .normalize_within_radius(4);
-        assert_eq!(area.start, VPoint::new(-4, -4));
-        assert_eq!(area.point_bottom_right(), VPOINT_ONE);
+        assert_eq!(area.point_top_left(), VPoint::new(-4, -4), "{:?}", area);
+        assert_eq!(area.point_bottom_right(), VPOINT_ONE, "{:?}", area);
     }
 
     #[test]
     fn test_normalize_radius_inside() {
         let area = VArea::from_arbitrary_points_pair(VPoint::new(-2, -2), VPoint::new(2, 2))
             .normalize_within_radius(4);
-        assert_eq!(area.start, VPoint::new(-2, -2));
-        assert_eq!(area.point_bottom_right(), VPoint::new(2, 2));
+        assert_eq!(area.point_top_left(), VPoint::new(-2, -2), "{:?}", area);
+        assert_eq!(area.point_bottom_right(), VPoint::new(2, 2), "{:?}", area);
     }
 }

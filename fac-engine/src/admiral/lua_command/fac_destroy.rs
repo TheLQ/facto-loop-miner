@@ -1,5 +1,5 @@
 use crate::admiral::lua_command::LuaCommand;
-use crate::common::varea::VArea;
+use crate::common::varea::{VArea, VAreaSugar};
 use itertools::Itertools;
 use std::borrow::Borrow;
 use tracing::debug;
@@ -36,10 +36,12 @@ impl FacDestroy {
             panic!("empty entities, not destroying everything")
         }
         let area = area.borrow();
-        let start_x = area.start.x();
-        let start_y = area.start.y();
-        let end_x = area.point_bottom_right().x();
-        let end_y = area.point_bottom_right().y();
+        let VAreaSugar {
+            start_x,
+            start_y,
+            end_x,
+            end_y,
+        } = area.desugar();
         Self {
             area: format!("{{ {{ {start_x}, {start_y} }} , {{ {end_x}, {end_y} }} }}"),
             entity_names,
