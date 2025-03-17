@@ -1,7 +1,7 @@
 use crate::err::{VIoError, VIoResult};
 use crate::varray::VArray;
 use libc::munmap;
-use memmap2::{Mmap, MmapOptions};
+use memmap2::{Mmap, MmapMut, MmapOptions};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::mem::{transmute, ManuallyDrop};
@@ -292,7 +292,7 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
     let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
 
     debug!("mmapping...");
-    let mut mmap = unsafe {
+    let mut mmap: MmapMut = unsafe {
         MmapOptions::new()
             // .populate()
             .map_copy(&file)
@@ -301,7 +301,7 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
     debug!("mapped {}", path.display());
 
     // Pull the underlying slice
-    let xy_array_u8: &mut [u8] = mmap.deref_mut();
+    let xy_array_u8: &mut [u8] = &mut mmap;
     assert_eq!(xy_array_u8.len(), xy_array_len_u8);
 
     // Build usize Vec viewing the same memory with proper aligned access
@@ -313,6 +313,7 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
     assert_eq!(xy_array_aligned.len(), xy_array_len_u64, "aligned size");
 
     // Create an ergonomic boxed slice instead of a lifetime slice
+    // SAFETY: mmap stored in struct then hidden with references to keep alive
     let xy_array_u64: Box<[usize]> = unsafe { Box::from_raw(xy_array_aligned) };
 
     Ok(VArray::from_mmap(
