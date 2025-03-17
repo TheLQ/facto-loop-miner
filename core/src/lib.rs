@@ -37,7 +37,7 @@ mod gamedata;
 mod navigator;
 mod opencv;
 mod simd;
-mod simd_diff;
+// mod simd_diff;
 mod state;
 mod surface;
 mod surfacev;

@@ -5,6 +5,6 @@ pub mod mine_selector;
 pub mod mori;
 pub mod mori_cost;
 mod path_side;
-pub mod resource_cloud;
+// pub mod resource_cloud;
 // pub mod shinri;
 mod threaded_search;
