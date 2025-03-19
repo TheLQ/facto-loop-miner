@@ -26,7 +26,10 @@ pub fn calculate_cost_for_link(
             distance_by_basic_manhattan(next, &segment_points.end)
         }
         MoriCostMode::Complete => {
-            distance_by_punish_turns(processor, next, &segment_points.end, tune)
+            let cost = distance_by_punish_turns(processor, next, &segment_points.end, tune);
+            let bias = axis_bias(next, tune);
+            //cost
+            cost + ((cost as f32 * bias) as u32)
         } // MoriCostMode::Complete => into_end_landing_bias(
           //     next,
           //     start,
@@ -75,7 +78,7 @@ fn distance_by_punish_turns(
     let base_distance = distance_by_basic_manhattan(next, end);
 
     let link_cost: u32 = match next.link_type() {
-        HopeLinkType::Straight { length } => tune.straight_cost_unit,
+        HopeLinkType::Straight { .. } => tune.straight_cost_unit,
         HopeLinkType::Turn90 { .. } => tune.turn_cost_unit,
         HopeLinkType::Shift45 { .. } => todo!("shift45"),
     };
@@ -90,6 +93,13 @@ fn distance_by_punish_turns(
     // let turn_punish = num_recent_turns * tune.multi_turn_cost_unit;
 
     (base_distance * link_cost) //+ turn_punish
+}
+
+fn axis_bias(next: &impl RailHopeLink, tune: &MoriTunables) -> f32 {
+    let y_abs = next.pos_next().y().abs();
+    let total = tune.crop_radius;
+    let percent = y_abs as f32 / total as f32;
+    percent
 }
 
 // fn into_end_landing_bias(next: &Rail, start: &Rail, end: &VPoint, base_distance: f32) -> f32 {
