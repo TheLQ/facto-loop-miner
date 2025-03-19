@@ -1,3 +1,4 @@
+use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::VSurface;
@@ -9,22 +10,23 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
 use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
+use std::cell::RefCell;
+use std::rc::Rc;
 use tracing::info;
 
 /// Input
 ///  - Single batch of mines to be routed together
 /// Output
 ///  - Each mine has 4 destinations
-///  - Batch has 4^n possible combinations
-///  - Combinations can be permutated generated n! combinations
-///  - Every combination is sourced from the same list of base sources
+///  - Therefore batch has 4^n possible combinations
+///  - Combinations each can be permutated generating n! combinations
 pub fn get_possible_routes_for_batch(
     surface: &VSurface,
     MineSelectBatch {
         mines,
         base_sources,
     }: MineSelectBatch,
-) -> Vec<PlannedBatch> {
+) -> CompletePlan {
     let mine_choices: Vec<MineChoices> = mines
         .into_iter()
         .map(|mine| MineChoices::from_mine(surface, mine))
@@ -67,20 +69,25 @@ pub fn get_possible_routes_for_batch(
         ),
     );
 
-    let routes =
-        build_routes_from_destinations(mine_combinations, base_sources, fixed_finding_limiter);
-    routes
+    CompletePlan {
+        batch: build_routes_from_destinations(mine_combinations, fixed_finding_limiter),
+        base_sources,
+    }
 }
 
 pub struct PlannedRoute {
     pub location: MineLocation,
     pub destination: VPointDirectionQ,
-    pub base_source: VPointDirectionQ,
     pub finding_limiter: VArea,
 }
 
 pub struct PlannedBatch {
     pub routes: Vec<PlannedRoute>,
+}
+
+pub struct CompletePlan {
+    pub batch: Vec<PlannedBatch>,
+    pub base_sources: Rc<RefCell<BaseSourceEighth>>,
 }
 
 struct MineChoices {
@@ -134,13 +141,11 @@ fn find_all_permutations(input_combinations: Vec<Vec<PartialEntry>>) -> Vec<Vec<
 /// Add the base source rail going to the destination, in order
 fn build_routes_from_destinations(
     input_combinations: Vec<Vec<PartialEntry>>,
-    base_sources: Vec<VPointDirectionQ>,
     fixed_finding_limiter: VArea,
 ) -> Vec<PlannedBatch> {
     let mut batches: Vec<PlannedBatch> = Vec::new();
     for combination in input_combinations {
         let mut routes: Vec<PlannedRoute> = Vec::new();
-        let mut base_sources = base_sources.iter();
 
         for PartialEntry {
             destination,
@@ -150,7 +155,6 @@ fn build_routes_from_destinations(
             routes.push(PlannedRoute {
                 destination,
                 location,
-                base_source: *base_sources.next().unwrap(),
                 finding_limiter: fixed_finding_limiter.clone(),
             })
         }

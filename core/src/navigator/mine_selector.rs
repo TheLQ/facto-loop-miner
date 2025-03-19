@@ -1,4 +1,4 @@
-use crate::navigator::base_source::BaseSource;
+use crate::navigator::base_source::{BaseSource, BaseSourceEighth, BaseSourceRefs};
 use crate::state::tuneables::BaseTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
@@ -11,11 +11,13 @@ use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
+use std::cell::RefCell;
+use std::rc::Rc;
 use tracing::{debug, error, warn};
 
 pub struct MineSelectBatch {
     pub mines: Vec<MineLocation>,
-    pub base_sources: Vec<VPointDirectionQ>,
+    pub base_sources: Rc<RefCell<BaseSourceEighth>>,
 }
 
 pub enum MineSelectBatchResult {
@@ -51,10 +53,11 @@ const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
     let mut offset_x_from_base = surface.tunables().base.base_chunks.as_tiles_i32();
     offset_x_from_base -= offset_x_from_base % SECTION_POINTS_I32;
-    let base_source = &mut BaseSource::new(VPointDirectionQ(
+    let base_source = BaseSource::new(VPointDirectionQ(
         VPoint::new(offset_x_from_base, 0),
         FacDirectionQuarter::East,
-    ));
+    ))
+    .into_refcells();
 
     let patch_groups = group_nearby_patches(
         surface,
@@ -72,7 +75,7 @@ pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
     // ordered_patches
 
     let mine_batches =
-        patches_by_cross_sign_expanding(patch_groups, base_source, &surface.tunables().base);
+        patches_by_cross_sign_expanding(patch_groups, &base_source, &surface.tunables().base);
     if mine_batches.is_empty() {
         return MineSelectBatchResult::EmptyBatch;
     }
@@ -93,13 +96,11 @@ pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
             let chunk_size = batch_mines_len / divisor;
             debug!("index {index} split {batch_mines_len} by {divisor}");
 
-            let mut base_sources = mine_batch.base_sources;
             for chunk in &mine_batch.mines.into_iter().chunks(chunk_size) {
                 let mines: Vec<MineLocation> = chunk.into_iter().collect();
-                let base_sources = base_sources.drain(0..mines.len()).collect();
                 result.push(MineSelectBatch {
                     mines,
-                    base_sources,
+                    base_sources: mine_batch.base_sources.clone(),
                 });
             }
         } else {
@@ -116,7 +117,6 @@ fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineLoca
         .iter()
         .filter(|patch| resources.contains(&patch.resource))
         .collect();
-    let patch_range = 0..patches.len();
 
     // group patches by nearby
     let mut groups: Vec<Vec<&VPatch>> = Vec::new();
@@ -205,7 +205,7 @@ fn recursive_near_patches<'a>(
 
 fn patches_by_cross_sign_expanding(
     mut mines: Vec<MineLocation>,
-    base_source: &mut BaseSource,
+    base_source: &BaseSourceRefs,
     base_tunables: &BaseTunables,
 ) -> Vec<MineSelectBatch> {
     let bounding_area =
@@ -287,15 +287,14 @@ fn patches_by_cross_sign_expanding(
 
             // TODO: Support multiple sides
             let base_source_eighth = if scan_index > 0 {
-                base_source.positive()
+                base_source.positive_rc()
             } else {
-                base_source.negative()
+                base_source.negative_rc()
             };
 
-            let found_mines_len = found_mines.len();
             batches.push(MineSelectBatch {
                 mines: found_mines,
-                base_sources: base_source_eighth.take(found_mines_len).collect(),
+                base_sources: base_source_eighth,
             });
         }
     }

@@ -1,3 +1,4 @@
+use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
 use crate::navigator::mine_executor::{
     execute_route_batch, FailingMeta, MineRouteCombinationPathResult,
 };
@@ -18,8 +19,10 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::Path;
+use std::rc::Rc;
 use tracing::{error, info, trace, warn};
 
 pub(crate) struct Step20;
@@ -71,7 +74,7 @@ impl Step for Step20 {
             }
 
             // if 1 + 1 == 2 {
-            if batch_index > 1000 {
+            if batch_index > 3 {
                 break;
             }
         }
@@ -130,7 +133,9 @@ fn draw_no_touching_zone(surface: &mut VSurface, batches: &[MineSelectBatch]) {
 
     // stop routes going backwards right behind the start
     let radius = surface.get_radius_i32();
-    let anti_backside_x = batches[0].base_sources[0].point().x() - 1;
+
+    let base_sources = batches[0].base_sources.as_ref().borrow();
+    let anti_backside_x = base_sources.peek_single().point().x() - 1;
     let anti_backside_points = (-(radius - 1)..radius)
         .map(|i| VPoint::new(anti_backside_x, i))
         .collect_vec();
@@ -146,9 +151,14 @@ fn debug_draw_base_sources(
     let mut pixels = Vec::new();
     for batch in batches {
         let batch = batch.borrow();
-        for source in &batch.base_sources {
-            pixels.push(*source.point());
+        let total_routes = batch.mines.len();
+
+        let mut borrow = batch.base_sources.as_ref().borrow_mut();
+        for _ in 0..total_routes {
+            // can't consume the iterator with take() :-(
+            pixels.push(borrow.next().unwrap().point().clone());
         }
+        // pixels.extend(borrow.take(total_routes).map(|v| v.point().clone()));
     }
     surface.set_pixels(Pixel::Highlighter, pixels).unwrap();
 }
@@ -182,17 +192,23 @@ fn process_batch(
     let mut planned_combinations = get_possible_routes_for_batch(surface, batch);
 
     let num_per_batch_routes_min = planned_combinations
+        .batch
         .iter()
         .map(|v| v.routes.len())
         .min()
         .unwrap();
     let num_per_batch_routes_max = planned_combinations
+        .batch
         .iter()
         .map(|v| v.routes.len())
         .max()
         .unwrap();
-    let num_routes_total: usize = planned_combinations.iter().map(|v| v.routes.len()).sum();
-    let num_batches = planned_combinations.len();
+    let num_routes_total: usize = planned_combinations
+        .batch
+        .iter()
+        .map(|v| v.routes.len())
+        .sum();
+    let num_batches = planned_combinations.batch.len();
     info!(
         "batch #{batch_index} with {num_mines} mines created {num_batches} combinations \
                 with total routes {num_routes_total} \

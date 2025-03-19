@@ -313,6 +313,7 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VIoResult<VArray> {
 
     // Create an ergonomic boxed slice instead of a lifetime slice
     // SAFETY: mmap stored in struct then hidden with references to keep alive
+    // SAFETY: No Vec that can be re-allocated
     let xy_array_u64: Box<[usize]> = unsafe { Box::from_raw(xy_array_aligned) };
 
     Ok(VArray::from_mmap(

@@ -1,5 +1,5 @@
 // pub mod basic;
-mod base_source;
+pub mod base_source;
 pub mod mine_executor;
 pub mod mine_permutate;
 pub mod mine_selector;

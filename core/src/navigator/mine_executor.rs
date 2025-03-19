@@ -1,9 +1,10 @@
-use crate::navigator::mine_permutate::{PlannedBatch, PlannedRoute};
+use crate::navigator::mine_permutate::{CompletePlan, PlannedBatch, PlannedRoute};
 use crate::navigator::mori::{mori2_start, MoriResult};
 use crate::surfacev::mine::MinePath;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
+use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use itertools::Itertools;
 use num_format::ToFormattedString;
@@ -19,7 +20,10 @@ pub const MINE_FRONT_RAIL_STEPS: usize = 6;
 /// Given thousands of possible route combinations, execute in parallel and find the best
 pub fn execute_route_batch(
     surface: &VSurface,
-    planned_combinations: Vec<PlannedBatch>,
+    CompletePlan {
+        batch: planned_combinations,
+        base_sources,
+    }: CompletePlan,
 ) -> MineRouteCombinationPathResult {
     let total_planned_combinations = planned_combinations.len();
 
@@ -65,13 +69,17 @@ pub fn execute_route_batch(
         .build()
         .unwrap();
 
+    let max_routes_len = planned_combinations.iter().map(|v| v.routes.len()).sum();
+    let actual_base_sources = base_sources.borrow().peek_multiple(max_routes_len);
     let route_results: Vec<MineRouteCombinationPathResult> = wrapping_pool.install(|| {
         planned_combinations
             .into_par_iter()
-            .map(|route_combination| {
+            .map(|PlannedBatch { routes }| {
+                let routes_len = routes.len();
                 execute_route_combination(
                     execution_surface,
-                    route_combination,
+                    routes,
+                    &actual_base_sources[0..routes_len],
                     total_planned_combinations,
                 )
             })
@@ -140,6 +148,13 @@ pub fn execute_route_batch(
         .map(|(k, v)| format!("{}:{}", k, v))
         .join("|");
     let res = best_path.unwrap();
+    if let MineRouteCombinationPathResult::Success { paths } = &res {
+        // consume the base sources we used
+        let mut iter = base_sources.as_ref().borrow_mut();
+        for _ in 0..paths.len() {
+            iter.next().unwrap();
+        }
+    }
     info!(
         "Route batch of {total_planned_combinations} combinations had {} success, cost range {} to {}, failure {}, thread oversubscribe {}, res {}", 
         success_count,
@@ -159,7 +174,8 @@ static FAIL_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 fn execute_route_combination(
     surface: &VSurface,
-    route_combination: PlannedBatch,
+    route_combination: Vec<PlannedRoute>,
+    base_sources_actual: &[VPointDirectionQ],
     total_planned_combinations: usize,
 ) -> MineRouteCombinationPathResult {
     let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -183,7 +199,7 @@ fn execute_route_combination(
 
     let mut found_paths = Vec::new();
     let mut failing_meta = FailingMeta::default();
-    for route in route_combination.routes {
+    for (i, route) in route_combination.into_iter().enumerate() {
         // in failure mode, consume the rest of the routes
         if !failing_meta.failing_routes.is_empty() {
             failing_meta.failing_routes.push(route);
@@ -205,7 +221,7 @@ fn execute_route_combination(
 
         let route_result = mori2_start(
             &working_surface,
-            route.base_source,
+            base_sources_actual[i],
             route.destination,
             &route.finding_limiter,
         );
