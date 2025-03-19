@@ -1,4 +1,4 @@
-use crate::navigator::path_side::BaseSource;
+use crate::navigator::base_source::BaseSource;
 use crate::state::tuneables::BaseTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
