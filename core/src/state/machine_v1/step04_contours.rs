@@ -3,7 +3,8 @@ use facto_loop_miner_fac_engine::opencv_re::core::{
 };
 use facto_loop_miner_fac_engine::opencv_re::imgcodecs::imwrite;
 use facto_loop_miner_fac_engine::opencv_re::imgproc::{
-    bounding_rect, find_contours, rectangle, CHAIN_APPROX_SIMPLE, LINE_8, RETR_EXTERNAL,
+    bounding_rect, find_contours, rectangle, CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE, LINE_8,
+    RETR_EXTERNAL, RETR_FLOODFILL, RETR_LIST,
 };
 use facto_loop_miner_fac_engine::opencv_re::prelude::*;
 use itertools::Itertools;
@@ -12,7 +13,7 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::path::Path;
-use tracing::{debug, info, trace};
+use tracing::{debug, info, trace, warn};
 
 use crate::opencv::combine_rects_into_big_rect;
 use crate::state::err::XMachineResult;
@@ -24,7 +25,7 @@ use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::VSurface;
 use crate::PixelKdTree;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ONE, VPOINT_TEN};
 
 // const WRITE_DEBUG_IMAGE: bool = false;
 

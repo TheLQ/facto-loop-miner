@@ -5,7 +5,6 @@ use memmap2::{Mmap, MmapMut, MmapOptions};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::mem::{transmute, ManuallyDrop};
-use std::ops::DerefMut;
 use std::os::fd::AsRawFd;
 use std::path::Path;
 use std::{io, mem, ptr, slice};

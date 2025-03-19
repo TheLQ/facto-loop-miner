@@ -8,7 +8,6 @@ use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use std::fs::read;
 use std::path::Path;
-use std::time::Instant;
 use tracing::{debug, info};
 
 #[derive(Deserialize)]
@@ -27,7 +26,6 @@ pub fn read_lua_tiles(input_dir: &Path) -> Vec<LuaEntity> {
         read_watch
     );
 
-    let load_watch = Instant::now();
     // let data_inner: ExportCompressedVec = open_data_file(&input_path);
     // let data_inner: ExportCompressedv2 = open_data_file(&input_path, raw_input);
     let entities = parse_exported_lua_data(&mut raw_input, |name, x, y| LuaEntity {

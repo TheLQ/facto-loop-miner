@@ -1,5 +1,4 @@
 use crate::opencv::GeneratedMat;
-use crate::simd_diff::SurfaceDiff;
 use crate::state::machine::StepParams;
 use crate::state::tuneables::Tunables;
 use crate::surface::pixel::Pixel;
@@ -10,12 +9,10 @@ use crate::surfacev::ventity_map::VEntityMap;
 use crate::surfacev::vpatch::VPatch;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
-use colorgrad::{Gradient, GradientBuilder, LinearGradient};
+use colorgrad::Gradient;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
-use facto_loop_miner_fac_engine::opencv_re::core::Mat;
-use facto_loop_miner_io::err::VIoError;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
@@ -416,10 +413,6 @@ impl VSurface {
         for patch_index in patches_to_remove {
             self.patches.remove(patch_index);
         }
-    }
-
-    pub fn to_surface_diff(&self) -> SurfaceDiff {
-        SurfaceDiff::from_surface(self)
     }
 
     pub fn log_pixel_stats(&self, debug_message: &str) {

@@ -3,17 +3,11 @@ use crate::state::tuneables::MoriTunables;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::{BasicWatch, BasicWatchResult};
 use crate::LOCALE;
-use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_dual::{
-    duals_into_single_vec, HopeDualLink, RailHopeDual,
-};
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, SECTION_POINTS_I32};
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{
-    sodas_to_links, sodas_to_rails, HopeSodaLink,
-};
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{sodas_to_links, HopeSodaLink};
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
 use std::time::Duration;

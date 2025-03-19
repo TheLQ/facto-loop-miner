@@ -4,7 +4,6 @@ use crate::state::tuneables::BaseTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::VResult;
 use crate::surfacev::vsurface::VSurface;
-use crate::TILES_PER_CHUNK;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ZERO};
 use itertools::Itertools;

@@ -10,8 +10,6 @@ use num_format::ToFormattedString;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
-use std::fs::{create_dir, remove_dir_all};
-use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;
 use tracing::{debug, info};

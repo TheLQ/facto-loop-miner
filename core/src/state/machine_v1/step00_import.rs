@@ -35,7 +35,7 @@ impl Step for Step00 {
         translate_entities_to_image(&lua_tiles, &mut surface, &params)?;
         info!("Converted in {}", convert_watch);
 
-        let center = surface.get_pixel(VPoint::new(0, 0));
+        // let center = surface.get_pixel(VPoint::new(0, 0));
         // if center != Pixel::SteelChest {
         //     panic!("unexpeted centerpoint {:?}", center);
         // }

@@ -9,7 +9,7 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
 use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
-use tracing::{info, trace};
+use tracing::info;
 
 /// Input
 ///  - Single batch of mines to be routed together

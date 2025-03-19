@@ -1,9 +1,6 @@
 use crate::common::vpoint::VPoint;
-use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
-use opencv::core::Rect;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
-use std::ops::Rem;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct VArea {
