@@ -3,20 +3,24 @@ use crate::navigator::mine_executor::{
 };
 use crate::navigator::mine_permutate::{get_possible_routes_for_batch, PlannedBatch, PlannedRoute};
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
+use crate::navigator::mori::mori2_start;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
+use crate::surfacev::err::VResult;
 use crate::surfacev::mine::MinePath;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
+use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::path::Path;
-use tracing::{error, info, trace};
+use tracing::{error, info, trace, warn};
 
 pub(crate) struct Step20;
 
@@ -59,6 +63,7 @@ impl Step for Step20 {
         // }
 
         for (batch_index, batch) in select_batches.into_iter().enumerate() {
+            // for (batch_index, batch) in [select_batches.into_iter().enumerate().last().unwrap()] {
             let found = process_batch(&mut surface, batch, batch_index, &params.step_out_dir);
             if !found {
                 error!("KILLING EARLY");
@@ -66,7 +71,7 @@ impl Step for Step20 {
             }
 
             // if 1 + 1 == 2 {
-            if batch_index > 10 {
+            if batch_index > 1000 {
                 break;
             }
         }
@@ -88,13 +93,12 @@ impl Step for Step20 {
 // }
 
 // fn run_mori(
-//     surface: &mut VSurface,
-//     start: VPointDirectionQ,
-//     end: VPointDirectionQ,
-//     mine_base: MineLocation,
+//     surface: &mut VSurface
 // ) -> VResult<()> {
-//     let watch = BasicWatch::start();
-//     match mori2_start(surface, start.clone(), end.clone()) {
+//     let start = VPointDirectionQ(VPoint::new(100,100), FacDirectionQuarter::East);
+//     let end = VPointDirectionQ(VPoint::new(-900, -900), FacDirectionQuarter::East);
+//
+//     match mori2_start(surface, start, end) {
 //         MoriResult::Route { path, cost } => {
 //             info!(
 //                 "found {} path cost {} from {} to {} ",
@@ -195,7 +199,7 @@ fn process_batch(
                 each in range {num_per_batch_routes_min} {num_per_batch_routes_max}"
     );
 
-    let planned_combinations = vec![planned_combinations.remove(0)];
+    // let planned_combinations = vec![planned_combinations.remove(0)];
     let res = execute_route_batch(surface, planned_combinations);
     match res {
         MineRouteCombinationPathResult::Success { paths } => {
@@ -215,6 +219,34 @@ fn process_batch(
                     failing_all,
                 },
         } => {
+            if 1 + 1 == 2 {
+                // continue mode
+                let (trigger_mine, rest) = failing_routes.split_first().unwrap();
+
+                error!(
+                    "failed to pathfind but writing {} paths anyway",
+                    found_paths.len()
+                );
+                for path in found_paths {
+                    surface.add_mine_path(path).unwrap();
+                }
+
+                surface.draw_square_area_replacing(
+                    &trigger_mine.location.area,
+                    Pixel::MineNoTouch,
+                    Pixel::Highlighter,
+                );
+                for entry in rest {
+                    warn!("failing at {:?}", entry.location.area);
+                    surface.draw_square_area_replacing(
+                        &entry.location.area,
+                        Pixel::MineNoTouch,
+                        Pixel::EdgeWall,
+                    );
+                }
+                return true;
+            }
+
             error!("failed to pathfind");
             for path in found_paths {
                 surface
@@ -223,12 +255,18 @@ fn process_batch(
             }
 
             let (trigger_mine, rest) = failing_routes.split_first().unwrap();
+            warn!(
+                "trigger failing at {:?} with rest num {}",
+                trigger_mine.location.area,
+                rest.len()
+            );
             surface.draw_square_area_replacing(
                 &trigger_mine.location.area,
                 Pixel::MineNoTouch,
                 Pixel::Highlighter,
             );
             for entry in rest {
+                warn!("failing at {:?}", entry.location.area);
                 surface.draw_square_area_replacing(
                     &entry.location.area,
                     Pixel::MineNoTouch,
