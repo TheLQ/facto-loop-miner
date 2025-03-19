@@ -4,7 +4,6 @@ use derivative::Derivative;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Derivative, Eq, PartialOrd, Ord)]
 #[derivative(Debug)]
