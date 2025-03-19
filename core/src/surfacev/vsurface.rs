@@ -388,7 +388,7 @@ impl VSurface {
         let mut removed_points: Vec<VPoint> = Vec::new();
         let mut patches_to_remove = Vec::new();
         for (patch_index, patch) in self.patches.iter().enumerate() {
-            if !patch.area.start.is_within_center_radius(radius) {
+            if !patch.area.point_center().is_within_center_radius(radius) {
                 // trace!("asdf {:?}\tfor {:?}", patch.area.start, patch.resource);
                 continue;
             }
@@ -694,7 +694,7 @@ mod test {
     use crate::surfacev::vsurface::VSurface;
     use facto_loop_miner_common::log_init_trace;
     use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
-    use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
+    use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ONE, VPOINT_ZERO};
     use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
     use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
@@ -725,5 +725,29 @@ mod test {
         let test_output_dir = Path::new("work/test-output");
         info!("writing to {}", test_output_dir.display());
         surface.save_pixel_img_colorized(&test_output_dir).unwrap()
+    }
+
+    #[test]
+    fn radius_checks() {
+        let surface = VSurface::new(50);
+
+        let extreme_top_left = VPoint::new(-50, -50);
+        let extreme_bottom_right = VPoint::new(50, 50);
+
+        assert_eq!(surface.get_pixel(extreme_top_left), Pixel::Empty);
+        assert_eq!(surface.get_pixel(extreme_bottom_right), Pixel::Empty);
+
+        // let new = extreme_top_left - VPOINT_ONE;
+        // // assert_eq!(
+        // //     surface
+        // //         .pixels
+        // //         .xy_to_index_unchecked(new.x(), new.y()),
+        // //         // .map(|v| v.pixel),
+        // //     Some(Pixel::Empty)
+        // // );
+        // assert_eq!(surface.pixels.xy_to_index_unchecked(new.x(), new.y()), 5);
+
+        assert!(!surface.is_point_out_of_bounds(&extreme_top_left));
+        assert!(!surface.is_point_out_of_bounds(&extreme_bottom_right));
     }
 }

@@ -22,8 +22,9 @@ impl VPatch {
         if !resource.is_resource() {
             panic!("not a resource {:?}", resource);
         }
-        if area.width > ALERT as u32 || area.height > ALERT as u32 {
-            warn!("rect probably too big {:?}", area);
+        let size_point = area.as_size();
+        if size_point.x() > ALERT || size_point.y() > ALERT {
+            panic!("rect probably too big {:?} with size {size_point}", area);
         }
         VPatch {
             resource,

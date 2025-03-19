@@ -101,8 +101,8 @@ where
 
     pub fn is_xy_out_of_bounds(&self, x: i32, y: i32) -> bool {
         let radius = self.radius as i32;
-        let x_valid = x > -radius && x < radius;
-        let y_valid = y > -radius && y < radius;
+        let x_valid = x >= -radius && x < radius;
+        let y_valid = y >= -radius && y < radius;
         !x_valid || !y_valid
     }
     //</editor-fold>
@@ -407,7 +407,17 @@ where
 
     pub fn get_entity_by_point(&self, point: &VPoint) -> Option<&E> {
         let index = self.xy_to_index(point.x(), point.y());
-        let entity_id = self.xy_to_entity.as_slice()[index];
+        // let entity_id = self.xy_to_entity.as_slice()[index];
+        let entity_id = self.xy_to_entity.as_slice().get(index).unwrap_or_else(|| {
+            panic!(
+                "len is {} but index is {} for point {} radius {}",
+                self.xy_to_entity.as_slice().len(),
+                index,
+                point,
+                self.radius,
+            )
+        });
+        let entity_id = *entity_id;
         if entity_id == EMPTY_XY_INDEX {
             None
         } else {

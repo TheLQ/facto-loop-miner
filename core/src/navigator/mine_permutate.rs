@@ -167,7 +167,8 @@ impl MineChoices {
         let mine_area = expanded_mine_no_touching_zone(surface, &location);
         // centered top
         {
-            let mut centered_point = VPoint::new(mine_area.point_center().x(), mine_area.start.y());
+            let mut centered_point =
+                VPoint::new(mine_area.point_center().x(), mine_area.point_top_left().y());
             centered_point = centered_point.move_round_rail_down();
             centered_point.assert_step_rail();
 
@@ -217,11 +218,10 @@ fn expanded_mine_no_touching_zone(surface: &VSurface, mine: &MineLocation) -> VA
     let area = &mine.area;
 
     VArea::from_arbitrary_points_pair(
-        area.start
-            .move_xy(-MINE_RAIL_BUFFER_PIXELS, -MINE_RAIL_BUFFER_PIXELS)
-            .trim_max(surface.point_top_left()),
+        area.point_top_left()
+            .move_xy(-MINE_RAIL_BUFFER_PIXELS, -MINE_RAIL_BUFFER_PIXELS),
         area.point_bottom_right()
-            .move_xy(MINE_RAIL_BUFFER_PIXELS, MINE_RAIL_BUFFER_PIXELS)
-            .trim_min(surface.point_bottom_right()),
+            .move_xy(MINE_RAIL_BUFFER_PIXELS, MINE_RAIL_BUFFER_PIXELS),
     )
+    .normalize_within_radius(surface.get_radius_i32())
 }

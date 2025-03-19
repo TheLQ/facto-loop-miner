@@ -1,7 +1,6 @@
 use crate::state::machine::StepParams;
 use crate::surface::game_locator::GameLocator;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vpatch::VPatch;
 use crate::PixelKdTree;
 use facto_loop_miner_fac_engine::opencv_re::core::{Point, Rect, Rect_};
 use serde::{Deserialize, Serialize};
@@ -175,13 +174,13 @@ pub fn map_patch_corners_to_kdtree<'a>(patch_rects: impl Iterator<Item = &'a Rec
     tree
 }
 
-pub fn map_vpatch_to_kdtree<'a>(patch_rects: impl Iterator<Item = &'a &'a VPatch>) -> PixelKdTree {
-    let mut tree: PixelKdTree = PixelKdTree::new();
-    for (patch_counter, patch_rect) in patch_rects.enumerate() {
-        tree.add(&patch_rect.area.start.to_slice_f32(), patch_counter);
-    }
-    tree
-}
+// pub fn map_vpatch_to_kdtree<'a>(patch_rects: impl Iterator<Item = &'a &'a VPatch>) -> PixelKdTree {
+//     let mut tree: PixelKdTree = PixelKdTree::new();
+//     for (patch_counter, patch_rect) in patch_rects.enumerate() {
+//         tree.add(&patch_rect.area.start.to_slice_f32(), patch_counter);
+//     }
+//     tree
+// }
 
 pub fn map_rect_corner_to_slice(rect: &Rect) -> [f32; 2] {
     [rect.x as f32, rect.y as f32]

@@ -55,15 +55,16 @@ impl Step for Step04 {
         // }
 
         for pixel in Pixel::iter_resource() {
-            let mut max_width = 0u32;
-            let mut max_height = 0u32;
+            let mut max_width = 0;
+            let mut max_height = 0;
             let mut total = 0;
             for patch in surface.get_patches_slice() {
                 if patch.resource != pixel {
                     continue;
                 }
-                max_width = max_width.max(patch.area.width);
-                max_height = max_height.max(patch.area.height);
+                let diff = patch.area.as_size();
+                max_width = max_width.max(diff.x());
+                max_height = max_height.max(diff.y());
                 total += 1;
             }
             info!(
@@ -181,38 +182,94 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: Pixel) -> Vec<VP
     patch_rects
         .into_iter()
         .map(|patch_rect| {
-            // arbitrary padding??
-            let search_width: u32 = patch_rect.width.try_into().unwrap();
-            let search_height: u32 = patch_rect.height.try_into().unwrap();
-            let search_area = VArea {
-                start: VPoint::new(
-                    patch_rect.x - surface_meta.get_radius_i32() - 5,
-                    patch_rect.y - surface_meta.get_radius_i32() - 5,
-                ),
-                width: search_width + 10,
-                height: search_height + 10,
-            };
+            let radius_offset =
+                VPoint::new(surface_meta.get_radius_i32(), surface_meta.get_radius_i32());
+
+            // debug!("from {patch_rect:?}");
+            let start = VPoint::from_rect_start(&patch_rect) - radius_offset;
+            assert!(
+                !surface_meta.is_point_out_of_bounds(&start),
+                "start {start} not in radius {}",
+                surface_meta.get_radius()
+            );
+            // debug!("start {start:?}");
+            let mut end = start + VPoint::new(patch_rect.width, patch_rect.height);
+            // if patch_rect.width != 1 && patch_rect.height != 1 {
+            //     end -= VPOINT_ONE;
+            // }
+
+            // todo: this is trimmed in later
             // assert!(
-            //     !surface_meta.is_xy_out_of_bounds(centered_patch_rect.x, centered_patch_rect.y),
-            //     "too big {:?} from {:?} is {}",
-            //     centered_patch_rect,
-            //     patch_rect,
-            //     surface_meta.is_xy_out_of_bounds(centered_patch_rect.x, centered_patch_rect.y)
+            //     !surface_meta.is_point_out_of_bounds(&end),
+            //     "end {end} not in radius {}",
+            //     surface_meta.get_radius()
             // );
-            let points: Vec<VPoint> = search_area
-                .get_points()
-                .into_iter()
-                .filter(|point| {
-                    !surface_meta.is_point_out_of_bounds(point)
-                        && surface_meta.get_pixel(point) == pixel
-                })
-                .collect();
-            assert_ne!(points.len(), 0);
+            // debug!("end   {end:?}");
 
-            // recreate bounding area
-            let patch_area = VArea::from_arbitrary_points(&points);
+            #[cfg(why_no_work)]
+            {
+                let patch_area = VArea::from_arbitrary_points_pair(start, end);
+                let raw_area_points = patch_area.get_points();
 
-            VPatch::new(patch_area, pixel, points)
+                let any_out_of_bounds = raw_area_points
+                    .iter()
+                    .filter(|p| surface_meta.is_point_out_of_bounds(p))
+                    .collect_vec();
+                let mut debug_any = any_out_of_bounds
+                    .iter()
+                    .map(|v| format!("{}", v))
+                    .join(", ");
+                debug_any.truncate(500);
+                assert_eq!(
+                    any_out_of_bounds.len(),
+                    0,
+                    "points out of bounds {debug_any}",
+                );
+
+                let points = raw_area_points
+                    .into_iter()
+                    .filter(|p| surface_meta.get_pixel(p) == pixel)
+                    .collect_vec();
+                assert_ne!(points.len(), 0, "no points found for pixel");
+
+                // recreate bounding area
+                let test_patch_area = VArea::from_arbitrary_points(&points);
+                // assert_eq!(
+                //     test_patch_area, patch_area,
+                //     "cv rect doesn't match found points"
+                // );
+                if test_patch_area != patch_area {
+                    warn!("initial patch rect {:?}", patch_rect);
+                    panic!(
+                        "cv rect doesn't match found points\n\
+                    from : {patch_area:?}\n\
+                    recal: {test_patch_area:?}\n\
+                    from  size: {:?}\n\
+                    recal size: {:?}",
+                        patch_area.as_size(),
+                        test_patch_area.as_size(),
+                    );
+                }
+                VPatch::new(patch_area, pixel, points)
+            }
+
+            {
+                // For some reason the opencv patch rects aren't exactly accurate
+                // Instead make a bigger box and shrink to known points via the surface
+
+                let offset = VPoint::new(3, 3);
+                let start = (start - offset).trim_max(surface_meta.point_top_left() + VPOINT_ONE);
+                let end = (end + offset).trim_min(surface_meta.point_bottom_right() - VPOINT_ONE);
+
+                let points = VArea::from_arbitrary_points_pair(start, end)
+                    .get_points()
+                    .into_iter()
+                    .filter(|p| surface_meta.get_pixel(p) == pixel)
+                    .collect_vec();
+                let patch_area = VArea::from_arbitrary_points(&points);
+
+                VPatch::new(patch_area, pixel, points)
+            }
         })
         .collect()
 }
@@ -230,7 +287,8 @@ fn detect_patch_rectangles(base: &impl ToInputArray) -> Vec<Rect> {
         base,
         &mut contours,
         RETR_EXTERNAL,
-        CHAIN_APPROX_SIMPLE,
+        // RETR_LIST,
+        CHAIN_APPROX_NONE,
         offset,
     )
     .unwrap();

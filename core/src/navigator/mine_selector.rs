@@ -150,36 +150,34 @@ fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineLoca
     // Merge groups
     let mut result = Vec::new();
     for patch_group in groups {
+        let patch_group_indexes;
+        let plain_area;
         if patch_group.len() != 1 {
             // trace!("Merging patch group of {:?}", patch_group);
 
             // Externally we use the index in the VSurface Patches slice
-            let patch_group_indexes = patch_group
+            patch_group_indexes = patch_group
                 .iter()
                 .map(|patch| patch.get_surface_patch_index(surface))
                 .collect();
 
-            let area = VArea::from_arbitrary_points(
+            plain_area = VArea::from_arbitrary_points(
                 patch_group.iter().flat_map(|patch| &patch.pixel_indexes),
-            )
-            .normalize_step_rail(5)
-            .normalize_within_radius(surface.get_radius_i32() - 1);
-
-            result.push(MineLocation {
-                patch_indexes: patch_group_indexes,
-                area,
-            });
+            );
         } else {
             let patch = patch_group[0];
             // trace!("Single patch group {:?}", patch);
-            result.push(MineLocation {
-                patch_indexes: vec![patch.get_surface_patch_index(surface)],
-                area: patch
-                    .area
-                    .normalize_step_rail(5)
-                    .normalize_within_radius(surface.get_radius_i32() - 1),
-            })
+            patch_group_indexes = vec![patch.get_surface_patch_index(surface)];
+
+            plain_area = patch.area.clone();
         }
+
+        result.push(MineLocation {
+            patch_indexes: patch_group_indexes,
+            area: plain_area
+                .normalize_step_rail(5)
+                .normalize_within_radius(surface.get_radius_i32() - 1),
+        });
     }
     result
 }
@@ -268,7 +266,7 @@ fn patches_by_cross_sign_expanding(
             let search_area = VArea::from_arbitrary_points_pair(scan_start, scan_end);
             let mut found_mines: Vec<MineLocation> = mines
                 .extract_if(0..mines.len(), |mine| {
-                    search_area.contains_point(&mine.area.start)
+                    search_area.contains_point(&mine.area.point_top_left())
                         || search_area.contains_point(&mine.area.point_bottom_right())
                 })
                 .collect();
@@ -279,8 +277,8 @@ fn patches_by_cross_sign_expanding(
             found_mines.sort_by(|left, right| {
                 VPoint::sort_by_direction(
                     *cross_side.direction(),
-                    left.area.start,
-                    right.area.start,
+                    left.area.point_top_left(),
+                    right.area.point_top_left(),
                 )
             });
             // for mine in &found_mines {

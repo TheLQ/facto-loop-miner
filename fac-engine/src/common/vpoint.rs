@@ -101,6 +101,9 @@ impl VPoint {
 
     pub const fn is_within_center_radius(&self, center_radius: u32) -> bool {
         let center_radius = center_radius as i32;
+        // note: Excludes -radius,-radius in VArray
+        // because origin per-pixel is top-left. The "absolute 0,0" is included,
+        // but the "absolute bottom-right" is out-of-bounds as off-by-one
         self.x > -center_radius
             && self.x < center_radius
             && self.y > -center_radius

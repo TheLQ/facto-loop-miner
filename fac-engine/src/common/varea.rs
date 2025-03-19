@@ -88,6 +88,10 @@ impl VArea {
             bottom_right: self.bottom_right.trim_min(VPoint::new(radius, radius)),
         }
     }
+
+    pub fn as_size(&self) -> VPoint {
+        self.bottom_right - self.top_left
+    }
 }
 
 pub struct VAreaSugar {
