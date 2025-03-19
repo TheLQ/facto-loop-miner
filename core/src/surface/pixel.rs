@@ -68,7 +68,7 @@ impl Pixel {
             Pixel::Empty => [0x00, 0x00, 0x00],
             Pixel::EdgeWall => [0xBD, 0x5F, 0x5F],
             Pixel::Rail => [0xB9, 0x7A, 0x57],
-            Pixel::Highlighter => [0x3C, 0xB6, 0xDE],
+            Pixel::Highlighter => [0xDD, 0xDE, 0x05],
             // 53E1FF
             Pixel::MineNoTouch => [0x53, 0xE1, 0xFF],
         }
