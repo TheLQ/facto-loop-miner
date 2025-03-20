@@ -1,4 +1,5 @@
 use crate::common::vpoint::VPOINT_TEN;
+use crate::common::vpoint_direction::VPointDirectionQ;
 use crate::game_blocks::rail_hope::RailHopeLink;
 use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use crate::game_blocks::rail_hope_soda::{HopeSodaLink, sodas_to_rails};
@@ -13,6 +14,7 @@ use crate::{
     },
     game_entities::direction::FacDirectionQuarter,
 };
+use itertools::Itertools;
 use std::rc::Rc;
 use strum::VariantArray;
 use tracing::info;
@@ -295,4 +297,88 @@ pub fn make_soda_plus(output: Rc<FacItemOutput>) {
             }
         }
     }
+}
+
+pub fn make_base_source_rails(output: Rc<FacItemOutput>) {
+    // let primary_link = HopeSodaLink::new_soda_straight(VPOINT_ZERO, FacDirectionQuarter::East);
+    // primary_link.pos_start().assert_step_rail();
+    //
+    // let end_link = HopeSodaLink::new_soda_straight(
+    //     VPoint::new(0, SECTION_POINTS_I32),
+    //     FacDirectionQuarter::East,
+    // );
+    // end_link.pos_start().assert_step_rail();
+    //
+    // for rail in sodas_to_rails([primary_link, end_link]) {
+    //     rail.write_output(&output);
+    // }
+    let mut source =
+        BaseSourceEighth::new(VPointDirectionQ(VPOINT_ZERO, FacDirectionQuarter::East), 1);
+
+    for _ in 0..6 {
+        let new_source = source.next().unwrap();
+        let link = HopeSodaLink::new_soda_straight(*new_source.point(), FacDirectionQuarter::East);
+
+        for rail in sodas_to_rails([link]) {
+            rail.write_output(&output);
+        }
+    }
+}
+
+/// Generator
+#[derive(Debug)]
+struct BaseSourceEighth {
+    origin: VPointDirectionQ,
+    sign: i32,
+    next: i32,
+}
+
+impl BaseSourceEighth {
+    fn new(origin: VPointDirectionQ, sign: i32) -> Self {
+        // Must start at 1 due to conflict at 0!
+        Self {
+            origin,
+            sign,
+            next: 1,
+        }
+    }
+
+    fn get_for_index(&self, index: i32) -> VPointDirectionQ {
+        const INTRA_COUNT: i32 = 4;
+        const LOOP_STEP: i32 = SECTION_POINTS_I32;
+
+        let pos = self.origin.point().move_direction_sideways_int(
+            self.origin.direction(),
+            self.sign * LOOP_STEP * (index / INTRA_COUNT) + ((index % INTRA_COUNT) * 6),
+        );
+        tracing::trace!("working with {} from {}", pos, self.origin);
+        // pos.assert_step_rail();
+        VPointDirectionQ(pos, *self.origin.direction())
+    }
+
+    fn peek_single(&self) -> VPointDirectionQ {
+        self.get_for_index(self.next)
+    }
+
+    fn peek_multiple(&self, size: usize) -> Vec<VPointDirectionQ> {
+        let res = (self.next..(self.next + size as i32))
+            .map(|i| self.get_for_index(i))
+            .collect_vec();
+        assert_eq!(res.len(), size);
+        res
+    }
+}
+
+impl Iterator for BaseSourceEighth {
+    type Item = VPointDirectionQ;
+    fn next(&mut self) -> Option<Self::Item> {
+        let result = self.get_for_index(self.next);
+        self.next += 1;
+        Some(result)
+    }
+}
+
+struct BaseSourceEntry {
+    origin: VPointDirectionQ,
+    applied_intra_offset: VPoint,
 }

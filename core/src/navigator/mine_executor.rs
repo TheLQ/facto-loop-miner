@@ -1,3 +1,4 @@
+use crate::navigator::base_source::BaseSourceEntry;
 use crate::navigator::mine_permutate::{CompletePlan, PlannedBatch, PlannedRoute};
 use crate::navigator::mori::{mori2_start, MoriResult};
 use crate::surfacev::mine::MinePath;
@@ -175,7 +176,7 @@ static FAIL_COUNTER: AtomicUsize = AtomicUsize::new(0);
 fn execute_route_combination(
     surface: &VSurface,
     route_combination: Vec<PlannedRoute>,
-    base_sources_actual: &[VPointDirectionQ],
+    base_sources_actual: &[BaseSourceEntry],
     total_planned_combinations: usize,
 ) -> MineRouteCombinationPathResult {
     let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -219,10 +220,11 @@ fn execute_route_combination(
         //         }
         //     };
 
+        let base_source_entry = &base_sources_actual[i];
         let route_result = mori2_start(
             &working_surface,
-            base_sources_actual[i],
-            route.destination,
+            base_source_entry.origin,
+            base_source_entry.apply_intra_offset_to(route.destination),
             &route.finding_limiter,
         );
         match route_result {

@@ -135,7 +135,7 @@ fn draw_no_touching_zone(surface: &mut VSurface, batches: &[MineSelectBatch]) {
     let radius = surface.get_radius_i32();
 
     let base_sources = batches[0].base_sources.as_ref().borrow();
-    let anti_backside_x = base_sources.peek_single().point().x() - 1;
+    let anti_backside_x = base_sources.peek_single().origin.point().x() - 1;
     let anti_backside_points = (-(radius - 1)..radius)
         .map(|i| VPoint::new(anti_backside_x, i))
         .collect_vec();
@@ -156,7 +156,7 @@ fn debug_draw_base_sources(
         let mut borrow = batch.base_sources.as_ref().borrow_mut();
         for _ in 0..total_routes {
             // can't consume the iterator with take() :-(
-            pixels.push(borrow.next().unwrap().point().clone());
+            pixels.push(borrow.next().unwrap().origin.point().clone());
         }
         // pixels.extend(borrow.take(total_routes).map(|v| v.point().clone()));
     }

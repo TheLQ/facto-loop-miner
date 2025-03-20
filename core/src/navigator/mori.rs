@@ -133,8 +133,8 @@ impl MoriResult {
 
 impl PathSegmentPoints {
     fn validate_positions(&self) {
-        self.start.point().assert_step_rail();
-        self.end.point().assert_step_rail();
+        // self.start.point().assert_step_rail();
+        // self.end.point().assert_step_rail();
     }
 }
 
@@ -194,7 +194,7 @@ fn into_buildable_link(
     {
         return None;
     }
-    new_link.pos_start().assert_step_rail();
+    // new_link.pos_start().assert_step_rail();
     let area = new_link.area();
     if surface.is_points_free_unchecked(&area) {
         Some(new_link)

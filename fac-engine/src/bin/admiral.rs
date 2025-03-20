@@ -19,9 +19,9 @@ use facto_loop_miner_fac_engine::tests::other_tests::make_solar_bath_test;
 use facto_loop_miner_fac_engine::tests::train_area::make_area_finder;
 use facto_loop_miner_fac_engine::tests::train_loop_tests::make_rail_loop;
 use facto_loop_miner_fac_engine::tests::train_rail_tests::{
-    make_rail_basic_dual, make_rail_dual_powered, make_rail_dual_turning, make_rail_gee_for_power,
-    make_rail_shift_45, make_rail_spiral_90, make_rail_step_sketch_single, make_soda,
-    make_soda_plus,
+    make_base_source_rails, make_rail_basic_dual, make_rail_dual_powered, make_rail_dual_turning,
+    make_rail_gee_for_power, make_rail_shift_45, make_rail_spiral_90, make_rail_step_sketch_single,
+    make_soda, make_soda_plus,
 };
 use facto_loop_miner_fac_engine::tests::train_station_tests::make_rail_station;
 use facto_loop_miner_fac_engine::{
@@ -61,7 +61,7 @@ fn inner_main() -> AdmiralResult<()> {
     };
 
     let command_output = output.clone();
-    match 21 {
+    match 23 {
         1 => make_basic(command_output)?,
         2 => make_assembler_thru(command_output),
         3 => make_belt_bettel(command_output)?,
@@ -84,6 +84,7 @@ fn inner_main() -> AdmiralResult<()> {
         20 => make_rail_basic_dual(command_output),
         21 => make_soda(command_output),
         22 => make_soda_plus(command_output),
+        23 => make_base_source_rails(command_output),
         _ => panic!("uihhh"),
     }
     output.flush();
