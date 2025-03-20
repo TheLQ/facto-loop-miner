@@ -101,45 +101,65 @@ pub fn execute_route_batch(
 
     let mut best_path: Option<MineRouteCombinationPathResult> = None;
     let mut lowest_cost = u32::MAX;
-    let mut highest_cost = 0;
+    let mut highest_cost = u32::MIN;
     let mut success_count = 0;
     let mut failure_found_paths_count: HashMap<usize, u32> = HashMap::new();
     for route_result in route_results {
+        let paths = match &route_result {
+            MineRouteCombinationPathResult::Success { paths } => paths,
+            MineRouteCombinationPathResult::Failure {
+                meta: FailingMeta { found_paths, .. },
+            } => found_paths,
+        };
+        let total_cost = paths.iter().map(|v| v.cost).sum();
+
         match &route_result {
             MineRouteCombinationPathResult::Success { paths } => {
                 success_count += 1;
 
-                let total_cost = paths.iter().map(|v| v.cost).sum();
-                if total_cost < lowest_cost {
-                    lowest_cost = total_cost;
-                    best_path = Some(route_result);
-                }
-                if total_cost > highest_cost {
-                    highest_cost = total_cost;
+                match best_path {
+                    Some(MineRouteCombinationPathResult::Failure { .. }) | None => {
+                        best_path = Some(route_result);
+                        lowest_cost = total_cost;
+                        highest_cost = total_cost;
+                    }
+                    Some(MineRouteCombinationPathResult::Success { .. }) => {
+                        if total_cost < lowest_cost {
+                            lowest_cost = total_cost;
+                            best_path = Some(route_result);
+                        }
+                        if total_cost > highest_cost {
+                            highest_cost = total_cost;
+                        }
+                    }
                 }
             }
             MineRouteCombinationPathResult::Failure { meta } => {
                 let found_len = meta.found_paths.len();
-                *failure_found_paths_count.entry(found_len).or_insert(0) += 1;
-                let total_cost: u32 = meta.found_paths.iter().map(|v| v.cost).sum();
-
-                best_path = match best_path {
-                    Some(MineRouteCombinationPathResult::Failure { meta: prev_meta }) => {
-                        let prev_total_cost: u32 =
-                            prev_meta.found_paths.iter().map(|v| v.cost).sum();
-                        let prev_found_len = prev_meta.found_paths.len();
-                        if found_len > prev_found_len
-                            || (found_len == prev_found_len && total_cost < prev_total_cost)
-                        {
-                            Some(route_result)
-                        } else {
-                            // keep, but recreate since we spread it out already
-                            Some(MineRouteCombinationPathResult::Failure { meta: prev_meta })
+                match best_path {
+                    None => {
+                        best_path = Some(route_result);
+                        lowest_cost = total_cost;
+                        highest_cost = total_cost;
+                    }
+                    Some(MineRouteCombinationPathResult::Failure { meta: prev_meta })
+                        if found_len > prev_meta.found_paths.len() =>
+                    {
+                        best_path = Some(route_result);
+                        lowest_cost = total_cost;
+                        highest_cost = total_cost;
+                    }
+                    Some(MineRouteCombinationPathResult::Failure { .. }) => {
+                        if total_cost < lowest_cost {
+                            lowest_cost = total_cost;
+                            best_path = Some(route_result);
+                        }
+                        if total_cost > highest_cost {
+                            highest_cost = total_cost;
                         }
                     }
-                    Some(success) => Some(success),
-                    None => Some(route_result),
-                };
+                    Some(MineRouteCombinationPathResult::Success { .. }) => {}
+                }
             }
         }
     }
