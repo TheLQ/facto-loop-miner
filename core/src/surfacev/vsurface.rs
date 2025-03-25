@@ -10,6 +10,7 @@ use crate::surfacev::vpatch::VPatch;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use colorgrad::Gradient;
+use facto_loop_miner_common::err_utils::IOEC;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
@@ -218,10 +219,6 @@ impl VSurface {
         for (i, pixel) in entities.enumerate() {
             let color = &pixel.color();
             let start = i * color.len();
-            // todo: thought only opencv was reversed?
-            // output[start] = color[2];
-            // output[start + 1] = color[1];
-            // output[start + 2] = color[0];
             output[start..(start + 3)].copy_from_slice(color);
         }
         trace!(
@@ -231,7 +228,7 @@ impl VSurface {
         );
 
         let size = self.pixels.diameter() as u32;
-        save_png(&pixel_map_path, &output, size, size);
+        save_png(&pixel_map_path, &output, size, size)?;
         Ok(())
     }
 
@@ -282,7 +279,7 @@ impl VSurface {
             size,
             size,
             ExtendedColorType::Rgba8,
-        );
+        )?;
         Ok(())
     }
 
@@ -635,27 +632,37 @@ fn display_patches(patches: &Vec<VPatch>) -> String {
 
 //<editor-fold desc="io common">
 
-fn save_png(path: &Path, rgb: &[u8], width: u32, height: u32) {
+fn save_png(path: &Path, rgb: &[u8], width: u32, height: u32) -> VResult<()> {
     save_png_with_space(path, rgb, width, height, ExtendedColorType::Rgb8)
 }
 
-fn save_png_with_space(path: &Path, rgb: &[u8], width: u32, height: u32, space: ExtendedColorType) {
+fn save_png_with_space(
+    path: &Path,
+    rgb: &[u8],
+    width: u32,
+    height: u32,
+    space: ExtendedColorType,
+) -> VResult<()> {
     let watch = BasicWatch::start();
-    let file = File::create(path).unwrap();
+    let ioec = VError::ioec(path);
+    let file = File::create(path).map_err(ioec.io())?;
     let writer = BufWriter::new(&file);
 
     // For input 2000x2000 image:
     // Custom takes 0.121 seconds to save
     // Default takes 2.4 seconds to save
     let encoder = PngEncoder::new_with_quality(writer, CompressionType::Fast, FilterType::NoFilter);
-    encoder.write_image(rgb, width, height, space).unwrap();
-    let size = file.metadata().unwrap().len();
+    encoder
+        .write_image(rgb, width, height, space)
+        .map_err(VError::image(&path))?;
+    let size = file.metadata().map_err(ioec.io())?.len();
     debug!(
         "Saved {} byte image to {} in {}",
         size.to_formatted_string(&LOCALE),
         path.display(),
         watch
     );
+    Ok(())
 }
 
 fn path_pixel_xy_indexes(out_dir: &Path) -> PathBuf {

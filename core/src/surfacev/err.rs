@@ -1,6 +1,7 @@
 use facto_loop_miner_common::err_utils::{xbt, IOECSerdeSimd, IOECStd, IOEC};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_io::err::VIoError;
+use image::ImageError;
 use itertools::Itertools;
 use std::backtrace::Backtrace;
 use std::io;
@@ -33,6 +34,12 @@ pub enum VError {
     },
     #[error("NotADirectory {path}")]
     NotADirectory { path: String, backtrace: Backtrace },
+    #[error("Image {path}")]
+    Image {
+        err: ImageError,
+        path: String,
+        backtrace: Backtrace,
+    },
     #[error("VIoError {0}")]
     VIoError(#[from] VIoError),
 }
@@ -44,7 +51,8 @@ impl VError {
             | VError::IoError { backtrace, .. }
             | VError::UnknownName { backtrace, .. }
             | VError::SimdJsonFail { backtrace, .. }
-            | VError::NotADirectory { backtrace, .. } => backtrace,
+            | VError::NotADirectory { backtrace, .. }
+            | VError::Image { backtrace, .. } => backtrace,
             VError::VIoError(e) => e.my_backtrace(),
         }
     }
@@ -67,6 +75,14 @@ impl VError {
             err,
             path: path.to_string_lossy().to_string(),
             backtrace: Backtrace::capture(),
+        }
+    }
+
+    pub fn image(path: &Path) -> impl FnOnce(ImageError) -> Self + '_ {
+        |err| Self::Image {
+            path: path.to_string_lossy().to_string(),
+            err,
+            backtrace: xbt(),
         }
     }
 }

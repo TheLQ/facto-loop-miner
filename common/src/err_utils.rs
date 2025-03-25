@@ -24,9 +24,9 @@ pub struct IOECSerdeSimd {
 }
 
 impl<E> IOEC<E> {
-    pub fn new(path: PathBuf) -> Self {
+    pub fn new(path: impl Into<PathBuf>) -> Self {
         Self {
-            path,
+            path: path.into(),
             _p: PhantomData,
         }
     }
