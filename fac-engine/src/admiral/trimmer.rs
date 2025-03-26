@@ -1,5 +1,82 @@
 /// We don't need no `\s+` regex library
+///
 pub fn string_space_shrinker(input: impl AsRef<str>) -> String {
+    string_space_shrinker_state(input)
+}
+
+pub fn string_space_shrinker_state(input: impl AsRef<str>) -> String {
+    let input = input.as_ref();
+    let in_bytes = input.as_bytes();
+    let in_len = in_bytes.len();
+    let mut out_bytes = Vec::with_capacity(in_len);
+
+    enum Code {
+        Space,
+        Newline,
+        Letter,
+    }
+    enum State {
+        Stuff { start: usize },
+        Space,
+        SpaceAndNewline,
+    }
+    let mut state = State::Stuff { start: 0 };
+    for i in 0..in_len {
+        let code = match in_bytes[i] {
+            b' ' => Code::Space,
+            b'\n' => Code::Newline,
+            _ => Code::Letter,
+        };
+
+        match (code, &state) {
+            (Code::Space, State::Space | State::SpaceAndNewline) => {
+                // is space, keep counting spaces
+            }
+            (Code::Newline, State::Space) => {
+                // keep counting spaces
+                state = State::SpaceAndNewline
+            }
+            (Code::Newline, State::SpaceAndNewline) => {
+                // is newline, keep counting spaces
+            }
+            (Code::Space, State::Stuff { start }) => {
+                // stuff ended
+                out_bytes.extend_from_slice(&in_bytes[*start..i]);
+                state = State::Space;
+            }
+            (Code::Newline, State::Stuff { start }) => {
+                // stuff ended
+                out_bytes.extend_from_slice(&in_bytes[*start..i]);
+                state = State::SpaceAndNewline;
+            }
+            (Code::Letter, State::Stuff { start: _ }) => {
+                // continue counting
+            }
+            (Code::Letter, State::Space) => {
+                // space ended, without including start space
+                if !out_bytes.is_empty() {
+                    out_bytes.push(b' ');
+                }
+                state = State::Stuff { start: i };
+            }
+            (Code::Letter, State::SpaceAndNewline) => {
+                // space ended, without including start space
+                if !out_bytes.is_empty() {
+                    out_bytes.extend_from_slice(b"  ");
+                }
+                state = State::Stuff { start: i };
+            }
+        }
+    }
+    // last word
+    if let State::Stuff { start } = state {
+        out_bytes.extend_from_slice(&in_bytes[start..in_len]);
+    }
+
+    String::from_utf8(out_bytes).unwrap()
+}
+
+pub fn string_space_shrinker_doubler(input: impl AsRef<str>) -> String {
     let input = input.as_ref();
     let mut in_bytes = input.as_bytes().to_vec();
     let input_len = in_bytes.len();
@@ -54,16 +131,24 @@ pub fn string_space_shrinker(input: impl AsRef<str>) -> String {
 }
 
 fn is_space_or_newline(cur_char: u8) -> bool {
-    cur_char == b'\n' || cur_char == b' '
+    is_newline(cur_char) || is_newline(cur_char)
 }
 
 fn is_newline(cur_char: u8) -> bool {
     cur_char == b'\n'
 }
 
+fn is_space(cur_char: u8) -> bool {
+    cur_char == b' '
+}
+
 #[cfg(test)]
 mod test {
-    use crate::admiral::trimmer::string_space_shrinker;
+    extern crate test;
+    use crate::admiral::trimmer::{
+        string_space_shrinker, string_space_shrinker_doubler, string_space_shrinker_state,
+    };
+    use test::Bencher;
 
     #[test]
     fn basic_test() {
@@ -92,5 +177,19 @@ mod test {
         let input = "teapot".to_string();
         let actual = string_space_shrinker(input.clone());
         assert_eq!(format!("|{input}|"), format!("|{actual}|"))
+    }
+
+    // const INPUT: &str = "   this   should   \n   split me  and I'm a teapot    ";
+    // const INPUT: &str = "I'm just a teapot";
+    const INPUT: &str = "I'm just\na teapot";
+
+    #[bench]
+    fn bench_state(b: &mut Bencher) {
+        b.iter(|| string_space_shrinker_state(INPUT));
+    }
+
+    #[bench]
+    fn bench_doubler(b: &mut Bencher) {
+        b.iter(|| string_space_shrinker_doubler(INPUT));
     }
 }
