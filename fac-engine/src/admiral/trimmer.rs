@@ -1,10 +1,98 @@
 /// We don't need no `\s+` regex library
 ///
 pub fn string_space_shrinker(input: impl AsRef<str>) -> String {
-    string_space_shrinker_state(input)
+    match 1 {
+        1 => string_space_shrinker_state_slice(input),
+        2 => string_space_shrinker_state_vec(input),
+        3 => string_space_shrinker_doubler(input),
+        _ => unreachable!(),
+    }
 }
 
-pub fn string_space_shrinker_state(input: impl AsRef<str>) -> String {
+pub fn string_space_shrinker_state_slice(input: impl AsRef<str>) -> String {
+    let input = input.as_ref();
+    let in_bytes = input.as_bytes();
+    let in_len = in_bytes.len();
+    // must pad because pure newline seps output longer string than input
+    let mut out_bytes: Box<[u8]> = vec![0u8; (in_len as f32 * 1.5) as usize].into_boxed_slice();
+
+    enum Code {
+        Space,
+        Newline,
+        Letter,
+    }
+    enum State {
+        Stuff { start: usize },
+        Space,
+        SpaceAndNewline,
+    }
+    let mut state = State::Stuff { start: 0 };
+    let mut out_pos = 0;
+    for i in 0..in_len {
+        let code = match in_bytes[i] {
+            b' ' => Code::Space,
+            b'\n' => Code::Newline,
+            _ => Code::Letter,
+        };
+
+        match (code, &state) {
+            (Code::Space, State::Space | State::SpaceAndNewline) => {
+                // is space, keep counting spaces
+            }
+            (Code::Newline, State::Space) => {
+                // keep counting spaces
+                state = State::SpaceAndNewline
+            }
+            (Code::Newline, State::SpaceAndNewline) => {
+                // is newline, keep counting spaces
+            }
+            (Code::Space, State::Stuff { start }) => {
+                // stuff ended
+                let len = i - start;
+                out_bytes[out_pos..(out_pos + len)].copy_from_slice(&in_bytes[*start..i]);
+                out_pos += len;
+                state = State::Space;
+            }
+            (Code::Newline, State::Stuff { start }) => {
+                // stuff ended
+                let len = i - start;
+                out_bytes[out_pos..(out_pos + len)].copy_from_slice(&in_bytes[*start..i]);
+                out_pos += len;
+                state = State::SpaceAndNewline;
+            }
+            (Code::Letter, State::Stuff { start: _ }) => {
+                // continue counting
+            }
+            (Code::Letter, State::Space) => {
+                // space ended, without including start space
+                if out_pos != 0 {
+                    out_bytes[out_pos] = b' ';
+                    out_pos += 1;
+                }
+                state = State::Stuff { start: i };
+            }
+            (Code::Letter, State::SpaceAndNewline) => {
+                // space ended, without including start space
+                if out_pos != 0 {
+                    out_bytes[out_pos..(out_pos + 2)].copy_from_slice(b"  ");
+                    out_pos += 2;
+                }
+                state = State::Stuff { start: i };
+            }
+        }
+    }
+    // last word
+    if let State::Stuff { start } = state {
+        let len = in_len - start;
+        out_bytes[out_pos..(out_pos + len)].copy_from_slice(&in_bytes[start..in_len]);
+        out_pos += len;
+    }
+
+    // str::from_utf8(&out_bytes[0..out_pos]).unwrap().to_string()
+    String::from_utf8(out_bytes[0..out_pos].to_vec()).unwrap()
+}
+
+pub fn string_space_shrinker_state_vec(input: impl AsRef<str>) -> String {
     let input = input.as_ref();
     let in_bytes = input.as_bytes();
     let in_len = in_bytes.len();
@@ -146,7 +234,8 @@ fn is_space(cur_char: u8) -> bool {
 mod test {
     extern crate test;
     use crate::admiral::trimmer::{
-        string_space_shrinker, string_space_shrinker_doubler, string_space_shrinker_state,
+        string_space_shrinker, string_space_shrinker_doubler, string_space_shrinker_state_slice,
+        string_space_shrinker_state_vec,
     };
     use test::Bencher;
 
@@ -179,17 +268,24 @@ mod test {
         assert_eq!(format!("|{input}|"), format!("|{actual}|"))
     }
 
-    // const INPUT: &str = "   this   should   \n   split me  and I'm a teapot    ";
+    const INPUT: &str = "   this   should   \n   split me  and I'm a teapot    ";
     // const INPUT: &str = "I'm just a teapot";
-    const INPUT: &str = "I'm just\na teapot";
+    // const INPUT: &str = "I'm just\na teapot";
+    const REPEAT: usize = 1;
+    // const REPEAT: usize = 99;
 
     #[bench]
     fn bench_state(b: &mut Bencher) {
-        b.iter(|| string_space_shrinker_state(INPUT));
+        b.iter(|| string_space_shrinker_state_slice(INPUT.repeat(REPEAT)));
+    }
+
+    #[bench]
+    fn bench_state_vec(b: &mut Bencher) {
+        b.iter(|| string_space_shrinker_state_vec(INPUT.repeat(REPEAT)));
     }
 
     #[bench]
     fn bench_doubler(b: &mut Bencher) {
-        b.iter(|| string_space_shrinker_doubler(INPUT));
+        b.iter(|| string_space_shrinker_doubler(INPUT.repeat(REPEAT)));
     }
 }
