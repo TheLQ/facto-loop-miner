@@ -32,3 +32,10 @@ opencv = { version = "0.94.2", default-features = false, features = [
     "imgcodecs",
     "imgproc"
 ] }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "trim_bench"
+harness = false

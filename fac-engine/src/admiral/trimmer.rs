@@ -1,7 +1,6 @@
 /// We don't need no `\s+` regex library
-///
 pub fn string_space_shrinker(input: impl AsRef<str>) -> String {
-    match 1 {
+    match 2 {
         1 => string_space_shrinker_state_slice(input),
         2 => string_space_shrinker_state_vec(input),
         3 => string_space_shrinker_doubler(input),
@@ -9,12 +8,18 @@ pub fn string_space_shrinker(input: impl AsRef<str>) -> String {
     }
 }
 
+/// State machine edition
+/// Tweak of _vec using theoretically better memcpy copy_from_slice
+///
+/// Benchmark verdict:
+///  - wider execution time range, faster in some
+///  - Vec is faster?
 pub fn string_space_shrinker_state_slice(input: impl AsRef<str>) -> String {
     let input = input.as_ref();
     let in_bytes = input.as_bytes();
     let in_len = in_bytes.len();
     // must pad because pure newline seps output longer string than input
-    let mut out_bytes: Box<[u8]> = vec![0u8; (in_len as f32 * 1.5) as usize].into_boxed_slice();
+    let mut out_bytes = vec![0u8; (in_len as f32 * 1.1) as usize];
 
     enum Code {
         Space,
@@ -87,9 +92,10 @@ pub fn string_space_shrinker_state_slice(input: impl AsRef<str>) -> String {
         out_bytes[out_pos..(out_pos + len)].copy_from_slice(&in_bytes[start..in_len]);
         out_pos += len;
     }
+    out_bytes.truncate(out_pos);
 
     // str::from_utf8(&out_bytes[0..out_pos]).unwrap().to_string()
-    String::from_utf8(out_bytes[0..out_pos].to_vec()).unwrap()
+    String::from_utf8(out_bytes).unwrap()
 }
 
 pub fn string_space_shrinker_state_vec(input: impl AsRef<str>) -> String {
@@ -164,6 +170,8 @@ pub fn string_space_shrinker_state_vec(input: impl AsRef<str>) -> String {
     String::from_utf8(out_bytes).unwrap()
 }
 
+/// Double-pass
+/// Benchmark
 pub fn string_space_shrinker_doubler(input: impl AsRef<str>) -> String {
     let input = input.as_ref();
     let mut in_bytes = input.as_bytes().to_vec();
@@ -219,7 +227,7 @@ pub fn string_space_shrinker_doubler(input: impl AsRef<str>) -> String {
 }
 
 fn is_space_or_newline(cur_char: u8) -> bool {
-    is_newline(cur_char) || is_newline(cur_char)
+    is_space(cur_char) || is_newline(cur_char)
 }
 
 fn is_newline(cur_char: u8) -> bool {
@@ -232,12 +240,7 @@ fn is_space(cur_char: u8) -> bool {
 
 #[cfg(test)]
 mod test {
-    extern crate test;
-    use crate::admiral::trimmer::{
-        string_space_shrinker, string_space_shrinker_doubler, string_space_shrinker_state_slice,
-        string_space_shrinker_state_vec,
-    };
-    use test::Bencher;
+    use crate::admiral::trimmer::string_space_shrinker;
 
     #[test]
     fn basic_test() {
@@ -249,6 +252,22 @@ mod test {
         );
         assert_eq!(
             string_space_shrinker("  first second \nnext  line"),
+            expected
+        );
+        assert_eq!(
+            string_space_shrinker("  first second\n next  line"),
+            expected
+        );
+        assert_eq!(
+            string_space_shrinker("first second \nnext  line\n"),
+            expected
+        );
+        assert_eq!(
+            string_space_shrinker("first second \nnext  line\n  "),
+            expected
+        );
+        assert_eq!(
+            string_space_shrinker("first second \nnext  line  \n"),
             expected
         );
         assert_eq!(string_space_shrinker("first second\nnext line  "), expected);
@@ -266,26 +285,5 @@ mod test {
         let input = "teapot".to_string();
         let actual = string_space_shrinker(input.clone());
         assert_eq!(format!("|{input}|"), format!("|{actual}|"))
-    }
-
-    const INPUT: &str = "   this   should   \n   split me  and I'm a teapot    ";
-    // const INPUT: &str = "I'm just a teapot";
-    // const INPUT: &str = "I'm just\na teapot";
-    const REPEAT: usize = 1;
-    // const REPEAT: usize = 99;
-
-    #[bench]
-    fn bench_state(b: &mut Bencher) {
-        b.iter(|| string_space_shrinker_state_slice(INPUT.repeat(REPEAT)));
-    }
-
-    #[bench]
-    fn bench_state_vec(b: &mut Bencher) {
-        b.iter(|| string_space_shrinker_state_vec(INPUT.repeat(REPEAT)));
-    }
-
-    #[bench]
-    fn bench_doubler(b: &mut Bencher) {
-        b.iter(|| string_space_shrinker_doubler(INPUT.repeat(REPEAT)));
     }
 }
