@@ -61,7 +61,15 @@ pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
 
     let patch_groups = group_nearby_patches(
         surface,
-        &[Pixel::IronOre, Pixel::CopperOre, Pixel::Stone, Pixel::Coal],
+        // ignores UraniumOre because it's only for
+        // electric production (solar instead) and military (unused)
+        &[
+            Pixel::IronOre,
+            Pixel::CopperOre,
+            Pixel::Stone,
+            Pixel::Coal,
+            Pixel::CrudeOil,
+        ],
     );
 
     // let ordered_patches = match 2 {
