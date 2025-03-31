@@ -11,7 +11,7 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{sodas_to_links, H
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
 use std::time::Duration;
-use tracing::warn;
+use tracing::{info, warn};
 
 /// Pathfinder v1.2, Mori Calliope💀
 ///
@@ -72,8 +72,8 @@ pub fn mori2_start(
 
     let success = pathfind.is_ok();
 
-    warn!(
-        "executions {} found {} nexts {} cost {} summed {} res {} total {} success {success}",
+    info!(
+        " - {:>9} executions {:>9} found {:>8} nexts {:>6} cost {:>6} summed {:>5} res {:>8} total  {success} success",
         watch_data.executions.to_formatted_string(&LOCALE),
         watch_data.found_successors.to_formatted_string(&LOCALE),
         BasicWatchResult(watch_data.nexts),

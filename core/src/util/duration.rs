@@ -1,6 +1,6 @@
 use crate::LOCALE;
 use num_format::ToFormattedString;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Pointer};
 use std::time::{Duration, Instant};
 
 /// Usage: format!("Task completed in {}")`
@@ -41,6 +41,9 @@ pub struct BasicWatchResult(pub Duration);
 
 impl Display for BasicWatchResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}ms", self.0.as_millis().to_formatted_string(&LOCALE))
+        f.pad(&format!(
+            "{}ms",
+            self.0.as_millis().to_formatted_string(&LOCALE)
+        ))
     }
 }
