@@ -138,39 +138,26 @@ impl VPoint {
         );
     }
 
-    // pub fn assert_even_8x8_position(&self) {
-    //     self.assert_even_position();
-    //     assert_eq!(self.x % 8, 0, "x={} is not 8", self.x);
-    //     assert_eq!(self.y % 8, 0, "y={} is not 8", self.y);
-    // }
+    pub fn test_step_rail(&self) -> Option<String> {
+        if self.x % SECTION_POINTS_I32 != 0 {
+            Some(format!(
+                "x={} is not {SECTION_POINTS_I32} for {self}",
+                self.x
+            ))
+        } else if self.y % SECTION_POINTS_I32 != 0 {
+            Some(format!(
+                "y={} is not {SECTION_POINTS_I32} for {self}",
+                self.y
+            ))
+        } else {
+            None
+        }
+    }
 
     pub fn assert_odd_position(&self) {
         assert_eq!((self.x - 1) % 2, 0, "x={} is not odd", self.x);
         assert_eq!((self.y - 1) % 2, 0, "y={} is not odd", self.y);
     }
-
-    // pub fn assert_odd_8x8_position(&self) {
-    //     self.assert_odd_position();
-    //     assert_eq!((self.x - 1) % 8, 0, "x={} is not 8", self.x);
-    //     assert_eq!((self.y - 1) % 8, 0, "y={} is not 8", self.y);
-    // }
-
-    pub fn assert_odd_16x16_position(&self) {
-        self.assert_odd_position();
-        assert_eq!((self.x - 1) % 16, 0, "x={} is not 16", self.x);
-        assert_eq!((self.y - 1) % 16, 0, "y={} is not 16", self.y);
-    }
-
-    // pub fn is_odd_16x16_position(&self) -> bool {
-    //     return (self.x - 1) % 16 == 0 && (self.y - 1) % 16 == 0;
-    // }
-    // pub fn is_odd_16x16_for_x(&self) -> bool {
-    //     (self.x - 1) % 16 == 0
-    // }
-    //
-    // pub fn is_odd_16x16_for_y(&self) -> bool {
-    //     (self.y - 1) % 16 == 0
-    // }
 
     pub const fn move_x(&self, steps: i32) -> Self {
         Self {
@@ -211,7 +198,6 @@ impl VPoint {
         steps: i32,
     ) -> Self {
         // cardinal directions are "north == up == -1" not "north == +1"
-        // println!("move {}", steps);
         match direction.borrow() {
             FacDirectionQuarter::North => self.move_y(-steps),
             FacDirectionQuarter::South => self.move_y(steps),
@@ -416,10 +402,6 @@ impl VPoint {
         VPoint::new(self.x().midpoint(other.x()), self.y().midpoint(other.y()))
     }
 
-    // pub fn move_xy_u32(&self, x_steps: u32, y_steps: u32) -> Self {
-    //     self.move_xy(x_steps as i32, y_steps as i32)
-    // }
-
     pub const fn move_round_rail_down(&self) -> Self {
         self.move_round_down(SECTION_POINTS_I32)
     }
@@ -436,9 +418,10 @@ impl VPoint {
     }
 
     const fn move_round_up(&self, size: i32) -> Self {
+        // avoid rounding up on rem=0
         VPoint {
-            x: self.x + (size - self.x.rem_euclid(size)),
-            y: self.y + (size - self.y.rem_euclid(size)),
+            x: self.x.next_multiple_of(size),
+            y: self.y.next_multiple_of(size),
         }
     }
 
@@ -450,6 +433,7 @@ impl VPoint {
             self.move_x(1).move_y(1),
         ]
     }
+
     pub const fn get_entity_area_3x3(&self) -> [Self; 9] {
         [
             *self,
@@ -574,4 +558,32 @@ pub fn display_any_pos(x: impl Display + Debug, y: impl Display + Debug) -> Stri
     // Without .N wiping out errors of x=24.64532
     // Neat.
     format!("{:4?}{}{:4?}", x, C_BLOCK_LINE, y)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::common::vpoint::{VPOINT_ZERO, VPoint};
+    use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
+
+    #[test]
+    fn rounding_sanity_down() {
+        let pos = VPoint::new(SECTION_POINTS_I32 - 1, SECTION_POINTS_I32 - 1);
+        assert_eq!(pos.move_round_rail_down(), VPOINT_ZERO);
+    }
+
+    #[test]
+    fn rounding_sanity_up() {
+        let pos = VPoint::new(1, 1);
+        assert_eq!(
+            pos.move_round_rail_up(),
+            VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32)
+        );
+    }
+
+    #[test]
+    fn rounding_sanity_divisor() {
+        let pos = VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32);
+        assert_eq!(pos.move_round_rail_down(), pos);
+        assert_eq!(pos.move_round_rail_up(), pos);
+    }
 }
