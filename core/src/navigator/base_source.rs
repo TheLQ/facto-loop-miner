@@ -129,6 +129,13 @@ impl BaseSourceEntry {
     ) -> VPointDirectionQ {
         VPointDirectionQ(pos + self.applied_intra_offset, direction)
     }
+
+    pub fn remove_intra_offset(
+        &self,
+        VPointDirectionQ(pos, direction): VPointDirectionQ,
+    ) -> VPointDirectionQ {
+        VPointDirectionQ(pos - self.applied_intra_offset, direction)
+    }
 }
 
 #[cfg(test)]

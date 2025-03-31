@@ -1,5 +1,5 @@
 use crate::navigator::base_source::BaseSourceEntry;
-use crate::navigator::mine_permutate::{CompletePlan, PlannedBatch, PlannedRoute};
+use crate::navigator::mine_permutate::{CompletePlan, PlannedRoute, PlannedSequence};
 use crate::navigator::mori::{mori2_start, MoriResult};
 use crate::surfacev::mine::MinePath;
 use crate::surfacev::vsurface::VSurface;
@@ -12,6 +12,7 @@ use num_format::ToFormattedString;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;
 use tracing::{debug, info};
@@ -22,11 +23,11 @@ pub const MINE_FRONT_RAIL_STEPS: usize = 6;
 pub fn execute_route_batch(
     surface: &VSurface,
     CompletePlan {
-        batch: planned_combinations,
+        sequences,
         base_sources,
     }: CompletePlan,
 ) -> MineRouteCombinationPathResult {
-    let total_planned_combinations = planned_combinations.len();
+    let total_sequences = sequences.len();
 
     // TODO: This isn't actually saving time
     // // At this point
@@ -70,34 +71,36 @@ pub fn execute_route_batch(
         .build()
         .unwrap();
 
-    let max_routes_len = planned_combinations.iter().map(|v| v.routes.len()).sum();
-    let actual_base_sources = base_sources.borrow().peek_multiple(max_routes_len);
-    let route_results: Vec<MineRouteCombinationPathResult> = wrapping_pool.install(|| {
-        planned_combinations
-            .into_par_iter()
-            .map(|PlannedBatch { routes }| {
-                let routes_len = routes.len();
-                execute_route_combination(
-                    execution_surface,
-                    routes,
-                    &actual_base_sources[0..routes_len],
-                    total_planned_combinations,
-                )
-            })
-            .collect()
-    });
-    // let route_results = planned_combinations
-    //     .into_iter()
-    //     .map(|route_combination| {
-    //         execute_route_combination(
-    //             &execution_surface,
-    //             route_combination,
-    //             total_planned_combinations,
-    //         )
-    //     })
-    //     .collect_vec();
+    let max_sequence_len = sequences.iter().map(|v| v.routes.len()).max().unwrap();
+    let actual_base_sources = base_sources.borrow().peek_multiple(max_sequence_len);
+    // let route_results: Vec<MineRouteCombinationPathResult> = wrapping_pool.install(|| {
+    //     planned_combinations
+    //         .into_par_iter()
+    //         .map(|PlannedBatch { routes }| {
+    //             let routes_len = routes.len();
+    //             execute_route_combination(
+    //                 execution_surface,
+    //                 routes,
+    //                 &actual_base_sources[0..routes_len],
+    //                 total_planned_combinations,
+    //             )
+    //         })
+    //         .collect()
+    // });
+    let route_results = sequences
+        .into_iter()
+        .map(|PlannedSequence { routes }| {
+            let routes_len = routes.len();
+            execute_route_combination(
+                &execution_surface,
+                routes,
+                &actual_base_sources[0..routes_len],
+                total_sequences,
+            )
+        })
+        .collect_vec();
 
-    debug!("Executed {total_planned_combinations} route combinations in {routing_watch}");
+    debug!("Executed {total_sequences} route combinations in {routing_watch}");
 
     let mut best_path: Option<MineRouteCombinationPathResult> = None;
     let mut lowest_cost = u32::MAX;
@@ -177,7 +180,7 @@ pub fn execute_route_batch(
         }
     }
     info!(
-        "Route batch of {total_planned_combinations} combinations had {} success, cost range {} to {}, failure {}, thread oversubscribe {}, res {}", 
+        "Route batch of {total_sequences} combinations had {} success, cost range {} to {}, failure {}, thread oversubscribe {}, res {}", 
         success_count,
         highest_cost.to_formatted_string(&LOCALE),
         lowest_cost.to_formatted_string(&LOCALE),
@@ -197,14 +200,14 @@ fn execute_route_combination(
     surface: &VSurface,
     route_combination: Vec<PlannedRoute>,
     base_sources_actual: &[BaseSourceEntry],
-    total_planned_combinations: usize,
+    total_sequences: usize,
 ) -> MineRouteCombinationPathResult {
     let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
     if my_counter % 100 == 0 {
         info!(
             "Processed {} of {} combinations, success {} fail {}",
             my_counter.to_formatted_string(&LOCALE),
-            total_planned_combinations.to_formatted_string(&LOCALE),
+            total_sequences.to_formatted_string(&LOCALE),
             SUCCESS_COUNTER
                 .load(Ordering::Relaxed)
                 .to_formatted_string(&LOCALE),
@@ -241,10 +244,14 @@ fn execute_route_combination(
         //     };
 
         let base_source_entry = &base_sources_actual[i];
+        assert_pos_valid(&base_source_entry, base_source_entry.origin, "origin");
+
+        let adjusted_destination = base_source_entry.apply_intra_offset_to(route.destination);
+        assert_pos_valid(&base_source_entry, adjusted_destination, "destination");
         let route_result = mori2_start(
             &working_surface,
             base_source_entry.origin,
-            base_source_entry.apply_intra_offset_to(route.destination),
+            adjusted_destination,
             &route.finding_limiter,
         );
         match route_result {
@@ -273,6 +280,15 @@ fn execute_route_combination(
     } else {
         MineRouteCombinationPathResult::Failure { meta: failing_meta }
     }
+}
+
+fn assert_pos_valid(source: &BaseSourceEntry, pos_raw: VPointDirectionQ, debug: impl Display) {
+    let pos_removed = source.remove_intra_offset(pos_raw);
+    assert_eq!(
+        pos_removed.point().test_step_rail(),
+        None,
+        "{debug} not step rail - pos_raw {pos_raw} step {pos_removed}",
+    )
 }
 
 //

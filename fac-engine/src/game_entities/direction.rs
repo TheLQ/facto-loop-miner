@@ -91,6 +91,7 @@ impl FacDirectionEighth {
     Eq,
     Hash,
     PartialOrd,
+    Ord,
     Display,
     AsRefStr,
     IntoStaticStr,

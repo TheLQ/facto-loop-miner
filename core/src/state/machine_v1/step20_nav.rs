@@ -2,7 +2,9 @@ use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
 use crate::navigator::mine_executor::{
     execute_route_batch, FailingMeta, MineRouteCombinationPathResult,
 };
-use crate::navigator::mine_permutate::{get_possible_routes_for_batch, PlannedBatch, PlannedRoute};
+use crate::navigator::mine_permutate::{
+    get_possible_routes_for_batch, CompletePlan, PlannedRoute, PlannedSequence,
+};
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
 use crate::navigator::mori::mori2_start;
 use crate::state::err::XMachineResult;
@@ -55,11 +57,10 @@ impl Step for Step20 {
 
         // if 1 + 1 == 2 {
         //     debug_draw_base_sources(&mut surface, &select_batches);
-        //
-        //     let mut plans = Vec::new();
-        //     for batch in select_batches {
-        //         plans.append(&mut get_possible_routes_for_batch(&surface, batch));
-        //     }
+        //     let plans = select_batches
+        //         .into_iter()
+        //         .map(|batch| get_possible_routes_for_batch(&surface, batch))
+        //         .collect_vec();
         //     debug_draw_planned_destinations(&mut surface, plans);
         //     surface.save(&params.step_out_dir)?;
         //     return Ok(());
@@ -165,15 +166,20 @@ fn debug_draw_base_sources(
 
 fn debug_draw_planned_destinations(
     surface: &mut VSurface,
-    plans: impl IntoIterator<Item = impl Borrow<PlannedBatch>>,
+    plans: impl IntoIterator<Item = impl Borrow<CompletePlan>>,
 ) {
     let mut pixels = Vec::new();
     for plan in plans {
-        let plan = plan.borrow();
+        let CompletePlan {
+            sequences,
+            base_sources,
+        } = plan.borrow();
         // will dupe
-        for route in &plan.routes {
+        for sequence in sequences {
+            for route in &sequence.routes {
+                pixels.push(*route.destination.point());
+            }
             // pixels.push(*route.base_source.point());
-            pixels.push(*route.destination.point());
         }
     }
 
@@ -189,26 +195,22 @@ fn process_batch(
     trace!("---");
     let num_mines = batch.mines.len();
 
-    let mut planned_combinations = get_possible_routes_for_batch(surface, batch);
+    let mut complete_plan = get_possible_routes_for_batch(surface, batch);
 
-    let num_per_batch_routes_min = planned_combinations
-        .batch
+    let num_per_batch_routes_min = complete_plan
+        .sequences
         .iter()
         .map(|v| v.routes.len())
         .min()
         .unwrap();
-    let num_per_batch_routes_max = planned_combinations
-        .batch
+    let num_per_batch_routes_max = complete_plan
+        .sequences
         .iter()
         .map(|v| v.routes.len())
         .max()
         .unwrap();
-    let num_routes_total: usize = planned_combinations
-        .batch
-        .iter()
-        .map(|v| v.routes.len())
-        .sum();
-    let num_batches = planned_combinations.batch.len();
+    let num_routes_total: usize = complete_plan.sequences.iter().map(|v| v.routes.len()).sum();
+    let num_batches = complete_plan.sequences.len();
     info!(
         "batch #{batch_index} with {num_mines} mines created {num_batches} combinations \
                 with total routes {num_routes_total} \
@@ -216,7 +218,7 @@ fn process_batch(
     );
 
     // let planned_combinations = vec![planned_combinations.remove(0)];
-    let res = execute_route_batch(surface, planned_combinations);
+    let res = execute_route_batch(surface, complete_plan);
     match res {
         MineRouteCombinationPathResult::Success { paths } => {
             info!("pushing {} new mine paths", paths.len());

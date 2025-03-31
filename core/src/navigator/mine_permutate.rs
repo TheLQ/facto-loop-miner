@@ -69,8 +69,15 @@ pub fn get_possible_routes_for_batch(
         ),
     );
 
+    // Did we actually generate unique steps?
+    // let mut dedupe_test = mine_combinations.iter().collect_vec();
+    // dedupe_test.sort();
+    // dedupe_test.dedup();
+    // let dedupe_len = dedupe_test.len();
+    // assert_eq!(total_combinations_permut, dedupe_len);
+
     CompletePlan {
-        batch: build_routes_from_destinations(mine_combinations, fixed_finding_limiter),
+        sequences: build_routes_from_destinations(mine_combinations, fixed_finding_limiter),
         base_sources,
     }
 }
@@ -81,12 +88,12 @@ pub struct PlannedRoute {
     pub finding_limiter: VArea,
 }
 
-pub struct PlannedBatch {
+pub struct PlannedSequence {
     pub routes: Vec<PlannedRoute>,
 }
 
 pub struct CompletePlan {
-    pub batch: Vec<PlannedBatch>,
+    pub sequences: Vec<PlannedSequence>,
     pub base_sources: Rc<RefCell<BaseSourceEighth>>,
 }
 
@@ -95,7 +102,7 @@ struct MineChoices {
     destinations: Vec<VPointDirectionQ>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq)]
 struct PartialEntry {
     location: MineLocation,
     destination: VPointDirectionQ,
@@ -142,8 +149,8 @@ fn find_all_permutations(input_combinations: Vec<Vec<PartialEntry>>) -> Vec<Vec<
 fn build_routes_from_destinations(
     input_combinations: Vec<Vec<PartialEntry>>,
     fixed_finding_limiter: VArea,
-) -> Vec<PlannedBatch> {
-    let mut batches: Vec<PlannedBatch> = Vec::new();
+) -> Vec<PlannedSequence> {
+    let mut batches: Vec<PlannedSequence> = Vec::new();
     for combination in input_combinations {
         let mut routes: Vec<PlannedRoute> = Vec::new();
 
@@ -158,7 +165,7 @@ fn build_routes_from_destinations(
                 finding_limiter: fixed_finding_limiter.clone(),
             })
         }
-        batches.push(PlannedBatch { routes });
+        batches.push(PlannedSequence { routes });
     }
     batches
 }
@@ -169,10 +176,11 @@ impl MineChoices {
         let mut destinations: Vec<VPointDirectionQ> = Vec::new();
 
         let mine_area = expanded_mine_no_touching_zone(surface, &location);
+        let centered_rounded = mine_area.point_center().move_round_rail_down();
         // centered top
         {
             let mut centered_point =
-                VPoint::new(mine_area.point_center().x(), mine_area.point_top_left().y());
+                VPoint::new(centered_rounded.x(), mine_area.point_top_left().y());
             centered_point = centered_point.move_round_rail_down();
             centered_point.assert_step_rail();
 
@@ -187,10 +195,8 @@ impl MineChoices {
             }
         };
         {
-            let mut centered_point = VPoint::new(
-                mine_area.point_center().x(),
-                mine_area.point_bottom_right().y(),
-            );
+            let mut centered_point =
+                VPoint::new(centered_rounded.x(), mine_area.point_bottom_right().y());
             centered_point = centered_point.move_round_rail_up();
             centered_point.assert_step_rail();
 

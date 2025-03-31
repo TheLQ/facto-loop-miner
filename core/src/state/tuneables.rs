@@ -55,6 +55,7 @@ pub struct MoriTunables {
     pub multi_turn_cost_unit: u32,
     pub direction_cost_unit: u32,
     pub axis_cost_unit: u32,
+    pub crop_radius: u32,
 }
 
 impl MoriTunables {
@@ -63,12 +64,13 @@ impl MoriTunables {
             straight_section_size: 1,
             cost_mode: MoriCostMode::Complete,
             straight_cost_unit: 1,
-            turn_cost_unit: 32,
+            turn_cost_unit: 2,
             multi_turn_lookback: usize::MAX,
             // todo: turn cost unit might be better
             multi_turn_cost_unit: 0,
             direction_cost_unit: 10,
             axis_cost_unit: 5,
+            crop_radius: 1000,
         }
     }
 }

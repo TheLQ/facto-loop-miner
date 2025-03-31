@@ -9,7 +9,7 @@ pub struct MinePath {
     pub cost: u32,
 }
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct MineLocation {
     pub patch_indexes: Vec<usize>,
     pub area: VArea,
