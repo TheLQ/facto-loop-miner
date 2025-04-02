@@ -1,4 +1,4 @@
-use crate::navigator::mori_cost::MoriCostMode;
+use crate::navigator::MoriCostMode;
 use crate::TILES_PER_CHUNK;
 use serde::{Deserialize, Serialize};
 
