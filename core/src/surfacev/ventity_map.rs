@@ -162,14 +162,6 @@ where
             .iter()
             .all(|v| xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX)
     }
-
-    // pub fn get_points_if_in_range_vec<'a, R>(&self, points: Vec<VPoint>) -> VResult<R>
-    // where
-    //     R: Iterator<Item = &'a VPoint>,
-    // {
-    //     self.check_points_if_in_range_iter(points.iter())
-    //         .map(|_| points)
-    // }
     //</editor-fold>
 
     pub fn add(&mut self, entity: E, positions: Vec<VPoint>) -> VResult<()> {
@@ -198,15 +190,6 @@ where
         Ok(())
     }
 
-    // fn add_entity_positions(&mut self, entity_index: usize, positions: &[VPoint]) {
-    //     for position in positions {
-    //         let xy_index = self.xy_to_index_unchecked(position.x(), position.y());
-    //         self.xy_to_entity.as_mut_slice()[xy_index] = entity_index;
-    //     }
-    // }
-
-    // pub fn remove(&mut self, entity_index: usize) {}
-    //
     pub fn remove_positions(&mut self, points: &[VPoint]) {
         for point in points {
             let xy_index = self.point_to_index(point);

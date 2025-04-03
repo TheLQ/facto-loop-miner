@@ -15,6 +15,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use tracing::{debug, error, warn};
 
+#[derive(Clone)]
 pub struct MineSelectBatch {
     pub mines: Vec<MineLocation>,
     pub base_sources: Rc<RefCell<BaseSourceEighth>>,
@@ -34,7 +35,6 @@ impl MineSelectBatchResult {
     }
 }
 
-const MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
 /// at 3000 crop
 /// - 20 generates mostly 1, 2, some 3
 /// - 40 generates slightly more 3
@@ -50,7 +50,10 @@ const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 ///  - Order patch groups starting from center
 ///  - Assign base sources
 ///  - Split groups if needed because too huge creates too many possibilities later
-pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
+pub fn select_mines_and_sources(
+    surface: &VSurface,
+    maximum_mine_count_per_batch: usize,
+) -> MineSelectBatchResult {
     let mut offset_x_from_base = surface.tunables().base.base_chunks.as_tiles_i32();
     offset_x_from_base -= offset_x_from_base % SECTION_POINTS_I32;
     let base_source = BaseSource::new(VPointDirectionQ(
@@ -95,9 +98,9 @@ pub fn select_mines_and_sources(surface: &VSurface) -> MineSelectBatchResult {
         let batch_mines_len = mine_batch.mines.len();
         if mine_batch.mines.is_empty() {
             error!("bad batch at {}", index);
-        } else if batch_mines_len > MAXIMUM_MINE_COUNT_PER_BATCH {
+        } else if batch_mines_len > maximum_mine_count_per_batch {
             let mut divisor = 2;
-            while batch_mines_len / divisor > MAXIMUM_MINE_COUNT_PER_BATCH {
+            while batch_mines_len / divisor > maximum_mine_count_per_batch {
                 divisor += 1;
                 warn!("increasing divisor to {divisor} total {batch_mines_len}")
             }

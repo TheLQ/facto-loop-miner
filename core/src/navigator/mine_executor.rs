@@ -282,7 +282,7 @@ fn execute_route_combination(
     }
 }
 
-fn assert_pos_valid(source: &BaseSourceEntry, pos_raw: VPointDirectionQ, debug: impl Display) {
+pub fn assert_pos_valid(source: &BaseSourceEntry, pos_raw: VPointDirectionQ, debug: impl Display) {
     let pos_removed = source.remove_intra_offset(pos_raw);
     assert_eq!(
         pos_removed.point().test_step_rail(),
