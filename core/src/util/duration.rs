@@ -21,7 +21,12 @@ impl BasicWatch {
         self.end_time = Some(Instant::now())
     }
 
-    pub fn duration(&self) -> Duration {
+    pub fn duration(self) -> Duration {
+        self.as_duration()
+    }
+
+    /// Publicly should consume, but internally Display can't consume
+    fn as_duration(&self) -> Duration {
         let end = if let Some(v) = self.end_time {
             v
         } else {
@@ -33,7 +38,7 @@ impl BasicWatch {
 
 impl Display for BasicWatch {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        BasicWatchResult(self.duration()).fmt(f)
+        BasicWatchResult(self.as_duration()).fmt(f)
     }
 }
 
