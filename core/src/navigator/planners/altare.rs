@@ -11,8 +11,10 @@ use crate::navigator::planners::common::{
 use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::{MineLocation, MinePath};
+use crate::surfacev::sanity::assert_sanity_mines_not_deduped;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
+use facto_loop_miner_fac_engine::util::ansi::{ansi_color, Color};
 use itertools::Itertools;
 use rayon::prelude::*;
 use rayon::ThreadPool;
@@ -146,7 +148,7 @@ enum WinderState {
     },
 }
 
-const IMPOSSIBLE_TRIGGER: usize = 6;
+const IMPOSSIBLE_TRIGGER: usize = 3;
 
 /// Wind and Re-Wind state
 struct Winder {
@@ -164,6 +166,7 @@ impl Winder {
             .unwrap();
         // to use push-pop semantics
         mines_remaining.reverse();
+        assert_sanity_mines_not_deduped(mines_remaining.iter().map(|v| &v.mines[0]));
         Self {
             state: WinderState::Normal,
             mines_remaining,
@@ -192,11 +195,18 @@ impl Winder {
         } else {
             self.mines_remaining.pop()
         };
+
         info!(
-            "remaining {:>3} processed {:>3} state {}{debug_rewinding}",
-            self.mines_remaining.len(),
-            self.mines_processed.len(),
-            self.state.name()
+            "{}",
+            ansi_color(
+                format!(
+                    "remaining {:>3} processed {:>3} state {}{debug_rewinding}",
+                    self.mines_remaining.len(),
+                    self.mines_processed.len(),
+                    self.state.name()
+                ),
+                Color::BrightCyan
+            )
         );
         res
     }
@@ -261,10 +271,11 @@ impl Winder {
                     // we processed a remaining?
                     processed.push((select, mine_path));
                 };
+                assert_sanity_mines_not_deduped(remaining.iter().map(|v| &v.mines[0]));
 
                 if remaining.is_empty() {
                     // nothing to do anymore
-                    self.mines_processed.extend(processed);
+                    self.mines_processed.append(&mut processed);
                     (WinderState::Normal, WinderNext::Continue)
                 } else {
                     // still in recovery
@@ -288,6 +299,49 @@ impl Winder {
                 },
                 Err(_routes),
             ) => {
+                debug!("HMM: Rewinding, failed again");
+                if let Some(cause) = cause {
+                    assert_eq!(cause.mines, select.mines);
+                    // do nothing else, this is later re-added as the cause
+                }
+                // throw away rewind results
+                for (select, path) in processed.into_iter() {
+                    remaining.push(select);
+                    surface.remove_mine_path(&path);
+                }
+                // try removing something in the way
+                // todo: or loop...
+                if let Some((last_select, path)) = self.mines_processed.pop() {
+                    remaining.push(last_select);
+                    surface.remove_mine_path(&path);
+                }
+
+                if remaining.is_empty() {
+                    return WinderNext::BreakRewindingFailed;
+                }
+
+                // DEBUG SANITY CHECKING
+                assert_sanity_mines_not_deduped(remaining.iter().map(|v| &v.mines[0]));
+
+                // DEBUG SANITY CHECKING
+                // remaining.push(select);
+                let all_mine_bases = remaining
+                    .iter()
+                    .chain(self.mines_remaining.iter())
+                    .flat_map(|v| {
+                        assert_eq!(v.mines.len(), 1);
+                        v.mines[0].patch_indexes.clone()
+                    })
+                    .collect_vec();
+                // let select = remaining.pop().unwrap();
+                let any_exist = surface.get_mine_paths().iter().find(|v| {
+                    v.mine_base
+                        .patch_indexes
+                        .iter()
+                        .any(|patch| all_mine_bases.contains(patch))
+                });
+                assert_eq!(any_exist, None, "remaining found in surface");
+
                 // loop detection
                 if self.impossible_for_remaining != self.mines_remaining.len() {
                     self.impossible_for_remaining = self.mines_remaining.len();
@@ -305,27 +359,6 @@ impl Winder {
                 } else {
                     Some(select)
                 };
-
-                debug!("HMM: Rewinding, failed again");
-                if let Some(cause) = cause {
-                    // todo: is this the best idea???
-                    remaining.push(cause);
-                }
-                // throw away rewind results
-                for (select, path) in processed {
-                    remaining.push(select);
-                    surface.remove_mine_path(&path);
-                }
-                // try removing something in the way
-                // todo: or loop...
-                if let Some((last_select, path)) = self.mines_processed.pop() {
-                    remaining.push(last_select);
-                    surface.remove_mine_path(&path);
-                }
-
-                if remaining.is_empty() {
-                    return WinderNext::BreakRewindingFailed;
-                }
 
                 (
                     WinderState::Rewinding {

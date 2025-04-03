@@ -552,9 +552,9 @@ impl VSurface {
     //     self.rail_paths.iter().flat_map(|v| &v.rail)
     // }
     //
-    // pub fn get_mines(&self) -> &[MinePath] {
-    //     &self.rail_paths
-    // }
+    pub fn get_mine_paths(&self) -> &[MinePath] {
+        &self.rail_paths
+    }
     //
     // pub fn get_mines_mut(&mut self) -> &mut [MinePath] {
     //     &mut self.rail_paths

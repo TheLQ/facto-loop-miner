@@ -24,6 +24,7 @@ pub fn ansi_color(string: impl AsRef<str>, color: Color) -> String {
 pub enum Color {
     Green,
     Purple,
+    BrightCyan,
 }
 
 impl Color {
@@ -31,6 +32,7 @@ impl Color {
         match &self {
             Self::Green => "32".into(),
             Self::Purple => "95".into(),
+            Self::BrightCyan => "96".into(),
         }
     }
 }
