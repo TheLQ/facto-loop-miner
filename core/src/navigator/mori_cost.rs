@@ -1,6 +1,6 @@
-use crate::navigator::mori::{ParentProcessor, PathSegmentPoints};
+use crate::navigator::mori::ParentProcessor;
 use crate::state::tuneables::MoriTunables;
-use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
+use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLinkType;
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ pub enum MoriCostMode {
 
 pub fn calculate_cost_for_link(
     next: &impl RailHopeLink,
-    segment_points: &PathSegmentPoints,
+    segment_points: &VSegment,
     processor: &ParentProcessor,
     tune: &MoriTunables,
 ) -> u32 {

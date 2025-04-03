@@ -1,9 +1,9 @@
+use crate::navigator::mine_permutate::PlannedRoute;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
+use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use itertools::Itertools;
 use std::cell::RefCell;
-use std::iter::Peekable;
 use std::rc::Rc;
 
 pub struct BaseSource {
@@ -123,18 +123,45 @@ pub struct BaseSourceEntry {
 }
 
 impl BaseSourceEntry {
-    pub fn apply_intra_offset_to(
+    pub fn route_to_segment(
         &self,
-        VPointDirectionQ(pos, direction): VPointDirectionQ,
-    ) -> VPointDirectionQ {
-        VPointDirectionQ(pos + self.applied_intra_offset, direction)
-    }
+        PlannedRoute {
+            destination: VPointDirectionQ(pos, direction),
+            location,
+            finding_limiter: _,
+        }: &PlannedRoute,
+    ) -> VSegment {
+        let test_origin = *self.origin.point() - self.applied_intra_offset;
+        assert_eq!(
+            test_origin.test_step_rail(),
+            None,
+            "Origin not step rail - pos_raw {} step {}",
+            self.origin,
+            test_origin
+        );
 
-    pub fn remove_intra_offset(
-        &self,
-        VPointDirectionQ(pos, direction): VPointDirectionQ,
-    ) -> VPointDirectionQ {
-        VPointDirectionQ(pos - self.applied_intra_offset, direction)
+        assert_eq!(
+            pos.test_step_rail(),
+            None,
+            "Destination not step rail - pos_raw {}",
+            pos,
+        );
+
+        // apply offset without moving away from center
+        let distance_test = &location.area.point_center();
+        let init_distance = pos.distance_to(distance_test);
+        let mut new_pos = *pos + self.applied_intra_offset;
+        if new_pos.distance_to(distance_test) > init_distance {
+            // todo: support x somehow
+            let pos = pos.move_y(SECTION_POINTS_I32 * self.applied_intra_offset.y().signum() * -1);
+            new_pos = pos + self.applied_intra_offset;
+            assert!(new_pos.distance_to(distance_test) < init_distance);
+        }
+
+        VSegment {
+            start: self.origin,
+            end: VPointDirectionQ(new_pos, *direction),
+        }
     }
 }
 

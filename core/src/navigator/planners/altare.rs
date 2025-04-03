@@ -1,5 +1,4 @@
 use crate::navigator::base_source::BaseSourceEntry;
-use crate::navigator::mine_executor::assert_pos_valid;
 use crate::navigator::mine_permutate::{
     get_possible_routes_for_batch, CompletePlan, PlannedRoute, PlannedSequence,
 };
@@ -10,6 +9,7 @@ use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MinePath;
 use crate::surfacev::vsurface::VSurface;
+use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
 use itertools::Itertools;
 use rayon::prelude::*;
 use rayon::ThreadPool;
@@ -130,14 +130,9 @@ fn execute_route(
     // let mut working_surface = (*surface).clone();
     let working_surface = surface;
 
-    assert_pos_valid(&base_source_entry, base_source_entry.origin, "origin");
-
-    let adjusted_destination = base_source_entry.apply_intra_offset_to(route.destination);
-    assert_pos_valid(&base_source_entry, adjusted_destination, "destination");
     let route_result = mori2_start(
         &working_surface,
-        base_source_entry.origin,
-        adjusted_destination,
+        base_source_entry.route_to_segment(route),
         &route.finding_limiter,
     );
     route_result

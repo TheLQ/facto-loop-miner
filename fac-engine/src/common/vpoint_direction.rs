@@ -27,3 +27,15 @@ impl From<(VPoint, FacDirectionQuarter)> for VPointDirectionQ {
         Self(value.0, value.1)
     }
 }
+
+pub struct VSegment {
+    pub start: VPointDirectionQ,
+    pub end: VPointDirectionQ,
+}
+
+impl VSegment {
+    // fn assert_step_rails(&self) {
+    //     self.start.point().assert_step_rail();
+    //     self.end.point().assert_step_rail();
+    // }
+}

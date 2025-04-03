@@ -5,7 +5,7 @@ use crate::surfacev::mine::MinePath;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
-use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
+use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use itertools::Itertools;
 use num_format::ToFormattedString;
@@ -244,14 +244,9 @@ fn execute_route_combination(
         //     };
 
         let base_source_entry = &base_sources_actual[i];
-        assert_pos_valid(&base_source_entry, base_source_entry.origin, "origin");
-
-        let adjusted_destination = base_source_entry.apply_intra_offset_to(route.destination);
-        assert_pos_valid(&base_source_entry, adjusted_destination, "destination");
         let route_result = mori2_start(
             &working_surface,
-            base_source_entry.origin,
-            adjusted_destination,
+            base_source_entry.route_to_segment(&route),
             &route.finding_limiter,
         );
         match route_result {
@@ -280,15 +275,6 @@ fn execute_route_combination(
     } else {
         MineRouteCombinationPathResult::Failure { meta: failing_meta }
     }
-}
-
-pub fn assert_pos_valid(source: &BaseSourceEntry, pos_raw: VPointDirectionQ, debug: impl Display) {
-    let pos_removed = source.remove_intra_offset(pos_raw);
-    assert_eq!(
-        pos_removed.point().test_step_rail(),
-        None,
-        "{debug} not step rail - pos_raw {pos_raw} step {pos_removed}",
-    )
 }
 
 //

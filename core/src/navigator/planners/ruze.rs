@@ -33,17 +33,6 @@ pub fn start_ruze_planner(surface: &mut VSurface, params: &StepParams) {
 
     draw_no_touching_zone(surface, &select_batches);
 
-    // if 1 + 1 == 2 {
-    //     debug_draw_base_sources(&mut surface, &select_batches);
-    //     let plans = select_batches
-    //         .into_iter()
-    //         .map(|batch| get_possible_routes_for_batch(&surface, batch))
-    //         .collect_vec();
-    //     debug_draw_planned_destinations(&mut surface, plans);
-    //     surface.save(&params.step_out_dir)?;
-    //     return Ok(());
-    // }
-
     for (batch_index, batch) in select_batches.into_iter().enumerate() {
         // for (batch_index, batch) in [select_batches.into_iter().enumerate().last().unwrap()] {
         let found = process_batch(surface, batch, batch_index, &params.step_out_dir);

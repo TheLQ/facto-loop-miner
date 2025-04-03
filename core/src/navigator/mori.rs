@@ -4,7 +4,7 @@ use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::{BasicWatch, BasicWatchResult};
 use crate::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
+use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{sodas_to_links, HopeSodaLink};
@@ -19,16 +19,9 @@ use tracing::{info, warn};
 ///
 /// Makes a dual rail + spacing, +6 straight or 90 degree turning, path of rail from start to end.
 /// Without collisions into any point on the Surface.
-pub fn mori2_start(
-    surface: &VSurface,
-    start: VPointDirectionQ,
-    end: VPointDirectionQ,
-    finding_limiter: &VArea,
-) -> MoriResult {
+pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VArea) -> MoriResult {
     let pathfind_watch = BasicWatch::start();
 
-    let endpoints = &PathSegmentPoints { start, end };
-    endpoints.validate_positions();
     let start_link = new_straight_link_from_vd(&endpoints.start);
     let end_link = new_straight_link_from_vd(&endpoints.end);
 
@@ -47,7 +40,7 @@ pub fn mori2_start(
             let watch = BasicWatch::start();
             let res = successors(
                 surface,
-                endpoints,
+                &endpoints,
                 head,
                 processor,
                 finding_limiter,
@@ -112,11 +105,6 @@ struct WatchData {
     found_successors: usize,
 }
 
-pub struct PathSegmentPoints {
-    start: VPointDirectionQ,
-    pub(crate) end: VPointDirectionQ,
-}
-
 pub enum MoriResult {
     Route { path: Vec<HopeLink>, cost: u32 },
     FailingDebug(Vec<HopeLink>, Vec<HopeLink>),
@@ -131,20 +119,13 @@ impl MoriResult {
     }
 }
 
-impl PathSegmentPoints {
-    fn validate_positions(&self) {
-        // self.start.point().assert_step_rail();
-        // self.end.point().assert_step_rail();
-    }
-}
-
 fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeSodaLink {
     HopeSodaLink::new_soda_straight(start.0, start.1)
 }
 
 fn successors(
     surface: &VSurface,
-    segment_points: &PathSegmentPoints,
+    segment_points: &VSegment,
     head: &HopeSodaLink,
     // path: &[&HopeLink],
     processor: &ParentProcessor,
