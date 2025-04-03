@@ -1,4 +1,4 @@
-use crate::LOCALE;
+use facto_loop_miner_common::LOCALE;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use std::collections::HashMap;

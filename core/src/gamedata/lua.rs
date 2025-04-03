@@ -2,7 +2,7 @@ use crate::gamedata::compressed_export::parse_exported_lua_data;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::util::duration::BasicWatch;
-use crate::LOCALE;
+use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};

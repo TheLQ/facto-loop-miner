@@ -2,7 +2,7 @@ use crate::navigator::mori_cost::calculate_cost_for_link;
 use crate::state::tuneables::MoriTunables;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::{BasicWatch, BasicWatchResult};
-use crate::LOCALE;
+use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;

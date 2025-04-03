@@ -12,7 +12,7 @@ use crate::surface::patch::{DiskPatch, Patch};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
-use crate::LOCALE;
+use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::opencv_re::core::Point;
