@@ -1,7 +1,8 @@
 use crate::navigator::mine_permutate::CompletePlan;
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::mine::MineLocation;
+use crate::surfacev::vsurface::{RemovedEntity, VSurface};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
@@ -75,10 +76,37 @@ pub(super) fn draw_no_touching_zone(surface: &mut VSurface, batches: &[MineSelec
         .unwrap()
 }
 
+pub(super) fn draw_active_no_touching_zone(
+    surface: &mut VSurface,
+    location: &MineLocation,
+) -> RemovedEntity {
+    let needle = location.area.point_top_left();
+    let existing_pixel = surface.get_pixel(needle);
+    assert_eq!(existing_pixel, Pixel::MineNoTouch, "at {needle}");
+
+    let new_points = location
+        .area
+        .get_points()
+        .into_iter()
+        .filter(|p| matches!(surface.get_pixel(p), Pixel::MineNoTouch | Pixel::Empty))
+        .collect_vec();
+    surface.set_pixel_entity_swap(surface.get_pixel_entity_id_at(&needle), new_points, false)
+}
+
+pub(super) fn draw_restored_no_touching_zone(
+    surface: &mut VSurface,
+    mut removed_entity: RemovedEntity,
+) -> RemovedEntity {
+    removed_entity
+        .points
+        .retain(|p| matches!(surface.get_pixel(p), Pixel::MineNoTouch | Pixel::Empty));
+    surface.set_pixel_entity_swap(removed_entity.entity_id, removed_entity.points, false)
+}
+
 fn max_no_touching_zone(surface: &VSurface, area: &VArea) -> VArea {
-    if 1 + 1 == 2 {
-        return area.clone();
-    }
+    // if 1 + 1 == 2 {
+    //     return area.clone();
+    // }
     VArea::from_arbitrary_points_pair(
         area.point_top_left().move_round_rail_down(),
         area.point_bottom_right().move_round_rail_up(),

@@ -16,6 +16,7 @@ use std::backtrace::Backtrace;
 use std::cell::RefCell;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
+use std::mem;
 use std::path::Path;
 use tracing::debug;
 
@@ -377,6 +378,10 @@ where
         result
     }
 
+    pub fn get_entity_id_at(&self, point: &VPoint) -> usize {
+        self.xy_to_entity.as_slice()[self.point_to_index(point)]
+    }
+
     pub fn get_entity_by_index(&self, index: usize) -> &E {
         match self.entities.get(index) {
             Some(v) => v,
@@ -389,18 +394,7 @@ where
     }
 
     pub fn get_entity_by_point(&self, point: &VPoint) -> Option<&E> {
-        let index = self.xy_to_index(point.x(), point.y());
-        // let entity_id = self.xy_to_entity.as_slice()[index];
-        let entity_id = self.xy_to_entity.as_slice().get(index).unwrap_or_else(|| {
-            panic!(
-                "len is {} but index is {} for point {} radius {}",
-                self.xy_to_entity.as_slice().len(),
-                index,
-                point,
-                self.radius,
-            )
-        });
-        let entity_id = *entity_id;
+        let entity_id = self.get_entity_id_at(point);
         if entity_id == EMPTY_XY_INDEX {
             None
         } else {
@@ -409,13 +403,39 @@ where
     }
 
     pub fn get_entity_by_point_mut(&mut self, point: &VPoint) -> Option<&mut E> {
-        let index = self.xy_to_index(point.x(), point.y());
-        let entity_id = self.xy_to_entity.as_slice()[index];
+        let entity_id = self.get_entity_id_at(point);
         if entity_id == EMPTY_XY_INDEX {
             None
         } else {
             Some(self.get_entity_by_index_mut(entity_id))
         }
+    }
+
+    pub fn set_entity_points_swap(
+        &mut self,
+        entity_id: usize,
+        new_points: &mut Vec<VPoint>,
+        overwrite_non_empty: bool,
+    ) where
+        E: Debug,
+    {
+        for point in &self.entity_to_xy[entity_id] {
+            let index = self.point_to_index(point);
+            let target = &mut self.xy_to_entity.as_mut_slice()[index];
+            if *target == entity_id {
+                *target = EMPTY_XY_INDEX;
+            }
+        }
+        for point in new_points.as_slice() {
+            let index = self.point_to_index(point);
+            let target = &mut self.xy_to_entity.as_mut_slice()[index];
+            if overwrite_non_empty || *target == EMPTY_XY_INDEX {
+                *target = entity_id;
+            } else {
+                panic!("point {point} is already index {target} val {:?}, cannot set to {entity_id} val {:?}", self.entities[*target], self.entities[entity_id])
+            }
+        }
+        mem::swap(new_points, &mut self.entity_to_xy[entity_id]);
     }
 
     pub fn iter_xy_entities_and_points(&self) -> impl Iterator<Item = (VPoint, Option<&E>)> {

@@ -243,6 +243,8 @@ impl VSurface {
         let max_count = *compressed.values().max().unwrap() as f32;
         let index_to_compressed: HashMap<usize, (VPoint, f32)> = compressed
             .into_iter()
+            //todo: filter shouldn't be needed
+            .filter(|(pos, _)| pos.is_within_center_radius(self.get_radius()))
             .flat_map(|(pos, count)| pos.area_2x2().map(|v| (v, count)))
             .map(|(pos, count)| {
                 (
@@ -409,6 +411,21 @@ impl VSurface {
         for patch_index in patches_to_remove {
             self.patches.remove(patch_index);
         }
+    }
+
+    pub fn get_pixel_entity_id_at(&self, point: &VPoint) -> usize {
+        self.pixels.get_entity_id_at(point)
+    }
+
+    pub fn set_pixel_entity_swap(
+        &mut self,
+        entity_id: usize,
+        mut points: Vec<VPoint>,
+        overwrite_non_empty: bool,
+    ) -> RemovedEntity {
+        self.pixels
+            .set_entity_points_swap(entity_id, &mut points, overwrite_non_empty);
+        RemovedEntity { entity_id, points }
     }
 
     pub fn log_pixel_stats(&self, debug_message: &str) {
@@ -689,9 +706,14 @@ impl VPixel {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct VEntity {
-    start: VPoint,
+// #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
+// pub(crate) struct VEntity {
+//     start: VPoint,
+// }
+
+pub struct RemovedEntity {
+    pub entity_id: usize,
+    pub points: Vec<VPoint>,
 }
 
 #[cfg(test)]

@@ -4,7 +4,9 @@ use crate::navigator::mine_permutate::{
 };
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
 use crate::navigator::mori::{mori2_start, MoriResult};
-use crate::navigator::planners::common::draw_no_touching_zone;
+use crate::navigator::planners::common::{
+    draw_active_no_touching_zone, draw_no_touching_zone, draw_restored_no_touching_zone,
+};
 use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MinePath;
@@ -19,8 +21,9 @@ use tracing::{error, info};
 
 /// Planner v2 "Regis Altare 🎇"
 ///
-/// Perfecting retry algorithm
-pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
+/// Advanced perfecting backtrack algorithm,
+/// because v1 Ruze Planner can mask    
+pub fn start_altare_planner(surface: &mut VSurface) {
     let exe_pool = rayon::ThreadPoolBuilder::new()
         .thread_name(|i| format!("exe{i:02}"))
         .num_threads(2)
@@ -33,6 +36,8 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
 
     while !winder.is_complete() {
         let select = winder.next_select();
+        assert_eq!(select.mines.len(), 1);
+        let prev_no_touch = draw_active_no_touching_zone(surface, &select.mines[0]);
 
         match process_select(surface, select, &exe_pool) {
             Ok(best_path) => surface.add_mine_path(best_path).unwrap(),
@@ -55,6 +60,8 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                 break;
             }
         }
+
+        draw_restored_no_touching_zone(surface, prev_no_touch);
     }
 }
 
@@ -93,7 +100,7 @@ fn process_select(
 
     results
         .into_iter()
-        // Find best path OR collect all the targeted MineLocation's
+        // Find best path OR collect all the failed MineLocation's
         .fold(Err(Vec::new()), |best, (res, route)| match (best, res) {
             (Err(_), MoriResult::Route { path, cost }) => Ok((path, cost, route)),
             (Ok(best), MoriResult::Route { path, cost }) => {
