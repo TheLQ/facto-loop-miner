@@ -5,11 +5,12 @@ use crate::navigator::mine_permutate::{
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
 use crate::navigator::mori::{mori2_start, MoriResult};
 use crate::navigator::planners::common::{
-    draw_active_no_touching_zone, draw_no_touching_zone, draw_restored_no_touching_zone,
+    debug_draw_failing_mines, draw_active_no_touching_zone, draw_no_touching_zone,
+    draw_restored_no_touching_zone,
 };
 use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::mine::MinePath;
+use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
 use itertools::Itertools;
@@ -17,12 +18,16 @@ use rayon::prelude::*;
 use rayon::ThreadPool;
 use simd_json::prelude::ArrayTrait;
 use std::cmp::PartialEq;
-use tracing::{error, info};
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
+use std::mem;
+use std::ops::ControlFlow;
+use tracing::{debug, error, info, warn};
 
 /// Planner v2 "Regis Altare 🎇"
 ///
 /// Advanced perfecting backtrack algorithm,
-/// because v1 Ruze Planner can mask    
+/// because v0 and v1 Ruze Planner can mask valid     
 pub fn start_altare_planner(surface: &mut VSurface) {
     let exe_pool = rayon::ThreadPoolBuilder::new()
         .thread_name(|i| format!("exe{i:02}"))
@@ -32,31 +37,18 @@ pub fn start_altare_planner(surface: &mut VSurface) {
 
     let mut winder = Winder::new(surface);
 
-    draw_no_touching_zone(surface, &winder.mines);
+    draw_no_touching_zone(surface, &winder.mines_remaining);
 
-    while !winder.is_complete() {
-        let select = winder.next_select();
+    let mut is_rewinding = false;
+    while let Some(select) = winder.next_select() {
         assert_eq!(select.mines.len(), 1);
         let prev_no_touch = draw_active_no_touching_zone(surface, &select.mines[0]);
 
-        match process_select(surface, select, &exe_pool) {
-            Ok(best_path) => surface.add_mine_path(best_path).unwrap(),
-            Err(routes) => {
-                let trigger_mine = routes
-                    .iter()
-                    .map(|v| &v.location)
-                    .reduce(|acc, next| {
-                        assert_eq!(acc, next);
-                        acc
-                    })
-                    .unwrap();
-                surface.draw_square_area_replacing(
-                    &trigger_mine.area,
-                    Pixel::MineNoTouch,
-                    Pixel::Highlighter,
-                );
-
-                error!("failed!");
+        let process = process_select(surface, &select, &exe_pool);
+        match winder.apply(surface, select, process) {
+            WinderNext::Continue => {}
+            res => {
+                error!("{res}, stop");
                 break;
             }
         }
@@ -145,31 +137,236 @@ fn execute_route(
     route_result
 }
 
+enum WinderState {
+    Normal,
+    Rewinding {
+        cause: Option<MineSelectBatch>,
+        remaining: Vec<MineSelectBatch>,
+        processed: Vec<(MineSelectBatch, MinePath)>,
+    },
+}
+
+const IMPOSSIBLE_TRIGGER: usize = 6;
+
 /// Wind and Re-Wind state
 struct Winder {
-    cursor: usize,
-    mines: Vec<MineSelectBatch>,
-    routes: Vec<MinePath>,
+    state: WinderState,
+    mines_remaining: Vec<MineSelectBatch>,
+    mines_processed: Vec<(MineSelectBatch, MinePath)>,
+    impossibles: HashMap<MineLocation, usize>,
+    impossible_for_remaining: usize,
 }
 
 impl Winder {
     fn new(surface: &VSurface) -> Self {
+        let mut mines_remaining = select_mines_and_sources(&surface, 1)
+            .into_success()
+            .unwrap();
+        // to use push-pop semantics
+        mines_remaining.reverse();
         Self {
-            cursor: 0,
-            mines: select_mines_and_sources(&surface, 1)
-                .into_success()
-                .unwrap(),
-            routes: Vec::new(),
+            state: WinderState::Normal,
+            mines_remaining,
+            mines_processed: Vec::new(),
+            impossibles: HashMap::new(),
+            impossible_for_remaining: usize::MAX,
         }
     }
 
-    fn is_complete(&self) -> bool {
-        self.cursor == self.mines.len()
+    fn next_select(&mut self) -> Option<MineSelectBatch> {
+        let mut debug_rewinding = "".to_string();
+        let res = if let WinderState::Rewinding {
+            cause,
+            remaining,
+            processed,
+        } = &mut self.state
+        {
+            debug_rewinding = format!(
+                " | rewind_remaining {:>3} rewind_processed {:>3}",
+                remaining.len(),
+                processed.len()
+            );
+            let next = cause.clone().or_else(|| remaining.pop());
+            // SAFETY: this state should have something
+            Some(next.unwrap())
+        } else {
+            self.mines_remaining.pop()
+        };
+        info!(
+            "remaining {:>3} processed {:>3} state {}{debug_rewinding}",
+            self.mines_remaining.len(),
+            self.mines_processed.len(),
+            self.state.name()
+        );
+        res
     }
 
-    fn next_select(&mut self) -> &MineSelectBatch {
-        let res = &self.mines[self.cursor];
-        self.cursor += 1;
-        res
+    fn apply(
+        &mut self,
+        surface: &mut VSurface,
+        select: MineSelectBatch,
+        result: Result<MinePath, Vec<PlannedRoute>>,
+    ) -> WinderNext {
+        // fn rewind(winder: &mut Winder, surface: &mut VSurface) -> WinderNext {
+        //     let Some((last_select, path)) = winder.mines_processed.pop() else {
+        //         return WinderNext::BreakNoMoreProcessed;
+        //     };
+        //     surface.remove_mine_path(&path);
+        //     winder.mines_rewinded_remaining.push(last_select);
+        //     WinderNext::Continue
+        // }
+
+        let mut intra_state = WinderState::Normal;
+        mem::swap(&mut self.state, &mut intra_state);
+        let (new_state, next) = match (intra_state, result) {
+            // all is good, apply normally
+            (WinderState::Normal, Ok(mine_path)) => {
+                debug!("HMM: Normal, normal");
+                self.mines_processed
+                    .push((select.clone(), mine_path.clone()));
+                surface.add_mine_path(mine_path).unwrap();
+                (WinderState::Normal, WinderNext::Continue)
+            }
+            // was normal now error, start backtracing
+            (WinderState::Normal, Err(_debug)) => {
+                debug!("HMM: Normal, failed");
+                let Some((last_select, path)) = self.mines_processed.pop() else {
+                    return WinderNext::BreakNoMoreProcessed;
+                };
+                surface.remove_mine_path(&path);
+
+                let state = WinderState::Rewinding {
+                    cause: Some(select),
+                    remaining: vec![last_select],
+                    processed: Vec::new(),
+                };
+                (state, WinderNext::Continue)
+            }
+            // Recovery success, either middle step or end step
+            (
+                WinderState::Rewinding {
+                    cause,
+                    remaining,
+                    mut processed,
+                },
+                Ok(mine_path),
+            ) => {
+                debug!("HMM: Rewinding, success");
+                surface.add_mine_path(mine_path.clone()).unwrap();
+                if let Some(cause) = cause {
+                    assert_eq!(cause.mines, select.mines);
+                    // we fixed cause
+                    processed.push((cause, mine_path));
+                } else {
+                    // we processed a remaining?
+                    processed.push((select, mine_path));
+                };
+
+                if remaining.is_empty() {
+                    // nothing to do anymore
+                    self.mines_processed.extend(processed);
+                    (WinderState::Normal, WinderNext::Continue)
+                } else {
+                    // still in recovery
+                    (
+                        WinderState::Rewinding {
+                            // grabbed the cause already
+                            cause: None,
+                            remaining,
+                            processed,
+                        },
+                        WinderNext::Continue,
+                    )
+                }
+            }
+            // while rewinding we still failed, go back more
+            (
+                WinderState::Rewinding {
+                    cause,
+                    mut remaining,
+                    processed,
+                },
+                Err(_routes),
+            ) => {
+                // loop detection
+                if self.impossible_for_remaining != self.mines_remaining.len() {
+                    self.impossible_for_remaining = self.mines_remaining.len();
+                    self.impossibles.clear();
+                }
+                let history = *self
+                    .impossibles
+                    .entry(select.mines[0].clone())
+                    .and_modify(|v| *v += 1)
+                    .or_insert(1);
+                let cause = if history == IMPOSSIBLE_TRIGGER {
+                    // skippa skippa
+                    warn!("HMM: purging impossible {:?}", select.mines[0]);
+                    Some(remaining.pop().unwrap())
+                } else {
+                    Some(select)
+                };
+
+                debug!("HMM: Rewinding, failed again");
+                if let Some(cause) = cause {
+                    // todo: is this the best idea???
+                    remaining.push(cause);
+                }
+                // throw away rewind results
+                for (select, path) in processed {
+                    remaining.push(select);
+                    surface.remove_mine_path(&path);
+                }
+                // try removing something in the way
+                // todo: or loop...
+                if let Some((last_select, path)) = self.mines_processed.pop() {
+                    remaining.push(last_select);
+                    surface.remove_mine_path(&path);
+                }
+
+                if remaining.is_empty() {
+                    return WinderNext::BreakRewindingFailed;
+                }
+
+                (
+                    WinderState::Rewinding {
+                        // existing cause was moved already
+                        cause,
+                        remaining,
+                        // moved to remaining
+                        processed: Vec::new(),
+                    },
+                    WinderNext::Continue,
+                )
+            }
+        };
+        self.state = new_state;
+        next
+    }
+}
+
+impl WinderState {
+    fn name(&self) -> &str {
+        match self {
+            Self::Normal => "Normal",
+            Self::Rewinding { .. } => "Rewinding",
+            // Self::Recovery => "Recovery",
+        }
+    }
+}
+
+enum WinderNext {
+    Continue,
+    BreakNoMoreProcessed,
+    BreakRewindingFailed,
+}
+
+impl Display for WinderNext {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            Self::Continue => "Continue",
+            Self::BreakNoMoreProcessed => "BreakNoMoreProcessed",
+            Self::BreakRewindingFailed => "BreakRewindingFailed",
+        };
+        f.write_str(name)
     }
 }

@@ -520,22 +520,7 @@ impl VSurface {
     }
 
     pub fn add_mine_path_with_pixel(&mut self, mine_path: MinePath, pixel: Pixel) -> VResult<()> {
-        let mut new_points: Vec<VPoint> =
-            mine_path.links.iter().flat_map(|v| v.area()).collect_vec();
-
-        let old_len = new_points.len();
-        new_points.sort();
-        new_points.dedup();
-        let new_len = new_points.len();
-        if old_len != new_len {
-            warn!(
-                "pixel {} dedupe mine path from {} to {}",
-                pixel.as_ref(),
-                old_len.to_formatted_string(&LOCALE),
-                new_len.to_formatted_string(&LOCALE)
-            )
-        }
-
+        let new_points = mine_path.total_area();
         self.set_pixels(pixel, new_points)?;
 
         // todo
@@ -546,6 +531,22 @@ impl VSurface {
         self.rail_paths.push(mine_path);
         Ok(())
     }
+
+    pub fn remove_mine_path(&mut self, mine_path: &MinePath) {
+        let pos = self.rail_paths.iter().position(|v| v == mine_path).unwrap();
+        let mine_path = self.rail_paths.remove(pos);
+
+        let removed_points = mine_path.total_area();
+        for point in &removed_points {
+            let existing = self.get_pixel(point);
+            if existing != Pixel::Rail {
+                panic!("existing {existing:?} is not Rail")
+            }
+        }
+
+        self.pixels.remove_positions(&removed_points);
+    }
+
     //
     // pub fn get_rail_TODO(&self) -> impl Iterator<Item = &Rail> {
     //     self.rail_paths.iter().flat_map(|v| &v.rail)

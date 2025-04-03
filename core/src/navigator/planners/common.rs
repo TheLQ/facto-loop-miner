@@ -1,4 +1,4 @@
-use crate::navigator::mine_permutate::CompletePlan;
+use crate::navigator::mine_permutate::{CompletePlan, PlannedRoute};
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
@@ -51,6 +51,30 @@ pub(super) fn debug_draw_complete_plans(
     }
 
     surface.set_pixels(Pixel::Highlighter, pixels).unwrap();
+}
+
+pub(super) fn debug_draw_failing_mines(
+    surface: &mut VSurface,
+    routes: impl IntoIterator<Item = impl Borrow<PlannedRoute>>,
+) {
+    let mut seen_mines = Vec::new();
+    let mut destinations = Vec::new();
+    for route in routes {
+        let route = route.borrow();
+
+        let mine_area = &route.location.area;
+        if seen_mines.contains(mine_area) {
+            continue;
+        }
+        surface.draw_square_area_replacing(mine_area, Pixel::MineNoTouch, Pixel::Highlighter);
+        seen_mines.push(mine_area.clone());
+
+        let destination = *route.destination.point();
+        if !destinations.contains(&destination) {
+            destinations.push(destination);
+        }
+    }
+    surface.set_pixels(Pixel::EdgeWall, destinations).unwrap();
 }
 
 pub(super) fn draw_no_touching_zone(surface: &mut VSurface, batches: &[MineSelectBatch]) {
