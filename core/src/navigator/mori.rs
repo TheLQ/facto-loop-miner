@@ -36,7 +36,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
     // ::<_, _, _, _, _, _, _, ParentProcessor>
     let pathfind = astar_mori(
         start_link,
-        |head, processor, cost| {
+        |head, processor, cost: _| {
             let watch = BasicWatch::start();
             let res = successors(
                 surface,

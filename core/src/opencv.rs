@@ -96,6 +96,7 @@ pub fn combine_rects_into_big_rect<'a>(rects: impl IntoIterator<Item = &'a Rect>
     get_cv_bounding_rect(corners)
 }
 
+#[allow(dead_code)]
 pub fn draw_text_cv(img: &mut Mat, text: &str, origin: Point) {
     tracing::debug!("drawing {} at {:?}", text, origin);
     put_text(
@@ -112,6 +113,7 @@ pub fn draw_text_cv(img: &mut Mat, text: &str, origin: Point) {
     .unwrap();
 }
 
+#[allow(dead_code)]
 pub fn draw_text_vertical_cv(_img: &mut Mat, text: &str, origin: Point) {
     tracing::debug!("drawing {} at {:?}", text, origin);
     // "cv(0,0)" is roughly 500x150

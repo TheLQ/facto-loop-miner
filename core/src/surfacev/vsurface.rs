@@ -10,7 +10,6 @@ use crate::surfacev::vpatch::VPatch;
 use crate::util::duration::BasicWatch;
 use crate::LOCALE;
 use colorgrad::Gradient;
-use facto_loop_miner_common::err_utils::IOEC;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;

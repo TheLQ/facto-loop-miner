@@ -20,13 +20,13 @@ impl BaseSource {
         }
     }
 
-    pub fn positive(&mut self) -> &mut BaseSourceEighth {
-        &mut self.positive
-    }
-
-    pub fn negative(&mut self) -> &mut BaseSourceEighth {
-        &mut self.negative
-    }
+    // pub fn positive(&mut self) -> &mut BaseSourceEighth {
+    //     &mut self.positive
+    // }
+    //
+    // pub fn negative(&mut self) -> &mut BaseSourceEighth {
+    //     &mut self.negative
+    // }
 
     pub fn into_refcells(self) -> BaseSourceRefs {
         BaseSourceRefs {

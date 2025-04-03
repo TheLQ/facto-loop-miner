@@ -11,8 +11,8 @@ use tracing::{debug, info, trace, warn};
 use uring_sys2::{
     io_uring_cqe, io_uring_cqe_get_data64, io_uring_cqe_seen, io_uring_get_sqe,
     io_uring_prep_read_fixed, io_uring_register_buffers, io_uring_register_files, io_uring_sqe,
-    io_uring_sqe_set_data64, io_uring_sqe_set_flags, io_uring_unregister_buffers,
-    io_uring_unregister_files, io_uring_wait_cqe,
+    io_uring_sqe_set_data64, io_uring_unregister_buffers, io_uring_unregister_files,
+    io_uring_wait_cqe,
 };
 
 use crate::err::{VIoError, VIoResult};

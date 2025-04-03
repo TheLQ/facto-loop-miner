@@ -4,7 +4,6 @@ use crate::navigator::planners::ruze::start_ruze_planner;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::vsurface::VSurface;
-use std::borrow::Borrow;
 
 pub(crate) struct Step20;
 

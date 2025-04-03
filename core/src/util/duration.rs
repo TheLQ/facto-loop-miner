@@ -1,6 +1,6 @@
 use crate::LOCALE;
 use num_format::ToFormattedString;
-use std::fmt::{Display, Formatter, Pointer};
+use std::fmt::{Display, Formatter};
 use std::time::{Duration, Instant};
 
 /// Usage: format!("Task completed in {}")`
