@@ -92,7 +92,7 @@ fn distance_by_punish_turns(
     //     .sum();
     // let turn_punish = num_recent_turns * tune.multi_turn_cost_unit;
 
-    (base_distance * link_cost) //+ turn_punish
+    base_distance * link_cost //+ turn_punish
 }
 
 fn axis_bias(next: &impl RailHopeLink, tune: &MoriTunables) -> f32 {

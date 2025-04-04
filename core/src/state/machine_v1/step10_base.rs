@@ -25,7 +25,8 @@ impl Step for Step10 {
         let mut surface = VSurface::load_from_last_step(&params)?;
         let tunables = &surface.tunables().base.clone();
 
-        surface.remove_patches_within_radius(tunables.resource_clear_chunks.as_tiles_u32());
+        // surface.remove_patches_within_radius(tunables.resource_clear_chunks.as_tiles_u32());
+        surface.remove_patches_in_column(tunables.resource_clear_chunks.as_tiles_u32());
         draw_mega_box(&mut surface, tunables)?;
 
         surface.save(&params.step_out_dir)?;

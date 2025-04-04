@@ -32,7 +32,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
 
     let total_watch = BasicWatch::start();
     let mut successor_sum = Duration::default();
-    let mut res_sum = Duration::default();
+    let res_sum = Duration::default();
     // ::<_, _, _, _, _, _, _, ParentProcessor>
     let pathfind = astar_mori(
         start_link,

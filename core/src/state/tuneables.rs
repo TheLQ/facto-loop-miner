@@ -40,7 +40,7 @@ impl BaseTunables {
     fn new() -> Self {
         Self {
             base_chunks: ChunkValue(2),
-            resource_clear_chunks: ChunkValue(15),
+            resource_clear_chunks: ChunkValue(25),
         }
     }
 }

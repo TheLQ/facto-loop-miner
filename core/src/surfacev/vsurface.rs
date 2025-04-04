@@ -413,6 +413,30 @@ impl VSurface {
         }
     }
 
+    pub fn remove_patches_in_column(&mut self, radius: u32) {
+        let mut removed_points: Vec<VPoint> = Vec::new();
+        let mut patches_to_remove = Vec::new();
+        let radius = radius as i32;
+        for (patch_index, patch) in self.patches.iter().enumerate() {
+            if (-radius..radius).contains(&patch.area.point_center().x()) {
+                removed_points.extend_from_slice(&patch.pixel_indexes);
+                patches_to_remove.push(patch_index);
+            }
+        }
+        info!(
+            "removing {} patches with {} entities within {} radius",
+            patches_to_remove.len(),
+            removed_points.len(),
+            radius
+        );
+        self.pixels.remove_positions(&removed_points);
+
+        patches_to_remove.reverse();
+        for patch_index in patches_to_remove {
+            self.patches.remove(patch_index);
+        }
+    }
+
     pub fn get_pixel_entity_id_at(&self, point: &VPoint) -> usize {
         self.pixels.get_entity_id_at(point)
     }
