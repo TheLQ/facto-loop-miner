@@ -30,7 +30,6 @@ use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
 use facto_loop_miner_common::log_init_trace;
 use kiddo::float;
-use num_format::Locale;
 use std::path::Path;
 
 mod gamedata;

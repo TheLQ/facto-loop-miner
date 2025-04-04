@@ -12,7 +12,6 @@ use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
 use std::cell::RefCell;
 use std::rc::Rc;
-use tracing::info;
 
 /// Input
 ///  - Single batch of mines to be routed together

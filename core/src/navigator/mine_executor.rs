@@ -5,14 +5,11 @@ use crate::surfacev::mine::MinePath;
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use facto_loop_miner_common::LOCALE;
-use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use itertools::Itertools;
 use num_format::ToFormattedString;
-use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;
 use tracing::{debug, info};
@@ -106,7 +103,7 @@ pub fn execute_route_batch(
     let mut lowest_cost = u32::MAX;
     let mut highest_cost = u32::MIN;
     let mut success_count = 0;
-    let mut failure_found_paths_count: HashMap<usize, u32> = HashMap::new();
+    let failure_found_paths_count: HashMap<usize, u32> = HashMap::new();
     for route_result in route_results {
         let paths = match &route_result {
             MineRouteCombinationPathResult::Success { paths } => paths,

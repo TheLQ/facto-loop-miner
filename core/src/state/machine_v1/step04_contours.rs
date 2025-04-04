@@ -8,14 +8,13 @@ use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::VSurface;
 use crate::PixelKdTree;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ONE, VPOINT_TEN};
+use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ONE};
 use facto_loop_miner_fac_engine::opencv_re::core::{
     Point, Rect, ToInputArray, ToInputOutputArray, Vector,
 };
 use facto_loop_miner_fac_engine::opencv_re::imgcodecs::imwrite;
 use facto_loop_miner_fac_engine::opencv_re::imgproc::{
-    bounding_rect, find_contours, rectangle, CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE, LINE_8,
-    RETR_EXTERNAL, RETR_FLOODFILL, RETR_LIST,
+    bounding_rect, find_contours, rectangle, CHAIN_APPROX_NONE, LINE_8, RETR_EXTERNAL,
 };
 use facto_loop_miner_fac_engine::opencv_re::prelude::*;
 use itertools::Itertools;
@@ -24,7 +23,7 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::path::Path;
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, info, trace};
 
 // const WRITE_DEBUG_IMAGE: bool = false;
 
@@ -192,7 +191,7 @@ fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: Pixel) -> Vec<VP
                 surface_meta.get_radius()
             );
             // debug!("start {start:?}");
-            let mut end = start + VPoint::new(patch_rect.width, patch_rect.height);
+            let end = start + VPoint::new(patch_rect.width, patch_rect.height);
             // if patch_rect.width != 1 && patch_rect.height != 1 {
             //     end -= VPOINT_ONE;
             // }

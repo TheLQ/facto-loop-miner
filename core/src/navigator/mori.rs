@@ -11,7 +11,7 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{sodas_to_links, H
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
 use std::time::Duration;
-use tracing::{info, warn};
+use tracing::info;
 
 /// Pathfinder v1.2, Mori Calliope💀
 ///

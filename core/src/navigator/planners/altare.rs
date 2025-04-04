@@ -5,25 +5,19 @@ use crate::navigator::mine_permutate::{
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
 use crate::navigator::mori::{mori2_start, MoriResult};
 use crate::navigator::planners::common::{
-    debug_draw_failing_mines, draw_active_no_touching_zone, draw_no_touching_zone,
+    draw_active_no_touching_zone, draw_no_touching_zone,
     draw_restored_no_touching_zone,
 };
-use crate::state::machine::StepParams;
-use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::sanity::assert_sanity_mines_not_deduped;
 use crate::surfacev::vsurface::VSurface;
-use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
 use facto_loop_miner_fac_engine::util::ansi::{ansi_color, Color};
-use itertools::Itertools;
 use rayon::prelude::*;
 use rayon::ThreadPool;
 use simd_json::prelude::ArrayTrait;
-use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::mem;
-use std::ops::ControlFlow;
 use tracing::{debug, error, info, warn};
 
 /// Planner v2 "Regis Altare 🎇"

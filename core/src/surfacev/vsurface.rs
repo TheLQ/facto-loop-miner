@@ -28,7 +28,7 @@ use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::thread::JoinHandle;
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, info, trace};
 
 /// A map of background pixels (eg resources, water) and the large entities on top
 ///
@@ -723,7 +723,7 @@ mod test {
     use crate::surfacev::vsurface::VSurface;
     use facto_loop_miner_common::log_init_trace;
     use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
-    use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ONE, VPOINT_ZERO};
+    use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ZERO};
     use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
     use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
