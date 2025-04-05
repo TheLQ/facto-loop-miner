@@ -165,11 +165,7 @@ impl FacBlkIndustry {
             for output_belt in thru_block.integ_output.borrow().iter() {
                 let output_pos = output_belt.next_insert_position();
                 if output_pos.x() != pos.x() {
-                    panic!(
-                        "unexpected X haystack {} needle {}",
-                        output_pos.display(),
-                        pos.display()
-                    );
+                    panic!("unexpected X haystack {output_pos} needle {pos}",);
                 }
             }
         }

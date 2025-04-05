@@ -470,8 +470,7 @@ impl VSurface {
         for point in area.get_points() {
             assert!(
                 !self.pixels.is_point_out_of_bounds(&point),
-                "Area point {} is out of bounds {area:?}",
-                point.display()
+                "Area point {point} is out of bounds {area}",
             );
             let existing_pixel = self.get_pixel(point);
             if existing_pixel == Pixel::Empty {
@@ -486,8 +485,7 @@ impl VSurface {
         for point in area.get_points() {
             assert!(
                 !self.pixels.is_point_out_of_bounds(&point),
-                "Area point {} is out of bounds {area:?}",
-                point.display()
+                "Area point {point} is out of bounds {area}",
             );
             let existing_pixel = self.get_pixel(point);
             if existing_pixel == search {

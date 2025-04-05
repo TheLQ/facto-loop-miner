@@ -69,11 +69,7 @@ impl FacBlkBeltTrainUnload {
 
                 let one_belt_origin =
                     origin.move_direction_sideways_usz(self.origin_direction, 2 * output_belt);
-                trace!(
-                    "one_belt from origin {} to {}",
-                    origin.display(),
-                    one_belt_origin.display(),
-                );
+                trace!("one_belt from origin {origin} to {one_belt_origin}");
                 let merged_height = self.padding_above + turn_offset + wagon_offset;
                 let mut one_belt =
                     self.add_dual_to_one(one_belt_origin, self.padding_unmerged, merged_height);

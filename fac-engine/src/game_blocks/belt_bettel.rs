@@ -515,11 +515,7 @@ mod test {
         } else {
             ""
         };
-        println!(
-            "facpos gen {:10} expect {:10} {err}",
-            actual_pos.display(),
-            expected.display(),
-        );
+        println!("facpos gen {actual_pos} expect {expected} {err}",);
     }
 
     fn expect_output(expected: FacBpPosition, output: &FacItemOutput, is_error: &mut bool) {
@@ -531,11 +527,7 @@ mod test {
         } else {
             ""
         };
-        println!(
-            "facpos gen {:10} expect {:10} {err}",
-            actual_pos.display(),
-            expected.display(),
-        );
+        println!("facpos gen {actual_pos} expect {expected} {err}",);
     }
 
     #[allow(dead_code)]
@@ -553,9 +545,7 @@ mod test {
                 ""
             };
             println!(
-                "facpos gen {:10} expect {:10} {:?} {err}",
-                facpos.display(),
-                expected.display(),
+                "facpos gen {facpos} expect {expected} {:?} {err}",
                 bp_item.entity().rectangle_size()
             );
         }

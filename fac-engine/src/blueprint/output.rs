@@ -102,9 +102,9 @@ impl FacItemOutput {
 
         let item_debug = format!("{:?}", item.entity());
         let message_pos = format!(
-            "blueprint pos {:6} facpos {:10}",
-            item.position().display(),
-            blueprint.position.display(),
+            "blueprint pos {} facpos {}",
+            item.position(),
+            blueprint.position,
         );
 
         Self::log_write(&mut odata.contexts, item_debug, message_pos);
@@ -113,7 +113,7 @@ impl FacItemOutput {
 
     pub fn write_tile(&self, blueprint: FacBpTile) {
         let item_debug = format!("{:?}", blueprint);
-        let message_pos = format!("blueprint facpos {:10}", blueprint.position.display());
+        let message_pos = format!("blueprint facpos {}", blueprint.position);
 
         let mut odata = self.odata.borrow_mut();
         Self::log_write(&mut odata.contexts, item_debug, message_pos);

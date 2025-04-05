@@ -1,6 +1,8 @@
 use crate::common::vpoint::VPoint;
+use crate::util::ansi::C_ARROW_TO_CORNER_SE;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
+use std::fmt::{Display, Formatter};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct VArea {
@@ -91,6 +93,15 @@ impl VArea {
 
     pub fn as_size(&self) -> VPoint {
         self.bottom_right - self.top_left
+    }
+}
+
+impl Display for VArea {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.pad(&format!(
+            "{} {C_ARROW_TO_CORNER_SE} {}",
+            self.top_left, self.bottom_right
+        ))
     }
 }
 

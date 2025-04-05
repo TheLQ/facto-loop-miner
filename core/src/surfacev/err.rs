@@ -88,7 +88,7 @@ impl VError {
 }
 
 fn positions_to_strings(positions: &[VPoint]) -> String {
-    positions.iter().map(VPoint::display).join(",")
+    positions.iter().map(VPoint::to_string).join(",")
 }
 
 impl From<IOECStd> for VError {

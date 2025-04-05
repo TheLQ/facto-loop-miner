@@ -343,7 +343,11 @@ impl Display for HopeDualLink {
             [BackingLink::Single(inner), BackingLink::Single(outer)] => {
                 write!(f, "Inner-{inner}\nOuter-{outer}")
             }
-            [BackingLink::MultiTurn(_), BackingLink::MultiTurn(_)] => unimplemented!(),
+            [BackingLink::MultiTurn(_), BackingLink::MultiTurn(_)] => {
+                // this shouldn't happen,
+                // but we shouldn't cause double panics when this is the message
+                write!(f, "ERROR-DoubleMultiTurn????????????")
+            }
         }
     }
 }

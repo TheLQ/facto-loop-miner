@@ -553,8 +553,8 @@ mod test {
 
         let mut success = true;
         for i in 0..hope_long_bp.len() {
-            let long = hope_long_bp[i].position.display();
-            let short = hope_short_bp[i].position.display();
+            let long = &hope_long_bp[i].position;
+            let short = &hope_short_bp[i].position;
             let compared = if long != short {
                 success = false;
                 "!!!"
@@ -702,9 +702,7 @@ mod test {
                 }
             );
             println!(
-                "actual {}     expected {}   {}",
-                position.display(),
-                expected_pos.display(),
+                "actual {position}     expected {expected_pos}   {}",
                 if position == expected_pos {
                     ""
                 } else {

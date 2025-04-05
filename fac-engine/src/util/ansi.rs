@@ -63,3 +63,6 @@ pub fn ansi_erase_line() -> String {
 // https://www.compart.com/en/unicode/block/U+2580
 pub const C_FULL_BLOCK: &str = "\u{2588}";
 pub const C_BLOCK_LINE: char = '\u{007C}';
+
+// https://www.compart.com/en/unicode/block/U+2190
+pub const C_ARROW_TO_CORNER_SE: char = '\u{21F2}'; // ⇲

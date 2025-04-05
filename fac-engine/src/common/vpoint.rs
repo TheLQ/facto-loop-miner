@@ -3,12 +3,13 @@ use crate::err::{FError, FResult};
 use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use crate::game_entities::direction::FacDirectionQuarter;
 use crate::util::ansi::C_BLOCK_LINE;
+use core::fmt;
 use opencv::core::{Point, Rect};
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Display, Formatter, Write};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 /// Core XY Point. Entity origin is top left, not Factorio's center
@@ -102,8 +103,8 @@ impl VPoint {
     pub const fn is_within_center_radius(&self, center_radius: u32) -> bool {
         let center_radius = center_radius as i32;
         // note: Excludes -radius,-radius in VArray
-        // because origin per-pixel is top-left. The "absolute 0,0" is included,
-        // but the "absolute bottom-right" is out-of-bounds as off-by-one
+        // Both top-left and bottom-right are included
+        // But bottom-right is off-by-one out of bounds
         self.x > -center_radius
             && self.x < center_radius
             && self.y > -center_radius
@@ -455,10 +456,10 @@ impl VPoint {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
     }
 
-    // aka hypotenuse I guess?
+    // aka Pythagorean theorem
     pub fn distance_bird(&self, other: &Self) -> f32 {
-        let squared_euclidean = self.x.abs_diff(other.x).pow(2) + self.y.abs_diff(other.y).pow(2);
-        (squared_euclidean as f32).sqrt()
+        let hypotenuse = self.x.abs_diff(other.x).pow(2) + self.y.abs_diff(other.y).pow(2);
+        (hypotenuse as f32).sqrt()
     }
 
     pub const fn subtract_x(&self, other: &Self) -> i32 {
@@ -468,15 +469,12 @@ impl VPoint {
     pub const fn subtract_y(&self, other: &Self) -> i32 {
         self.y - other.y
     }
-
-    pub fn display(&self) -> String {
-        display_any_pos(self.x(), self.y())
-    }
 }
 
 impl Display for VPoint {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.display())
+        let Self { x, y } = self;
+        display_any_pos(f, format_args!("{x:>4}"), format_args!("{y:>4}"))
     }
 }
 
@@ -553,17 +551,21 @@ pub fn must_half_number(point: FacBpPosition) {
     );
 }
 
-pub fn display_any_pos(x: impl Display + Debug, y: impl Display + Debug) -> String {
-    // doing de-bug of float always does as 0.0 display.
-    // Without .N wiping out errors of x=24.64532
-    // Neat.
-    format!("{:4?}{}{:4?}", x, C_BLOCK_LINE, y)
+pub fn display_any_pos(f: &mut Formatter<'_>, x: fmt::Arguments, y: fmt::Arguments) -> fmt::Result {
+    f.write_fmt(x)?;
+    f.write_char(C_BLOCK_LINE)?;
+    f.write_fmt(y)
 }
 
 #[cfg(test)]
 mod test {
     use crate::common::vpoint::{VPOINT_ZERO, VPoint};
     use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
+
+    #[test]
+    fn write() {
+        println!("{}", VPoint::new(0, 0));
+    }
 
     #[test]
     fn rounding_sanity_down() {

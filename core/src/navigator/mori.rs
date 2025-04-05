@@ -20,14 +20,10 @@ use tracing::info;
 /// Makes a dual rail + spacing, +6 straight or 90 degree turning, path of rail from start to end.
 /// Without collisions into any point on the Surface.
 pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VArea) -> MoriResult {
-    let pathfind_watch = BasicWatch::start();
-
     let start_link = new_straight_link_from_vd(&endpoints.start);
     let end_link = new_straight_link_from_vd(&endpoints.end);
 
     let tunables = &surface.tunables().mori;
-    // info!("tunables {:?}", tunables);
-
     let mut watch_data = WatchData::default();
 
     let total_watch = BasicWatch::start();

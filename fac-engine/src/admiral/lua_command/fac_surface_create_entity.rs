@@ -27,9 +27,9 @@ impl LuaCommand for FacSurfaceCreateEntity {
         let mut lua: Vec<String> = Vec::new();
 
         let name = &self.name;
+        let pos = &self.position;
         let x = self.position.x;
         let y = self.position.y;
-        let pretty_pos = self.position.display();
 
         if DEBUG_PRE_COLLISION {
             let direction = self.params.iter().find_map(|v| match v {
@@ -46,7 +46,7 @@ impl LuaCommand for FacSurfaceCreateEntity {
             lua.push(
                 format!(
                     r#"if game.surfaces[1].entity_prototype_collides("{name}", {{ {x}, {y} }}, false{direction_param}) then
-                        rcon.print("[Admiral] Collision {name} {pretty_pos}")           
+                        rcon.print("[Admiral] Collision {name} {pos}")           
                     end"#
                 ),
             )
@@ -79,9 +79,9 @@ impl LuaCommand for FacSurfaceCreateEntity {
         if DEBUG_POSITION_EXPECTED {
             lua.push(format!(
                 r#"if admiral_create == nil then
-                    rcon.print("[Admiral] Inserted {name} at {pretty_pos} but was nil")
+                    rcon.print("[Admiral] Inserted {name} at {pos} but was nil")
                 elseif admiral_create.position.x ~= {x} or admiral_create.position.y ~= {y} then
-                    rcon.print("[Admiral] Inserted {name} at {pretty_pos} but was placed at " .. admiral_create.position.x .. "{C_BLOCK_LINE}" .. admiral_create.position.y)
+                    rcon.print("[Admiral] Inserted {name} at {pos} but was placed at " .. admiral_create.position.x .. "{C_BLOCK_LINE}" .. admiral_create.position.y)
                 end"#
             ));
         }
