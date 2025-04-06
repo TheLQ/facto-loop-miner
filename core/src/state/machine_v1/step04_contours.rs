@@ -2,7 +2,6 @@ use crate::opencv::combine_rects_into_big_rect;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
-use crate::surface::patch::map_patch_corners_to_kdtree;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::VSurface;
@@ -311,7 +310,7 @@ fn detect_patch_rectangles(base: &impl ToInputArray) -> Vec<Rect> {
     rects
 }
 
-/// Merge, for example Oil wells patches into a single Oil patch.   
+/// Merge, for example Oil wells patches into a single Oil patch.
 fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree) {
     const SEARCH_UNIT: u32 = 25;
 
@@ -392,7 +391,7 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree)
     }
 }
 
-/// Merge, for example Oil wells patches into a single Oil patch.   
+/// Merge, for example Oil wells patches into a single Oil patch.
 fn detect_merge_nearby_patches_slow(
     patch_rects: &mut Vec<Rect>,
     cloud: &PixelKdTree,
@@ -488,6 +487,18 @@ fn draw_patch_border(img: &mut impl ToInputOutputArray, rects: impl Iterator<Ite
     for rect in rects {
         rectangle(img, rect, Pixel::Highlighter.scalar_cv(), 2, LINE_8, 0).unwrap();
     }
+}
+
+pub fn map_patch_corners_to_kdtree<'a>(patch_rects: impl Iterator<Item = &'a Rect>) -> PixelKdTree {
+    let mut tree: PixelKdTree = PixelKdTree::new();
+    for (patch_counter, patch_rect) in patch_rects.enumerate() {
+        tree.add(&map_rect_corner_to_slice(patch_rect), patch_counter);
+    }
+    tree
+}
+
+pub fn map_rect_corner_to_slice(rect: &Rect) -> [f32; 2] {
+    [rect.x as f32, rect.y as f32]
 }
 
 #[allow(dead_code)]
