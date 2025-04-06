@@ -35,6 +35,13 @@ impl MineSelectBatchResult {
     }
 }
 
+impl MineSelectBatch {
+    pub fn only_mine(&self) -> &MineLocation {
+        assert_eq!(self.mines.len(), 1);
+        &self.mines[0]
+    }
+}
+
 /// at 3000 crop
 /// - 20 generates mostly 1, 2, some 3
 /// - 40 generates slightly more 3

@@ -5,16 +5,20 @@ use crate::navigator::mine_permutate::{
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
 use crate::navigator::mori::{mori2_start, MoriResult};
 use crate::navigator::planners::common::{
-    draw_active_no_touching_zone, draw_no_touching_zone,
-    draw_restored_no_touching_zone,
+    draw_active_no_touching_zone, draw_no_touching_zone, draw_restored_no_touching_zone,
 };
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::sanity::assert_sanity_mines_not_deduped;
 use crate::surfacev::vsurface::VSurface;
+use facto_loop_miner_fac_engine::common::varea::VArea;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use facto_loop_miner_fac_engine::util::ansi::{ansi_color, Color};
+use itertools::Itertools;
 use rayon::prelude::*;
 use rayon::ThreadPool;
 use simd_json::prelude::ArrayTrait;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::mem;
@@ -23,7 +27,7 @@ use tracing::{debug, error, info, warn};
 /// Planner v2 "Regis Altare 🎇"
 ///
 /// Advanced perfecting backtrack algorithm,
-/// because v0 and v1 Ruze Planner can mask valid     
+/// because v0 Mori and v1 Ruze Planner can mask valid routes
 pub fn start_altare_planner(surface: &mut VSurface) {
     let exe_pool = rayon::ThreadPoolBuilder::new()
         .thread_name(|i| format!("exe{i:02}"))
@@ -34,8 +38,8 @@ pub fn start_altare_planner(surface: &mut VSurface) {
     let mut winder = Winder::new(surface);
 
     draw_no_touching_zone(surface, &winder.mines_remaining);
+    // surface.validate();
 
-    let mut is_rewinding = false;
     while let Some(select) = winder.next_select() {
         assert_eq!(select.mines.len(), 1);
         let prev_no_touch = draw_active_no_touching_zone(surface, &select.mines[0]);
@@ -49,7 +53,24 @@ pub fn start_altare_planner(surface: &mut VSurface) {
             }
         }
 
+        surface.save_pixel_to_oculante();
+        // if winder.mines_processed.len() == 8 {
+        //     break;
+        // }
         draw_restored_no_touching_zone(surface, prev_no_touch);
+
+        match winder.reorder_processing(surface) {
+            WinderNext::Continue => {}
+            res => {
+                error!("{res}, stop reorder");
+                break;
+            }
+        }
+
+        if matches!(winder.state, WinderState::Normal) && winder.mines_processed.len() > 50 {
+            error!("ENDING");
+            break;
+        }
     }
 }
 
@@ -59,7 +80,7 @@ fn process_select(
     exe_pool: &ThreadPool,
 ) -> Result<MinePath, Vec<PlannedRoute>> {
     assert_eq!(select.mines.len(), 1);
-    info!("processing {:?}", select.mines[0]);
+    // info!("processing {:?}", select.mines[0]);
 
     let CompletePlan {
         sequences,
@@ -71,10 +92,10 @@ fn process_select(
     //     sequences.len()
     // );
     // assert_ne!(sequences.len(), 0, "no destinations found?");
-    assert_eq!(sequences.len(), 2, "not enough destinations found?");
+    // assert_eq!(sequences.len(), 2, "not enough destinations found?");
 
     let actual_base_source = base_sources.borrow().peek_single();
-    let mut results: Vec<(MoriResult, PlannedRoute)> = exe_pool.install(|| {
+    let results: Vec<(MoriResult, PlannedRoute)> = exe_pool.install(|| {
         sequences
             .into_par_iter()
             .map(|PlannedSequence { mut routes }| {
@@ -123,6 +144,7 @@ fn execute_route(
     base_source_entry: &BaseSourceEntry,
 ) -> MoriResult {
     // let mut working_surface = (*surface).clone();
+    // We run once per iteration so no mut, unlike Ruze that runs an entire batch
     let working_surface = surface;
 
     let route_result = mori2_start(
@@ -179,7 +201,7 @@ impl Winder {
         } = &mut self.state
         {
             debug_rewinding = format!(
-                " | rewind_remaining {:>3} rewind_processed {:>3}",
+                " | {:>3} rewind_remaining   {:>3} rewind_processed ",
                 remaining.len(),
                 processed.len()
             );
@@ -194,7 +216,7 @@ impl Winder {
             "{}",
             ansi_color(
                 format!(
-                    "remaining {:>3} processed {:>3} state {}{debug_rewinding}",
+                    "{:>3} remaining   {:>3} processed   {}{debug_rewinding}",
                     self.mines_remaining.len(),
                     self.mines_processed.len(),
                     self.state.name()
@@ -226,8 +248,7 @@ impl Winder {
             // all is good, apply normally
             (WinderState::Normal, Ok(mine_path)) => {
                 debug!("HMM: Normal, normal");
-                self.mines_processed
-                    .push((select.clone(), mine_path.clone()));
+                self.mines_processed.push((select, mine_path.clone()));
                 surface.add_mine_path(mine_path).unwrap();
                 (WinderState::Normal, WinderNext::Continue)
             }
@@ -237,14 +258,16 @@ impl Winder {
                 let Some((last_select, path)) = self.mines_processed.pop() else {
                     return WinderNext::BreakNoMoreProcessed;
                 };
-                surface.remove_mine_path(&path);
+                // surface.remove_mine_path(&path);
 
-                let state = WinderState::Rewinding {
-                    cause: Some(select),
-                    remaining: vec![last_select],
-                    processed: Vec::new(),
-                };
-                (state, WinderNext::Continue)
+                (
+                    WinderState::Rewinding {
+                        cause: Some(select),
+                        remaining: vec![last_select],
+                        processed: Vec::new(),
+                    },
+                    WinderNext::Continue,
+                )
             }
             // Recovery success, either middle step or end step
             (
@@ -298,61 +321,64 @@ impl Winder {
                     assert_eq!(cause.mines, select.mines);
                     // do nothing else, this is later re-added as the cause
                 }
-                // throw away rewind results
-                for (select, path) in processed.into_iter() {
-                    remaining.push(select);
-                    surface.remove_mine_path(&path);
-                }
+
                 // try removing something in the way
                 // todo: or loop...
                 if let Some((last_select, path)) = self.mines_processed.pop() {
                     remaining.push(last_select);
-                    surface.remove_mine_path(&path);
+                    // surface.remove_mine_path(&path);
+                }
+                // throw away rewind results
+                for (select, path) in processed.into_iter() {
+                    remaining.push(select);
+                    // surface.remove_mine_path(&path);
                 }
 
                 if remaining.is_empty() {
                     return WinderNext::BreakRewindingFailed;
                 }
 
-                // DEBUG SANITY CHECKING
-                assert_sanity_mines_not_deduped(remaining.iter().map(|v| &v.mines[0]));
-
-                // DEBUG SANITY CHECKING
-                // remaining.push(select);
-                let all_mine_bases = remaining
-                    .iter()
-                    .chain(self.mines_remaining.iter())
-                    .flat_map(|v| {
-                        assert_eq!(v.mines.len(), 1);
-                        v.mines[0].patch_indexes.clone()
-                    })
-                    .collect_vec();
-                // let select = remaining.pop().unwrap();
-                let any_exist = surface.get_mine_paths().iter().find(|v| {
-                    v.mine_base
-                        .patch_indexes
-                        .iter()
-                        .any(|patch| all_mine_bases.contains(patch))
-                });
-                assert_eq!(any_exist, None, "remaining found in surface");
+                // // DEBUG SANITY CHECKING
+                // assert_sanity_mines_not_deduped(remaining.iter().map(|v| &v.mines[0]));
+                //
+                // // DEBUG SANITY CHECKING
+                // // remaining.push(select);
+                // let all_mine_bases = remaining
+                //     .iter()
+                //     .chain(self.mines_remaining.iter())
+                //     .flat_map(|v| {
+                //         assert_eq!(v.mines.len(), 1);
+                //         v.mines[0].patch_indexes.clone()
+                //     })
+                //     .collect_vec();
+                // // let select = remaining.pop().unwrap();
+                // let any_exist = surface.get_mine_paths().iter().find(|v| {
+                //     v.mine_base
+                //         .patch_indexes
+                //         .iter()
+                //         .any(|patch| all_mine_bases.contains(patch))
+                // });
+                // assert_eq!(any_exist, None, "remaining found in surface");
 
                 // loop detection
-                if self.impossible_for_remaining != self.mines_remaining.len() {
-                    self.impossible_for_remaining = self.mines_remaining.len();
-                    self.impossibles.clear();
-                }
-                let history = *self
-                    .impossibles
-                    .entry(select.mines[0].clone())
-                    .and_modify(|v| *v += 1)
-                    .or_insert(1);
-                let cause = if history == IMPOSSIBLE_TRIGGER {
-                    // skippa skippa
-                    warn!("HMM: purging impossible {:?}", select.mines[0]);
-                    Some(remaining.pop().unwrap())
-                } else {
-                    Some(select)
-                };
+                // if self.impossible_for_remaining != self.mines_remaining.len() {
+                //     self.impossible_for_remaining = self.mines_remaining.len();
+                //     self.impossibles.clear();
+                // }
+                // let history = *self
+                //     .impossibles
+                //     .entry(select.mines[0].clone())
+                //     .and_modify(|v| *v += 1)
+                //     .or_insert(1);
+                // let cause = if history == IMPOSSIBLE_TRIGGER {
+                //     // skippa skippa
+                //     warn!("HMM: purging impossible {:?}", select.mines[0]);
+                //     self.impossibles.clear();
+                //     Some(remaining.pop().unwrap())
+                // } else {
+                //     Some(select)
+                // };
+                let cause = Some(select);
 
                 (
                     WinderState::Rewinding {
@@ -368,6 +394,123 @@ impl Winder {
         };
         self.state = new_state;
         next
+    }
+
+    fn reorder_processing(&mut self, surface: &VSurface) -> WinderNext {
+        if !matches!(self.state, WinderState::Normal) {
+            error!("umm");
+            return WinderNext::BreakRewindingFailed;
+        }
+
+        // split remaining into
+        //  - include horizontal band defined by height of processed mines
+        //  - excluded
+        let edge_start = *self
+            .mines_remaining
+            .last()
+            .unwrap()
+            .base_sources
+            .borrow()
+            .peek_single()
+            .origin
+            .point();
+        let edge_end = VPoint::new(surface.get_radius_i32(), edge_start.y());
+        error!("edge_start {edge_start}");
+        error!("edge_end   {edge_end}");
+        let mut processed_area = VArea::from_arbitrary_points(
+            self.mines_processed
+                .iter()
+                .flat_map(|(select, path)| select.only_mine().area.get_corner_points())
+                .chain([edge_start, edge_end]),
+        );
+        error!("processed len {}", self.mines_processed.len());
+        error!(
+            "pos_start {}",
+            self.mines_processed[0].0.only_mine().area.point_top_left()
+        );
+        error!("area {processed_area}");
+        // panic!("uhh");
+        let remaining_before_len = self.mines_remaining.len();
+        let mut inner_remaining = mem::take(&mut self.mines_remaining);
+        let mut included = Vec::new();
+        let mut excluded = Vec::new();
+        for select in inner_remaining {
+            if select
+                .only_mine()
+                .area
+                .get_corner_points()
+                .iter()
+                .any(|v| processed_area.contains_point(v))
+            {
+                // if processed_area.contains_point(&select.only_mine().area.point_top_left()) {
+                included.push(select);
+            } else {
+                excluded.push(select);
+            }
+        }
+
+        let mut expansion = 0;
+        while included.is_empty() {
+            expansion += 1;
+
+            processed_area = VArea::from_arbitrary_points_pair(
+                processed_area.point_top_left().move_y(-SECTION_POINTS_I32),
+                processed_area
+                    .point_bottom_right()
+                    .move_y(SECTION_POINTS_I32),
+            );
+            warn!("expanding {expansion} with {processed_area}");
+            included.extend(excluded.extract_if(0.., |v| {
+                v.only_mine()
+                    .area
+                    .get_corner_points()
+                    .iter()
+                    .any(|v| processed_area.contains_point(v))
+            }));
+        }
+
+        // sort the included into preferred order
+        included.sort_by(|a, b| {
+            VPoint::sort_by_x_then_y_column(
+                a.only_mine().area.point_top_left(),
+                b.only_mine().area.point_top_left(),
+            )
+        });
+
+        self.mines_remaining.extend(included);
+        self.mines_remaining.extend(excluded);
+        self.mines_remaining.reverse();
+        assert_eq!(remaining_before_len, self.mines_remaining.len());
+
+        let last_advice = self
+            .mines_remaining
+            .last()
+            .unwrap()
+            .only_mine()
+            .area
+            .get_corner_points();
+        assert!(
+            last_advice.iter().any(|v| processed_area.contains_point(v)),
+            "area {processed_area} last {}",
+            last_advice.map(|v| v.to_string()).join(",")
+        );
+
+        WinderNext::Continue
+    }
+
+    fn steal_nearby_routes(&self) {
+        // find the closest rail in VEntityMap
+        // map back to it's MineLocation and endpoints
+        // Remove from surface
+        // set new destination to this, re-path
+        todo!()
+    }
+
+    fn find_next_rail() {
+        // Instead of precalculated order,
+        // Pick the (farthest?) patch on x axis
+        // Range is the distance between the connected patches, working (towards?) middle
+        todo!()
     }
 }
 

@@ -57,7 +57,7 @@ fn process_batch(
     trace!("---");
     let num_mines = batch.mines.len();
 
-    let mut complete_plan = get_possible_routes_for_batch(surface, batch);
+    let complete_plan = get_possible_routes_for_batch(surface, batch);
 
     let num_per_batch_routes_min = complete_plan
         .sequences

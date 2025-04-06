@@ -388,6 +388,24 @@ impl VPoint {
         }
     }
 
+    pub fn sort_by_x_then_y_column(a: impl Borrow<VPoint>, b: impl Borrow<VPoint>) -> Ordering {
+        let a = a.borrow();
+        let b = b.borrow();
+        match a.x().cmp(&b.x()) {
+            Ordering::Equal => a.y().cmp(&b.y()),
+            x => x,
+        }
+    }
+
+    pub fn sort_by_y_then_x_row(a: impl Borrow<VPoint>, b: impl Borrow<VPoint>) -> Ordering {
+        let a = a.borrow();
+        let b = b.borrow();
+        match a.y().cmp(&b.y()) {
+            Ordering::Equal => a.x().cmp(&b.x()),
+            x => x,
+        }
+    }
+
     pub fn trim_max(&self, other: impl Borrow<VPoint>) -> Self {
         let other = other.borrow();
         VPoint::new(self.x().max(other.x()), self.y().max(other.y()))

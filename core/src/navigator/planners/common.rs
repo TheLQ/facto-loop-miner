@@ -7,6 +7,7 @@ use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
 use itertools::Itertools;
+use simd_json::prelude::ArrayTrait;
 use std::borrow::Borrow;
 /*
 pub(super) fn debug_draw_base_sources(
@@ -98,6 +99,40 @@ pub(super) fn draw_no_touching_zone(surface: &mut VSurface, batches: &[MineSelec
     surface
         .set_pixels(Pixel::MineNoTouch, anti_backside_points)
         .unwrap()
+}
+
+pub fn debug_conflict_no_touching(
+    surface: &mut VSurface,
+    batches: &[MineSelectBatch],
+) -> Result<(), ()> {
+    let mut seen_points: Vec<(&MineLocation, VArea)> = Vec::new();
+    let mut fail = false;
+    for batch in batches {
+        for mine in &batch.mines {
+            let area = max_no_touching_zone(surface, &mine.area);
+            for point in area.get_points() {
+                if let Some((loc, _)) = seen_points.iter().find(|(_, v)| v.contains_point(&point)) {
+                    surface.draw_square_area_replacing(
+                        &max_no_touching_zone(surface, &area),
+                        Pixel::MineNoTouch,
+                        Pixel::Highlighter,
+                    );
+                    surface.draw_square_area_replacing(
+                        &max_no_touching_zone(surface, &loc.area),
+                        Pixel::MineNoTouch,
+                        Pixel::EdgeWall,
+                    );
+                }
+                fail = true;
+            }
+            seen_points.push((mine, area));
+        }
+    }
+    if fail {
+        Err(())
+    } else {
+        Ok(())
+    }
 }
 
 pub(super) fn draw_active_no_touching_zone(

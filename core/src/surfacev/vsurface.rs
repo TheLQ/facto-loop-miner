@@ -11,8 +11,10 @@ use crate::util::duration::BasicWatch;
 use colorgrad::Gradient;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ONE};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
+use facto_loop_miner_fac_engine::opencv_re::core::Rect;
+use facto_loop_miner_fac_engine::opencv_re::prelude::*;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
@@ -25,6 +27,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
+use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::thread::JoinHandle;
@@ -302,6 +305,55 @@ impl VSurface {
         std::fs::write(&tuning_path, &output).map_err(ioec.io())?;
 
         Ok(())
+    }
+
+    /// https://github.com/woelper/oculante
+    pub fn save_pixel_to_oculante(&self) {
+        let build_watch = BasicWatch::start();
+        let address: SocketAddr = "192.168.66.21:5689".parse().unwrap();
+        debug!("Saving RGB dump image to oculante {address}");
+        let mut stream = TcpStream::connect(address).unwrap();
+
+        let crop_circle = VArea::from_arbitrary_points_pair(
+            VPoint::new(0, -self.get_radius_i32() / 2),
+            VPoint::new(self.get_radius_i32() - 1, (self.get_radius_i32() / 2) - 1),
+        );
+        let crop_size = crop_circle.as_size() + VPOINT_ONE;
+        let output_size = (crop_size.x() * crop_size.y() * 3) as usize;
+
+        let entities = self.pixels.iter_xy_pixels();
+
+        let mut output: Vec<u8> = Vec::with_capacity(output_size);
+        // trace!(
+        //     "area {crop_circle} size {} output {} width {}",
+        //     output.len(),
+        //     crop_size,
+        //     output.len() / 3 / self.get_radius() as usize
+        // );
+        for (i, pixel) in entities.enumerate() {
+            if !crop_circle.contains_point(&self.pixels.index_to_xy(i)) {
+                continue;
+            }
+            let color = &pixel.color();
+            output.extend(color);
+        }
+        assert_eq!(output.len(), output_size);
+        trace!(
+            "built entity array of {} in {}",
+            output.len().to_formatted_string(&LOCALE),
+            build_watch
+        );
+
+        let encoder =
+            PngEncoder::new_with_quality(stream, CompressionType::Fast, FilterType::NoFilter);
+        encoder
+            .write_image(
+                &output,
+                self.get_radius(),
+                self.get_radius(),
+                ExtendedColorType::Rgb8,
+            )
+            .unwrap();
     }
     //</editor-fold>
 
