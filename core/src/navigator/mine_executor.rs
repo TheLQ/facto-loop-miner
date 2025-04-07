@@ -8,7 +8,6 @@ use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use itertools::Itertools;
 use num_format::ToFormattedString;
-use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;

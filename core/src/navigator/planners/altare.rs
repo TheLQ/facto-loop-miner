@@ -1,12 +1,10 @@
-use crate::navigator::base_source::BaseSourceEntry;
+use crate::navigator::base_source::{BaseSourceEighth, BaseSourceEntry};
 use crate::navigator::mine_permutate::{
     get_possible_routes_for_batch, CompletePlan, PlannedRoute, PlannedSequence,
 };
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
 use crate::navigator::mori::{mori2_start, MoriResult};
-use crate::navigator::planners::common::{
-    draw_active_no_touching_zone, draw_no_touching_zone, draw_restored_no_touching_zone,
-};
+use crate::navigator::planners::common::draw_prep_mines;
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::sanity::assert_sanity_mines_not_deduped;
 use crate::surfacev::vsurface::VSurface;
@@ -18,10 +16,12 @@ use itertools::Itertools;
 use rayon::prelude::*;
 use rayon::ThreadPool;
 use simd_json::prelude::ArrayTrait;
+use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::mem;
+use std::rc::Rc;
 use tracing::{debug, error, info, warn};
 
 /// Planner v2 "Regis Altare 🎇"
@@ -37,12 +37,15 @@ pub fn start_altare_planner(surface: &mut VSurface) {
 
     let mut winder = Winder::new(surface);
 
-    draw_no_touching_zone(surface, &winder.mines_remaining);
+    draw_prep_mines(
+        surface,
+        winder.mines_remaining.iter().map(|v| &v.mine),
+        &winder.mines_remaining[0].base_sources,
+    );
     // surface.validate();
 
     while let Some(select) = winder.next_select() {
-        assert_eq!(select.mines.len(), 1);
-        let prev_no_touch = draw_active_no_touching_zone(surface, &select.mines[0]);
+        let prev_no_touch = select.mine.draw_area_buffered_to_no_touch(surface);
 
         let process = process_select(surface, &select, &exe_pool);
         match winder.apply(surface, select, process) {
@@ -57,7 +60,7 @@ pub fn start_altare_planner(surface: &mut VSurface) {
         // if winder.mines_processed.len() == 8 {
         //     break;
         // }
-        draw_restored_no_touching_zone(surface, prev_no_touch);
+        MineLocation::draw_area_no_touch_to_buffered(surface, prev_no_touch);
 
         match winder.reorder_processing(surface) {
             WinderNext::Continue => {}
@@ -76,36 +79,23 @@ pub fn start_altare_planner(surface: &mut VSurface) {
 
 fn process_select(
     surface: &VSurface,
-    select: &MineSelectBatch,
+    select: &SlimeSelect,
     exe_pool: &ThreadPool,
 ) -> Result<MinePath, Vec<PlannedRoute>> {
-    assert_eq!(select.mines.len(), 1);
     // info!("processing {:?}", select.mines[0]);
 
-    let CompletePlan {
-        sequences,
-        base_sources,
-    } = get_possible_routes_for_batch(surface, select.clone());
-    // assert!(
-    //     sequences.len() <= 2,
-    //     "too many destinations {}?",
-    //     sequences.len()
-    // );
-    // assert_ne!(sequences.len(), 0, "no destinations found?");
-    // assert_eq!(sequences.len(), 2, "not enough destinations found?");
-
-    let actual_base_source = base_sources.borrow().peek_single();
+    let actual_base_source = select.base_sources.borrow().peek_single();
+    let routes = select.to_routes(surface).collect_vec();
     let results: Vec<(MoriResult, PlannedRoute)> = exe_pool.install(|| {
-        sequences
+        routes
             .into_par_iter()
-            .map(|PlannedSequence { mut routes }| {
-                assert_eq!(routes.len(), 1, "sequence should go to 1 route");
-                let route = routes.remove(0);
+            .map(|route| {
                 let res = execute_route(surface, &route, &actual_base_source);
                 (res, route)
             })
             .collect()
     });
+    assert_ne!(results.len(), 0, "no destinations found?");
 
     results
         .into_iter()
@@ -127,7 +117,7 @@ fn process_select(
             (Ok(best), MoriResult::FailingDebug(_, _)) => Ok(best),
         })
         .map(|(links, cost, route)| {
-            base_sources.borrow_mut().next().unwrap();
+            select.base_sources.borrow_mut().next().unwrap();
 
             MinePath {
                 links,
@@ -155,12 +145,52 @@ fn execute_route(
     route_result
 }
 
+#[derive(Clone)]
+struct SlimeSelect {
+    pub mine: MineLocation,
+    pub base_sources: Rc<RefCell<BaseSourceEighth>>,
+}
+
+impl From<MineSelectBatch> for SlimeSelect {
+    fn from(
+        MineSelectBatch {
+            mut mines,
+            base_sources,
+        }: MineSelectBatch,
+    ) -> Self {
+        assert_eq!(mines.len(), 1);
+        Self {
+            mine: mines.remove(0),
+            base_sources,
+        }
+    }
+}
+
+impl SlimeSelect {
+    fn to_routes<'a>(
+        &self,
+        surface: &'a VSurface,
+    ) -> impl Iterator<Item = PlannedRoute> + use<'_, 'a> {
+        self.mine
+            .destinations()
+            .iter()
+            .map(|destination| PlannedRoute {
+                destination: *destination,
+                location: self.mine.clone(),
+                finding_limiter: VArea::from_arbitrary_points_pair(
+                    surface.point_top_left(),
+                    surface.point_bottom_right(),
+                ),
+            })
+    }
+}
+
 enum WinderState {
     Normal,
     Rewinding {
-        cause: Option<MineSelectBatch>,
-        remaining: Vec<MineSelectBatch>,
-        processed: Vec<(MineSelectBatch, MinePath)>,
+        cause: Option<SlimeSelect>,
+        remaining: Vec<SlimeSelect>,
+        processed: Vec<(SlimeSelect, MinePath)>,
     },
 }
 
@@ -169,20 +199,23 @@ const IMPOSSIBLE_TRIGGER: usize = 3;
 /// Wind and Re-Wind state
 struct Winder {
     state: WinderState,
-    mines_remaining: Vec<MineSelectBatch>,
-    mines_processed: Vec<(MineSelectBatch, MinePath)>,
+    mines_remaining: Vec<SlimeSelect>,
+    mines_processed: Vec<(SlimeSelect, MinePath)>,
     impossibles: HashMap<MineLocation, usize>,
     impossible_for_remaining: usize,
 }
 
 impl Winder {
     fn new(surface: &VSurface) -> Self {
-        let mut mines_remaining = select_mines_and_sources(&surface, 1)
+        let mut mines_remaining: Vec<SlimeSelect> = select_mines_and_sources(&surface, 1)
             .into_success()
-            .unwrap();
+            .unwrap()
+            .into_iter()
+            .map(SlimeSelect::from)
+            .collect();
         // to use push-pop semantics
         mines_remaining.reverse();
-        assert_sanity_mines_not_deduped(mines_remaining.iter().map(|v| &v.mines[0]));
+        assert_sanity_mines_not_deduped(mines_remaining.iter().map(|v| &v.mine));
         Self {
             state: WinderState::Normal,
             mines_remaining,
@@ -192,7 +225,7 @@ impl Winder {
         }
     }
 
-    fn next_select(&mut self) -> Option<MineSelectBatch> {
+    fn next_select(&mut self) -> Option<SlimeSelect> {
         let mut debug_rewinding = "".to_string();
         let res = if let WinderState::Rewinding {
             cause,
@@ -230,7 +263,7 @@ impl Winder {
     fn apply(
         &mut self,
         surface: &mut VSurface,
-        select: MineSelectBatch,
+        select: SlimeSelect,
         result: Result<MinePath, Vec<PlannedRoute>>,
     ) -> WinderNext {
         // fn rewind(winder: &mut Winder, surface: &mut VSurface) -> WinderNext {
@@ -281,14 +314,14 @@ impl Winder {
                 debug!("HMM: Rewinding, success");
                 surface.add_mine_path(mine_path.clone()).unwrap();
                 if let Some(cause) = cause {
-                    assert_eq!(cause.mines, select.mines);
+                    assert_eq!(cause.mine, select.mine);
                     // we fixed cause
                     processed.push((cause, mine_path));
                 } else {
                     // we processed a remaining?
                     processed.push((select, mine_path));
                 };
-                assert_sanity_mines_not_deduped(remaining.iter().map(|v| &v.mines[0]));
+                assert_sanity_mines_not_deduped(remaining.iter().map(|v| &v.mine));
 
                 if remaining.is_empty() {
                     // nothing to do anymore
@@ -318,7 +351,7 @@ impl Winder {
             ) => {
                 debug!("HMM: Rewinding, failed again");
                 if let Some(cause) = cause {
-                    assert_eq!(cause.mines, select.mines);
+                    assert_eq!(cause.mine, select.mine);
                     // do nothing else, this is later re-added as the cause
                 }
 
@@ -420,13 +453,17 @@ impl Winder {
         let mut processed_area = VArea::from_arbitrary_points(
             self.mines_processed
                 .iter()
-                .flat_map(|(select, path)| select.only_mine().area.get_corner_points())
+                .flat_map(|(select, path)| select.mine.area_buffered().get_corner_points())
                 .chain([edge_start, edge_end]),
         );
         error!("processed len {}", self.mines_processed.len());
         error!(
             "pos_start {}",
-            self.mines_processed[0].0.only_mine().area.point_top_left()
+            self.mines_processed[0]
+                .0
+                .mine
+                .area_buffered()
+                .point_top_left()
         );
         error!("area {processed_area}");
         // panic!("uhh");
@@ -436,8 +473,8 @@ impl Winder {
         let mut excluded = Vec::new();
         for select in inner_remaining {
             if select
-                .only_mine()
-                .area
+                .mine
+                .area_buffered()
                 .get_corner_points()
                 .iter()
                 .any(|v| processed_area.contains_point(v))
@@ -461,8 +498,8 @@ impl Winder {
             );
             warn!("expanding {expansion} with {processed_area}");
             included.extend(excluded.extract_if(0.., |v| {
-                v.only_mine()
-                    .area
+                v.mine
+                    .area_buffered()
                     .get_corner_points()
                     .iter()
                     .any(|v| processed_area.contains_point(v))
@@ -472,8 +509,8 @@ impl Winder {
         // sort the included into preferred order
         included.sort_by(|a, b| {
             VPoint::sort_by_x_then_y_column(
-                a.only_mine().area.point_top_left(),
-                b.only_mine().area.point_top_left(),
+                a.mine.area_buffered().point_top_left(),
+                b.mine.area_buffered().point_top_left(),
             )
         });
 
@@ -486,8 +523,8 @@ impl Winder {
             .mines_remaining
             .last()
             .unwrap()
-            .only_mine()
-            .area
+            .mine
+            .area_buffered()
             .get_corner_points();
         assert!(
             last_advice.iter().any(|v| processed_area.contains_point(v)),
@@ -503,6 +540,7 @@ impl Winder {
         // map back to it's MineLocation and endpoints
         // Remove from surface
         // set new destination to this, re-path
+
         todo!()
     }
 

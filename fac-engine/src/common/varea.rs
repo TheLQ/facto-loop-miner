@@ -41,6 +41,10 @@ impl VArea {
             && target.y() <= self.bottom_right.y()
     }
 
+    pub fn contains_points(&self, targets: impl IntoIterator<Item = impl Borrow<VPoint>>) -> bool {
+        targets.into_iter().any(|p| self.contains_point(p.borrow()))
+    }
+
     pub fn get_points(&self) -> Vec<VPoint> {
         let mut points = Vec::new();
         for point_x in self.top_left.x()..=self.bottom_right.x() {

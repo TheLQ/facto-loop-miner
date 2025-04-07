@@ -1,9 +1,10 @@
 use crate::common::vpoint::VPoint;
 use crate::game_entities::direction::FacDirectionQuarter;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 /// aka a Vector
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct VPointDirectionQ(pub VPoint, pub FacDirectionQuarter);
 
 impl VPointDirectionQ {

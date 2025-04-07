@@ -3,7 +3,7 @@ use crate::navigator::mine_executor::{
 };
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
-use crate::navigator::planners::common::draw_no_touching_zone;
+use crate::navigator::planners::common::draw_prep;
 use crate::state::machine::StepParams;
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
@@ -31,7 +31,7 @@ pub fn start_ruze_planner(surface: &mut VSurface, params: &StepParams) {
     }
     num_mines_metrics.log_final();
 
-    draw_no_touching_zone(surface, &select_batches);
+    draw_prep(surface, &select_batches);
 
     for (batch_index, batch) in select_batches.into_iter().enumerate() {
         // for (batch_index, batch) in [select_batches.into_iter().enumerate().last().unwrap()] {
@@ -111,18 +111,14 @@ fn process_batch(
                     surface.add_mine_path(path).unwrap();
                 }
 
-                surface.draw_square_area_replacing(
-                    &trigger_mine.location.area,
-                    Pixel::MineNoTouch,
-                    Pixel::Highlighter,
-                );
+                trigger_mine
+                    .location
+                    .draw_area_buffered_with(surface, Pixel::Highlighter);
                 for entry in rest {
-                    warn!("failing at {:?}", entry.location.area);
-                    surface.draw_square_area_replacing(
-                        &entry.location.area,
-                        Pixel::MineNoTouch,
-                        Pixel::EdgeWall,
-                    );
+                    warn!("failing at {:?}", entry.location.area_buffered());
+                    trigger_mine
+                        .location
+                        .draw_area_buffered_with(surface, Pixel::EdgeWall);
                 }
                 return true;
             }
@@ -137,21 +133,17 @@ fn process_batch(
             let (trigger_mine, rest) = failing_routes.split_first().unwrap();
             warn!(
                 "trigger failing at {:?} with rest num {}",
-                trigger_mine.location.area,
+                trigger_mine.location.area_buffered(),
                 rest.len()
             );
-            surface.draw_square_area_replacing(
-                &trigger_mine.location.area,
-                Pixel::MineNoTouch,
-                Pixel::Highlighter,
-            );
+            trigger_mine
+                .location
+                .draw_area_buffered_with(surface, Pixel::Highlighter);
             for entry in rest {
-                warn!("failing at {:?}", entry.location.area);
-                surface.draw_square_area_replacing(
-                    &entry.location.area,
-                    Pixel::MineNoTouch,
-                    Pixel::EdgeWall,
-                );
+                warn!("failing at {:?}", entry.location.area_buffered());
+                trigger_mine
+                    .location
+                    .draw_area_buffered_with(surface, Pixel::EdgeWall);
             }
 
             // // very busy dump

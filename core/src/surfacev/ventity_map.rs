@@ -176,7 +176,7 @@ where
             if existing_entity_index == &entity_index {
                 // we may be called with duplicate points, which we can't remove
                 continue;
-            } else if existing_entity_index != &EMPTY_XY_INDEX {
+            } else if *existing_entity_index != EMPTY_XY_INDEX {
                 // remove existing
                 self.entity_to_xy[*existing_entity_index].retain(|v| v != position)
             }
@@ -415,25 +415,25 @@ where
         &mut self,
         entity_id: usize,
         new_points: &mut Vec<VPoint>,
-        overwrite_non_empty: bool,
+        _overwrite_non_empty: bool,
     ) where
         E: Debug,
     {
         for point in &self.entity_to_xy[entity_id] {
             let index = self.point_to_index(point);
             let target = &mut self.xy_to_entity.as_mut_slice()[index];
-            if *target == entity_id {
-                *target = EMPTY_XY_INDEX;
-            }
+            // if *target == entity_id {
+            *target = EMPTY_XY_INDEX;
+            // }
         }
         for point in new_points.as_slice() {
             let index = self.point_to_index(point);
             let target = &mut self.xy_to_entity.as_mut_slice()[index];
-            if overwrite_non_empty || *target == EMPTY_XY_INDEX {
-                *target = entity_id;
-            } else {
-                panic!("point {point} is already index {target} val {:?}, cannot set to {entity_id} val {:?}", self.entities[*target], self.entities[entity_id])
-            }
+            // if overwrite_non_empty || *target == EMPTY_XY_INDEX {
+            *target = entity_id;
+            // } else {
+            //     panic!("point {point} is already index {target} val {:?}, cannot set to {entity_id} val {:?}", self.entities[*target], self.entities[entity_id])
+            // }
         }
         mem::swap(new_points, &mut self.entity_to_xy[entity_id]);
     }

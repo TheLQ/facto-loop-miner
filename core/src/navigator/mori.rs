@@ -32,7 +32,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
     // ::<_, _, _, _, _, _, _, ParentProcessor>
     let pathfind = astar_mori(
         start_link,
-        |head, processor, cost: _| {
+        |head, processor, _cost| {
             let watch = BasicWatch::start();
             let res = successors(
                 surface,
@@ -54,7 +54,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
             res
             // p.start.distance_bird(&end_link.start) < 5.0
         },
-        |processor, cur_link| {
+        |processor, _cur_link| {
             processor.total_links += 1;
         },
     );
@@ -78,7 +78,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
             path: sodas_to_links(path).collect(),
             cost,
         },
-        Err((dump, all)) => MoriResult::FailingDebug(
+        Err((_dump, _all)) => MoriResult::FailingDebug(
             // duals_into_single_vec(dump.into_iter().map(|(v, (i, r))| v)),
             // duals_into_single_vec(all),
             Vec::new(),

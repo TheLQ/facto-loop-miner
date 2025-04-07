@@ -148,7 +148,7 @@ impl BaseSourceEntry {
         );
 
         // apply offset without moving away from center
-        let distance_test = &location.area.point_center();
+        let distance_test = &location.area_min().point_center();
         let init_distance = pos.distance_to(distance_test);
         let mut new_pos = *pos + self.applied_intra_offset;
         if new_pos.distance_to(distance_test) > init_distance {

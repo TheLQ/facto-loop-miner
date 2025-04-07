@@ -169,7 +169,6 @@ fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineLoca
     let mut result = Vec::new();
     for patch_group in groups {
         let patch_group_indexes;
-        let plain_area;
         if patch_group.len() != 1 {
             // trace!("Merging patch group of {:?}", patch_group);
 
@@ -178,24 +177,15 @@ fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineLoca
                 .iter()
                 .map(|patch| patch.get_surface_patch_index(surface))
                 .collect();
-
-            plain_area = VArea::from_arbitrary_points(
-                patch_group.iter().flat_map(|patch| &patch.pixel_indexes),
-            );
         } else {
             let patch = patch_group[0];
             // trace!("Single patch group {:?}", patch);
             patch_group_indexes = vec![patch.get_surface_patch_index(surface)];
-
-            plain_area = patch.area.clone();
         }
 
-        result.push(MineLocation {
-            patch_indexes: patch_group_indexes,
-            area: plain_area
-                .normalize_step_rail(5)
-                .normalize_within_radius(surface.get_radius_i32() - 1),
-        });
+        if let Some(mine) = MineLocation::from_patch_indexes(surface, patch_group_indexes) {
+            result.push(mine);
+        }
     }
     result
 }
@@ -227,7 +217,7 @@ fn patches_by_cross_sign_expanding(
     base_tunables: &BaseTunables,
 ) -> Vec<MineSelectBatch> {
     let bounding_area =
-        VArea::from_arbitrary_points(mines.iter().flat_map(|v| v.area.get_corner_points()));
+        VArea::from_arbitrary_points(mines.iter().flat_map(|v| v.area_min().get_corner_points()));
 
     let cross_sides: [VPointDirectionQ; 1] = [
         // Rail::new_straight(
@@ -283,9 +273,8 @@ fn patches_by_cross_sign_expanding(
 
             let search_area = VArea::from_arbitrary_points_pair(scan_start, scan_end);
             let mut found_mines: Vec<MineLocation> = mines
-                .extract_if(0..mines.len(), |mine| {
-                    search_area.contains_point(&mine.area.point_top_left())
-                        || search_area.contains_point(&mine.area.point_bottom_right())
+                .extract_if(0.., |mine| {
+                    search_area.contains_points(mine.area_min().get_corner_points())
                 })
                 .collect();
             if found_mines.is_empty() {
@@ -295,8 +284,8 @@ fn patches_by_cross_sign_expanding(
             found_mines.sort_by(|left, right| {
                 VPoint::sort_by_direction(
                     *cross_side.direction(),
-                    left.area.point_top_left(),
-                    right.area.point_top_left(),
+                    left.area_min().point_top_left(),
+                    right.area_min().point_top_left(),
                 )
             });
             // for mine in &found_mines {

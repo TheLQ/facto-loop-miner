@@ -70,7 +70,7 @@ fn distance_by_basic_manhattan(next: &impl RailHopeLink, end: &VPointDirectionQ)
 }
 
 fn distance_by_punish_turns(
-    processor: &ParentProcessor,
+    _processor: &ParentProcessor,
     next: &impl RailHopeLink,
     end: &VPointDirectionQ,
     tune: &MoriTunables,

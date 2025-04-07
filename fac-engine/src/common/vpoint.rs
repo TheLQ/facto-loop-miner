@@ -25,6 +25,14 @@ pub const VPOINT_ZERO: VPoint = VPoint { x: 0, y: 0 };
 pub const VPOINT_ONE: VPoint = VPoint { x: 1, y: 1 };
 pub const VPOINT_EIGHT: VPoint = VPoint { x: 8, y: 8 };
 pub const VPOINT_TEN: VPoint = VPoint { x: 10, y: 10 };
+pub const VPOINT_SECTION: VPoint = VPoint {
+    x: SECTION_POINTS_I32,
+    y: SECTION_POINTS_I32,
+};
+pub const VPOINT_SECTION_NEGATIVE: VPoint = VPoint {
+    x: -SECTION_POINTS_I32,
+    y: -SECTION_POINTS_I32,
+};
 
 impl VPoint {
     pub const fn x(&self) -> i32 {
