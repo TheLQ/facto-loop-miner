@@ -10,6 +10,7 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
+use std::{hint, ptr, slice};
 use tracing::warn;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
@@ -73,7 +74,9 @@ impl MineLocation {
         )
         .normalize_within_radius(surface.get_radius_i32() - 1);
 
-        let Some(endpoints) = Self::new_endpoints(surface, &area_buffered) else {
+        assert!(area_no_touch.get_points().len() < area_buffered.get_points().len());
+
+        let Some(endpoints) = Self::new_endpoints(surface, &area_no_touch) else {
             return None;
         };
         let destinations = endpoints
@@ -153,7 +156,7 @@ impl MineLocation {
         assert_eq!(existing_pixel, Pixel::MineNoTouch, "at {needle}");
 
         let new_points = self
-            .area_buffered
+            .area_no_touch
             .get_points()
             .into_iter()
             .filter(|p| matches!(surface.get_pixel(p), Pixel::MineNoTouch | Pixel::Empty))

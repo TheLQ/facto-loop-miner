@@ -5,11 +5,12 @@ use crate::navigator::mine_permutate::{
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
 use crate::navigator::mori::{mori2_start, MoriResult};
 use crate::navigator::planners::common::draw_prep_mines;
+use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::sanity::assert_sanity_mines_not_deduped;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ZERO};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use facto_loop_miner_fac_engine::util::ansi::{ansi_color, Color};
 use itertools::Itertools;
@@ -48,10 +49,42 @@ pub fn start_altare_planner(surface: &mut VSurface) {
         let prev_no_touch = select.mine.draw_area_buffered_to_no_touch(surface);
 
         let process = process_select(surface, &select, &exe_pool);
-        match winder.apply(surface, select, process) {
+        match winder.apply(surface, select.clone(), process) {
             WinderNext::Continue => {}
-            res => {
-                error!("{res}, stop");
+            breaker => {
+                let res = match breaker {
+                    WinderNext::Continue => unreachable!(),
+                    WinderNext::BreakRewindingFailed => "BreakRewindingFailed",
+                    WinderNext::BreakNoMoreProcessed => "BreakNoMoreProcessed",
+                };
+
+                for endpoint in select.mine.destinations() {
+                    let route = PlannedRoute {
+                        location: select.mine.clone(),
+                        destination: *endpoint,
+                        finding_limiter: VArea::from_arbitrary_points([VPOINT_ZERO]),
+                    };
+                    let route = select
+                        .base_sources
+                        .borrow()
+                        .peek_single()
+                        .route_to_segment(&route);
+                    surface
+                        .set_pixels(Pixel::Highlighter, vec![*route.end.point()])
+                        .unwrap();
+                }
+
+                surface.set_entity_replace(
+                    select.mine.area_no_touch().point_top_left(),
+                    Pixel::MineNoTouch,
+                    Pixel::EdgeWall,
+                );
+
+                surface
+                    .set_pixels(Pixel::SteelChest, select.mine.endpoints().to_vec())
+                    .unwrap();
+                surface.save_pixel_to_oculante();
+                error!("{res}, stop, drawing");
                 break;
             }
         }

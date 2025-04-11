@@ -59,9 +59,9 @@ where
     //<editor-fold desc="query xy">
     /// Fast Get index in xy_to_entity buffer
     pub fn xy_to_index_unchecked(&self, x: i32, y: i32) -> usize {
-        let radius = self.radius as isize;
-        let abs_x = (x as isize + radius) as usize;
-        let abs_y = (y as isize + radius) as usize;
+        let radius = self.radius as i32;
+        let abs_x = (x + radius) as usize;
+        let abs_y = (y + radius) as usize;
         self.diameter() * abs_y + abs_x
     }
 
@@ -547,6 +547,16 @@ impl VEntityMap<VPixel> {
             data,
         }
     }
+}
+
+pub enum InsertMap {
+    Stomp,
+    EmptyOnly,
+    ReplaceOneEntity,
+}
+
+impl InsertMap {
+    fn insert<E>(self, map: &mut VEntityMap<E>, value: E) {}
 }
 
 #[cfg(test)]

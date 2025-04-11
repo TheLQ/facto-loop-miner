@@ -151,11 +151,11 @@ impl BaseSourceEntry {
         let distance_test = &location.area_min().point_center();
         let init_distance = pos.distance_to(distance_test);
         let mut new_pos = *pos + self.applied_intra_offset;
-        if new_pos.distance_to(distance_test) > init_distance {
+        if new_pos.distance_to(distance_test) < init_distance {
             // todo: support x somehow
             let pos = pos.move_y(SECTION_POINTS_I32 * self.applied_intra_offset.y().signum() * -1);
             new_pos = pos + self.applied_intra_offset;
-            assert!(new_pos.distance_to(distance_test) < init_distance);
+            assert!(new_pos.distance_to(distance_test) > init_distance);
         }
 
         VSegment {
