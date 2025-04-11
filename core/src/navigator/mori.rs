@@ -4,16 +4,14 @@ use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::{BasicWatch, BasicWatchResult};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPointSugar, VPOINT_ZERO};
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, SECTION_POINTS_I32};
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{sodas_to_links, HopeSodaLink};
-use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use num_format::ToFormattedString;
-use pathfinding::prelude::{astar_mori, astar_mori2};
+use pathfinding::prelude::astar_mori;
 use std::time::Duration;
-use tracing::{info, trace};
+use tracing::info;
 
 /// Pathfinder v1.2, Mori Calliope💀
 ///
@@ -28,44 +26,40 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
     let tunables = &surface.tunables().mori;
     let mut watch_data = WatchData::default();
 
-    let dummy_processor = ParentProcessor::default();
-
     let total_watch = BasicWatch::start();
     let mut successor_sum = Duration::default();
     let res_sum = Duration::default();
     // ::<_, _, _, _, _, _, _, ParentProcessor>
-    let pathfind = astar_mori2(
-        &start_link.pos_next(),
-        |head, parent| {
+    let pathfind = astar_mori(
+        start_link,
+        |head, processor, _cost| {
             let watch = BasicWatch::start();
             let res = successors(
                 surface,
                 &endpoints,
                 head,
-                parent,
-                &dummy_processor,
+                processor,
                 finding_limiter,
                 tunables,
                 &mut watch_data,
             );
-            trace!("writing {}", res.len());
             successor_sum += watch.duration();
             res
         },
         |_p| 0,
         |p| {
             // let watch = BasicWatch::start();
-            let res = p == &end_link.pos_next();
+            let res = p == &end_link;
             // res_sum += watch.duration();
             res
             // p.start.distance_bird(&end_link.start) < 5.0
         },
-        // |processor, _cur_link| {
-        //     processor.total_links += 1;
-        // },
+        |processor, _cur_link| {
+            processor.total_links += 1;
+        },
     );
 
-    let success = true; //pathfind.is_ok();
+    let success = pathfind.is_ok();
 
     info!(
         " - {:>9} executions {:>9} found {:>8} nexts {:>6} cost {:>6} summed {:>5} res {:>8} total  {success} success",
@@ -78,20 +72,19 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
         total_watch
     );
 
-    todo!("why you exit")
-    // match pathfind {
-    //     Ok((path, cost)) => MoriResult::Route {
-    //         // path: duals_into_single_vec(path),
-    //         path: sodas_to_links(path).collect(),
-    //         cost,
-    //     },
-    //     Err((_dump, _all)) => MoriResult::FailingDebug(
-    //         // duals_into_single_vec(dump.into_iter().map(|(v, (i, r))| v)),
-    //         // duals_into_single_vec(all),
-    //         Vec::new(),
-    //         Vec::new(),
-    //     ),
-    // }
+    match pathfind {
+        Ok((path, cost)) => MoriResult::Route {
+            // path: duals_into_single_vec(path),
+            path: sodas_to_links(path).collect(),
+            cost,
+        },
+        Err((_dump, _all)) => MoriResult::FailingDebug(
+            // duals_into_single_vec(dump.into_iter().map(|(v, (i, r))| v)),
+            // duals_into_single_vec(all),
+            Vec::new(),
+            Vec::new(),
+        ),
+    }
 }
 
 #[derive(Default)]
@@ -129,35 +122,14 @@ fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeSodaLink {
 fn successors(
     surface: &VSurface,
     segment_points: &VSegment,
-    head_pos: &VPoint,
-    parent_pos: &VPoint,
+    head: &HopeSodaLink,
+    // path: &[&HopeLink],
     processor: &ParentProcessor,
     finding_limiter: &VArea,
     tune: &MoriTunables,
     watch_data: &mut WatchData,
-) -> Vec<(VPoint, u32)> {
-    info!("successor for {head_pos} parent {parent_pos}");
+) -> Vec<(HopeSodaLink, u32)> {
     watch_data.executions += 1;
-
-    // match can't take expression
-    const SECTION_NEGATIVE: i32 = -SECTION_POINTS_I32;
-    const SECTION_POSITIVE: i32 = SECTION_POINTS_I32;
-
-    let pos = (head_pos - parent_pos).sugar();
-    let head: HopeSodaLink;
-    match pos {
-        VPointSugar(0, 0) => {
-            // note: assumes starting easy
-            head = HopeSodaLink::new_soda_straight(*head_pos, FacDirectionQuarter::East);
-            trace!("start");
-        }
-        VPointSugar(SECTION_POSITIVE, 0) => {
-            head = HopeSodaLink::new_soda_straight(*head_pos, FacDirectionQuarter::East);
-            trace!("forward east {pos}");
-        }
-        unknown => unimplemented!("what? {unknown}"),
-    };
-
     // let head = path.first().unwrap();
 
     // if processor.total_links > 200 {
@@ -177,8 +149,7 @@ fn successors(
     let mut successors = Vec::with_capacity(3);
     for next in nexts.into_iter().flatten() {
         let cost = calculate_cost_for_link(&next, segment_points, processor, tune);
-        successors.push((next.pos_next(), cost));
-        trace!("next {}", next.my_q());
+        successors.push((next, cost));
     }
     watch_data.cost += watch.duration();
 
