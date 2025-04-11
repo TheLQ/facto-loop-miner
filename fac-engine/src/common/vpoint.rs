@@ -514,6 +514,16 @@ impl Add for VPoint {
     }
 }
 
+impl Add for &VPoint {
+    type Output = VPoint;
+    fn add(self, rhs: &VPoint) -> Self::Output {
+        VPoint {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
+    }
+}
+
 impl AddAssign for VPoint {
     fn add_assign(&mut self, rhs: Self) {
         self.x += rhs.x;
@@ -524,6 +534,16 @@ impl AddAssign for VPoint {
 impl Sub for VPoint {
     type Output = VPoint;
     fn sub(self, rhs: VPoint) -> Self::Output {
+        VPoint {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
+}
+
+impl Sub for &VPoint {
+    type Output = VPoint;
+    fn sub(self, rhs: &VPoint) -> Self::Output {
         VPoint {
             x: self.x - rhs.x,
             y: self.y - rhs.y,

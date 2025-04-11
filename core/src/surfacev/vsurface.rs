@@ -504,6 +504,22 @@ impl VSurface {
         RemovedEntity { entity_id, points }
     }
 
+    pub fn set_entity_replace(&mut self, pos: VPoint, expected: Pixel, new: Pixel) {
+        let entity = self
+            .pixels
+            .get_entity_by_point_mut(&pos)
+            .unwrap_or_else(|| panic!("must exist {pos}"));
+        if entity.pixel == expected {
+            entity.pixel = new;
+        } else {
+            panic!(
+                "at {pos} expected {} found {}",
+                expected.as_ref(),
+                entity.pixel.as_ref()
+            )
+        }
+    }
+
     pub fn log_pixel_stats(&self, debug_message: &str) {
         // let mut metrics = FastMetrics::new(format!("log_pixel_stats Entities {}", debug_message));
         // for entity in self.pixels.iter_entities() {

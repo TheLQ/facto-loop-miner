@@ -69,8 +69,14 @@ pub fn start_altare_planner(surface: &mut VSurface) {
                         .borrow()
                         .peek_single()
                         .route_to_segment(&route);
+                    if select.mine.destinations().contains(&route.end) {
+                        warn!("destination and end match")
+                    }
                     surface
-                        .set_pixels(Pixel::Highlighter, vec![*route.end.point()])
+                        .set_pixels(
+                            Pixel::Highlighter,
+                            vec![*route.start.point(), *route.end.point()],
+                        )
                         .unwrap();
                 }
 

@@ -74,11 +74,15 @@ impl BaseSourceEighth {
     fn get_for_index(&self, index: i32) -> BaseSourceEntry {
         const TOTAL_INTRA_RAILS: i32 = 4;
 
-        let applied_infra_offset_pos = self.sign * (index % TOTAL_INTRA_RAILS) * INTRA_OFFSET;
+        // non-zero to move outside of no-touch area
+        let stay_outside_offset = 1;
+        let applied_infra_offset_pos =
+            self.sign * ((index % TOTAL_INTRA_RAILS) + stay_outside_offset) * INTRA_OFFSET;
         let pos = self.origin.point().move_direction_sideways_int(
             self.origin.direction(),
             self.sign * SECTION_POINTS_I32 * (index / TOTAL_INTRA_RAILS) + applied_infra_offset_pos,
         );
+        // todo: never true
         if applied_infra_offset_pos == 0 {
             pos.assert_step_rail();
         }
@@ -156,6 +160,14 @@ impl BaseSourceEntry {
             let pos = pos.move_y(SECTION_POINTS_I32 * self.applied_intra_offset.y().signum() * -1);
             new_pos = pos + self.applied_intra_offset;
             assert!(new_pos.distance_to(distance_test) > init_distance);
+        }
+
+        let bad_area = location.area_no_touch();
+        if bad_area.contains_point(&new_pos) {
+            panic!(
+                "orig {pos} new {new_pos} with offset {} still inside no_touch {bad_area}",
+                self.applied_intra_offset
+            )
         }
 
         VSegment {
