@@ -11,6 +11,7 @@ use crate::surfacev::sanity::assert_sanity_mines_not_deduped;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ZERO};
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use facto_loop_miner_fac_engine::util::ansi::{ansi_color, Color};
 use itertools::Itertools;
@@ -101,10 +102,18 @@ pub fn start_altare_planner(surface: &mut VSurface) {
         // }
         MineLocation::draw_area_no_touch_to_buffered(surface, prev_no_touch);
 
-        match winder.reorder_processing(surface) {
-            WinderNext::Continue => {}
-            res => {
-                error!("{res}, stop reorder");
+        match winder.reorder_processing(surface, select) {
+            ReorderResult::Continue => {}
+            ReorderResult::BackoutAndRetry(location) => {
+                let mine_path_index = surface
+                    .get_mine_paths()
+                    .iter()
+                    .position(|p| p.mine_base == location)
+                    .unwrap();
+                surface.remove_mine_path_at_index(mine_path_index)
+            }
+            ReorderResult::BreakNotNormal => {
+                error!("BreakNotNormal, stop reorder");
                 break;
             }
         }
@@ -338,7 +347,7 @@ impl Winder {
                         remaining: vec![last_select],
                         processed: Vec::new(),
                     },
-                    WinderNext::Continue,
+                    WinderNext::BreakRewindingFailed,
                 )
             }
             // Recovery success, either middle step or end step
@@ -468,10 +477,14 @@ impl Winder {
         next
     }
 
-    fn reorder_processing(&mut self, surface: &VSurface) -> WinderNext {
+    fn reorder_processing(
+        &mut self,
+        surface: &VSurface,
+        last_processed_mine: SlimeSelect,
+    ) -> ReorderResult {
         if !matches!(self.state, WinderState::Normal) {
             error!("umm");
-            return WinderNext::BreakRewindingFailed;
+            return ReorderResult::BreakNotNormal;
         }
 
         // split remaining into
@@ -489,61 +502,54 @@ impl Winder {
         let edge_end = VPoint::new(surface.get_radius_i32(), edge_start.y());
         error!("edge_start {edge_start}");
         error!("edge_end   {edge_end}");
+
+        let remaining_before_len = self.mines_remaining.len();
+
+        // Get batch of
+        let mut included = Vec::new();
+        let mut excluded = Vec::new();
         let mut processed_area = VArea::from_arbitrary_points(
             self.mines_processed
                 .iter()
-                .flat_map(|(select, path)| select.mine.area_buffered().get_corner_points())
+                .flat_map(|(select, path)| &path.links)
+                .map(|link| link.pos_next())
                 .chain([edge_start, edge_end]),
         );
-        error!("processed len {}", self.mines_processed.len());
-        error!(
-            "pos_start {}",
-            self.mines_processed[0]
-                .0
-                .mine
-                .area_buffered()
-                .point_top_left()
-        );
-        error!("area {processed_area}");
-        // panic!("uhh");
-        let remaining_before_len = self.mines_remaining.len();
-        let mut inner_remaining = mem::take(&mut self.mines_remaining);
-        let mut included = Vec::new();
-        let mut excluded = Vec::new();
-        for select in inner_remaining {
-            if select
-                .mine
-                .area_buffered()
-                .get_corner_points()
-                .iter()
-                .any(|v| processed_area.contains_point(v))
-            {
-                // if processed_area.contains_point(&select.only_mine().area.point_top_left()) {
-                included.push(select);
-            } else {
-                excluded.push(select);
-            }
-        }
-
-        let mut expansion = 0;
-        while included.is_empty() {
-            expansion += 1;
-
+        for edge_expansion in 0.. {
             processed_area = VArea::from_arbitrary_points_pair(
-                processed_area.point_top_left().move_y(-SECTION_POINTS_I32),
+                processed_area
+                    .point_top_left()
+                    .move_y(-SECTION_POINTS_I32 * edge_expansion),
                 processed_area
                     .point_bottom_right()
-                    .move_y(SECTION_POINTS_I32),
+                    .move_y(SECTION_POINTS_I32 * edge_expansion),
             );
-            warn!("expanding {expansion} with {processed_area}");
-            included.extend(excluded.extract_if(0.., |v| {
-                v.mine
+
+            for select in mem::take(&mut self.mines_remaining) {
+                if select
+                    .mine
                     .area_buffered()
                     .get_corner_points()
                     .iter()
                     .any(|v| processed_area.contains_point(v))
-            }));
+                {
+                    included.push(select);
+                } else {
+                    excluded.push(select);
+                }
+            }
+
+            if included.is_empty() {
+                // All results moved here, restore remaining for next iteration
+                self.mines_remaining = mem::take(&mut excluded);
+            } else {
+                break;
+            }
         }
+
+        // check where our mine should have been in this new search area
+        let last_processed_mine_location = last_processed_mine.mine.clone();
+        included.push(last_processed_mine);
 
         // sort the included into preferred order
         included.sort_by(|a, b| {
@@ -556,7 +562,10 @@ impl Winder {
         self.mines_remaining.extend(included);
         self.mines_remaining.extend(excluded);
         self.mines_remaining.reverse();
-        assert_eq!(remaining_before_len, self.mines_remaining.len());
+        assert_eq!(
+            remaining_before_len + /*last mine check*/1,
+            self.mines_remaining.len()
+        );
 
         let last_advice = self
             .mines_remaining
@@ -571,7 +580,12 @@ impl Winder {
             last_advice.map(|v| v.to_string()).join(",")
         );
 
-        WinderNext::Continue
+        if self.mines_remaining.last().unwrap().mine != last_processed_mine_location {
+            ReorderResult::BackoutAndRetry(last_processed_mine_location)
+        } else {
+            self.mines_remaining.pop();
+            ReorderResult::Continue
+        }
     }
 
     fn steal_nearby_routes(&self) {
@@ -605,6 +619,12 @@ enum WinderNext {
     Continue,
     BreakNoMoreProcessed,
     BreakRewindingFailed,
+}
+
+enum ReorderResult {
+    Continue,
+    BackoutAndRetry(MineLocation),
+    BreakNotNormal,
 }
 
 impl Display for WinderNext {
