@@ -25,6 +25,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
 
     let tunables = &surface.tunables().mori;
     let mut watch_data = WatchData::default();
+    let dummy_processor = ParentProcessor::default();
 
     let total_watch = BasicWatch::start();
     let mut successor_sum = Duration::default();
@@ -32,13 +33,14 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
     // ::<_, _, _, _, _, _, _, ParentProcessor>
     let pathfind = astar_mori(
         start_link,
-        |head, processor, _cost| {
+        |head| {
             let watch = BasicWatch::start();
             let res = successors(
                 surface,
                 &endpoints,
                 head,
-                processor,
+                // processor,
+                &dummy_processor,
                 finding_limiter,
                 tunables,
                 &mut watch_data,
@@ -54,9 +56,9 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
             res
             // p.start.distance_bird(&end_link.start) < 5.0
         },
-        |processor, _cur_link| {
-            processor.total_links += 1;
-        },
+        // |processor, _cur_link| {
+        //     processor.total_links += 1;
+        // },
     );
 
     let success = pathfind.is_ok();
