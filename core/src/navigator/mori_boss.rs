@@ -15,6 +15,7 @@ use std::ops::Range;
 use std::sync::LazyLock;
 use tracing::info;
 
+/// A pure multi-executor. Input is final points
 pub fn mori_boss(
     mode: BossMode,
     surface: &VSurface,
@@ -133,7 +134,7 @@ fn execute_batch(
     Ok(success_routes)
 }
 
-pub struct BossRoute(MineLocation, VSegment);
+pub struct BossRoute(pub MineLocation, pub VSegment);
 
 pub enum BossMode {
     Sequential,

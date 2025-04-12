@@ -54,7 +54,7 @@ impl BaseSourceRefs {
 const INTRA_OFFSET: i32 = 6;
 
 /// From a source point,
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct BaseSourceEighth {
     origin: VPointDirectionQ,
     sign: i32,

@@ -4,6 +4,7 @@ use crate::navigator::mine_permutate::{
 };
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
 use crate::navigator::mori::{mori2_start, MoriResult};
+use crate::navigator::mori_boss::{mori_boss, BossMode, BossRoute};
 use crate::navigator::planners::common::draw_prep_mines;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::{MineLocation, MinePath};
@@ -11,6 +12,7 @@ use crate::surfacev::sanity::assert_sanity_mines_not_deduped;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ZERO};
+use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use facto_loop_miner_fac_engine::util::ansi::{ansi_color, Color};
@@ -31,12 +33,6 @@ use tracing::{debug, error, info, warn};
 /// Advanced perfecting backtrack algorithm,
 /// because v0 Mori and v1 Ruze Planner can mask valid routes
 pub fn start_altare_planner(surface: &mut VSurface) {
-    let exe_pool = rayon::ThreadPoolBuilder::new()
-        .thread_name(|i| format!("exe{i:02}"))
-        .num_threads(2)
-        .build()
-        .unwrap();
-
     let mut winder = Winder::new(surface);
 
     draw_prep_mines(
@@ -49,7 +45,7 @@ pub fn start_altare_planner(surface: &mut VSurface) {
     while let Some(select) = winder.next_select() {
         let prev_no_touch = select.mine.draw_area_buffered_to_no_touch(surface);
 
-        let process = process_select(surface, &select, &exe_pool);
+        let process = process_select(surface, &select);
         match winder.apply(surface, select.clone(), process) {
             WinderNext::Continue => {}
             breaker => {
@@ -102,21 +98,29 @@ pub fn start_altare_planner(surface: &mut VSurface) {
         // }
         MineLocation::draw_area_no_touch_to_buffered(surface, prev_no_touch);
 
+        let mut is_clean_run = matches!(winder.state, WinderState::Normal);
         match winder.reorder_processing(surface, select) {
             ReorderResult::Continue => {}
             ReorderResult::BackoutAndRetry(location) => {
+                is_clean_run = false;
                 let mine_path_index = surface
                     .get_mine_paths()
                     .iter()
                     .position(|p| p.mine_base == location)
                     .unwrap();
-                surface.remove_mine_path_at_index(mine_path_index)
+                surface.remove_mine_path_at_index(mine_path_index);
+                todo!()
             }
             ReorderResult::BreakNotNormal => {
+                is_clean_run = false;
                 error!("BreakNotNormal, stop reorder");
                 break;
             }
         }
+
+        // if is_clean_run {
+        //     optimize_latest_processed(&mut winder, surface);
+        // }
 
         if matches!(winder.state, WinderState::Normal) && winder.mines_processed.len() > 50 {
             error!("ENDING");
@@ -125,72 +129,129 @@ pub fn start_altare_planner(surface: &mut VSurface) {
     }
 }
 
-fn process_select(
-    surface: &VSurface,
-    select: &SlimeSelect,
-    exe_pool: &ThreadPool,
-) -> Result<MinePath, Vec<PlannedRoute>> {
+fn process_select(surface: &VSurface, select: &SlimeSelect) -> Result<MinePath, Vec<MineLocation>> {
     // info!("processing {:?}", select.mines[0]);
 
     let actual_base_source = select.base_sources.borrow().peek_single();
-    let routes = select.to_routes(surface).collect_vec();
-    let results: Vec<(MoriResult, PlannedRoute)> = exe_pool.install(|| {
-        routes
-            .into_par_iter()
-            .map(|route| {
-                let res = execute_route(surface, &route, &actual_base_source);
-                (res, route)
-            })
-            .collect()
-    });
-    assert_ne!(results.len(), 0, "no destinations found?");
-
-    results
-        .into_iter()
-        // Find best path OR collect all the failed MineLocation's
-        .fold(Err(Vec::new()), |best, (res, route)| match (best, res) {
-            (Err(_), MoriResult::Route { path, cost }) => Ok((path, cost, route)),
-            (Ok(best), MoriResult::Route { path, cost }) => {
-                if best.1 < cost {
-                    Ok(best)
-                } else {
-                    Ok((path, cost, route))
-                }
-            }
-            //
-            (Err(mut total), MoriResult::FailingDebug(_, _)) => {
-                total.push(route);
-                Err(total)
-            }
-            (Ok(best), MoriResult::FailingDebug(_, _)) => Ok(best),
+    let route_batches = select
+        .to_routes(surface)
+        .map(|route| {
+            let segment = actual_base_source.route_to_segment(&route);
+            // vec because 1 route per batch
+            vec![BossRoute(route.location, segment)]
         })
-        .map(|(links, cost, route)| {
+        .collect_vec();
+
+    let dummy_finding_limiter =
+        VArea::from_arbitrary_points_pair(VPoint::new_extreme_min(), VPoint::new_extreme_max());
+    let boss_result = mori_boss(
+        BossMode::Sequential,
+        surface,
+        route_batches,
+        &dummy_finding_limiter,
+    );
+    match boss_result {
+        Ok((mut best_path, cost_range)) => {
+            assert_eq!(best_path.len(), 1);
+            let best_path = best_path.remove(0);
+
             select.base_sources.borrow_mut().next().unwrap();
-
-            MinePath {
-                links,
-                cost,
-                mine_base: route.location,
-            }
-        })
-        .inspect_err(|routes| assert!(!routes.is_empty()))
+            // info!(
+            //     "found best path with {} links range {cost_range}",
+            //     best_path
+            // );
+            Ok(best_path)
+        }
+        Err(most_failed_mines) => Err(most_failed_mines.into_keys().collect_vec()),
+    }
+    .inspect_err(|routes| assert!(!routes.is_empty()))
 }
 
-fn execute_route(
-    surface: &VSurface,
-    route: &PlannedRoute,
-    base_source_entry: &BaseSourceEntry,
-) -> MoriResult {
-    // let mut working_surface = (*surface).clone();
-    // We run once per iteration so no mut, unlike Ruze that runs an entire batch
-    let working_surface = surface;
+fn optimize_latest_processed(winder: &mut Winder, surface: &mut VSurface) {
+    const CHUNK_SIZE: usize = 3;
 
-    let route_result = mori2_start(
-        &working_surface,
-        base_source_entry.route_to_segment(route),
-        &route.finding_limiter,
-    );
-    route_result
+    let needle_base_sources = {
+        let (last_select, _last_path) = winder.mines_processed.last().unwrap();
+        if winder
+            .mines_processed
+            .iter()
+            .filter(|(cur_select, _path)| cur_select.base_sources == last_select.base_sources)
+            .take(CHUNK_SIZE)
+            .count()
+            != CHUNK_SIZE
+        {
+            debug!("not enough mines in same base_sources to optimize");
+            return;
+        }
+        last_select.base_sources.clone()
+    };
+
+    info!("opmizing------");
+
+    // extract latest
+    let to_optimize: Vec<(SlimeSelect, MinePath)> = winder
+        .mines_processed
+        .extract_if(.., |(cur_select, cur_path)| {
+            cur_select.base_sources == needle_base_sources
+        })
+        .take(CHUNK_SIZE)
+        .collect_vec();
+
+    // remove from surface, get cost, extract endpoints
+    let mut orig_total_cost = 0;
+    let mut new_starts: Vec<()> = Vec::new();
+    let mut new_ends: Vec<()> = Vec::new();
+    for (_select, path) in &to_optimize {
+        let index = surface
+            .get_mine_paths()
+            .iter()
+            .position(|v| v == path)
+            .unwrap();
+        // had ref now owned
+        let path = surface.remove_mine_path_at_index(index);
+
+        orig_total_cost += path.cost;
+        new_starts.push(todo!());
+        new_ends.push(todo!());
+        // new_starts.push(path.links.first().unwrap().my_q());
+        // new_ends.push((path.mine_base, path.links.last().unwrap().my_q()));
+    }
+    //
+    // // get possibilities of endpoints and make them
+    // let permutations = new_ends.len();
+    // let new_segments: Vec<Vec<(MineLocation, VSegment)>> = new_ends
+    //     .into_iter()
+    //     .permutations(permutations)
+    //     .map(|plan| {
+    //         plan.into_iter()
+    //             .enumerate()
+    //             .map(|(i, (mine, end))| {
+    //                 (
+    //                     mine,
+    //                     VSegment {
+    //                         start: new_starts[i].clone(),
+    //                         end,
+    //                     },
+    //                 )
+    //             })
+    //             .collect_vec()
+    //     })
+    //     .collect_vec();
+    // info!("optimizer: generated {} plans", new_segments.len());
+    //
+    // // pathfind!
+    // let dummy_finding_limiter =
+    //     VArea::from_arbitrary_points_pair(VPoint::new_extreme_min(), VPoint::new_extreme_max());
+    // let results = {
+    //     new_segments.into_par_iter().map(|plan| {
+    //         let working_surface = surface.clone();
+    //
+    //         let new_paths = Vec::new();
+    //         for (mine, segment) in plan {
+    //             mori2_start(&working_surface, segment, &dummy_finding_limiter);
+    //         }
+    //     })
+    // };
 }
 
 #[derive(Clone)]
@@ -232,6 +293,8 @@ impl SlimeSelect {
             })
     }
 }
+
+enum ProcessedSlime {}
 
 enum WinderState {
     Normal,
@@ -312,7 +375,7 @@ impl Winder {
         &mut self,
         surface: &mut VSurface,
         select: SlimeSelect,
-        result: Result<MinePath, Vec<PlannedRoute>>,
+        result: Result<MinePath, Vec<MineLocation>>,
     ) -> WinderNext {
         // fn rewind(winder: &mut Winder, surface: &mut VSurface) -> WinderNext {
         //     let Some((last_select, path)) = winder.mines_processed.pop() else {
@@ -505,7 +568,7 @@ impl Winder {
 
         let remaining_before_len = self.mines_remaining.len();
 
-        // Get batch of
+        // Do splits
         let mut included = Vec::new();
         let mut excluded = Vec::new();
         let mut processed_area = VArea::from_arbitrary_points(

@@ -54,6 +54,20 @@ impl VPoint {
         }
     }
 
+    pub fn new_extreme_min() -> Self {
+        Self {
+            x: i32::MIN,
+            y: i32::MIN,
+        }
+    }
+
+    pub fn new_extreme_max() -> Self {
+        Self {
+            x: i32::MAX,
+            y: i32::MAX,
+        }
+    }
+
     // pub fn from_cv_point(point: Point) -> Self {
     //     VPoint {
     //         x: point.x,
