@@ -7,6 +7,7 @@ mod mori;
 mod mori_cost;
 // pub mod resource_cloud;
 // pub mod shinri;
+mod mori_boss;
 pub mod planners;
 mod threaded_search;
 

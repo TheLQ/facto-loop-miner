@@ -35,7 +35,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
     let res_sum = Duration::default();
     // ::<_, _, _, _, _, _, _, ParentProcessor>
     let pathfind = astar_mori(
-        start_link,
+        start_link.clone(),
         |head| {
             let watch = BasicWatch::start();
             let res = successors(
@@ -78,11 +78,21 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
     );
 
     match pathfind {
-        Ok((path, cost)) => MoriResult::Route {
-            // path: duals_into_single_vec(path),
-            path: sodas_to_links(path).collect(),
-            cost,
-        },
+        Ok((path, cost)) => {
+            assert!(
+                path.first().unwrap() == &start_link,
+                "path should start with start link"
+            );
+            assert!(
+                path.last().unwrap() == &end_link,
+                "path should ebd with start link"
+            );
+            MoriResult::Route {
+                // path: duals_into_single_vec(path),
+                path: sodas_to_links(path).collect(),
+                cost,
+            }
+        }
         Err((_dump, _all)) => MoriResult::FailingDebug(
             // duals_into_single_vec(dump.into_iter().map(|(v, (i, r))| v)),
             // duals_into_single_vec(all),
