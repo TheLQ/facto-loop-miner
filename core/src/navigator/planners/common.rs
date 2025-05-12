@@ -34,26 +34,28 @@ pub(super) fn debug_draw_base_sources(
 }
 */
 
-pub(super) fn debug_draw_complete_plans(
+pub(super) fn debug_draw_complete_plan(
     surface: &mut VSurface,
-    plans: impl IntoIterator<Item = impl Borrow<CompletePlan>>,
+    CompletePlan {
+        sequences,
+        base_sources,
+    }: CompletePlan,
 ) -> VResult<()> {
     let mut pixels = Vec::new();
-    for plan in plans {
-        let CompletePlan {
-            sequences,
-            base_sources,
-        } = plan.borrow();
-        // will dupe
-        for sequence in sequences {
-            for route in &sequence.routes {
-                let VSegment { start, end } = route.segment;
-                pixels.push(*start.point());
-                pixels.push(*end.point());
-                // pixels.push(*route.destination.point());
-            }
+    let total_sequences = sequences.len();
+
+    // will dupe
+    for sequence in sequences {
+        for route in &sequence.routes {
+            let VSegment { start, end } = route.segment;
+            pixels.push(*start.point());
+            pixels.push(*end.point());
         }
     }
+    base_sources
+        .borrow_mut()
+        .advance_by(total_sequences)
+        .unwrap();
 
     surface.set_pixels(Pixel::Highlighter, pixels)
 }

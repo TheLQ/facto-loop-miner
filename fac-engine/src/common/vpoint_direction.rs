@@ -1,3 +1,4 @@
+use crate::common::varea::VArea;
 use crate::common::vpoint::VPoint;
 use crate::game_entities::direction::FacDirectionQuarter;
 use serde::{Deserialize, Serialize};
@@ -40,4 +41,8 @@ impl VSegment {
     //     self.start.point().assert_step_rail();
     //     self.end.point().assert_step_rail();
     // }
+
+    pub fn is_within_area(&self, area: &VArea) -> bool {
+        area.contains_points([self.start.point(), self.end.point()])
+    }
 }

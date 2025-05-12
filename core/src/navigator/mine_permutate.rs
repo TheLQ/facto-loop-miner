@@ -24,7 +24,7 @@ pub fn get_possible_routes_for_batch(
         base_sources,
     }: MineSelectBatch,
 ) -> CompletePlan {
-    // let mines_len = mines.len();
+    let mines_len = mines.len();
     // let mines_destinations_len: usize = mines.iter().map(|v| v.destinations().len()).sum();
     // info!(
     //     "Expanded {} mines with {} destinations to...",
@@ -70,6 +70,10 @@ pub fn get_possible_routes_for_batch(
         mine_combinations,
         fixed_finding_limiter,
         &mut base_sources.borrow_mut(),
+    );
+    assert!(
+        !sequences.is_empty(),
+        "no sequences found from {mines_len} input mines"
     );
     CompletePlan {
         sequences,
@@ -132,7 +136,7 @@ fn build_routes_from_destinations(
     base_source: &mut BaseSourceEighth,
 ) -> Vec<ExecutionSequence> {
     let mut sequences: Vec<ExecutionSequence> = Vec::new();
-    for combination in input_combinations {
+    'combinations: for combination in input_combinations {
         let mut routes: Vec<ExecutionRoute> = Vec::new();
 
         for (
@@ -143,10 +147,14 @@ fn build_routes_from_destinations(
             },
         ) in combination.into_iter().enumerate()
         {
+            let segment = base_source
+                .peek_at(i)
+                .segment_for_mine(&destination, &location);
+            if !segment.is_within_area(&fixed_finding_limiter) {
+                continue 'combinations;
+            }
             routes.push(ExecutionRoute {
-                segment: base_source
-                    .peek_at(i)
-                    .segment_for_mine(&destination, &location),
+                segment,
                 location,
                 finding_limiter: fixed_finding_limiter.clone(),
             })

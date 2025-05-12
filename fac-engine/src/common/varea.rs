@@ -42,7 +42,7 @@ impl VArea {
     }
 
     pub fn contains_points(&self, targets: impl IntoIterator<Item = impl Borrow<VPoint>>) -> bool {
-        targets.into_iter().any(|p| self.contains_point(p.borrow()))
+        targets.into_iter().all(|p| self.contains_point(p.borrow()))
     }
 
     pub fn get_points(&self) -> Vec<VPoint> {
