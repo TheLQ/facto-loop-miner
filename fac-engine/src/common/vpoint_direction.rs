@@ -29,6 +29,7 @@ impl From<(VPoint, FacDirectionQuarter)> for VPointDirectionQ {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct VSegment {
     pub start: VPointDirectionQ,
     pub end: VPointDirectionQ,

@@ -21,11 +21,18 @@ pub fn mori_boss(
     surface: &VSurface,
     routes_batches: Vec<Vec<BossRoute>>,
     finding_limiter: &VArea,
-) -> Result<(Vec<MinePath>, std::range::RangeInclusive<u32>), (HashMap<MineLocation, usize>)> {
-    let results: Vec<Result<Vec<MinePath>, MineLocation>> = match mode {
+) -> Result<(usize, Vec<MinePath>, std::range::RangeInclusive<u32>), (HashMap<MineLocation, usize>)>
+{
+    assert!(!routes_batches.is_empty());
+    for (i, batch) in routes_batches.iter().enumerate() {
+        assert!(!batch.is_empty(), "empty {i} of {}", routes_batches.len());
+    }
+
+    let results: Vec<(usize, Result<Vec<MinePath>, MineLocation>)> = match mode {
         BossMode::Sequential => routes_batches
             .into_iter()
             .map(|batch| execute_batch(surface, batch, finding_limiter))
+            .enumerate()
             .collect_vec(),
         BossMode::Threaded => {
             static THREAD_POOL: LazyLock<ThreadPool> = LazyLock::new(|| {
@@ -46,6 +53,7 @@ pub fn mori_boss(
                 routes_batches
                     .into_par_iter()
                     .map(|batch| execute_batch(surface, batch, finding_limiter))
+                    .enumerate()
                     .collect()
             })
         }
@@ -54,20 +62,20 @@ pub fn mori_boss(
     results
         .into_iter()
         // Find best path OR collect all the failed MineLocation's
-        .fold(Err(HashMap::new()), |best, batch_result| {
+        .fold(Err(HashMap::new()), |best, (i, batch_result)| {
             match (best, batch_result) {
                 (Err(_), Ok(paths)) => {
                     // first good result
                     let total_cost = paths.iter().map(|v| v.cost).sum();
-                    Ok((paths, (total_cost..=total_cost).into()))
+                    Ok((i, paths, (total_cost..=total_cost).into()))
                 }
-                (Ok((best_path, cost_range)), Ok(paths)) => {
+                (Ok((best_i, best_path, cost_range)), Ok(paths)) => {
                     // maybe improve best
                     let total_cost: u32 = paths.iter().map(|v| v.cost).sum();
                     match total_cost.cmp(&cost_range.start) {
                         Ordering::Less => {
                             // new lower cost
-                            Ok((paths, (total_cost..=cost_range.end).into()))
+                            Ok((i, paths, (total_cost..=cost_range.end).into()))
                         }
                         Ordering::Equal => {
                             todo!("this happens?")
@@ -75,6 +83,7 @@ pub fn mori_boss(
                         Ordering::Greater => {
                             // worse than best
                             Ok((
+                                best_i,
                                 best_path,
                                 (cost_range.start..=total_cost.max(cost_range.end)).into(),
                             ))
@@ -106,11 +115,12 @@ fn execute_batch(
 
     let mut success_routes = Vec::new();
 
+    let batch_len = batch.len();
     let mut batch_iter = batch.into_iter();
     while let Some(BossRoute(mine, segment)) = batch_iter.next() {
         let mori_res = mori2_start(
             working_surface.as_ref().map_or_else(|| surface, |v| v),
-            segment,
+            segment.clone(),
             finding_limiter,
         );
         match mori_res {
@@ -119,6 +129,7 @@ fn execute_batch(
                     cost,
                     links: path,
                     mine_base: mine,
+                    segment,
                 };
 
                 if is_writable {
@@ -128,9 +139,13 @@ fn execute_batch(
 
                 success_routes.push(mine_result)
             }
-            MoriResult::FailingDebug(_, _) => return Err(mine),
+            MoriResult::FailingDebug(_, _) => {
+                // todo: collect remaining routes?
+                return Err(mine);
+            }
         }
     }
+    assert_eq!(success_routes.len(), batch_len);
     Ok(success_routes)
 }
 

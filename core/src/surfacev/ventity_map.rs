@@ -549,16 +549,6 @@ impl VEntityMap<VPixel> {
     }
 }
 
-pub enum InsertMap {
-    Stomp,
-    EmptyOnly,
-    ReplaceOneEntity,
-}
-
-impl InsertMap {
-    fn insert<E>(self, map: &mut VEntityMap<E>, value: E) {}
-}
-
 #[cfg(test)]
 mod test {
     use crate::surfacev::ventity_map::VEntityMap;

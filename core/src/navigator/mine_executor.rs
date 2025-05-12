@@ -1,13 +1,16 @@
 use crate::navigator::base_source::BaseSourceEntry;
-use crate::navigator::mine_permutate::{CompletePlan, PlannedRoute, PlannedSequence};
+use crate::navigator::mine_permutate::CompletePlan;
 use crate::navigator::mori::{mori2_start, MoriResult};
-use crate::surfacev::mine::MinePath;
+use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use facto_loop_miner_common::LOCALE;
+use facto_loop_miner_fac_engine::common::varea::VArea;
+use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use itertools::Itertools;
 use num_format::ToFormattedString;
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;
@@ -18,10 +21,7 @@ pub const MINE_FRONT_RAIL_STEPS: usize = 6;
 /// Given thousands of possible route combinations, execute in parallel and find the best
 pub fn execute_route_batch(
     surface: &VSurface,
-    CompletePlan {
-        sequences,
-        base_sources,
-    }: CompletePlan,
+    sequences: Vec<ExecutionSequence>,
 ) -> MineRouteCombinationPathResult {
     let total_sequences = sequences.len();
 
@@ -54,47 +54,37 @@ pub fn execute_route_batch(
     FAIL_COUNTER.store(0, Ordering::Relaxed);
 
     let routing_watch = BasicWatch::start();
-    let default_threads = rayon::current_num_threads();
-    const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 1.5;
-    let num_threads = (default_threads as f32 * THREAD_OVERSUBSCRIBE_PERCENT) as usize;
-    info!(
-        "default threads are {} upgraded to {}",
-        default_threads, num_threads
-    );
-    let wrapping_pool = rayon::ThreadPoolBuilder::new()
-        .thread_name(|i| format!("exe{i:02}"))
-        .num_threads(num_threads)
-        .build()
-        .unwrap();
 
-    let max_sequence_len = sequences.iter().map(|v| v.routes.len()).max().unwrap();
-    let actual_base_sources = base_sources.borrow().peek_multiple(max_sequence_len);
-    // let route_results: Vec<MineRouteCombinationPathResult> = wrapping_pool.install(|| {
-    //     planned_combinations
-    //         .into_par_iter()
-    //         .map(|PlannedBatch { routes }| {
-    //             let routes_len = routes.len();
-    //             execute_route_combination(
-    //                 execution_surface,
-    //                 routes,
-    //                 &actual_base_sources[0..routes_len],
-    //                 total_planned_combinations,
-    //             )
-    //         })
-    //         .collect()
-    // });
-    let route_results = sequences
-        .into_iter()
-        .map(|PlannedSequence { routes }| {
-            let routes_len = routes.len();
-            execute_route_combination(
-                &execution_surface,
-                routes,
-                &actual_base_sources[0..routes_len],
-                total_sequences,
-            )
+    const EXECUTE_THREADED: bool = true;
+    let route_results: Vec<MineRouteCombinationPathResult> = if EXECUTE_THREADED {
+        let default_threads = rayon::current_num_threads();
+        const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 1.5;
+        let num_threads = (default_threads as f32 * THREAD_OVERSUBSCRIBE_PERCENT) as usize;
+        info!(
+            "default threads are {} upgraded to {}",
+            default_threads, num_threads
+        );
+        let wrapping_pool = rayon::ThreadPoolBuilder::new()
+            .thread_name(|i| format!("exe{i:02}"))
+            .num_threads(num_threads)
+            .build()
+            .unwrap();
+        wrapping_pool.install(|| {
+            sequences
+                .into_par_iter()
+                .map(|ExecutionSequence { routes }| {
+                    execute_route_combination(execution_surface, routes, total_sequences)
+                })
+                .collect()
         })
-        .collect_vec();
+    } else {
+        sequences
+            .into_iter()
+            .map(|ExecutionSequence { routes }| {
+                execute_route_combination(&execution_surface, routes, total_sequences)
+            })
+            .collect()
+    };
 
     debug!("Executed {total_sequences} route combinations in {routing_watch}");
 
@@ -168,20 +158,12 @@ pub fn execute_route_batch(
         .map(|(k, v)| format!("{}:{}", k, v))
         .join("|");
     let res = best_path.unwrap();
-    if let MineRouteCombinationPathResult::Success { paths } = &res {
-        // consume the base sources we used
-        let mut iter = base_sources.as_ref().borrow_mut();
-        for _ in 0..paths.len() {
-            iter.next().unwrap();
-        }
-    }
     info!(
-        "Route batch of {total_sequences} combinations had {} success, cost range {} to {}, failure {}, thread oversubscribe {}, res {}", 
+        "Route batch of {total_sequences} combinations had {} success, cost range {} to {}, failure {}, res {}",
         success_count,
         highest_cost.to_formatted_string(&LOCALE),
         lowest_cost.to_formatted_string(&LOCALE),
         failure_found_paths_count_debug,
-        THREAD_OVERSUBSCRIBE_PERCENT,
         res.as_ref(),
     );
 
@@ -194,14 +176,13 @@ static FAIL_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 fn execute_route_combination(
     surface: &VSurface,
-    route_combination: Vec<PlannedRoute>,
-    base_sources_actual: &[BaseSourceEntry],
+    route_combination: Vec<ExecutionRoute>,
     total_sequences: usize,
 ) -> MineRouteCombinationPathResult {
     let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
     if my_counter % 100 == 0 {
         info!(
-            "Processed {} of {} combinations, success {} fail {}",
+            "Processed {} of {} sequences, success {} fail {}",
             my_counter.to_formatted_string(&LOCALE),
             total_sequences.to_formatted_string(&LOCALE),
             SUCCESS_COUNTER
@@ -239,10 +220,9 @@ fn execute_route_combination(
         //         }
         //     };
 
-        let base_source_entry = &base_sources_actual[i];
         let route_result = mori2_start(
             &working_surface,
-            base_source_entry.route_to_segment(&route),
+            route.segment.clone(),
             &route.finding_limiter,
         );
         match route_result {
@@ -253,6 +233,7 @@ fn execute_route_combination(
                     links: path,
                     cost,
                     mine_base: route.location,
+                    segment: route.segment,
                 };
                 found_paths.push(path.clone());
                 working_surface.add_mine_path(path).unwrap();
@@ -273,25 +254,15 @@ fn execute_route_combination(
     }
 }
 
-//
-// pub fn extend_rail_end(
-//     surface: &VSurface,
-//     search_area: &VArea,
-//     mine_rail: &Rail,
-// ) -> Option<Vec<Rail>> {
-//     let mut rails: Vec<Rail> = Vec::new();
-//     let mut last_rail = &mine_rail
-//         .clone()
-//         .into_buildable_simple(surface, search_area)?;
-//     for i in 0..MINE_FRONT_RAIL_STEPS {
-//         let rail = last_rail
-//             .move_forward_step()
-//             .into_buildable_simple(surface, search_area)?;
-//         rails.push(rail);
-//         last_rail = rails.last().unwrap();
-//     }
-//     Some(rails)
-// }
+pub struct ExecutionRoute {
+    pub location: MineLocation,
+    pub segment: VSegment,
+    pub finding_limiter: VArea,
+}
+
+pub struct ExecutionSequence {
+    pub routes: Vec<ExecutionRoute>,
+}
 
 #[derive(AsRefStr)]
 pub enum MineRouteCombinationPathResult {
@@ -302,7 +273,7 @@ pub enum MineRouteCombinationPathResult {
 #[derive(Default)]
 pub struct FailingMeta {
     pub found_paths: Vec<MinePath>,
-    pub failing_routes: Vec<PlannedRoute>,
+    pub failing_routes: Vec<ExecutionRoute>,
     pub failing_dump: Vec<HopeLink>,
     pub failing_all: Vec<HopeLink>,
 }

@@ -3,7 +3,7 @@ use crate::surfacev::vsurface::{RemovedEntity, VSurface};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::{VArea, VAreaSugar};
 use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_SECTION};
-use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
+use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
@@ -17,6 +17,7 @@ use tracing::warn;
 pub struct MinePath {
     pub mine_base: MineLocation,
     pub links: Vec<HopeLink>,
+    pub segment: VSegment,
     pub cost: u32,
 }
 

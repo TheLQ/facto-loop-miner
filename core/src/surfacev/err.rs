@@ -53,7 +53,7 @@ impl VError {
             | VError::SimdJsonFail { backtrace, .. }
             | VError::NotADirectory { backtrace, .. }
             | VError::Image { backtrace, .. } => backtrace,
-            VError::VIoError(e) => e.my_backtrace(),
+            VError::UringError(e) => e.my_backtrace(),
         }
     }
 }

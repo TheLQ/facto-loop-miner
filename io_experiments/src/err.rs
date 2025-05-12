@@ -57,8 +57,8 @@ impl UringError {
 pub type VStdIoResult<V> = Result<V, VStdIoError>;
 
 pub struct VStdIoError {
-    e: io::Error,
-    backtrace: Backtrace,
+    pub e: io::Error,
+    pub backtrace: Backtrace,
 }
 
 impl From<io::Error> for VStdIoError {

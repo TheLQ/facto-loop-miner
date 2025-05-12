@@ -1,5 +1,6 @@
 use crate::navigator::base_source::BaseSourceEighth;
-use crate::navigator::mine_permutate::{CompletePlan, PlannedRoute};
+use crate::navigator::mine_executor::ExecutionRoute;
+use crate::navigator::mine_permutate::CompletePlan;
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
@@ -45,11 +46,10 @@ pub(super) fn debug_draw_complete_plans(
         // will dupe
         for sequence in sequences {
             for route in &sequence.routes {
-                // let base_source_entry = base_sources.borrow_mut().next().unwrap();
-                // let VSegment { start, end } = base_source_entry.route_to_segment(route);
-                // pixels.push(*start.point());
-                // pixels.push(*end.point());
-                pixels.push(*route.destination.point());
+                let VSegment { start, end } = route.segment;
+                pixels.push(*start.point());
+                pixels.push(*end.point());
+                // pixels.push(*route.destination.point());
             }
         }
     }
@@ -59,7 +59,7 @@ pub(super) fn debug_draw_complete_plans(
 
 pub(super) fn debug_draw_failing_mines<'a>(
     surface: &mut VSurface,
-    routes: impl IntoIterator<Item = &'a PlannedRoute>,
+    routes: impl IntoIterator<Item = &'a ExecutionRoute>,
 ) {
     let mut seen_mines: Vec<&VArea> = Vec::new();
     let mut destinations = Vec::new();
@@ -71,7 +71,7 @@ pub(super) fn debug_draw_failing_mines<'a>(
         surface.draw_square_area_replacing(mine_area, Pixel::MineNoTouch, Pixel::Highlighter);
         seen_mines.push(mine_area);
 
-        let destination = *route.destination.point();
+        let destination = *route.segment.end.point();
         if !destinations.contains(&destination) {
             destinations.push(destination);
         }

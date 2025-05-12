@@ -1,4 +1,5 @@
 use crate::navigator::base_source::BaseSourceEighth;
+use crate::navigator::mine_executor::{ExecutionRoute, ExecutionSequence};
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::VSurface;
@@ -8,6 +9,7 @@ use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::constants::TILES_PER_CHUNK;
 use itertools::Itertools;
 use std::cell::RefCell;
+use std::ops::DerefMut;
 use std::rc::Rc;
 
 /// Input
@@ -20,7 +22,7 @@ pub fn get_possible_routes_for_batch(
     surface: &VSurface,
     MineSelectBatch {
         mines,
-        base_sources,
+        mut base_sources,
     }: MineSelectBatch,
 ) -> CompletePlan {
     // let mines_len = mines.len();
@@ -65,24 +67,19 @@ pub fn get_possible_routes_for_batch(
     // let dedupe_len = dedupe_test.len();
     // assert_eq!(total_combinations_permut, dedupe_len);
 
+    let sequences = build_routes_from_destinations(
+        mine_combinations,
+        fixed_finding_limiter,
+        &mut base_sources.borrow_mut(),
+    );
     CompletePlan {
-        sequences: build_routes_from_destinations(mine_combinations, fixed_finding_limiter),
+        sequences,
         base_sources,
     }
 }
 
-pub struct PlannedRoute {
-    pub location: MineLocation,
-    pub destination: VPointDirectionQ,
-    pub finding_limiter: VArea,
-}
-
-pub struct PlannedSequence {
-    pub routes: Vec<PlannedRoute>,
-}
-
 pub struct CompletePlan {
-    pub sequences: Vec<PlannedSequence>,
+    pub sequences: Vec<ExecutionSequence>,
     pub base_sources: Rc<RefCell<BaseSourceEighth>>,
 }
 
@@ -133,23 +130,29 @@ fn find_all_permutations(input_combinations: Vec<Vec<PartialEntry>>) -> Vec<Vec<
 fn build_routes_from_destinations(
     input_combinations: Vec<Vec<PartialEntry>>,
     fixed_finding_limiter: VArea,
-) -> Vec<PlannedSequence> {
-    let mut batches: Vec<PlannedSequence> = Vec::new();
+    base_source: &mut BaseSourceEighth,
+) -> Vec<ExecutionSequence> {
+    let mut sequences: Vec<ExecutionSequence> = Vec::new();
     for combination in input_combinations {
-        let mut routes: Vec<PlannedRoute> = Vec::new();
+        let mut routes: Vec<ExecutionRoute> = Vec::new();
 
-        for PartialEntry {
-            destination,
-            location,
-        } in combination
-        {
-            routes.push(PlannedRoute {
+        for (
+            i,
+            PartialEntry {
                 destination,
+                location,
+            },
+        ) in combination.into_iter().enumerate()
+        {
+            routes.push(ExecutionRoute {
+                segment: base_source
+                    .peek_at(i)
+                    .segment_for_mine(&destination, &location),
                 location,
                 finding_limiter: fixed_finding_limiter.clone(),
             })
         }
-        batches.push(PlannedSequence { routes });
+        sequences.push(ExecutionSequence { routes });
     }
-    batches
+    sequences
 }

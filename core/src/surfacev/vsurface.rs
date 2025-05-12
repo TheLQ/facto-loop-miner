@@ -2,7 +2,7 @@ use crate::opencv::GeneratedMat;
 use crate::state::machine::StepParams;
 use crate::state::tuneables::Tunables;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::err::{CoreConvertPathResult, VError, VResult};
+use crate::surfacev::err::{CoreConvertPathResult, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::mine::MinePath;
 use crate::surfacev::ventity_map::VEntityMap;
@@ -615,9 +615,8 @@ impl VSurface {
         Ok(())
     }
 
-    pub fn remove_mine_path(&mut self, mine_path: &MinePath) {
-        let pos = self.rail_paths.iter().position(|v| v == mine_path).unwrap();
-        let mine_path = self.rail_paths.remove(pos);
+    pub fn remove_mine_path_at_index(&mut self, index: usize) -> MinePath {
+        let mine_path = self.rail_paths.remove(index);
 
         let removed_points = mine_path.total_area();
         for point in &removed_points {
@@ -628,6 +627,7 @@ impl VSurface {
         }
 
         self.pixels.remove_positions(&removed_points);
+        mine_path
     }
 
     //

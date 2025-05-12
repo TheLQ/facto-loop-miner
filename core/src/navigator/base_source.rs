@@ -1,8 +1,9 @@
-use crate::navigator::mine_permutate::PlannedRoute;
+use crate::surfacev::mine::MineLocation;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -102,8 +103,20 @@ impl BaseSourceEighth {
         self.get_for_index(self.next)
     }
 
+    pub fn peek_at(&self, index: usize) -> BaseSourceEntry {
+        self.get_for_index(self.next + i32::try_from(index).unwrap())
+    }
+
     pub fn peek_multiple(&self, size: usize) -> Vec<BaseSourceEntry> {
         let res = (self.next..(self.next + size as i32))
+            .map(|i| self.get_for_index(i))
+            .collect_vec();
+        assert_eq!(res.len(), size);
+        res
+    }
+
+    pub fn peek_multiple_backwards(&self, size: usize) -> Vec<BaseSourceEntry> {
+        let res = ((self.next - (size as i32) + 1)..=self.next)
             .map(|i| self.get_for_index(i))
             .collect_vec();
         assert_eq!(res.len(), size);
@@ -127,13 +140,10 @@ pub struct BaseSourceEntry {
 }
 
 impl BaseSourceEntry {
-    pub fn route_to_segment(
+    pub fn segment_for_mine(
         &self,
-        PlannedRoute {
-            destination: VPointDirectionQ(pos, direction),
-            location,
-            finding_limiter: _,
-        }: &PlannedRoute,
+        VPointDirectionQ(pos, direction): &VPointDirectionQ,
+        location: &MineLocation,
     ) -> VSegment {
         let test_origin = *self.origin.point() - self.applied_intra_offset;
         assert_eq!(
