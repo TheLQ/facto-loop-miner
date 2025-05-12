@@ -205,7 +205,7 @@ fn recursive_near_patches<'a>(
             .area
             .point_center()
             .distance_bird(&other.area.point_center())
-            < TILES_PER_CHUNK as f32 * 4.0
+            < TILES_PER_CHUNK as f32 * 5.0
         {
             total.push(*other);
             recursive_near_patches(other, patches, total);
