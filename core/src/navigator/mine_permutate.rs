@@ -99,35 +99,40 @@ struct PartialEntry {
 /// Start with a list of mines with 4x possible positions.
 /// Create combinations of `[a1, b1, c2, ...]`
 fn find_all_combinations(mines: Vec<MineLocation>) -> Vec<Vec<PartialEntry>> {
-    let mut routes: Vec<Vec<PartialEntry>> = Vec::new();
-    for i in 0..4 {
-        let mut route = Vec::new();
-        for mine in &mines {
-            if let Some(destination) = mine.destinations().get(i) {
-                route.push(PartialEntry {
+    fn recurse(
+        path: Vec<PartialEntry>,
+        remain: &[MineLocation],
+        output: &mut Vec<Vec<PartialEntry>>,
+    ) {
+        if let Some(mine) = remain.first() {
+            for destination in mine.destinations() {
+                let mut next_path = path.clone();
+                next_path.push(PartialEntry {
                     destination: *destination,
                     location: mine.clone(),
-                })
+                });
+                recurse(next_path, &remain[1..], output);
             }
-        }
-        if !route.is_empty() {
-            routes.push(route);
+        } else {
+            output.push(path);
         }
     }
+
+    let mut routes: Vec<Vec<PartialEntry>> = Vec::new();
+    recurse(Vec::new(), &mines, &mut routes);
     routes
 }
 
 /// Find all re-ordered permutations of `[a,b,c,...] = n!`
 /// This is huge
 fn find_all_permutations(input_combinations: Vec<Vec<PartialEntry>>) -> Vec<Vec<PartialEntry>> {
-    let mut permutated = Vec::new();
-    for combination in input_combinations {
-        let destinations_len = combination.len();
-        for permutation in combination.into_iter().permutations(destinations_len) {
-            permutated.push(permutation);
-        }
-    }
-    permutated
+    input_combinations
+        .into_iter()
+        .flat_map(|combination| {
+            let total_combinations = combination.len();
+            combination.into_iter().permutations(total_combinations)
+        })
+        .collect()
 }
 
 /// Add the base source rail going to the destination, in order
