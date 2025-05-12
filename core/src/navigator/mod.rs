@@ -9,6 +9,6 @@ mod mori_cost;
 // pub mod shinri;
 mod mori_boss;
 pub mod planners;
-mod threaded_search;
+// mod threaded_search;
 
 pub use mori_cost::MoriCostMode;

@@ -1,11 +1,11 @@
-use facto_loop_miner_common::err_utils::{xbt, IOECSerdeSimd, IOECStd, IOEC};
+use facto_loop_miner_common::err_utils::xbt;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_io::err::{UringError, VStdIoError};
 use image::ImageError;
 use itertools::Itertools;
 use std::backtrace::Backtrace;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use thiserror::Error;
 use tracing::error;
 
@@ -32,8 +32,8 @@ pub enum VError {
         path: String,
         backtrace: Backtrace,
     },
-    #[error("NotADirectory {path}")]
-    NotADirectory { path: String, backtrace: Backtrace },
+    // #[error("NotADirectory {path}")]
+    // NotADirectory { path: String, backtrace: Backtrace },
     #[error("Image {path}")]
     Image {
         err: ImageError,
@@ -51,7 +51,7 @@ impl VError {
             | VError::IoError { backtrace, .. }
             | VError::UnknownName { backtrace, .. }
             | VError::SimdJsonFail { backtrace, .. }
-            | VError::NotADirectory { backtrace, .. }
+            // | VError::NotADirectory { backtrace, .. }
             | VError::Image { backtrace, .. } => backtrace,
             VError::UringError(e) => e.my_backtrace(),
         }

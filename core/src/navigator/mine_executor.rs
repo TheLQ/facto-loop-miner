@@ -1,12 +1,10 @@
-use crate::navigator::base_source::BaseSourceEntry;
-use crate::navigator::mine_permutate::CompletePlan;
 use crate::navigator::mori::{mori2_start, MoriResult};
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::VSurface;
 use crate::util::duration::BasicWatch;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
+use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use itertools::Itertools;
 use num_format::ToFormattedString;
@@ -15,8 +13,6 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;
 use tracing::{debug, info};
-
-pub const MINE_FRONT_RAIL_STEPS: usize = 6;
 
 /// Given thousands of possible route combinations, execute in parallel and find the best
 pub fn execute_route_batch(
@@ -103,7 +99,7 @@ pub fn execute_route_batch(
         let total_cost = paths.iter().map(|v| v.cost).sum();
 
         match &route_result {
-            MineRouteCombinationPathResult::Success { paths } => {
+            MineRouteCombinationPathResult::Success { .. } => {
                 success_count += 1;
 
                 match best_path {

@@ -9,7 +9,6 @@ use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::constants::TILES_PER_CHUNK;
 use itertools::Itertools;
 use std::cell::RefCell;
-use std::ops::DerefMut;
 use std::rc::Rc;
 
 /// Input
@@ -22,7 +21,7 @@ pub fn get_possible_routes_for_batch(
     surface: &VSurface,
     MineSelectBatch {
         mines,
-        mut base_sources,
+        base_sources,
     }: MineSelectBatch,
 ) -> CompletePlan {
     // let mines_len = mines.len();

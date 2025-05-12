@@ -3,6 +3,7 @@ use crate::navigator::mine_executor::ExecutionRoute;
 use crate::navigator::mine_permutate::CompletePlan;
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surface::pixel::Pixel;
+use crate::surfacev::err::VResult;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -36,7 +37,7 @@ pub(super) fn debug_draw_base_sources(
 pub(super) fn debug_draw_complete_plans(
     surface: &mut VSurface,
     plans: impl IntoIterator<Item = impl Borrow<CompletePlan>>,
-) {
+) -> VResult<()> {
     let mut pixels = Vec::new();
     for plan in plans {
         let CompletePlan {
@@ -54,7 +55,7 @@ pub(super) fn debug_draw_complete_plans(
         }
     }
 
-    surface.set_pixels(Pixel::Highlighter, pixels).unwrap();
+    surface.set_pixels(Pixel::Highlighter, pixels)
 }
 
 pub(super) fn debug_draw_failing_mines<'a>(
