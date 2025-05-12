@@ -84,9 +84,12 @@ fn process_batch(
     // let planned_combinations = vec![planned_combinations.remove(0)];
     let res = execute_route_batch(surface, complete_plan.sequences);
     match res {
-        MineRouteCombinationPathResult::Success { paths } => {
+        MineRouteCombinationPathResult::Success { paths, routes } => {
             info!("pushing {} new mine paths", paths.len());
             assert!(!paths.is_empty(), "Success but no paths!!!!");
+            for route in routes {
+                route.location.draw_area_buffered(surface);
+            }
             complete_plan
                 .base_sources
                 .borrow_mut()

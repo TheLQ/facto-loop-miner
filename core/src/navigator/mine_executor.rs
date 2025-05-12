@@ -53,7 +53,7 @@ pub fn execute_route_batch(
 
     const EXECUTE_THREADED: bool = true;
     let route_results: Vec<MineRouteCombinationPathResult> = if EXECUTE_THREADED {
-        let default_threads = rayon::current_num_threads();
+        let default_threads = 32; // todo: numa rayon::current_num_threads();
         const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 1.5;
         let num_threads = (default_threads as f32 * THREAD_OVERSUBSCRIBE_PERCENT) as usize;
         info!(
@@ -91,7 +91,7 @@ pub fn execute_route_batch(
     let failure_found_paths_count: HashMap<usize, u32> = HashMap::new();
     for route_result in route_results {
         let paths = match &route_result {
-            MineRouteCombinationPathResult::Success { paths } => paths,
+            MineRouteCombinationPathResult::Success { paths, .. } => paths,
             MineRouteCombinationPathResult::Failure {
                 meta: FailingMeta { found_paths, .. },
             } => found_paths,
@@ -195,27 +195,7 @@ fn execute_route_combination(
     info!("Cloned surface in {}", watch);
 
     let mut found_paths = Vec::new();
-    let mut failing_meta = FailingMeta::default();
-    for (i, route) in route_combination.into_iter().enumerate() {
-        // in failure mode, consume the rest of the routes
-        if !failing_meta.failing_routes.is_empty() {
-            failing_meta.failing_routes.push(route);
-            continue;
-        }
-
-        // let extended_entry_rails =
-        //     match extend_rail_end(&working_surface, search_area, &mine_endpoint.entry_rail) {
-        //         Some(v) => v,
-        //         None => {
-        //             // This was valid during first pass but now another Rail is on-top of it
-        //             FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
-        //             return MineRouteCombinationPathResult::Failure {
-        //                 found_paths,
-        //                 failing_mine: mine_endpoint.clone(),
-        //             };
-        //         }
-        //     };
-
+    for (i, route) in route_combination.iter().enumerate() {
         let route_result = mori2_start(
             &working_surface,
             route.segment.clone(),
@@ -228,25 +208,30 @@ fn execute_route_combination(
                 let path = MinePath {
                     links: path,
                     cost,
-                    mine_base: route.location,
-                    segment: route.segment,
+                    mine_base: route.location.clone(),
+                    segment: route.segment.clone(),
                 };
                 found_paths.push(path.clone());
                 working_surface.add_mine_path(path).unwrap();
             }
             MoriResult::FailingDebug(debug_rail, debug_all) => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
-                failing_meta.failing_routes.push(route);
-                failing_meta.failing_dump = debug_rail;
-                failing_meta.failing_all = debug_all;
+                return MineRouteCombinationPathResult::Failure {
+                    meta: FailingMeta {
+                        failing_routes: route_combination,
+                        failing_all: debug_rail,
+                        failing_dump: debug_all,
+                        found_paths,
+                    },
+                };
             }
         }
     }
-    if failing_meta.failing_routes.is_empty() {
-        SUCCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
-        MineRouteCombinationPathResult::Success { paths: found_paths }
-    } else {
-        MineRouteCombinationPathResult::Failure { meta: failing_meta }
+
+    SUCCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
+    MineRouteCombinationPathResult::Success {
+        paths: found_paths,
+        routes: route_combination,
     }
 }
 
@@ -262,8 +247,13 @@ pub struct ExecutionSequence {
 
 #[derive(AsRefStr)]
 pub enum MineRouteCombinationPathResult {
-    Success { paths: Vec<MinePath> },
-    Failure { meta: FailingMeta },
+    Success {
+        paths: Vec<MinePath>,
+        routes: Vec<ExecutionRoute>,
+    },
+    Failure {
+        meta: FailingMeta,
+    },
 }
 
 #[derive(Default)]
