@@ -1,6 +1,6 @@
 use crate::opencv::GeneratedMat;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::err::{VError, VResult};
+use crate::surfacev::err::{CoreConvertPathResult, VError, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::vsurface::VPixel;
 use crate::util::duration::BasicWatch;
@@ -242,7 +242,7 @@ where
         serialize_watch.stop();
 
         let write_watch = BasicWatch::start();
-        write_entire_file(path, &big_xy_bytes)?;
+        write_entire_file(path, &big_xy_bytes).convert(path)?;
 
         debug!(
             "Saving Entity XY serialize {} write {} bytes {} path {}",
@@ -318,7 +318,7 @@ where
 
     fn _load_xy_file_mmap(&mut self, path: &Path) -> VResult<()> {
         let total_watch = BasicWatch::start();
-        self.xy_to_entity = read_entire_file_varray_mmap_lib(path)?;
+        self.xy_to_entity = read_entire_file_varray_mmap_lib(path).convert(path)?;
         debug!(
             "Loading Entity XY (mmap) total {} / {} in {} path {}",
             self.xy_to_entity.len().to_formatted_string(&LOCALE),

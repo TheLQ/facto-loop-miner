@@ -2,7 +2,7 @@ use crate::opencv::GeneratedMat;
 use crate::state::machine::StepParams;
 use crate::state::tuneables::Tunables;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::err::{VError, VResult};
+use crate::surfacev::err::{CoreConvertPathResult, VError, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::mine::MinePath;
 use crate::surfacev::ventity_map::VEntityMap;
@@ -12,13 +12,9 @@ use colorgrad::Gradient;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ONE};
-use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
-use facto_loop_miner_fac_engine::opencv_re::core::Rect;
-use facto_loop_miner_fac_engine::opencv_re::prelude::*;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
-use itertools::Itertools;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
@@ -27,7 +23,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
-use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
+use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::thread::JoinHandle;
@@ -96,12 +92,11 @@ impl VSurface {
     fn _load_state_sequential(out_dir: &Path) -> VResult<Self> {
         let mut read_watch = BasicWatch::start();
         let path = path_state(out_dir);
-        let ioec = VError::ioec(&path);
-        let mut data = read_entire_file(&path, true)?;
+        let mut data = read_entire_file(&path, true).convert(&path)?;
         read_watch.stop();
 
         let load_watch = BasicWatch::start();
-        let surface = simd_json::serde::from_slice(&mut data).map_err(ioec.simd())?;
+        let surface = simd_json::serde::from_slice(&mut data).convert(&path)?;
         info!(
             "Loading state JSON read {} deserialize {} from {}",
             read_watch,
@@ -115,10 +110,9 @@ impl VSurface {
         trace!("start state thread");
         let total_watch = BasicWatch::start();
         let path = path_state(out_dir);
-        let ioec = VError::ioec(&path);
-        let reader = BufReader::new(File::open(&path).map_err(ioec.io())?);
+        let reader = BufReader::new(File::open(&path).convert(&path)?);
 
-        let surface = simd_json::serde::from_reader(reader).map_err(ioec.simd())?;
+        let surface = simd_json::serde::from_reader(reader).convert(&path)?;
         info!(
             "Loading state JSON in {} from {}",
             total_watch,
@@ -194,11 +188,11 @@ impl VSurface {
         let state_path = out_dir.join("vsurface-state.json");
 
         let mut serialize_watch = BasicWatch::start();
-        let data = simd_json::to_vec(self).map_err(VError::simd_json(&state_path))?;
+        let data = simd_json::to_vec(self).convert(&state_path)?;
         serialize_watch.stop();
 
         let save_watch = BasicWatch::start();
-        write_entire_file(&state_path, &data)?;
+        write_entire_file(&state_path, &data).convert(&state_path)?;
 
         debug!(
             "Saving state JSON serialize {} save {} to {}",
@@ -300,9 +294,8 @@ impl VSurface {
     /// Created after loosing so much run data
     fn save_tuning_parameters(&self, out_dir: &Path) -> VResult<()> {
         let tuning_path = out_dir.join("tuning-params.json");
-        let ioec = VError::ioec(&tuning_path);
-        let output = simd_json::to_vec_pretty(&self.tunables).map_err(ioec.simd())?;
-        std::fs::write(&tuning_path, &output).map_err(ioec.io())?;
+        let output = simd_json::to_vec_pretty(&self.tunables).convert(&tuning_path)?;
+        std::fs::write(&tuning_path, &output).convert(&tuning_path)?;
 
         Ok(())
     }
@@ -312,7 +305,7 @@ impl VSurface {
         let build_watch = BasicWatch::start();
         let address: SocketAddr = "192.168.66.21:5689".parse().unwrap();
         debug!("Saving RGB dump image to oculante {address}");
-        let mut stream = TcpStream::connect(address).unwrap();
+        let stream = TcpStream::connect(address).unwrap();
 
         let crop_circle = VArea::from_arbitrary_points_pair(
             VPoint::new(0, -self.get_radius_i32() / 2),
@@ -751,8 +744,7 @@ fn save_png_with_space(
     space: ExtendedColorType,
 ) -> VResult<()> {
     let watch = BasicWatch::start();
-    let ioec = VError::ioec(path);
-    let file = File::create(path).map_err(ioec.io())?;
+    let file = File::create(path).convert(path)?;
     let writer = BufWriter::new(&file);
 
     // For input 2000x2000 image:
@@ -761,8 +753,8 @@ fn save_png_with_space(
     let encoder = PngEncoder::new_with_quality(writer, CompressionType::Fast, FilterType::NoFilter);
     encoder
         .write_image(rgb, width, height, space)
-        .map_err(VError::image(&path))?;
-    let size = file.metadata().map_err(ioec.io())?.len();
+        .convert(&path)?;
+    let size = file.metadata().convert(path)?.len();
     debug!(
         "Saved {} byte image to {} in {}",
         size.to_formatted_string(&LOCALE),

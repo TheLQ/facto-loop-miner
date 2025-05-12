@@ -1,6 +1,6 @@
 use facto_loop_miner_common::err_utils::{xbt, IOECSerdeSimd, IOECStd, IOEC};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_io::err::VIoError;
+use facto_loop_miner_io::err::{VIoError, VStdIoError};
 use image::ImageError;
 use itertools::Itertools;
 use std::backtrace::Backtrace;
@@ -56,57 +56,52 @@ impl VError {
             VError::VIoError(e) => e.my_backtrace(),
         }
     }
-
-    pub fn ioec(path: impl Into<PathBuf>) -> IOEC<Self> {
-        IOEC::new(path.into())
-    }
-
-    pub fn simd_json(path: &Path) -> impl FnOnce(simd_json::Error) -> Self + '_ {
-        |err| VError::SimdJsonFail {
-            err,
-            path: path.to_string_lossy().to_string(),
-            backtrace: Backtrace::capture(),
-        }
-    }
-
-    // Use like `read().map_err(VError::io_error)`
-    fn io_error(path: &Path) -> impl FnOnce(io::Error) -> Self + '_ {
-        |err| VError::IoError {
-            err,
-            path: path.to_string_lossy().to_string(),
-            backtrace: Backtrace::capture(),
-        }
-    }
-
-    pub fn image(path: &Path) -> impl FnOnce(ImageError) -> Self + '_ {
-        |err| Self::Image {
-            path: path.to_string_lossy().to_string(),
-            err,
-            backtrace: xbt(),
-        }
-    }
 }
 
 fn positions_to_strings(positions: &[VPoint]) -> String {
     positions.iter().map(VPoint::to_string).join(",")
 }
 
-impl From<IOECStd> for VError {
-    fn from(IOECStd { path, err }: IOECStd) -> Self {
-        Self::IoError {
-            path: path.to_string_lossy().to_string(),
-            err,
-            backtrace: xbt(),
-        }
+pub trait CoreConvertPathResult<T, E> {
+    fn convert(self, path: impl AsRef<Path>) -> Result<T, E>;
+}
+
+impl<T> CoreConvertPathResult<T, VError> for Result<T, VStdIoError> {
+    fn convert(self, path: impl AsRef<Path>) -> Result<T, VError> {
+        self.map_err(|VStdIoError { e, backtrace }| VError::IoError {
+            err: e,
+            backtrace,
+            path: path.as_ref().to_string_lossy().to_string(),
+        })
     }
 }
 
-impl From<IOECSerdeSimd> for VError {
-    fn from(IOECSerdeSimd { path, err }: IOECSerdeSimd) -> Self {
-        Self::SimdJsonFail {
-            path: path.to_string_lossy().to_string(),
-            err,
+impl<T> CoreConvertPathResult<T, VError> for Result<T, io::Error> {
+    fn convert(self, path: impl AsRef<Path>) -> Result<T, VError> {
+        self.map_err(|e| VError::IoError {
+            err: e,
             backtrace: xbt(),
-        }
+            path: path.as_ref().to_string_lossy().to_string(),
+        })
+    }
+}
+
+impl<T> CoreConvertPathResult<T, VError> for Result<T, simd_json::Error> {
+    fn convert(self, path: impl AsRef<Path>) -> Result<T, VError> {
+        self.map_err(|e| VError::SimdJsonFail {
+            err: e,
+            backtrace: xbt(),
+            path: path.as_ref().to_string_lossy().to_string(),
+        })
+    }
+}
+
+impl<T> CoreConvertPathResult<T, VError> for Result<T, ImageError> {
+    fn convert(self, path: impl AsRef<Path>) -> Result<T, VError> {
+        self.map_err(|e| VError::Image {
+            err: e,
+            backtrace: xbt(),
+            path: path.as_ref().to_string_lossy().to_string(),
+        })
     }
 }

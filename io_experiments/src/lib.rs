@@ -20,6 +20,7 @@ mod io_uring_common;
 // mod io_uring_file;
 mod io_uring_file_copying;
 
+use crate::err::VPathUnwrapper;
 use crate::io::read_entire_file_usize_mmap_custom;
 use crate::io_bench::checksum_vec_usize;
 use crate::io_uring::io_uring_main;
@@ -41,9 +42,9 @@ pub fn io_experiment_main() {
 
     tracing::debug!("hello io_experiment");
 
-    let file_path: PathBuf = match 3 {
+    let file_path: PathBuf = match 2 {
         1 => "/xf-megafile/data/pages.db.index",
-        2 => "/boot/initrd.img-6.1.0-9-amd64",
+        2 => "README.md",
         3 => {
             "/home/desk/IdeaProjects/facto-loop-miner/work/out0/step00-import/pixel-xy-indexes.dat"
         }
@@ -68,7 +69,7 @@ fn test_u8(path: &Path) {
 
     info!("asdf");
     let stopwatch = Instant::now();
-    let output = read_entire_file_usize_mmap_custom(path, true, true, true).unwrap();
+    let output = read_entire_file_usize_mmap_custom(path, true, true, true).unwrap_path(path);
     // let output = read_entire_file_mmap_copy(path).unwrap();
     info!(
         "file read in {}",

@@ -1,9 +1,8 @@
 use std::backtrace::Backtrace;
 
+use crate::{blueprint::bpfac::position::FacBpPosition, common::vpoint::VPoint};
 use itertools::Itertools;
 use thiserror::Error;
-
-use crate::{blueprint::bpfac::position::FacBpPosition, common::vpoint::VPoint};
 
 pub type FResult<T> = Result<T, FError>;
 
