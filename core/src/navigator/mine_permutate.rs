@@ -10,6 +10,7 @@ use facto_loop_miner_fac_engine::constants::TILES_PER_CHUNK;
 use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;
+use tracing::{trace, warn};
 
 /// Input
 ///  - Single batch of mines to be routed together
@@ -53,10 +54,7 @@ pub fn get_possible_routes_for_batch(
         VPoint::new(0, -fixed_radius),
         // Must give spacing from Edge, because hope_link.area() can extend past it.
         // range checks are disabled for theoretical performance
-        VPoint::new(
-            fixed_radius - TILES_PER_CHUNK as i32,
-            fixed_radius - TILES_PER_CHUNK as i32,
-        ),
+        VPoint::new(fixed_radius, fixed_radius),
     );
 
     // Did we actually generate unique steps?
@@ -69,12 +67,15 @@ pub fn get_possible_routes_for_batch(
     let sequences = build_routes_from_destinations(
         mine_combinations,
         fixed_finding_limiter,
-        &mut base_sources.borrow_mut(),
+        &base_sources.borrow(),
     );
-    assert!(
-        !sequences.is_empty(),
-        "no sequences found from {mines_len} input mines"
-    );
+    // assert!(
+    //     !sequences.is_empty(),
+    //     "no sequences found from {mines_len} input mines"
+    // );
+    if sequences.is_empty() {
+        warn!("no sequences found from {mines_len} input mines");
+    }
     CompletePlan {
         sequences,
         base_sources,
@@ -133,7 +134,7 @@ fn find_all_permutations(input_combinations: Vec<Vec<PartialEntry>>) -> Vec<Vec<
 fn build_routes_from_destinations(
     input_combinations: Vec<Vec<PartialEntry>>,
     fixed_finding_limiter: VArea,
-    base_source: &mut BaseSourceEighth,
+    base_source: &BaseSourceEighth,
 ) -> Vec<ExecutionSequence> {
     let mut sequences: Vec<ExecutionSequence> = Vec::new();
     'combinations: for combination in input_combinations {
@@ -151,6 +152,7 @@ fn build_routes_from_destinations(
                 .peek_at(i)
                 .segment_for_mine(&destination, &location);
             if !segment.is_within_area(&fixed_finding_limiter) {
+                trace!("segment out of bounds {}", segment);
                 continue 'combinations;
             }
             routes.push(ExecutionRoute {

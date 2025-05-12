@@ -78,6 +78,7 @@ impl MineLocation {
         assert!(area_no_touch.get_points().len() < area_buffered.get_points().len());
 
         let Some(endpoints) = Self::new_endpoints(surface, &area_no_touch) else {
+            warn!("Excluding mine at {}", area_no_touch);
             return None;
         };
         let destinations = endpoints
@@ -182,6 +183,10 @@ impl MineLocation {
 
     pub fn destinations(&self) -> &[VPointDirectionQ] {
         &self.destinations
+    }
+
+    pub fn surface_patches_len(&self) -> usize {
+        self.patch_indexes.len()
     }
 }
 

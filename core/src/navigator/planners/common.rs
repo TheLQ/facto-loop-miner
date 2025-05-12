@@ -42,7 +42,10 @@ pub(super) fn debug_draw_complete_plan(
     }: CompletePlan,
 ) -> VResult<()> {
     let mut pixels = Vec::new();
-    let total_sequences = sequences.len();
+    let route_len = sequences[0].routes.len();
+    for sequence in &sequences {
+        assert_eq!(sequence.routes.len(), route_len);
+    }
 
     // will dupe
     for sequence in sequences {
@@ -52,10 +55,7 @@ pub(super) fn debug_draw_complete_plan(
             pixels.push(*end.point());
         }
     }
-    base_sources
-        .borrow_mut()
-        .advance_by(total_sequences)
-        .unwrap();
+    base_sources.borrow_mut().advance_by(route_len).unwrap();
 
     surface.set_pixels(Pixel::Highlighter, pixels)
 }
@@ -97,6 +97,7 @@ pub(super) fn draw_prep_mines(
 ) {
     for mine in mines {
         mine.borrow().draw_area_buffered(surface);
+        // mine.borrow().draw_area_buffered_to_no_touch(surface);
     }
 
     // stop routes going backwards right behind the start

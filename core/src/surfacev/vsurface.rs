@@ -311,6 +311,9 @@ impl VSurface {
             VPoint::new(0, -self.get_radius_i32() / 2),
             VPoint::new(self.get_radius_i32() - 1, (self.get_radius_i32() / 2) - 1),
         );
+        // let crop_circle: VArea = self
+        //     .dummy_area_entire_surface()
+        //     .normalize_within_radius(self.get_radius_i32() - 5);
         let crop_size = crop_circle.as_size() + VPOINT_ONE;
         let output_size = (crop_size.x() * crop_size.y() * 3) as usize;
 

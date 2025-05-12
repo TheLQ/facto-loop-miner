@@ -13,7 +13,7 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 
 #[derive(Clone)]
 pub struct MineSelectBatch {
@@ -81,6 +81,8 @@ pub fn select_mines_and_sources(
             Pixel::CrudeOil,
         ],
     );
+    let total_patches: usize = patch_groups.iter().map(|v| v.surface_patches_len()).sum();
+    info!("selected {total_patches} patches");
 
     // let ordered_patches = match 2 {
     //     1 => patches_by_radial_base_corner(surface, Pixel::IronOre),
@@ -273,8 +275,8 @@ fn patches_by_cross_sign_expanding(
 
             let search_area = VArea::from_arbitrary_points_pair(scan_start, scan_end);
             let mut found_mines: Vec<MineLocation> = mines
-                .extract_if(0.., |mine| {
-                    search_area.contains_points(mine.area_min().get_corner_points())
+                .extract_if(.., |mine| {
+                    search_area.contains_point(&mine.area_min().point_center())
                 })
                 .collect();
             if found_mines.is_empty() {
