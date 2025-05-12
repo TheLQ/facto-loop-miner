@@ -1,6 +1,6 @@
 use facto_loop_miner_common::err_utils::{xbt, IOECSerdeSimd, IOECStd, IOEC};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_io::err::{VIoError, VStdIoError};
+use facto_loop_miner_io::err::{UringError, VStdIoError};
 use image::ImageError;
 use itertools::Itertools;
 use std::backtrace::Backtrace;
@@ -40,8 +40,8 @@ pub enum VError {
         path: String,
         backtrace: Backtrace,
     },
-    #[error("VIoError {0}")]
-    VIoError(#[from] VIoError),
+    #[error("UringError {0}")]
+    UringError(#[from] UringError),
 }
 
 impl VError {

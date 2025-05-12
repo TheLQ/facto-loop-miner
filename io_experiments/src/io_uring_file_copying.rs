@@ -15,7 +15,7 @@ use uring_sys2::{
     io_uring_wait_cqe,
 };
 
-use crate::err::{VIoError, VIoResult};
+use crate::err::{UringError, VIoResult};
 use crate::io::USIZE_BYTES;
 use crate::io_uring::IoUring;
 use crate::io_uring_common::{allocate_page_size_aligned, PAGE_SIZE};
@@ -181,7 +181,7 @@ impl IoUringFileCopying {
         }
         let sqe_ptr = io_uring_get_sqe(&mut ring.ring);
         if sqe_ptr.is_null() {
-            return Err(VIoError::IoUring_SqeNullPointer {
+            return Err(UringError::IoUring_SqeNullPointer {
                 backtrace: Backtrace::capture(),
             });
         }
@@ -215,20 +215,20 @@ impl IoUringFileCopying {
         let mut cqe_ptr: *mut io_uring_cqe = ptr::null_mut();
         let ret = io_uring_wait_cqe(&mut ring.ring, &mut cqe_ptr);
         if ret != 0 {
-            return Err(VIoError::IoUring_CqeWaitReturn {
+            return Err(UringError::IoUring_CqeWaitReturn {
                 e: io::Error::from_raw_os_error(-ret),
                 backtrace: Backtrace::capture(),
             });
         }
         if cqe_ptr.is_null() {
-            return Err(VIoError::IoUring_CqeNullPointer {
+            return Err(UringError::IoUring_CqeNullPointer {
                 backtrace: Backtrace::capture(),
             });
         }
 
         let cqe_result = (*cqe_ptr).res;
         if cqe_result < 0 {
-            return Err(VIoError::IoUring_CqeResultReturn {
+            return Err(UringError::IoUring_CqeResultReturn {
                 e: io::Error::from_raw_os_error(-cqe_result),
                 backtrace: Backtrace::capture(),
             });
@@ -251,7 +251,7 @@ impl IoUringFileCopying {
         let cqe_buf_index = io_uring_cqe_get_data64(cqe_ptr) as usize;
         let target_offset_start = self.backing_buf_ring_data[cqe_buf_index].result_offset;
         if target_offset_start > self.file_size() {
-            return Err(VIoError::IoUring_CqeOffsetTooBig {
+            return Err(UringError::IoUring_CqeOffsetTooBig {
                 file_size: self.file_size(),
                 target_offset: target_offset_start,
                 backtrace: Backtrace::capture(),

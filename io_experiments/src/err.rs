@@ -7,11 +7,11 @@ use std::{io, result};
 use thiserror::Error;
 use tracing::error;
 
-pub type VIoResult<V> = result::Result<V, VIoError>;
+pub type VIoResult<V> = result::Result<V, UringError>;
 
 #[derive(Error, Debug)]
 #[allow(non_camel_case_types)]
-pub enum VIoError {
+pub enum UringError {
     #[error("IoUring_SqeNullPointer")]
     IoUring_SqeNullPointer { backtrace: Backtrace },
     #[error("IoUring_CqeWaitReturn {e}")]
@@ -40,16 +40,16 @@ pub enum VIoError {
     },
 }
 
-impl VIoError {
+impl UringError {
     pub fn my_backtrace(&self) -> &Backtrace {
         match self {
-            VIoError::IoUring_SqeNullPointer { backtrace, .. }
-            | VIoError::IoUring_CqeWaitReturn { backtrace, .. }
-            | VIoError::IoUring_CqeNullPointer { backtrace, .. }
-            | VIoError::IoUring_CqeResultReturn { backtrace, .. }
-            | VIoError::IoUring_CqeReadIncomplete { backtrace, .. }
-            | VIoError::IoUring_CqeOffsetTooBig { backtrace, .. }
-            | VIoError::IoUring_CqeCopyFailed { backtrace, .. } => backtrace,
+            UringError::IoUring_SqeNullPointer { backtrace, .. }
+            | UringError::IoUring_CqeWaitReturn { backtrace, .. }
+            | UringError::IoUring_CqeNullPointer { backtrace, .. }
+            | UringError::IoUring_CqeResultReturn { backtrace, .. }
+            | UringError::IoUring_CqeReadIncomplete { backtrace, .. }
+            | UringError::IoUring_CqeOffsetTooBig { backtrace, .. }
+            | UringError::IoUring_CqeCopyFailed { backtrace, .. } => backtrace,
         }
     }
 }
