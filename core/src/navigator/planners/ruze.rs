@@ -37,12 +37,12 @@ pub fn start_ruze_planner(surface: &mut VSurface, params: &StepParams) {
         // for (batch_index, batch) in [select_batches.into_iter().enumerate().last().unwrap()] {
         let found = process_batch(surface, batch, batch_index, &params.step_out_dir);
         if !found {
-            error!("KILLING EARLY");
+            error!("KILLING EARLY index {batch_index}");
             break;
         }
 
         // if 1 + 1 == 2 {
-        if batch_index > 3 {
+        if batch_index > 20 {
             break;
         }
     }
@@ -57,6 +57,9 @@ fn process_batch(
     trace!("---");
     let num_mines = batch.mines.len();
 
+    for mine in &batch.mines {
+        mine.draw_area_buffered_to_no_touch(surface);
+    }
     let complete_plan = get_possible_routes_for_batch(surface, batch);
 
     let num_per_batch_routes_min = complete_plan
@@ -78,13 +81,17 @@ fn process_batch(
                 with total routes {num_routes_total} \
                 each in range {num_per_batch_routes_min} {num_per_batch_routes_max}"
     );
-
     // let planned_combinations = vec![planned_combinations.remove(0)];
     let res = execute_route_batch(surface, complete_plan.sequences);
     match res {
         MineRouteCombinationPathResult::Success { paths } => {
             info!("pushing {} new mine paths", paths.len());
             assert!(!paths.is_empty(), "Success but no paths!!!!");
+            complete_plan
+                .base_sources
+                .borrow_mut()
+                .advance_by(paths.len())
+                .unwrap();
             for path in paths {
                 surface.add_mine_path(path).unwrap();
             }
@@ -100,6 +107,17 @@ fn process_batch(
                 },
         } => {
             if 1 + 1 == 2 {
+                surface
+                    .set_pixels(
+                        Pixel::Highlighter,
+                        failing_routes
+                            .iter()
+                            .flat_map(|v| [v.segment.start, v.segment.end])
+                            .map(|v| *v.point())
+                            .collect(),
+                    )
+                    .unwrap();
+
                 // continue mode
                 let (trigger_mine, rest) = failing_routes.split_first().unwrap();
 
@@ -113,14 +131,14 @@ fn process_batch(
 
                 trigger_mine
                     .location
-                    .draw_area_buffered_with(surface, Pixel::Highlighter);
+                    .draw_area_buffered_replacing(surface, Pixel::Highlighter);
                 for entry in rest {
                     warn!("failing at {:?}", entry.location.area_buffered());
-                    trigger_mine
+                    entry
                         .location
-                        .draw_area_buffered_with(surface, Pixel::EdgeWall);
+                        .draw_area_buffered_replacing(surface, Pixel::EdgeWall);
                 }
-                return true;
+                return false;
             }
 
             error!("failed to pathfind");

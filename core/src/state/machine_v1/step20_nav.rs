@@ -22,7 +22,7 @@ impl Step for Step20 {
         let mut surface = VSurface::load_from_last_step(&params)?;
         // surface.validate();
 
-        match 9 {
+        match 1 {
             1 => start_ruze_planner(&mut surface, &params),
             // 2 => start_altare_planner(&mut surface),
             9 => start_debug_planner(&mut surface)?,
