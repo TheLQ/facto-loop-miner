@@ -1,3 +1,4 @@
+use crate::read_entire_file_varray_mmap_lib;
 use memmap2::MmapMut;
 use std::fs::File;
 use std::mem::ManuallyDrop;
@@ -68,6 +69,16 @@ impl VArray {
         }
     }
 
+    pub fn is_dirty_for_clone(&self) -> bool {
+        match &self.inner {
+            BackingMemory::RegularOldeVec { .. } => {
+                // never needs to be written to disk first
+                false
+            }
+            BackingMemory::Mmap { is_dirty, .. } => *is_dirty,
+        }
+    }
+
     #[allow(clippy::len_without_is_empty)] // unused
     pub fn len(&self) -> usize {
         self.as_slice().len()
@@ -99,16 +110,17 @@ impl Clone for VArray {
                 backing_path,
                 is_dirty,
             } => {
-                // if *is_dirty {
-                //     panic!("Cannot clone dirty mmap");
-                // }
-                // read_entire_file_varray_mmap_lib(backing_path).unwrap()
-                VArray {
-                    inner: BackingMemory::RegularOldeVec {
-                        data: ManuallyDrop::into_inner(data.clone()),
-                        is_dirty: false,
-                    },
+                if *is_dirty {
+                    panic!("Cannot clone dirty mmap");
                 }
+                read_entire_file_varray_mmap_lib(backing_path)
+                    .unwrap_or_else(|e| panic!("unable to clone"))
+                // VArray {
+                //     inner: BackingMemory::RegularOldeVec {
+                //         data: ManuallyDrop::into_inner(data.clone()),
+                //         is_dirty: false,
+                //     },
+                // }
             }
         }
     }

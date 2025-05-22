@@ -167,6 +167,11 @@ impl VSurface {
         path_pixel_xy_indexes(params.previous_step_dir())
     }
 
+    pub fn load_clone_prep(&mut self, clone_prep_dir: &Path) -> VResult<()> {
+        self.pixels
+            .load_clone_prep(&path_pixel_xy_indexes_clone(clone_prep_dir))
+    }
+
     //</editor-fold>
 
     //<editor-fold desc="io save">
@@ -769,6 +774,10 @@ fn save_png_with_space(
 
 fn path_pixel_xy_indexes(out_dir: &Path) -> PathBuf {
     out_dir.join("pixel-xy-indexes.dat")
+}
+
+fn path_pixel_xy_indexes_clone(out_dir: &Path) -> PathBuf {
+    out_dir.join("pixel-xy-indexes-clone.dat")
 }
 
 // fn path_entity_xy_indexes(out_dir: &Path) -> PathBuf {

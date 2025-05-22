@@ -334,6 +334,14 @@ where
         self.xy_to_entity = other.xy_to_entity;
     }
 
+    pub fn load_clone_prep(&mut self, clone_prep_file: &Path) -> VResult<()> {
+        if self.xy_to_entity.is_dirty_for_clone() {
+            self.save_xy_file(clone_prep_file)?;
+            self.load_xy_file(clone_prep_file)?;
+        }
+        Ok(())
+    }
+
     pub fn iter_entities(&self) -> impl Iterator<Item = &E> {
         self.entities.iter()
     }

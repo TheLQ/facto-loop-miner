@@ -1,5 +1,6 @@
 use crate::err::VStdIoResult;
 use crate::varray::VArray;
+use facto_loop_miner_common::duration::BasicWatch;
 use libc::munmap;
 use memmap2::{Mmap, MmapMut, MmapOptions};
 use std::fs::File;
@@ -285,13 +286,14 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VStdIoResult<VArray> {
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
     let xy_array_len_u64 = xy_array_len_u8 / USIZE_BYTES;
 
-    debug!("mmapping...");
+    // debug!("mmapping...");
+    let watch = BasicWatch::start();
     let mut mmap: MmapMut = unsafe {
         MmapOptions::new()
             // .populate()
             .map_copy(&file)?
     };
-    debug!("mapped {}", path.display());
+    debug!("mapped {} in {watch}", path.display());
 
     // Pull the underlying slice
     let xy_array_u8: &mut [u8] = &mut mmap;
