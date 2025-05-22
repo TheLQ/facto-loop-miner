@@ -232,23 +232,18 @@ where
 
     //<editor-fold desc="io">
     pub fn save_xy_file(&self, path: &Path) -> VResult<()> {
-        let mut serialize_watch = BasicWatch::start();
-        let big_xy_bytes: Vec<u8> = self
-            .xy_to_entity
-            .as_slice()
-            .iter()
-            .flat_map(|v| usize::to_ne_bytes(*v))
-            .collect();
-        serialize_watch.stop();
-
-        let write_watch = BasicWatch::start();
-        write_entire_file(path, &big_xy_bytes).convert(path)?;
+        let mut write_watch = BasicWatch::start();
+        let source = self.xy_to_entity.as_slice();
+        let source_len = source.len();
+        let (before, data, after) = unsafe { source.align_to() };
+        assert_eq!(before.len(), 0);
+        assert_eq!(after.len(), 0);
+        assert_eq!(data.len(), source_len * 8);
+        write_entire_file(path, data).convert(path)?;
 
         debug!(
-            "Saving Entity XY serialize {} write {} bytes {} path {}",
-            serialize_watch,
-            write_watch,
-            big_xy_bytes.len(),
+            "Saving Entity XY write {} bytes path {} in {write_watch}",
+            data.len(),
             path.display()
         );
 
