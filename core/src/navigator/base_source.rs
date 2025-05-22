@@ -1,7 +1,9 @@
 use crate::surfacev::mine::MineLocation;
+use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
+use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -12,7 +14,16 @@ pub struct BaseSource {
 }
 
 impl BaseSource {
-    pub fn new(origin: VPointDirectionQ) -> Self {
+    pub fn from_central_base(surface: &VSurface) -> Self {
+        let mut offset_x_from_base = surface.tunables().base.base_chunks.as_tiles_i32();
+        offset_x_from_base -= offset_x_from_base % SECTION_POINTS_I32;
+        BaseSource::new(VPointDirectionQ(
+            VPoint::new(offset_x_from_base, 0),
+            FacDirectionQuarter::East,
+        ))
+    }
+
+    fn new(origin: VPointDirectionQ) -> Self {
         origin.point().assert_even_position();
         Self {
             positive: BaseSourceEighth::new(origin, 1),

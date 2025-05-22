@@ -61,13 +61,7 @@ pub fn select_mines_and_sources(
     surface: &VSurface,
     maximum_mine_count_per_batch: usize,
 ) -> MineSelectBatchResult {
-    let mut offset_x_from_base = surface.tunables().base.base_chunks.as_tiles_i32();
-    offset_x_from_base -= offset_x_from_base % SECTION_POINTS_I32;
-    let base_source = BaseSource::new(VPointDirectionQ(
-        VPoint::new(offset_x_from_base, 0),
-        FacDirectionQuarter::East,
-    ))
-    .into_refcells();
+    let base_source = BaseSource::from_central_base(surface).into_refcells();
 
     let patch_groups = group_nearby_patches(surface);
     let total_patches: usize = patch_groups.iter().map(|v| v.surface_patches_len()).sum();
