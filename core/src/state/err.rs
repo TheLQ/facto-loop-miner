@@ -1,4 +1,5 @@
 use crate::surfacev::err::VError;
+use facto_loop_miner_common::err_bt::MyBacktrace;
 use std::backtrace::Backtrace;
 use thiserror::Error;
 
@@ -10,8 +11,8 @@ pub enum XMachineError {
     SurfaceFailure { e: VError },
 }
 
-impl XMachineError {
-    pub fn my_backtrace(&self) -> &Backtrace {
+impl MyBacktrace for XMachineError {
+    fn my_backtrace(&self) -> &Backtrace {
         match self {
             XMachineError::SurfaceFailure { e } => e.my_backtrace(),
         }

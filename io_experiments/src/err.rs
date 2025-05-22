@@ -1,3 +1,4 @@
+use facto_loop_miner_common::err_bt::MyBacktrace;
 use facto_loop_miner_common::err_utils::xbt;
 use std::backtrace::Backtrace;
 use std::fmt::Debug;
@@ -40,8 +41,8 @@ pub enum UringError {
     },
 }
 
-impl UringError {
-    pub fn my_backtrace(&self) -> &Backtrace {
+impl MyBacktrace for UringError {
+    fn my_backtrace(&self) -> &Backtrace {
         match self {
             UringError::IoUring_SqeNullPointer { backtrace, .. }
             | UringError::IoUring_CqeWaitReturn { backtrace, .. }

@@ -1,3 +1,4 @@
+use facto_loop_miner_common::err_bt::MyBacktrace;
 use facto_loop_miner_common::err_utils::xbt;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_io::err::{UringError, VStdIoError};
@@ -44,8 +45,8 @@ pub enum VError {
     UringError(#[from] UringError),
 }
 
-impl VError {
-    pub fn my_backtrace(&self) -> &Backtrace {
+impl MyBacktrace for VError {
+    fn my_backtrace(&self) -> &Backtrace {
         match self {
             VError::XYOutOfBounds { backtrace, .. }
             | VError::IoError { backtrace, .. }
