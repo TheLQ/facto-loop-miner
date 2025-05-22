@@ -15,7 +15,9 @@ use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::cell::RefCell;
 use std::fmt::{Debug, Display, Formatter};
+use std::fs::remove_file;
 use std::hash::Hash;
+use std::io::ErrorKind;
 use std::mem;
 use std::path::Path;
 use tracing::debug;
@@ -331,6 +333,15 @@ where
 
     pub fn load_clone_prep(&mut self, clone_prep_file: &Path) -> VResult<()> {
         if self.xy_to_entity.is_dirty_for_clone() {
+            // Can't write mmap's data back to itself apparently. Failed with "Bad Address"
+            match remove_file(clone_prep_file).convert(clone_prep_file) {
+                Err(VError::IoError { err, .. }) if err.kind() == ErrorKind::NotFound => {
+                    // do nothing
+                }
+                Err(e) => return Err(e),
+                Ok(()) => {}
+            };
+
             self.save_xy_file(clone_prep_file)?;
             self.load_xy_file(clone_prep_file)?;
         }
