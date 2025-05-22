@@ -25,7 +25,7 @@ impl Step for Step20 {
 
         match 2 {
             1 => start_ruze_planner(&mut surface, &params),
-            2 => start_altare_planner(&mut surface),
+            2 => start_altare_planner(&mut surface, &params),
             9 => start_debug_planner(&mut surface)?,
             _ => unimplemented!(),
         }

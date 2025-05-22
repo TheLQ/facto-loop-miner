@@ -1,7 +1,14 @@
-use crate::navigator::mine_selector::{group_nearby_patches, PERPENDICULAR_SCAN_WIDTH};
+use crate::navigator::base_source::BaseSource;
+use crate::navigator::mine_executor::{execute_route_batch, MineRouteCombinationPathResult};
+use crate::navigator::mine_permutate::get_possible_routes_for_batch;
+use crate::navigator::mine_selector::{
+    group_nearby_patches, MineSelectBatch, PERPENDICULAR_SCAN_WIDTH,
+};
+use crate::state::machine::StepParams;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::VSurface;
+use facto_loop_miner_common::err_bt::pretty_print_error;
 use facto_loop_miner_fac_engine::admiral::lua_command::fac_surface_create_tile::FacSurfaceCreateLua;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
@@ -9,9 +16,11 @@ use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use simd_json::prelude::ArrayTrait;
 use std::sync::Mutex;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
-pub fn start_altare_planner(surface: &mut VSurface) {
+pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
+    let base_source = BaseSource::from_central_base(&surface).into_refcells();
+
     let all_mine_locations = group_nearby_patches(surface);
     let mut quester = Quester {
         surface,
@@ -32,15 +41,46 @@ pub fn start_altare_planner(surface: &mut VSurface) {
                 quester.origin_index += 1;
             }
             QuesterScanResult::NewPatchesInScanArea(patches) => {
-                for patch in patches {
+                for patch in &patches {
                     debug!("found {:?}", patch);
                 }
+                let possible_routes = get_possible_routes_for_batch(
+                    quester.surface,
+                    MineSelectBatch {
+                        base_sources: base_source.positive_rc(),
+                        mines: patches.into_iter().take(BATCH_SIZE_MAX).cloned().collect(),
+                    },
+                );
+                info!("found {} sequences", possible_routes.sequences.len());
 
-                break;
+                if let Err(e) = quester.surface.load_clone_prep(&params.step_out_dir) {
+                    pretty_print_error(e);
+                    panic!("uhh");
+                }
+                let route_result = execute_route_batch(quester.surface, possible_routes.sequences);
+                match route_result {
+                    MineRouteCombinationPathResult::Success { paths, routes } => {
+                        base_source
+                            .positive_rc()
+                            .borrow_mut()
+                            .advance_by(paths.len())
+                            .unwrap();
+                        for path in paths {
+                            quester.surface.add_mine_path(path).unwrap();
+                        }
+                        quester.surface.save_pixel_to_oculante();
+                    }
+                    MineRouteCombinationPathResult::Failure { meta } => {
+                        error!("failed to pathfind!");
+                        break;
+                    }
+                }
             }
         }
     }
 }
+
+const BATCH_SIZE_MAX: usize = 4;
 
 struct Quester<'s> {
     surface: &'s mut VSurface,
