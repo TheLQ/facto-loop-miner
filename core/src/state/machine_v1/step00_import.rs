@@ -4,7 +4,7 @@ use crate::state::machine::{Step, StepParams};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::VResult;
 use crate::surfacev::vsurface::VSurface;
-use crate::util::duration::BasicWatch;
+use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use std::collections::HashMap;

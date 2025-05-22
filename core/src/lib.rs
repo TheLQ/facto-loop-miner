@@ -41,7 +41,6 @@ mod simd;
 mod state;
 mod surface;
 mod surfacev;
-mod util;
 
 // pub type PixelKdTree = KdTree<f32, 2usize>;
 type PixelKdTree = float::kdtree::KdTree<f32, usize, 2usize, 32, u32>;

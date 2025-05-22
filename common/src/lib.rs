@@ -1,5 +1,6 @@
 use num_format::Locale;
 
+pub mod duration;
 pub mod err_utils;
 mod logger;
 

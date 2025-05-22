@@ -1,7 +1,7 @@
 use crate::state::disk::State;
 use crate::state::err::XMachineResult;
 use crate::surface::metric::Metrics;
-use crate::util::duration::BasicWatch;
+use facto_loop_miner_common::duration::BasicWatch;
 use std::cell::RefCell;
 use std::fs::{create_dir, read_dir, remove_dir, remove_dir_all};
 use std::path::{Path, PathBuf};
