@@ -84,82 +84,126 @@ pub fn execute_route_batch(
 
     debug!("Executed {total_sequences} route combinations in {routing_watch}");
 
-    let mut best_path: Option<MineRouteCombinationPathResult> = None;
-    let mut lowest_cost = u32::MAX;
-    let mut highest_cost = u32::MIN;
-    let mut success_count = 0;
-    let failure_found_paths_count: HashMap<usize, u32> = HashMap::new();
-    for route_result in route_results {
-        let paths = match &route_result {
-            MineRouteCombinationPathResult::Success { paths, .. } => paths,
-            MineRouteCombinationPathResult::Failure {
-                meta: FailingMeta { found_paths, .. },
-            } => found_paths,
-        };
-        let total_cost = paths.iter().map(|v| v.cost).sum();
-
-        match &route_result {
-            MineRouteCombinationPathResult::Success { .. } => {
-                success_count += 1;
-
-                match best_path {
-                    Some(MineRouteCombinationPathResult::Failure { .. }) | None => {
-                        best_path = Some(route_result);
-                        lowest_cost = total_cost;
-                        highest_cost = total_cost;
-                    }
-                    Some(MineRouteCombinationPathResult::Success { .. }) => {
-                        if total_cost < lowest_cost {
-                            lowest_cost = total_cost;
-                            best_path = Some(route_result);
-                        }
-                        if total_cost > highest_cost {
-                            highest_cost = total_cost;
-                        }
-                    }
-                }
+    struct CostMeta {
+        lowest: u32,
+        highest: u32,
+        tested: u32,
+    };
+    impl CostMeta {
+        fn new() -> Self {
+            Self {
+                lowest: u32::MAX,
+                highest: u32::MIN,
+                tested: 0,
             }
-            MineRouteCombinationPathResult::Failure { meta } => {
-                let found_len = meta.found_paths.len();
-                match best_path {
-                    None => {
-                        best_path = Some(route_result);
-                        lowest_cost = total_cost;
-                        highest_cost = total_cost;
-                    }
-                    Some(MineRouteCombinationPathResult::Failure { meta: prev_meta })
-                        if found_len > prev_meta.found_paths.len() =>
-                    {
-                        best_path = Some(route_result);
-                        lowest_cost = total_cost;
-                        highest_cost = total_cost;
-                    }
-                    Some(MineRouteCombinationPathResult::Failure { .. }) => {
-                        if total_cost < lowest_cost {
-                            lowest_cost = total_cost;
-                            best_path = Some(route_result);
-                        }
-                        if total_cost > highest_cost {
-                            highest_cost = total_cost;
-                        }
-                    }
-                    Some(MineRouteCombinationPathResult::Success { .. }) => {}
-                }
+        }
+
+        fn apply_and_is_lowest(&mut self, cost: u32) -> bool {
+            self.tested += 1;
+            self.highest = self.highest.max(cost);
+            if cost < self.lowest {
+                self.lowest = cost;
+                true
+            } else {
+                false
             }
         }
     }
-    let failure_found_paths_count_debug = failure_found_paths_count
+    let mut cost = CostMeta::new();
+
+    let mut failure_attempts_per_len: HashMap<usize, u16> = HashMap::new();
+    let mut success_count = 0;
+    let mut failure_count = 0;
+    let res: MineRouteCombinationPathResult = route_results.into_iter().fold(
+        MineRouteCombinationPathResult::Failure {
+            meta: FailingMeta::default(),
+        },
+        |best, cur_result| {
+            let cur_paths = match &cur_result {
+                MineRouteCombinationPathResult::Success { paths, .. } => {
+                    success_count += 1;
+                    paths
+                }
+                MineRouteCombinationPathResult::Failure {
+                    meta: FailingMeta { found_paths, .. },
+                } => {
+                    let total = failure_attempts_per_len
+                        .entry(found_paths.len())
+                        .or_default();
+                    *total += 1;
+                    failure_count += 1;
+                    found_paths
+                }
+            };
+            let total_cost = cur_paths.iter().map(|v| v.cost).sum();
+
+            match (&best, &cur_result) {
+                (
+                    MineRouteCombinationPathResult::Success { .. },
+                    MineRouteCombinationPathResult::Success { .. },
+                ) => {
+                    if cost.apply_and_is_lowest(total_cost) {
+                        cur_result
+                    } else {
+                        best
+                    }
+                }
+                (
+                    MineRouteCombinationPathResult::Success { .. },
+                    MineRouteCombinationPathResult::Failure { .. },
+                ) => {
+                    // ignore failure after success
+                    best
+                }
+                (
+                    MineRouteCombinationPathResult::Failure { .. },
+                    MineRouteCombinationPathResult::Success { .. },
+                ) => {
+                    // replace failure with success
+                    cost = CostMeta::new();
+                    cost.apply_and_is_lowest(total_cost);
+                    cur_result
+                }
+                (
+                    MineRouteCombinationPathResult::Failure {
+                        meta:
+                            FailingMeta {
+                                found_paths: best_paths,
+                                ..
+                            },
+                    },
+                    MineRouteCombinationPathResult::Failure { .. },
+                ) => {
+                    if cur_paths.len() > best_paths.len() {
+                        cost = CostMeta::new();
+                        cost.apply_and_is_lowest(total_cost);
+                        cur_result
+                    } else {
+                        if cost.apply_and_is_lowest(total_cost) {
+                            cur_result
+                        } else {
+                            best
+                        }
+                    }
+                }
+            }
+        },
+    );
+
+    let failure_attempts_debug = failure_attempts_per_len
         .into_iter()
         .sorted_by_key(|(k, _v)| *k)
         .map(|(k, v)| format!("{}:{}", k, v))
         .join("|");
-    let res = best_path.unwrap();
     info!(
-        "Route batch of {total_sequences} combinations had {} success, cost range {} to {}, failure {}, res {}",
-        success_count,
-        highest_cost.to_formatted_string(&LOCALE),
-        lowest_cost.to_formatted_string(&LOCALE),
-        failure_found_paths_count_debug,
+        "Route batch of {total_sequences} combinations had \
+        {success_count} / {failure_count} success/failure, \
+        cost range {} to {} (over {}), \
+        attempts {failure_attempts_debug}, \
+        res {}",
+        cost.highest.to_formatted_string(&LOCALE),
+        cost.lowest.to_formatted_string(&LOCALE),
+        cost.tested,
         res.as_ref(),
     );
 
