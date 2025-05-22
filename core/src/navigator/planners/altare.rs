@@ -4,7 +4,7 @@ use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{
     group_nearby_patches, MineSelectBatch, PERPENDICULAR_SCAN_WIDTH,
 };
-use crate::navigator::planners::common::{draw_prep, draw_prep_mines};
+use crate::navigator::planners::common::{debug_failing, draw_prep, draw_prep_mines};
 use crate::state::machine::StepParams;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vpatch::VPatch;
@@ -77,6 +77,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                     }
                     MineRouteCombinationPathResult::Failure { meta } => {
                         error!("failed to pathfind!");
+                        debug_failing(surface, meta);
                         break;
                     }
                 }

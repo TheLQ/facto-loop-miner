@@ -198,7 +198,7 @@ pub fn execute_route_batch(
     info!(
         "Route batch of {total_sequences} combinations had \
         {success_count} / {failure_count} success/failure, \
-        cost range {} to {} (over {}), \
+        cost range {} to {} (best {}), \
         attempts {failure_attempts_debug}, \
         res {}",
         cost.highest.to_formatted_string(&LOCALE),
@@ -262,7 +262,7 @@ fn execute_route_combination(
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
                 return MineRouteCombinationPathResult::Failure {
                     meta: FailingMeta {
-                        failing_routes: route_combination,
+                        all_routes: route_combination,
                         failing_all: debug_rail,
                         failing_dump: debug_all,
                         found_paths,
@@ -303,7 +303,7 @@ pub enum MineRouteCombinationPathResult {
 #[derive(Default)]
 pub struct FailingMeta {
     pub found_paths: Vec<MinePath>,
-    pub failing_routes: Vec<ExecutionRoute>,
+    pub all_routes: Vec<ExecutionRoute>,
     pub failing_dump: Vec<HopeLink>,
     pub failing_all: Vec<HopeLink>,
 }

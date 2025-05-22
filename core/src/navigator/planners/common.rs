@@ -1,5 +1,5 @@
 use crate::navigator::base_source::BaseSourceEighth;
-use crate::navigator::mine_executor::ExecutionRoute;
+use crate::navigator::mine_executor::{ExecutionRoute, FailingMeta};
 use crate::navigator::mine_permutate::CompletePlan;
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surface::pixel::Pixel;
@@ -13,6 +13,7 @@ use itertools::Itertools;
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::rc::Rc;
+use tracing::{error, warn};
 /*
 pub(super) fn debug_draw_base_sources(
     surface: &mut VSurface,
@@ -80,6 +81,67 @@ pub(super) fn debug_draw_failing_mines<'a>(
         }
     }
     surface.set_pixels(Pixel::EdgeWall, destinations).unwrap();
+}
+
+pub fn debug_failing(
+    surface: &mut VSurface,
+    FailingMeta {
+        found_paths,
+        mut all_routes,
+        failing_dump,
+        failing_all,
+    }: FailingMeta,
+) {
+    // draw all endpoints
+    surface
+        .set_pixels(
+            Pixel::Highlighter,
+            all_routes
+                .iter()
+                .flat_map(|v| [v.segment.start, v.segment.end])
+                .map(|v| *v.point())
+                .collect(),
+        )
+        .unwrap();
+
+    // split all_routes
+    let routes_found: Vec<ExecutionRoute> = all_routes
+        .extract_if(.., |v| {
+            found_paths
+                .iter()
+                .any(|found_path| found_path.mine_base == v.location)
+        })
+        .collect();
+    let routes_notfound = all_routes;
+
+    // draw paths (now that we don't need it anymore)
+    error!(
+        "failed to pathfind but writing {} paths anyway",
+        found_paths.len()
+    );
+    for path in found_paths {
+        surface.add_mine_path(path).unwrap();
+    }
+
+    warn!(
+        "Found {} notfound {}",
+        routes_found.len(),
+        routes_notfound.len()
+    );
+    // draw found
+    for route in routes_found {
+        route
+            .location
+            .draw_area_buffered_replacing(surface, Pixel::Stone);
+    }
+    // draw not found
+    for route in routes_notfound {
+        warn!("failing at {:?}", route.location.area_buffered());
+        route
+            .location
+            .draw_area_buffered_replacing(surface, Pixel::SteelChest);
+    }
+    surface.save_pixel_to_oculante();
 }
 
 pub(super) fn draw_prep(surface: &mut VSurface, batches: &[MineSelectBatch]) {

@@ -166,6 +166,10 @@ impl MineLocation {
         surface.set_pixel_entity_swap(surface.get_pixel_entity_id_at(&needle), new_points, false)
     }
 
+    pub fn draw_area_buffered_replacing(&self, surface: &mut VSurface, pixel: Pixel) {
+        surface.draw_square_area_replacing(&self.area_buffered, Pixel::MineNoTouch, pixel)
+    }
+
     /// Don't take self as MineLocation already moved / don't need it
     pub fn draw_area_no_touch_to_buffered(
         surface: &mut VSurface,

@@ -3,7 +3,7 @@ use crate::navigator::mine_executor::{
 };
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
-use crate::navigator::planners::common::draw_prep;
+use crate::navigator::planners::common::{debug_failing, draw_prep};
 use crate::state::machine::StepParams;
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
@@ -100,49 +100,18 @@ fn process_batch(
             }
             true
         }
-        MineRouteCombinationPathResult::Failure {
-            meta:
-                FailingMeta {
-                    found_paths,
-                    failing_routes,
-                    failing_dump,
-                    failing_all,
-                },
-        } => {
+        MineRouteCombinationPathResult::Failure { meta } => {
             if 1 + 1 == 2 {
-                surface
-                    .set_pixels(
-                        Pixel::Highlighter,
-                        failing_routes
-                            .iter()
-                            .flat_map(|v| [v.segment.start, v.segment.end])
-                            .map(|v| *v.point())
-                            .collect(),
-                    )
-                    .unwrap();
-
-                // continue mode
-                let (trigger_mine, rest) = failing_routes.split_first().unwrap();
-
-                error!(
-                    "failed to pathfind but writing {} paths anyway",
-                    found_paths.len()
-                );
-                for path in found_paths {
-                    surface.add_mine_path(path).unwrap();
-                }
-
-                trigger_mine
-                    .location
-                    .draw_area_buffered_replacing(surface, Pixel::Highlighter);
-                for entry in rest {
-                    warn!("failing at {:?}", entry.location.area_buffered());
-                    entry
-                        .location
-                        .draw_area_buffered_replacing(surface, Pixel::EdgeWall);
-                }
+                debug_failing(surface, meta);
                 return false;
             }
+
+            let FailingMeta {
+                found_paths,
+                all_routes: failing_routes,
+                failing_dump,
+                failing_all,
+            } = meta;
 
             error!("failed to pathfind");
             for path in found_paths {
