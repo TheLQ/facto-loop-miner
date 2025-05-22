@@ -48,7 +48,7 @@ impl MineSelectBatch {
 /// - 80 generates way less 1, more 2, good 3,4
 /// - 160 generates mostly 3 - very good
 /// - 220 generates 10 batch, too big
-const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
+pub const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 
 /// Input:
 ///  - Raw patch list
@@ -69,18 +69,7 @@ pub fn select_mines_and_sources(
     ))
     .into_refcells();
 
-    let patch_groups = group_nearby_patches(
-        surface,
-        // ignores UraniumOre because it's only for
-        // electric production (solar instead) and military (unused)
-        &[
-            Pixel::IronOre,
-            Pixel::CopperOre,
-            Pixel::Stone,
-            Pixel::Coal,
-            Pixel::CrudeOil,
-        ],
-    );
+    let patch_groups = group_nearby_patches(surface);
     let total_patches: usize = patch_groups.iter().map(|v| v.surface_patches_len()).sum();
     info!("selected {total_patches} patches");
 
@@ -131,7 +120,17 @@ pub fn select_mines_and_sources(
 }
 
 /// Second grouping pass (after opencv), now by grouping different resource patches
-fn group_nearby_patches(surface: &VSurface, resources: &[Pixel]) -> Vec<MineLocation> {
+pub fn group_nearby_patches(surface: &VSurface) -> Vec<MineLocation> {
+    // ignores UraniumOre because it's only for
+    // electric production (solar instead) and military (unused)
+    let resources = [
+        Pixel::IronOre,
+        Pixel::CopperOre,
+        Pixel::Stone,
+        Pixel::Coal,
+        Pixel::CrudeOil,
+    ];
+
     let patches: Vec<&VPatch> = surface
         .get_patches_slice()
         .iter()

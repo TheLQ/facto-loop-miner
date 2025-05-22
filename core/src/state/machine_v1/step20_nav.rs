@@ -1,3 +1,4 @@
+use crate::navigator::planners::altare::start_altare_planner;
 // use crate::navigator::planners::altare::start_altare_planner;
 use crate::navigator::planners::debugplan::start_debug_planner;
 use crate::navigator::planners::ruze::start_ruze_planner;
@@ -22,9 +23,9 @@ impl Step for Step20 {
         let mut surface = VSurface::load_from_last_step(&params)?;
         // surface.validate();
 
-        match 1 {
+        match 2 {
             1 => start_ruze_planner(&mut surface, &params),
-            // 2 => start_altare_planner(&mut surface),
+            2 => start_altare_planner(&mut surface),
             9 => start_debug_planner(&mut surface)?,
             _ => unimplemented!(),
         }
