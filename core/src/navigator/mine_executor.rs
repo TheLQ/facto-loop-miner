@@ -18,6 +18,7 @@ use tracing::{debug, info};
 pub fn execute_route_batch(
     surface: &VSurface,
     sequences: Vec<ExecutionSequence>,
+    pre_callback: impl Fn(&mut VSurface, &[ExecutionRoute], usize) + Send + Sync,
 ) -> MineRouteCombinationPathResult {
     let total_sequences = sequences.len();
 
@@ -69,7 +70,12 @@ pub fn execute_route_batch(
             sequences
                 .into_par_iter()
                 .map(|ExecutionSequence { routes }| {
-                    execute_route_combination(execution_surface, routes, total_sequences)
+                    execute_route_combination(
+                        execution_surface,
+                        routes,
+                        total_sequences,
+                        &pre_callback,
+                    )
                 })
                 .collect()
         })
@@ -77,7 +83,12 @@ pub fn execute_route_batch(
         sequences
             .into_iter()
             .map(|ExecutionSequence { routes }| {
-                execute_route_combination(&execution_surface, routes, total_sequences)
+                execute_route_combination(
+                    &execution_surface,
+                    routes,
+                    total_sequences,
+                    &pre_callback,
+                )
             })
             .collect()
     };
@@ -218,6 +229,7 @@ fn execute_route_combination(
     surface: &VSurface,
     route_combination: Vec<ExecutionRoute>,
     total_sequences: usize,
+    pre_callback: impl Fn(&mut VSurface, &[ExecutionRoute], usize),
 ) -> MineRouteCombinationPathResult {
     let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
     if my_counter % 100 == 0 {
@@ -240,6 +252,7 @@ fn execute_route_combination(
 
     let mut found_paths = Vec::new();
     for (i, route) in route_combination.iter().enumerate() {
+        pre_callback(&mut working_surface, &route_combination, i);
         let route_result = mori2_start(
             &working_surface,
             route.segment.clone(),

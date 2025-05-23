@@ -42,16 +42,30 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
             QuesterScanResult::NoPatchesInScan => {
                 quester.origin_index += 1;
             }
-            QuesterScanResult::NewPatchesInScanArea(patches) => {
-                let buffer_areas: Vec<RemovedEntity> = patches
-                    .iter()
-                    .map(|p| p.draw_area_buffered_to_no_touch(surface))
-                    .collect();
+            QuesterScanResult::NewPatchesInScanArea(mut patches) => {
+                let mut mines: Vec<MineLocation> = Vec::new();
+
+                for _ in 0..(BATCH_SIZE_MAX - 1) {
+                    if let Some(mine) = surface.remove_mine_path_pop() {
+                        mines.push(mine.mine_base);
+                        base_source_positive.borrow_mut().undo_one();
+                    }
+                }
+                while mines.len() != BATCH_SIZE_MAX {
+                    mines.push(patches.remove(0).clone());
+                }
+
+                drop(patches);
+
+                // let buffer_areas: Vec<RemovedEntity> = mines
+                //     .iter()
+                //     .map(|p| p.draw_area_buffered_to_no_touch(surface))
+                //     .collect();
                 let possible_routes = get_possible_routes_for_batch(
                     surface,
                     MineSelectBatch {
                         base_sources: base_source_positive.clone(),
-                        mines: patches.into_iter().take(BATCH_SIZE_MAX).cloned().collect(),
+                        mines,
                     },
                 );
                 info!("found {} sequences", possible_routes.sequences.len());
@@ -60,16 +74,25 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                     pretty_print_error(e);
                     panic!("uhh");
                 }
-                let route_result = execute_route_batch(surface, possible_routes.sequences);
+                let route_result = execute_route_batch(
+                    surface,
+                    possible_routes.sequences,
+                    |surface, execution, i| {
+                        execution[i]
+                            .location
+                            .draw_area_buffered_to_no_touch(surface);
+                        if i != 0 {
+                            execution[i - 1].location.draw_area_buffered(surface)
+                        }
+                    },
+                );
                 match route_result {
                     MineRouteCombinationPathResult::Success { paths, routes } => {
                         base_source_positive
                             .borrow_mut()
                             .advance_by(paths.len())
                             .unwrap();
-                        for buffer_area in buffer_areas {
-                            MineLocation::draw_area_no_touch_to_buffered(surface, buffer_area);
-                        }
+                        routes.last().unwrap().location.draw_area_buffered(surface);
                         for path in paths {
                             surface.add_mine_path(path).unwrap();
                         }

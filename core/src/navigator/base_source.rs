@@ -132,6 +132,11 @@ impl BaseSourceEighth {
         assert_eq!(res.len(), size);
         res
     }
+
+    pub fn undo_one(&mut self) {
+        self.next -= 1;
+        assert!(self.next > 1)
+    }
 }
 
 impl Iterator for BaseSourceEighth {

@@ -82,7 +82,7 @@ fn process_batch(
                 each in range {num_per_batch_routes_min} {num_per_batch_routes_max}"
     );
     // let planned_combinations = vec![planned_combinations.remove(0)];
-    let res = execute_route_batch(surface, complete_plan.sequences);
+    let res = execute_route_batch(surface, complete_plan.sequences, |surface, execution, i| {});
     match res {
         MineRouteCombinationPathResult::Success { paths, routes } => {
             info!("pushing {} new mine paths", paths.len());

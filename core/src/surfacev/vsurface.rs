@@ -623,8 +623,10 @@ impl VSurface {
         Ok(())
     }
 
-    pub fn remove_mine_path_at_index(&mut self, index: usize) -> MinePath {
-        let mine_path = self.rail_paths.remove(index);
+    pub fn remove_mine_path_pop(&mut self) -> Option<MinePath> {
+        let Some(mine_path) = self.rail_paths.pop() else {
+            return None;
+        };
 
         let removed_points = mine_path.total_area();
         for point in &removed_points {
@@ -635,7 +637,7 @@ impl VSurface {
         }
 
         self.pixels.remove_positions(&removed_points);
-        mine_path
+        Some(mine_path)
     }
 
     //
