@@ -34,7 +34,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
     let mut successor_sum = Duration::default();
     let res_sum = Duration::default();
     // ::<_, _, _, _, _, _, _, ParentProcessor>
-    let pathfind = astar_mori(
+    let pathfind = astar_mori::<_, _, _, _, _, _, _, 5>(
         start_link.clone(),
         |head| {
             let watch = BasicWatch::start();
@@ -59,9 +59,18 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
             res
             // p.start.distance_bird(&end_link.start) < 5.0
         },
-        // |processor, _cur_link| {
-        //     processor.total_links += 1;
-        // },
+        |path| {
+            path.sort_by_key(|v| v.pos_start());
+
+            let mut i = 0;
+            while i + 1 < path.len() {
+                if path[i].pos_start() == path[i + 1].pos_start() {
+                    return false;
+                }
+                i += 1;
+            }
+            true
+        },
     );
 
     let success = pathfind.is_ok();
