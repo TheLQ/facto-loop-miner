@@ -308,7 +308,11 @@ impl VSurface {
     /// https://github.com/woelper/oculante
     pub fn save_pixel_to_oculante(&self) {
         let build_watch = BasicWatch::start();
-        let address: SocketAddr = "192.168.66.21:5689".parse().unwrap();
+        let address: SocketAddr = ("peko.g.xana.sh", 5689)
+            .to_socket_addrs()
+            .unwrap()
+            .next()
+            .unwrap();
         debug!("Saving RGB dump image to oculante {address}");
         let stream = TcpStream::connect(address).unwrap();
 
