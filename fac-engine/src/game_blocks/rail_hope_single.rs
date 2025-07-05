@@ -385,16 +385,20 @@ impl RailHopeLink for HopeLink {
         }
     }
 
-    fn area(&self) -> Vec<VPoint> {
-        let mut area = Vec::new();
+    fn area(&self, output: &mut Vec<VPoint>) {
         match &self.rtype {
             HopeLinkType::Straight { length } => {
                 for i in 0..*length {
                     let rail = self
                         .start
                         .move_direction_usz(self.next_direction, i * RAIL_STRAIGHT_DIAMETER);
-                    area.extend(rail.area_2x2());
+                    output.extend(rail.area_2x2());
                 }
+
+                // let size = area.len();
+                // if !matches!(size, 8 | 52) {
+                //     panic!("uhh {size}")
+                // }
             }
             HopeLinkType::Turn90 { clockwise } => {
                 // todo: hack just goes at an angle. Probably fine?
@@ -406,19 +410,23 @@ impl RailHopeLink for HopeLink {
 
                 let mut rail = self.start;
                 for _ in 0..5 {
-                    area.extend(rail.area_2x2());
+                    output.extend(rail.area_2x2());
                     rail = rail.move_direction_usz(unrotated, RAIL_STRAIGHT_DIAMETER);
                 }
                 for _ in 0..6 {
-                    area.extend(rail.area_2x2());
+                    output.extend(rail.area_2x2());
                     rail = rail.move_direction_usz(self.next_direction, RAIL_STRAIGHT_DIAMETER);
                 }
+
+                // let size = area.len();
+                // if !matches!(size, 52 | 44) {
+                //     panic!("uhh {size}")
+                // }
             }
             HopeLinkType::Shift45 { .. } => {
                 todo!("shift 45 area")
             }
         }
-        area
     }
 }
 

@@ -28,5 +28,15 @@ pub trait RailHopeLink {
 
     fn pos_next(&self) -> VPoint;
 
-    fn area(&self) -> Vec<VPoint>;
+    fn area(&self, output: &mut Vec<VPoint>);
+
+    fn area_vec(&self) -> Vec<VPoint> {
+        let mut res = Vec::new();
+        res.reserve(104);
+        self.area(&mut res);
+        if !matches!(res.len(), 104) {
+            panic!("unknown {}", res.len());
+        }
+        res
+    }
 }

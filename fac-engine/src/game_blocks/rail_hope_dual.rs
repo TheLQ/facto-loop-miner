@@ -251,24 +251,22 @@ impl RailHopeLink for HopeDualLink {
         self.end
     }
 
-    fn area(&self) -> Vec<VPoint> {
+    fn area(&self, output: &mut Vec<VPoint>) {
         // self.links.iter().flat_map(|v| match v {
         //     BackingLink::Straight(link) => [link],
         //     BackingLink::Turn90(links) => (links),
         // })
         // self.links
-        let mut res = Vec::new();
         for link in &self.singles {
             match link {
-                BackingLink::Single(link) => res.extend(link.area()),
+                BackingLink::Single(link) => link.area(output),
                 BackingLink::MultiTurn(links) => {
                     for sub in links {
-                        res.extend(sub.area())
+                        sub.area(output)
                     }
                 }
             }
         }
-        res
     }
 }
 

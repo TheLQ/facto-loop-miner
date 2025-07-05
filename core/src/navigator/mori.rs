@@ -196,7 +196,7 @@ fn into_buildable_link(
         return None;
     }
     // new_link.pos_start().assert_step_rail();
-    let area = new_link.area();
+    let area = new_link.area_vec();
     if surface.is_points_free_unchecked(&area) {
         Some(new_link)
     } else {

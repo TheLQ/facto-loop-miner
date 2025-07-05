@@ -167,11 +167,10 @@ impl RailHopeLink for HopeSodaLink {
         self.center
     }
 
-    fn area(&self) -> Vec<VPoint> {
-        self.links_for_soda()
-            .iter()
-            .flat_map(|v| v.area())
-            .collect()
+    fn area(&self, output: &mut Vec<VPoint>) {
+        for link in self.links_for_soda() {
+            link.area(output);
+        }
     }
 }
 

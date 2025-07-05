@@ -33,7 +33,10 @@ pub struct MineLocation {
 
 impl MinePath {
     pub fn total_area(&self) -> Vec<VPoint> {
-        let mut new_points: Vec<VPoint> = self.links.iter().flat_map(|v| v.area()).collect_vec();
+        let mut new_points: Vec<VPoint> = Vec::new();
+        for link in &self.links {
+            link.area(&mut new_points);
+        }
 
         let old_len = new_points.len();
         new_points.sort();
