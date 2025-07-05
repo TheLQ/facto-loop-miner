@@ -137,7 +137,7 @@ impl RailHopeLink for HopeLink {
         let new_origin = self.pos_next();
         trace!("writing direction {}", self.next_direction);
 
-        let mut rails = Vec::new();
+        let mut rails = Vec::with_capacity(length);
         for i in 0..length {
             rails.push(HopeFactoRail {
                 position: new_origin
@@ -183,7 +183,7 @@ impl RailHopeLink for HopeLink {
         // 1,1 to cancel RailStraight's to_fac offset
         let new_origin = self.pos_next();
         let new_origin_fac = new_origin + VPOINT_ONE;
-        let mut rails = Vec::new();
+        let mut rails = Vec::with_capacity(3);
 
         // curve 1
         let first_curve_pos = new_origin_fac
