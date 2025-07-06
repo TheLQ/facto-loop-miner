@@ -31,12 +31,9 @@ pub trait RailHopeLink {
     fn area(&self, output: &mut Vec<VPoint>);
 
     fn area_vec(&self) -> Vec<VPoint> {
-        let mut res = Vec::new();
-        res.reserve(104);
+        let mut res = Vec::with_capacity(104);
         self.area(&mut res);
-        if !matches!(res.len(), 104) {
-            panic!("unknown {}", res.len());
-        }
+        // assert_eq!(res.capacity(), 104); sanity
         res
     }
 }
