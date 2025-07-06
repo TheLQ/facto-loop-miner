@@ -76,10 +76,10 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                 );
                 info!("found {} sequences", possible_routes.sequences.len());
 
-                if let Err(e) = surface.load_clone_prep(&params.step_out_dir) {
-                    pretty_print_error(e);
-                    panic!("uhh");
-                }
+                // if let Err(e) = surface.load_clone_prep(&params.step_out_dir) {
+                //     pretty_print_error(e);
+                //     panic!("uhh");
+                // }
                 let route_result = execute_route_batch(
                     surface,
                     possible_routes.sequences,
