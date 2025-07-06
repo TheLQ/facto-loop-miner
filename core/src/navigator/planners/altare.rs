@@ -115,7 +115,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
     }
 }
 
-const BATCH_SIZE_MAX: usize = 4;
+const BATCH_SIZE_MAX: usize = 3;
 
 struct Quester {
     all_mine_locations: Vec<MineLocation>,
@@ -169,8 +169,7 @@ impl Quester {
             return QuesterScanResult::NoPatchesInScan;
         }
         new_patches_in_scan_area.sort_by(|a, b| {
-            VPoint::sort_by_direction(
-                *self.origin_base.direction(),
+            VPoint::sort_by_x_then_y_column(
                 a.area_min().point_center(),
                 b.area_min().point_center(),
             )
