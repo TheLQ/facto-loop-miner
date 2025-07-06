@@ -161,6 +161,7 @@ where
     pub fn is_points_free_unchecked_iter(&self, points: &[VPoint]) -> bool {
         let xy_lookup = self.xy_to_entity.as_slice();
 
+        // todo: sanity wtf? Why is every
         if !matches!(points.len(), 104) {
             panic!("processing {}", points.len());
         }
@@ -177,6 +178,8 @@ where
             let diameter = Simd::splat(self.diameter() as i32);
 
             let (chunks, remainder) = points.as_chunks::<POINTS_SIZE>();
+            assert_eq!(remainder.len(), 0); // todo: holy magic wtf
+
             for chunk in chunks {
                 let mut as_x: Simd<i32, POINTS_SIZE> = Simd::splat(0);
                 let mut as_y: Simd<i32, POINTS_SIZE> = Simd::splat(0);

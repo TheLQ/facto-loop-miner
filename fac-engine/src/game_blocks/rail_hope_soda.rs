@@ -81,14 +81,13 @@ impl HopeSodaLink {
     }
 
     fn links_for_soda(&self) -> Vec<HopeLink> {
-        let mut output;
-
         let mut sources = self.links_source();
         match self.stype {
             SodaType::Straight => {
-                output = Vec::with_capacity(2);
+                let mut output = Vec::with_capacity(2);
                 output.extend(sources.map(|v| v.add_straight(SODA_RAILS_NUM)));
-                assert_eq!(output.len(), 2);
+                // assert_eq!(output.len(), 2); // sanity
+                output
             }
             SodaType::Turn90 { clockwise } => {
                 if let FacDirectionQuarter::East | FacDirectionQuarter::South =
@@ -98,14 +97,13 @@ impl HopeSodaLink {
                 }
 
                 // sources.swap(0, 1);
-                output = Vec::with_capacity(4);
+                let mut output = Vec::with_capacity(4);
                 output.extend(create_turn_link_from(&sources[0], clockwise));
                 output.push(sources[1].add_turn90(clockwise));
-                assert_eq!(output.len(), 4);
+                // assert_eq!(output.len(), 4); // sanity
+                output
             }
         }
-
-        output
     }
 
     pub fn corners(&self) -> [VPoint; 4] {
@@ -253,5 +251,26 @@ mod test {
 
         let bp = output.into_blueprint_string().unwrap();
         assert_eq!(bp, "asd");
+    }
+
+    #[test]
+    fn area_wtf() {
+        let source = HopeSodaLink::new_soda_straight(VPOINT_TEN, FacDirectionQuarter::East);
+
+        // todo: wtf???
+        const MAGIC: usize = 104;
+
+        let straight = source.add_straight_section();
+        assert_eq!(straight.area_vec().len(), MAGIC);
+
+        let turn_left = source.add_turn90(false);
+        assert_eq!(turn_left.area_vec().len(), MAGIC);
+
+        let turn_right = source.add_turn90(true);
+        assert_eq!(turn_right.area_vec().len(), MAGIC);
+
+        assert_ne!(straight.area_vec(), turn_left.area_vec());
+        assert_ne!(straight.area_vec(), turn_right.area_vec());
+        assert_ne!(turn_left.area_vec(), turn_right.area_vec());
     }
 }
