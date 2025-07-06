@@ -52,10 +52,10 @@ pub fn execute_route_batch(
 
     let routing_watch = BasicWatch::start();
 
-    const EXECUTE_THREADED: bool = true;
+    const EXECUTE_THREADED: bool = false;
     let route_results: Vec<MineRouteCombinationPathResult> = if EXECUTE_THREADED {
         let default_threads = 32; // todo: numa rayon::current_num_threads();
-        const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 1.5;
+        const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 1.0;
         let num_threads = (default_threads as f32 * THREAD_OVERSUBSCRIBE_PERCENT) as usize;
         info!(
             "default threads are {} upgraded to {}",
@@ -82,6 +82,7 @@ pub fn execute_route_batch(
     } else {
         sequences
             .into_iter()
+            // .take(40)
             .map(|ExecutionSequence { routes }| {
                 execute_route_combination(
                     &execution_surface,

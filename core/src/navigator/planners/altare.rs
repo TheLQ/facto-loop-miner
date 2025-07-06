@@ -32,6 +32,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
         origin_sign_pos: true,
     };
 
+    // let mut limiter_counter = 0;
     loop {
         match quester.scan_patches(&surface) {
             QuesterScanResult::YAxisEnding => {
@@ -43,6 +44,11 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                 quester.origin_index += 1;
             }
             QuesterScanResult::NewPatchesInScanArea(mut patches) => {
+                // if limiter_counter >= 2 {
+                //     info!("limiter {limiter_counter}");
+                //     break;
+                // }
+                // limiter_counter += 1;
                 let mut mines: Vec<MineLocation> = Vec::new();
 
                 for _ in 0..(BATCH_SIZE_MAX - 1) {
