@@ -207,14 +207,25 @@ pub fn execute_route_batch(
         .sorted_by_key(|(k, _v)| *k)
         .map(|(k, v)| format!("{}:{}", k, v))
         .join("|");
+    let deepest_depth = match &res {
+        MineRouteCombinationPathResult::Failure { .. } => "FAIL".into(),
+        MineRouteCombinationPathResult::Success { paths, .. } => {
+            let mut deepest_depth = 0;
+            for path in paths {
+                deepest_depth = deepest_depth.max(path.links.len());
+            }
+            format!("{deepest_depth}")
+        }
+    };
     info!(
         "Route batch of {total_sequences} combinations had \
         {success_count} / {failure_count} success/failure, \
         cost range {} to {} (best {}), \
         attempts {failure_attempts_debug}, \
+        depth {deepest_depth}, \
         res {}",
-        cost.highest.to_formatted_string(&LOCALE),
         cost.lowest.to_formatted_string(&LOCALE),
+        cost.highest.to_formatted_string(&LOCALE),
         cost.tested,
         res.as_ref(),
     );

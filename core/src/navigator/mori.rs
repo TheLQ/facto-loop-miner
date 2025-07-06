@@ -75,8 +75,12 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
 
     let success = pathfind.is_ok();
 
+    let depth: String = match &pathfind {
+        Err(_) => "FAIL".into(),
+        Ok((links, cost)) => format!("{}", links.len()),
+    };
     info!(
-        " - {:>9} executions {:>9} found {:>8} nexts {:>6} cost {:>6} summed {:>5} res {:>8} total  {success} success",
+        " - {:>9} executions {:>9} found {:>8} nexts {:>6} cost {:>6} summed {:>5} res {:>8} total  {success:>5} success {depth:>4} depth",
         watch_data.executions.to_formatted_string(&LOCALE),
         watch_data.found_successors.to_formatted_string(&LOCALE),
         BasicWatchResult(watch_data.nexts),
@@ -114,7 +118,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
 #[derive(Default)]
 pub(crate) struct ParentProcessor {
     // parent_turns: usize,
-    total_links: usize,
+    // total_links: usize,
 }
 
 #[derive(Default)]
@@ -154,12 +158,6 @@ fn successors(
     watch_data: &mut WatchData,
 ) -> Vec<(HopeSodaLink, u32)> {
     watch_data.executions += 1;
-    // let head = path.first().unwrap();
-
-    // if processor.total_links > 200 {
-    //     // warn!("too many links");
-    //     return Vec::new();
-    // }
 
     let watch = BasicWatch::start();
     let nexts = [
