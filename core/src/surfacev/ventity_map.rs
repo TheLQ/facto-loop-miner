@@ -20,6 +20,7 @@ use std::hash::Hash;
 use std::io::ErrorKind;
 use std::mem;
 use std::path::Path;
+use std::simd::Simd;
 use tracing::debug;
 
 /// Collection of entities and xy positions they cover
