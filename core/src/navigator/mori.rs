@@ -60,6 +60,12 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
             // p.start.distance_bird(&end_link.start) < 5.0
         },
         |path| {
+            // max depth alarm
+            if path.len() > 200 {
+                return false;
+            }
+
+            // sequential compare
             path.sort_by_key(|v| v.pos_start());
 
             let mut i = 0;
@@ -195,6 +201,7 @@ fn into_buildable_link(
     }
     // new_link.pos_start().assert_step_rail();
     let area = new_link.area_vec();
+    assert_eq!(area.len(), 104);
     if surface.is_points_free_unchecked(&area) {
         Some(new_link)
     } else {
