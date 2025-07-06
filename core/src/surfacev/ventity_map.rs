@@ -160,10 +160,44 @@ where
 
     pub fn is_points_free_unchecked_iter(&self, points: &[VPoint]) -> bool {
         let xy_lookup = self.xy_to_entity.as_slice();
-        // !self.is_point_out_of_bounds(v)
-        points
-            .iter()
-            .all(|v| xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX)
+
+        if !matches!(points.len(), 104) {
+            panic!("processing {}", points.len());
+        }
+
+        // This is an extremely hot function. Attempt SIMD
+        if false {
+            points
+                .iter()
+                .all(|v| xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX)
+        } else {
+            const POINTS_SIZE: usize = 8;
+
+            let radius = Simd::splat(self.radius as i32);
+            let diameter = Simd::splat(self.diameter() as i32);
+
+            let (chunks, remainder) = points.as_chunks::<POINTS_SIZE>();
+            for chunk in chunks {
+                let mut as_x: Simd<i32, POINTS_SIZE> = Simd::splat(0);
+                let mut as_y: Simd<i32, POINTS_SIZE> = Simd::splat(0);
+                for i in 0..POINTS_SIZE {
+                    as_x[i] = chunk[i].x();
+                    as_y[i] = chunk[i].y();
+                }
+
+                let indexes = diameter * (as_y + radius) + (as_x + radius);
+                if !indexes
+                    .as_array()
+                    .into_iter()
+                    .all(|i| xy_lookup[*i as usize] == EMPTY_XY_INDEX)
+                {
+                    return false;
+                }
+            }
+            remainder
+                .into_iter()
+                .all(|v| xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX)
+        }
     }
     //</editor-fold>
 
