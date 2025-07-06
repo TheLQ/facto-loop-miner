@@ -159,6 +159,7 @@ where
         !not_free
     }
 
+    // #[inline(never)]
     pub fn is_points_free_unchecked_iter(&self, points: &[VPoint]) -> bool {
         let xy_lookup = self.xy_to_entity.as_slice();
 
