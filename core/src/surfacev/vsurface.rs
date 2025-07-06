@@ -168,8 +168,7 @@ impl VSurface {
     }
 
     pub fn load_clone_prep(&mut self, clone_prep_dir: &Path) -> VResult<()> {
-        self.pixels
-            .load_clone_prep(&path_pixel_xy_indexes_clone(clone_prep_dir))
+        self.pixels.load_clone_prep(&path_pixel_xy_indexes_clone())
     }
 
     //</editor-fold>
@@ -782,8 +781,8 @@ fn path_pixel_xy_indexes(out_dir: &Path) -> PathBuf {
     out_dir.join("pixel-xy-indexes.dat")
 }
 
-fn path_pixel_xy_indexes_clone(out_dir: &Path) -> PathBuf {
-    out_dir.join("pixel-xy-indexes-clone.dat")
+fn path_pixel_xy_indexes_clone() -> PathBuf {
+    Path::new("/tmp/pixel-xy-indexes-clone.dat").into()
 }
 
 // fn path_entity_xy_indexes(out_dir: &Path) -> PathBuf {
