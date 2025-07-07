@@ -104,7 +104,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                         }
                         surface.save_pixel_to_oculante();
                     }
-                    MineRouteCombinationPathResult::Failure { meta } => {
+                    MineRouteCombinationPathResult::Failure(meta) => {
                         error!("failed to pathfind!");
                         debug_failing(surface, meta);
                         break;

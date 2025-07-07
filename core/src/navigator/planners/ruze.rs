@@ -100,7 +100,7 @@ fn process_batch(
             }
             true
         }
-        MineRouteCombinationPathResult::Failure { meta } => {
+        MineRouteCombinationPathResult::Failure(meta) => {
             if 1 + 1 == 2 {
                 debug_failing(surface, meta);
                 return false;

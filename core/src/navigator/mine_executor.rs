@@ -127,18 +127,14 @@ pub fn execute_route_batch(
     let mut success_count = 0;
     let mut failure_count = 0;
     let res: MineRouteCombinationPathResult = route_results.into_iter().fold(
-        MineRouteCombinationPathResult::Failure {
-            meta: FailingMeta::default(),
-        },
+        MineRouteCombinationPathResult::Failure(FailingMeta::default()),
         |best, cur_result| {
             let cur_paths = match &cur_result {
                 MineRouteCombinationPathResult::Success { paths, .. } => {
                     success_count += 1;
                     paths
                 }
-                MineRouteCombinationPathResult::Failure {
-                    meta: FailingMeta { found_paths, .. },
-                } => {
+                MineRouteCombinationPathResult::Failure(FailingMeta { found_paths, .. }) => {
                     let total = failure_attempts_per_len
                         .entry(found_paths.len())
                         .or_default();
@@ -177,13 +173,10 @@ pub fn execute_route_batch(
                     cur_result
                 }
                 (
-                    MineRouteCombinationPathResult::Failure {
-                        meta:
-                            FailingMeta {
-                                found_paths: best_paths,
-                                ..
-                            },
-                    },
+                    MineRouteCombinationPathResult::Failure(FailingMeta {
+                        found_paths: best_paths,
+                        ..
+                    }),
                     MineRouteCombinationPathResult::Failure { .. },
                 ) => {
                     if cur_paths.len() > best_paths.len() {
@@ -218,7 +211,7 @@ pub fn execute_route_batch(
         }
     };
     info!(
-        "Route batch of {total_sequences} combinations had \
+        "Route batch of {total_sequences} sequences had \
         {success_count} / {failure_count} success/failure, \
         cost range {} to {} (best {}), \
         attempts {failure_attempts_debug}, \
@@ -260,7 +253,7 @@ fn execute_route_combination(
 
     let watch = BasicWatch::start();
     let mut working_surface = (*surface).clone();
-    info!("Cloned surface in {}", watch);
+    // info!("Cloned surface in {}", watch);
 
     let mut found_paths = Vec::new();
     for (i, route) in route_combination.iter().enumerate() {
@@ -285,14 +278,12 @@ fn execute_route_combination(
             }
             MoriResult::FailingDebug(debug_rail, debug_all) => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
-                return MineRouteCombinationPathResult::Failure {
-                    meta: FailingMeta {
-                        all_routes: route_combination,
-                        failing_all: debug_rail,
-                        failing_dump: debug_all,
-                        found_paths,
-                    },
-                };
+                return MineRouteCombinationPathResult::Failure(FailingMeta {
+                    all_routes: route_combination,
+                    failing_all: debug_rail,
+                    failing_dump: debug_all,
+                    found_paths,
+                });
             }
         }
     }
@@ -320,9 +311,7 @@ pub enum MineRouteCombinationPathResult {
         paths: Vec<MinePath>,
         routes: Vec<ExecutionRoute>,
     },
-    Failure {
-        meta: FailingMeta,
-    },
+    Failure(FailingMeta),
 }
 
 #[derive(Default)]
