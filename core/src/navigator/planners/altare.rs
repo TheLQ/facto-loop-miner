@@ -1,5 +1,5 @@
-use crate::navigator::base_source::BaseSource;
-use crate::navigator::mine_executor::{execute_route_batch, MineRouteCombinationPathResult};
+use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
+use crate::navigator::mine_executor::{execute_route_batch, ExecutorResult};
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{
     group_nearby_patches, MineSelectBatch, PERPENDICULAR_SCAN_WIDTH,
@@ -93,7 +93,8 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                     },
                 );
                 match route_result {
-                    MineRouteCombinationPathResult::Success { paths, routes } => {
+                    ExecutorResult::Success { paths, routes } => {
+                        is_prev_retry = false;
                         base_source_positive
                             .borrow_mut()
                             .advance_by(paths.len())
@@ -104,7 +105,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                         }
                         surface.save_pixel_to_oculante();
                     }
-                    MineRouteCombinationPathResult::Failure(meta) => {
+                    ExecutorResult::Failure(meta) => {
                         error!("failed to pathfind!");
                         debug_failing(surface, meta);
                         break;

@@ -19,7 +19,7 @@ pub fn execute_route_batch(
     surface: &VSurface,
     sequences: Vec<ExecutionSequence>,
     pre_callback: impl Fn(&mut VSurface, &[ExecutionRoute], usize) + Send + Sync,
-) -> MineRouteCombinationPathResult {
+) -> ExecutorResult {
     let total_sequences = sequences.len();
 
     // TODO: This isn't actually saving time
@@ -52,8 +52,9 @@ pub fn execute_route_batch(
 
     let routing_watch = BasicWatch::start();
 
-    const EXECUTE_THREADED: bool = false;
-    let route_results: Vec<MineRouteCombinationPathResult> = if EXECUTE_THREADED {
+    const EXECUTE_THREADED: bool = true;
+    let is_threaded = (sequences.len() > 1) ^ EXECUTE_THREADED;
+    let route_results: Vec<ExecutorResult> = if is_threaded {
         let default_threads = 32; // todo: numa rayon::current_num_threads();
         const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 1.0;
         let num_threads = (default_threads as f32 * THREAD_OVERSUBSCRIBE_PERCENT) as usize;
@@ -126,15 +127,15 @@ pub fn execute_route_batch(
     let mut failure_attempts_per_len: HashMap<usize, u16> = HashMap::new();
     let mut success_count = 0;
     let mut failure_count = 0;
-    let res: MineRouteCombinationPathResult = route_results.into_iter().fold(
-        MineRouteCombinationPathResult::Failure(FailingMeta::default()),
+    let res: ExecutorResult = route_results.into_iter().fold(
+        ExecutorResult::Failure(FailingMeta::default()),
         |best, cur_result| {
             let cur_paths = match &cur_result {
-                MineRouteCombinationPathResult::Success { paths, .. } => {
+                ExecutorResult::Success { paths, .. } => {
                     success_count += 1;
                     paths
                 }
-                MineRouteCombinationPathResult::Failure(FailingMeta { found_paths, .. }) => {
+                ExecutorResult::Failure(FailingMeta { found_paths, .. }) => {
                     let total = failure_attempts_per_len
                         .entry(found_paths.len())
                         .or_default();
@@ -146,38 +147,29 @@ pub fn execute_route_batch(
             let total_cost = cur_paths.iter().map(|v| v.cost).sum();
 
             match (&best, &cur_result) {
-                (
-                    MineRouteCombinationPathResult::Success { .. },
-                    MineRouteCombinationPathResult::Success { .. },
-                ) => {
+                (ExecutorResult::Success { .. }, ExecutorResult::Success { .. }) => {
                     if cost.apply_and_is_lowest(total_cost) {
                         cur_result
                     } else {
                         best
                     }
                 }
-                (
-                    MineRouteCombinationPathResult::Success { .. },
-                    MineRouteCombinationPathResult::Failure { .. },
-                ) => {
+                (ExecutorResult::Success { .. }, ExecutorResult::Failure { .. }) => {
                     // ignore failure after success
                     best
                 }
-                (
-                    MineRouteCombinationPathResult::Failure { .. },
-                    MineRouteCombinationPathResult::Success { .. },
-                ) => {
+                (ExecutorResult::Failure { .. }, ExecutorResult::Success { .. }) => {
                     // replace failure with success
                     cost = CostMeta::new();
                     cost.apply_and_is_lowest(total_cost);
                     cur_result
                 }
                 (
-                    MineRouteCombinationPathResult::Failure(FailingMeta {
+                    ExecutorResult::Failure(FailingMeta {
                         found_paths: best_paths,
                         ..
                     }),
-                    MineRouteCombinationPathResult::Failure { .. },
+                    ExecutorResult::Failure { .. },
                 ) => {
                     if cur_paths.len() > best_paths.len() {
                         cost = CostMeta::new();
@@ -201,8 +193,8 @@ pub fn execute_route_batch(
         .map(|(k, v)| format!("{}:{}", k, v))
         .join("|");
     let deepest_depth = match &res {
-        MineRouteCombinationPathResult::Failure { .. } => "FAIL".into(),
-        MineRouteCombinationPathResult::Success { paths, .. } => {
+        ExecutorResult::Failure { .. } => "FAIL".into(),
+        ExecutorResult::Success { paths, .. } => {
             let mut deepest_depth = 0;
             for path in paths {
                 deepest_depth = deepest_depth.max(path.links.len());
@@ -235,7 +227,7 @@ fn execute_route_combination(
     route_combination: Vec<ExecutionRoute>,
     total_sequences: usize,
     pre_callback: impl Fn(&mut VSurface, &[ExecutionRoute], usize),
-) -> MineRouteCombinationPathResult {
+) -> ExecutorResult {
     let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
     if my_counter % 100 == 0 {
         info!(
@@ -278,7 +270,7 @@ fn execute_route_combination(
             }
             MoriResult::FailingDebug(debug_rail, debug_all) => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
-                return MineRouteCombinationPathResult::Failure(FailingMeta {
+                return ExecutorResult::Failure(FailingMeta {
                     all_routes: route_combination,
                     failing_all: debug_rail,
                     failing_dump: debug_all,
@@ -289,7 +281,7 @@ fn execute_route_combination(
     }
 
     SUCCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
-    MineRouteCombinationPathResult::Success {
+    ExecutorResult::Success {
         paths: found_paths,
         routes: route_combination,
     }
@@ -306,7 +298,7 @@ pub struct ExecutionSequence {
 }
 
 #[derive(AsRefStr)]
-pub enum MineRouteCombinationPathResult {
+pub enum ExecutorResult {
     Success {
         paths: Vec<MinePath>,
         routes: Vec<ExecutionRoute>,
