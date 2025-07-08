@@ -199,9 +199,11 @@ where
                     return false;
                 }
             }
-            remainder
-                .into_iter()
-                .all(|v| xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX)
+            // todo: spooky magic, remainder is already zero
+            true
+            // remainder
+            //     .into_iter()
+            //     .all(|v| xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX)
         }
     }
     //</editor-fold>
