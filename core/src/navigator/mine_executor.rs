@@ -10,12 +10,11 @@ use itertools::Itertools;
 use num_format::ToFormattedString;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use rayon::ThreadPool;
-use std::cell::{LazyCell, OnceCell};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::LazyLock;
 use strum::AsRefStr;
-use tracing::{debug, info, span, trace, Level};
+use tracing::{info, span, trace, Level};
 
 /// Given thousands of possible route combinations, execute in parallel and find the best
 pub fn execute_route_batch(
@@ -24,6 +23,44 @@ pub fn execute_route_batch(
     flags: &[ExecuteFlags],
 ) -> ExecutorResult {
     let total_sequences = sequences.len();
+    let unique_mines = {
+        let mut seen: Vec<&MineLocation> = Vec::new();
+        for sequence in &sequences {
+            for route in &sequence.routes {
+                if !seen.contains(&&route.location) {
+                    seen.push(&route.location);
+                }
+            }
+        }
+        seen.len()
+    };
+
+    // dedupe is bad
+    {
+        let seq_segments: Vec<Vec<VSegment>> = sequences
+            .iter()
+            .map(|v| v.routes.iter().map(|v| v.segment.clone()).collect())
+            .collect();
+        let mut seq_segments_clean = seq_segments.clone();
+        seq_segments_clean.dedup();
+        seq_segments_clean.sort();
+        assert_eq!(
+            seq_segments_clean.len(),
+            total_sequences,
+            "dedupe detected {}",
+            seq_segments
+                .iter()
+                .map(|v| v.iter().map(|v| v.to_string()).join(","))
+                .join("\n")
+        );
+        trace!(
+            "segments\n{}",
+            seq_segments
+                .iter()
+                .map(|v| v.iter().map(|v| v.to_string()).join(","))
+                .join("\n")
+        );
+    };
 
     // TODO: This isn't actually saving time
     // // At this point
@@ -130,7 +167,7 @@ pub fn execute_route_batch(
             meta: FailingMeta::default(),
             seen_mines: Vec::new(),
         },
-        |mut best, mut cur_result| {
+        |best, cur_result| {
             let cur_paths = match &cur_result {
                 ExecutorResult::Success { paths, .. } => {
                     success_count += 1;
@@ -222,11 +259,13 @@ pub fn execute_route_batch(
             format!("{deepest_depth}")
         }
     };
+    let mode = if is_threaded { "P" } else { "S" };
     info!(
-        "Route batch of {total_sequences} sequences had \
+        "Batch {mode} of {total_sequences} sequences had \
         {success_count} / {failure_count} success/failure, \
-        cost range {} to {} (best {}), \
+        cost range {} .. {} (best {}), \
         attempts {failure_attempts_debug}, \
+        mines {unique_mines}, \
         depth {deepest_depth}, \
         res {}, \
         exec {execute_watch}",
@@ -266,7 +305,7 @@ fn execute_route_combination(
         )
     }
 
-    let watch = BasicWatch::start();
+    // let watch = BasicWatch::start();
     let mut working_surface = (*surface).clone();
     // info!("Cloned surface in {}", watch);
 
