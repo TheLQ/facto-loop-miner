@@ -120,7 +120,10 @@ pub fn debug_failing(
         found_paths.len()
     );
     for path in found_paths {
-        surface.add_mine_path(path).unwrap();
+        // path.
+        surface
+            .add_mine_path_with_pixel(path, Pixel::Water)
+            .unwrap();
     }
 
     warn!(
