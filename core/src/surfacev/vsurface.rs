@@ -614,6 +614,11 @@ impl VSurface {
     }
 
     pub fn add_mine_path_with_pixel(&mut self, mine_path: MinePath, pixel: Pixel) -> VResult<()> {
+        trace!(
+            "{} {}",
+            nu_ansi_term::Color::Red.paint("mine add"),
+            mine_path.segment
+        );
         let new_points = mine_path.total_area();
         self.set_pixels(pixel, new_points)?;
 
@@ -626,11 +631,31 @@ impl VSurface {
         Ok(())
     }
 
+    pub fn remove_mine_path_at(&mut self, index: usize) -> Option<MinePath> {
+        trace!(
+            "{} at {index} total {}",
+            nu_ansi_term::Color::Red.paint("mine remove"),
+            self.rail_paths.len()
+        );
+        let mine_path = self.rail_paths.remove(index);
+        self.remove_mine_path_cleanup(&mine_path);
+        Some(mine_path)
+    }
+
     pub fn remove_mine_path_pop(&mut self) -> Option<MinePath> {
+        trace!(
+            "{} pop total {}",
+            nu_ansi_term::Color::Red.paint("mine remove"),
+            self.rail_paths.len()
+        );
         let Some(mine_path) = self.rail_paths.pop() else {
             return None;
         };
+        self.remove_mine_path_cleanup(&mine_path);
+        Some(mine_path)
+    }
 
+    fn remove_mine_path_cleanup(&mut self, mine_path: &MinePath) {
         let removed_points = mine_path.total_area();
         for point in &removed_points {
             let existing = self.get_pixel(point);
@@ -640,7 +665,6 @@ impl VSurface {
         }
 
         self.pixels.remove_positions(&removed_points);
-        Some(mine_path)
     }
 
     //

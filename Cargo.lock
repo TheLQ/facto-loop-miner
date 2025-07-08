@@ -687,6 +687,7 @@ dependencies = [
  "kiddo",
  "lazy_static",
  "mimalloc",
+ "nu-ansi-term 0.50.1",
  "num-format",
  "pathfinding",
  "rayon",

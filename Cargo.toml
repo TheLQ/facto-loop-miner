@@ -7,6 +7,7 @@ default-members = ["core"]
 
 [profile.release]
 #lto = "fat"
+#debug = true
 
 [workspace.dependencies]
 #
@@ -20,3 +21,4 @@ itertools = "0.14.0"
 serde = { version = "1.0.216", features = ["derive"] }
 serde_json = { version = "1.0.133" }
 simd-json = { version = "0.14.3", features = ["serde"] }
+nu-ansi-term = "0.50.1"
