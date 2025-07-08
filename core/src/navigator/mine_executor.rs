@@ -9,10 +9,13 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+use rayon::ThreadPool;
+use std::cell::{LazyCell, OnceCell};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::LazyLock;
 use strum::AsRefStr;
-use tracing::{debug, info, span, Level};
+use tracing::{debug, info, span, trace, Level};
 
 /// Given thousands of possible route combinations, execute in parallel and find the best
 pub fn execute_route_batch(
@@ -52,9 +55,7 @@ pub fn execute_route_batch(
 
     let execute_watch = BasicWatch::start();
 
-    const EXECUTE_THREADED: bool = true;
-    let is_threaded = (sequences.len() > 1) ^ EXECUTE_THREADED;
-    let route_results: Vec<ExecutorResult> = if is_threaded {
+    static WRAPPING_POOL: LazyLock<ThreadPool> = LazyLock::new(|| {
         let default_threads = 32; // todo: numa rayon::current_num_threads();
         const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 1.0;
         let num_threads = (default_threads as f32 * THREAD_OVERSUBSCRIBE_PERCENT) as usize;
@@ -62,12 +63,17 @@ pub fn execute_route_batch(
             "default threads are {} upgraded to {}",
             default_threads, num_threads
         );
-        let wrapping_pool = rayon::ThreadPoolBuilder::new()
+        rayon::ThreadPoolBuilder::new()
             .thread_name(|i| format!("exe{i:02}"))
             .num_threads(num_threads)
             .build()
-            .unwrap();
-        wrapping_pool.install(|| {
+            .unwrap()
+    });
+
+    const EXECUTE_THREADED: bool = true;
+    let is_threaded = (sequences.len() > 1) && EXECUTE_THREADED;
+    let route_results: Vec<ExecutorResult> = if is_threaded {
+        WRAPPING_POOL.install(|| {
             sequences
                 .into_par_iter()
                 .map(|ExecutionSequence { routes }| {
