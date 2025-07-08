@@ -566,6 +566,11 @@ impl VSurface {
         }
         self.set_pixels(replace, found_pos).unwrap();
     }
+
+    pub fn draw_square_area_forced(&mut self, area: &VArea, new: Pixel) {
+        self.set_pixels(new, area.get_points()).unwrap()
+    }
+
     //
     // pub fn draw_square_around_point(
     //     &mut self,
@@ -632,12 +637,14 @@ impl VSurface {
     }
 
     pub fn remove_mine_path_at(&mut self, index: usize) -> Option<MinePath> {
-        trace!(
-            "{} at {index} total {}",
-            nu_ansi_term::Color::Red.paint("mine remove"),
-            self.rail_paths.len()
-        );
         let mine_path = self.rail_paths.remove(index);
+        trace!(
+            "{} at {index} total {} - {}",
+            nu_ansi_term::Color::Red.paint("mine remove"),
+            self.rail_paths.len(),
+            mine_path.segment,
+        );
+
         self.remove_mine_path_cleanup(&mine_path);
         Some(mine_path)
     }

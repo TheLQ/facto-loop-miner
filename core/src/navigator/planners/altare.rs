@@ -4,7 +4,9 @@ use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{
     group_nearby_patches, MineSelectBatch, PERPENDICULAR_SCAN_WIDTH,
 };
-use crate::navigator::planners::common::{debug_failing, draw_prep, draw_prep_mines};
+use crate::navigator::planners::common::{
+    debug_draw_failing_mines, debug_failing, draw_prep, draw_prep_mines,
+};
 use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
@@ -132,10 +134,19 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                             assert_eq!(never_mined.len(), 1);
                             let never_mined = never_mined.remove(0);
 
-                            let nearest_rail = detect_nearby_rails_as_index(surface, never_mined);
+                            // where tf are we
+                            surface.draw_square_area_forced(
+                                &VArea::from_radius(never_mined.area_min().point_center(), 20),
+                                Pixel::Highlighter,
+                            );
+
+                            surface.save_pixel_to_oculante();
+
+                            let nearest_rail = detect_nearby_rails_as_index(surface, &never_mined);
                             rollback_and_reapply(
                                 surface,
                                 nearest_rail,
+                                never_mined,
                                 &base_source_positive.borrow(),
                             );
 
@@ -148,7 +159,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
     }
 }
 
-fn detect_nearby_rails_as_index(surface: &VSurface, mine_location: MineLocation) -> usize {
+fn detect_nearby_rails_as_index(surface: &VSurface, mine_location: &MineLocation) -> usize {
     let origin = mine_location
         .area_min()
         .point_center()
@@ -164,7 +175,7 @@ fn detect_nearby_rails_as_index(surface: &VSurface, mine_location: MineLocation)
                 break;
             }
             match surface.get_pixel(cursor) {
-                Pixel::Empty | Pixel::MineNoTouch => {
+                Pixel::Empty | Pixel::MineNoTouch | Pixel::Highlighter => {
                     // the vast expanse...
                 }
                 Pixel::Rail => {
@@ -205,6 +216,7 @@ fn detect_nearby_rails_as_index(surface: &VSurface, mine_location: MineLocation)
 fn rollback_and_reapply(
     surface: &mut VSurface,
     old_rail_index: usize,
+    new_mine: MineLocation,
     base_source: &BaseSourceEighth,
 ) {
     // remove old rail
@@ -215,13 +227,11 @@ fn rollback_and_reapply(
     while base_source_dummy.peek_single().origin != old_path.segment.start {
         base_source_dummy.next();
     }
-
-    // lazy way
     let mut plan = get_possible_routes_for_batch(
         surface,
         MineSelectBatch {
             base_sources: base_source_dummy.into_rc_refcell(),
-            mines: vec![old_path.mine_base],
+            mines: vec![new_mine],
         },
     );
     assert!(!plan.sequences.is_empty());
@@ -235,8 +245,13 @@ fn rollback_and_reapply(
     }
     // assert_eq!(plan.sequences.len(), 1);
     // assert_eq!(plan.sequences[0].routes.len(), 1);
-    let new_path = match execute_route_batch(surface, plan.sequences, |_, _, _| {}) {
-        ExecutorResult::Failure { .. } => panic!("uhh"),
+    let new_path = match execute_route_batch(surface, plan.sequences, &[ExecuteFlags::ShrinkBases])
+    {
+        ExecutorResult::Failure { meta, .. } => {
+            debug_failing(surface, meta);
+            surface.save_pixel_to_oculante();
+            panic!("uhh")
+        }
         ExecutorResult::Success { mut paths, routes } => {
             assert_eq!(paths.len(), 1);
             paths.remove(0)
