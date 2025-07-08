@@ -20,7 +20,6 @@ serde_json = { workspace = true }
 simd-json = { workspace = true }
 #
 mimalloc = "0.1.43"
-jemallocator = "0.5.4"
 #
 image = "0.25.5"
 kiddo = "5.0.3"
