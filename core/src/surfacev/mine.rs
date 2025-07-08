@@ -1,4 +1,5 @@
 use crate::surface::pixel::Pixel;
+use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::{RemovedEntity, VSurface};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::{VArea, VAreaSugar};
@@ -155,10 +156,10 @@ impl MineLocation {
         surface.draw_square_area(&self.area_buffered, pixel)
     }
 
-    pub fn draw_area_buffered_to_no_touch(&self, surface: &mut VSurface) -> RemovedEntity {
+    pub fn draw_area_buffered_to_no_touch(&self, surface: &mut VSurface) {
         let needle = self.area_buffered.point_top_left();
         let existing_pixel = surface.get_pixel(needle);
-        assert_eq!(existing_pixel, Pixel::MineNoTouch, "at {needle}");
+        // assert_eq!(existing_pixel, Pixel::MineNoTouch, "at {needle}");
 
         let new_points = self
             .area_no_touch
@@ -166,7 +167,18 @@ impl MineLocation {
             .into_iter()
             .filter(|p| matches!(surface.get_pixel(p), Pixel::MineNoTouch | Pixel::Empty))
             .collect_vec();
-        surface.set_pixel_entity_swap(surface.get_pixel_entity_id_at(&needle), new_points, false)
+        // surface.set_pixel_entity_swap(surface.get_pixel_entity_id_at(&needle), new_points, false)
+
+        let removed_buffer_pixels = self
+            .area_buffered
+            .get_points()
+            .into_iter()
+            .filter(|p| matches!(surface.get_pixel(p), Pixel::MineNoTouch))
+            .collect();
+        surface
+            .set_pixels(Pixel::Empty, removed_buffer_pixels)
+            .unwrap();
+        surface.set_pixels(Pixel::MineNoTouch, new_points).unwrap();
     }
 
     pub fn draw_area_buffered_replacing(&self, surface: &mut VSurface, pixel: Pixel) {
@@ -195,6 +207,29 @@ impl MineLocation {
     pub fn surface_patches_len(&self) -> usize {
         self.patch_indexes.len()
     }
+
+    // pub fn surface_patches<'s>(
+    //     &self,
+    //     surface: &'s VSurface,
+    // ) -> impl IntoIterator<Item = &'s VPatch> {
+    //     surface
+    //         .get_mine_paths()
+    //         .into_iter()
+    //         .flat_map(|v| v.mine_base.patch_indexes)
+    //         .map(|v| surface.get_patches_slice()[v])
+    // }
+
+    // pub fn surface_patches_iter<'s>(
+    //     mines: impl IntoIterator<Item = &'s Self>,
+    //     surface: &'s VSurface,
+    // ) -> impl Iterator<Item = &'s VPatch> {
+    //     let patch = surface.get_patches_slice();
+    //     mines
+    //         .into_iter()
+    //         // .map(|v| v.borrow())
+    //         .flat_map(|v| v.patch_indexes.as_slice())
+    //         .map(|v| &patch[*v])
+    // }
 }
 
 #[cfg(test)]
