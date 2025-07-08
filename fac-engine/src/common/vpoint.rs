@@ -13,9 +13,7 @@ use std::fmt::{Debug, Display, Formatter, Write};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 /// Core XY Point. Entity origin is top left, not Factorio's center
-#[derive(
-    Debug, Serialize, Deserialize, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Hash, Ord,
-)]
+#[derive(Serialize, Deserialize, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Hash, Ord)]
 pub struct VPoint {
     x: i32,
     y: i32,
@@ -514,6 +512,14 @@ impl VPoint {
 impl Display for VPoint {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let Self { x, y } = self;
+        display_any_pos(f, format_args!("{x:>4}"), format_args!("{y:>4}"))
+    }
+}
+
+impl Debug for VPoint {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let Self { x, y } = self;
+        write!(f, "VPoint ",)?;
         display_any_pos(f, format_args!("{x:>4}"), format_args!("{y:>4}"))
     }
 }
