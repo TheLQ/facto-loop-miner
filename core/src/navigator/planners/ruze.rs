@@ -98,7 +98,7 @@ fn process_batch(
             }
             true
         }
-        ExecutorResult::Failure(meta) => {
+        ExecutorResult::Failure { meta, .. } => {
             if 1 + 1 == 2 {
                 debug_failing(surface, meta);
                 return false;

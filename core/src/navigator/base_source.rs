@@ -41,8 +41,8 @@ impl BaseSource {
 
     pub fn into_refcells(self) -> BaseSourceRefs {
         BaseSourceRefs {
-            positive: Rc::new(RefCell::new(self.positive)),
-            negative: Rc::new(RefCell::new(self.negative)),
+            positive: self.positive.into_rc_refcell(),
+            negative: self.negative.into_rc_refcell(),
         }
     }
 }
@@ -78,6 +78,14 @@ impl BaseSourceEighth {
         Self {
             origin,
             sign,
+            next: 1,
+        }
+    }
+
+    pub fn regenerate(&self) -> Self {
+        Self {
+            origin: self.origin,
+            sign: self.sign,
             next: 1,
         }
     }
@@ -136,6 +144,10 @@ impl BaseSourceEighth {
     pub fn undo_one(&mut self) {
         self.next -= 1;
         assert!(self.next > 1)
+    }
+
+    pub fn into_rc_refcell(self) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(self))
     }
 }
 

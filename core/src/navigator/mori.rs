@@ -67,7 +67,6 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
 
             // sequential compare
             path.sort_by_key(|v| v.pos_start());
-
             let mut i = 0;
             while i + 1 < path.len() {
                 if path[i].pos_start() == path[i + 1].pos_start() {

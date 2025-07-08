@@ -126,17 +126,24 @@ pub fn execute_route_batch(
     let mut cost = CostMeta::new();
 
     let mut failure_attempts_per_len: HashMap<usize, u16> = HashMap::new();
+    let mut failure_seen_mines = Vec::new();
     let mut success_count = 0;
     let mut failure_count = 0;
     let res: ExecutorResult = route_results.into_iter().fold(
-        ExecutorResult::Failure(FailingMeta::default()),
-        |best, cur_result| {
+        ExecutorResult::Failure {
+            meta: FailingMeta::default(),
+            seen_mines: Vec::new(),
+        },
+        |mut best, mut cur_result| {
             let cur_paths = match &cur_result {
                 ExecutorResult::Success { paths, .. } => {
                     success_count += 1;
                     paths
                 }
-                ExecutorResult::Failure(FailingMeta { found_paths, .. }) => {
+                ExecutorResult::Failure {
+                    meta: FailingMeta { found_paths, .. },
+                    ..
+                } => {
                     let total = failure_attempts_per_len
                         .entry(found_paths.len())
                         .or_default();
@@ -166,13 +173,18 @@ pub fn execute_route_batch(
                     cur_result
                 }
                 (
-                    ExecutorResult::Failure(FailingMeta {
-                        found_paths: best_paths,
-                        ..
-                    }),
-                    ExecutorResult::Failure { .. },
+                    ExecutorResult::Failure {
+                        meta: best_meta, ..
+                    },
+                    ExecutorResult::Failure { meta: cur_meta, .. },
                 ) => {
-                    if cur_paths.len() > best_paths.len() {
+                    for path in &cur_meta.found_paths {
+                        if !failure_seen_mines.contains(&path.mine_base) {
+                            failure_seen_mines.push(path.mine_base.clone());
+                        }
+                    }
+
+                    if cur_paths.len() > best_meta.all_routes.len() {
                         cost = CostMeta::new();
                         cost.apply_and_is_lowest(total_cost);
                         cur_result
@@ -187,6 +199,17 @@ pub fn execute_route_batch(
             }
         },
     );
+    // merge extra tracked state
+    let res = match res {
+        ExecutorResult::Failure { meta, seen_mines } => {
+            assert_eq!(seen_mines.len(), 0);
+            ExecutorResult::Failure {
+                meta,
+                seen_mines: failure_seen_mines,
+            }
+        }
+        r => r,
+    };
 
     let failure_attempts_debug = failure_attempts_per_len
         .into_iter()
@@ -272,12 +295,15 @@ fn execute_route_combination(
             }
             MoriResult::FailingDebug(debug_rail, debug_all) => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
-                return ExecutorResult::Failure(FailingMeta {
-                    all_routes: route_combination,
-                    failing_all: debug_rail,
-                    failing_dump: debug_all,
-                    found_paths,
-                });
+                return ExecutorResult::Failure {
+                    meta: FailingMeta {
+                        all_routes: route_combination,
+                        failing_all: debug_rail,
+                        failing_dump: debug_all,
+                        found_paths,
+                    },
+                    seen_mines: Vec::new(),
+                };
             }
         }
     }
@@ -305,7 +331,22 @@ pub enum ExecutorResult {
         paths: Vec<MinePath>,
         routes: Vec<ExecutionRoute>,
     },
-    Failure(FailingMeta),
+    Failure {
+        meta: FailingMeta,
+        seen_mines: Vec<MineLocation>,
+    },
+}
+
+impl ExecutorResult {
+    fn get_all_sequences(&self) -> &Vec<ExecutionRoute> {
+        match self {
+            ExecutorResult::Success { routes, .. } => routes,
+            ExecutorResult::Failure {
+                meta: FailingMeta { all_routes, .. },
+                ..
+            } => all_routes,
+        }
+    }
 }
 
 #[derive(Default)]
