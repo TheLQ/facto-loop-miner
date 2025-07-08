@@ -34,6 +34,7 @@ fn log_init_internal(default_env: &str) {
 
 /// kustom Formatter because the compact formatter is not configurably compact enough
 /// Sadly needs a lot re-implemented
+/// https://github.com/tokio-rs/tracing/blob/e63ef57f3d686abe3727ddd586eb9af73d6715b7/tracing-subscriber/src/fmt/format/pretty.rs#L175
 struct LoopFormatter;
 
 impl<S, N> FormatEvent<S, N> for LoopFormatter
@@ -78,6 +79,18 @@ where
             }
         }
 
+        // execution threads, add offset text
+        let span = event
+            .parent()
+            .and_then(|id| ctx.span(id))
+            .or_else(|| ctx.lookup_current());
+        let scope = span.into_iter().flat_map(|span| span.scope());
+        for span in scope {
+            if span.metadata().name() == EXECUTOR_TAG && current_thread.name() == Some("main") {
+                write!(f, "[exe] ")?;
+            }
+        }
+
         // Compress gigantic crate names
         let dimmed = Style::new().dimmed();
         let target_raw = meta.target();
@@ -96,3 +109,5 @@ where
         writeln!(f)
     }
 }
+
+pub const EXECUTOR_TAG: &str = "executor";

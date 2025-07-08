@@ -2,7 +2,7 @@ use crate::navigator::mori::{mori2_start, MoriResult};
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_common::duration::BasicWatch;
-use facto_loop_miner_common::LOCALE;
+use facto_loop_miner_common::{EXECUTOR_TAG, LOCALE};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
@@ -12,7 +12,7 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;
-use tracing::{debug, info};
+use tracing::{debug, info, span, Level};
 
 /// Given thousands of possible route combinations, execute in parallel and find the best
 pub fn execute_route_batch(
@@ -253,6 +253,8 @@ fn execute_route_combination(
     total_sequences: usize,
     pre_callback: impl Fn(&mut VSurface, &[ExecutionRoute], usize),
 ) -> ExecutorResult {
+    let executor_mark = span!(Level::INFO, EXECUTOR_TAG);
+    let _ = executor_mark.enter();
     let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
     if my_counter % 100 == 0 {
         info!(
