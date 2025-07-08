@@ -18,7 +18,7 @@ use tracing::{debug, info, span, Level};
 pub fn execute_route_batch(
     surface: &VSurface,
     sequences: Vec<ExecutionSequence>,
-    pre_callback: impl Fn(&mut VSurface, &[ExecutionRoute], usize) + Send + Sync,
+    flags: &[ExecuteFlags],
 ) -> ExecutorResult {
     let total_sequences = sequences.len();
 
@@ -71,12 +71,7 @@ pub fn execute_route_batch(
             sequences
                 .into_par_iter()
                 .map(|ExecutionSequence { routes }| {
-                    execute_route_combination(
-                        execution_surface,
-                        routes,
-                        total_sequences,
-                        &pre_callback,
-                    )
+                    execute_route_combination(execution_surface, routes, total_sequences, flags)
                 })
                 .collect()
         })
@@ -85,12 +80,7 @@ pub fn execute_route_batch(
             .into_iter()
             // .take(40)
             .map(|ExecutionSequence { routes }| {
-                execute_route_combination(
-                    &execution_surface,
-                    routes,
-                    total_sequences,
-                    &pre_callback,
-                )
+                execute_route_combination(&execution_surface, routes, total_sequences, flags)
             })
             .collect()
     };
@@ -251,10 +241,10 @@ fn execute_route_combination(
     surface: &VSurface,
     route_combination: Vec<ExecutionRoute>,
     total_sequences: usize,
-    pre_callback: impl Fn(&mut VSurface, &[ExecutionRoute], usize),
+    flags: &[ExecuteFlags],
 ) -> ExecutorResult {
     let executor_mark = span!(Level::INFO, EXECUTOR_TAG);
-    let _ = executor_mark.enter();
+    let _mark = executor_mark.enter();
     let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
     if my_counter % 100 == 0 {
         info!(
@@ -276,7 +266,16 @@ fn execute_route_combination(
 
     let mut found_paths = Vec::new();
     for (i, route) in route_combination.iter().enumerate() {
-        pre_callback(&mut working_surface, &route_combination, i);
+        if flags.contains(&ExecuteFlags::ShrinkBases) {
+            route
+                .location
+                .draw_area_buffered_to_no_touch(&mut working_surface);
+            if i != 0 {
+                route_combination[i - 1]
+                    .location
+                    .draw_area_buffered(&mut working_surface)
+            }
+        }
         let route_result = mori2_start(
             &working_surface,
             route.segment.clone(),
@@ -357,4 +356,9 @@ pub struct FailingMeta {
     pub all_routes: Vec<ExecutionRoute>,
     pub failing_dump: Vec<HopeLink>,
     pub failing_all: Vec<HopeLink>,
+}
+
+#[derive(PartialEq)]
+pub enum ExecuteFlags {
+    ShrinkBases,
 }

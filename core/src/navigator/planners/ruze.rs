@@ -1,4 +1,6 @@
-use crate::navigator::mine_executor::{execute_route_batch, ExecutorResult, FailingMeta};
+use crate::navigator::mine_executor::{
+    execute_route_batch, ExecuteFlags, ExecutorResult, FailingMeta,
+};
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
 use crate::navigator::planners::common::{debug_failing, draw_prep};
@@ -80,7 +82,7 @@ fn process_batch(
                 each in range {num_per_batch_routes_min} {num_per_batch_routes_max}"
     );
     // let planned_combinations = vec![planned_combinations.remove(0)];
-    let res = execute_route_batch(surface, complete_plan.sequences, |surface, execution, i| {});
+    let res = execute_route_batch(surface, complete_plan.sequences, &[]); // todo: Shrink flag??
     match res {
         ExecutorResult::Success { paths, routes } => {
             info!("pushing {} new mine paths", paths.len());

@@ -1,5 +1,5 @@
 use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
-use crate::navigator::mine_executor::{execute_route_batch, ExecutorResult};
+use crate::navigator::mine_executor::{execute_route_batch, ExecuteFlags, ExecutorResult};
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{
     group_nearby_patches, MineSelectBatch, PERPENDICULAR_SCAN_WIDTH,
@@ -91,14 +91,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                 let route_result = execute_route_batch(
                     surface,
                     possible_routes.sequences,
-                    |surface, execution, i| {
-                        execution[i]
-                            .location
-                            .draw_area_buffered_to_no_touch(surface);
-                        if i != 0 {
-                            execution[i - 1].location.draw_area_buffered(surface)
-                        }
-                    },
+                    &[ExecuteFlags::ShrinkBases],
                 );
                 match route_result {
                     ExecutorResult::Success { paths, routes } => {
