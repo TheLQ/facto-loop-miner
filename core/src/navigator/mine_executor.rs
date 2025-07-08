@@ -50,7 +50,7 @@ pub fn execute_route_batch(
     SUCCESS_COUNTER.store(0, Ordering::Relaxed);
     FAIL_COUNTER.store(0, Ordering::Relaxed);
 
-    let routing_watch = BasicWatch::start();
+    let execute_watch = BasicWatch::start();
 
     const EXECUTE_THREADED: bool = true;
     let is_threaded = (sequences.len() > 1) ^ EXECUTE_THREADED;
@@ -95,7 +95,8 @@ pub fn execute_route_batch(
             .collect()
     };
 
-    debug!("Executed {total_sequences} route combinations in {routing_watch}");
+    let execute_watch = execute_watch.to_string();
+    // debug!("Executed {total_sequences} route combinations in {routing_watch}");
 
     struct CostMeta {
         lowest: u32,
@@ -208,7 +209,8 @@ pub fn execute_route_batch(
         cost range {} to {} (best {}), \
         attempts {failure_attempts_debug}, \
         depth {deepest_depth}, \
-        res {}",
+        res {}, \
+        exec {execute_watch}",
         cost.lowest.to_formatted_string(&LOCALE),
         cost.highest.to_formatted_string(&LOCALE),
         cost.tested,
