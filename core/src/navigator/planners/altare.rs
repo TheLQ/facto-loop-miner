@@ -117,8 +117,6 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                             is_prev_retry = true;
                             info!("attempting retry");
 
-                            surface.save_pixel_to_oculante();
-
                             assert_ne!(meta.all_routes.len(), seen_mines.len());
 
                             let all_mines = meta
@@ -136,11 +134,10 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
 
                             // where tf are we
                             surface.draw_square_area_forced(
-                                &VArea::from_radius(never_mined.area_min().point_center(), 20),
+                                &VArea::from_radius(never_mined.area_min().point_center(), 20)
+                                    .normalize_within_radius(surface.get_radius_i32() - 1),
                                 Pixel::Highlighter,
                             );
-
-                            surface.save_pixel_to_oculante();
 
                             let nearest_rail = detect_nearby_rails_as_index(surface, &never_mined);
                             rollback_and_reapply(
@@ -321,10 +318,7 @@ impl Quester {
             return QuesterScanResult::NoPatchesInScan;
         }
         new_patches_in_scan_area.sort_by(|a, b| {
-            VPoint::sort_by_x_then_y_column(
-                a.area_min().point_center(),
-                b.area_min().point_center(),
-            )
+            VPoint::sort_by_y_then_x_row(a.area_min().point_center(), b.area_min().point_center())
         });
 
         info!(
