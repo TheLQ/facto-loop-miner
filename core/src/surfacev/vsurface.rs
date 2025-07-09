@@ -213,21 +213,7 @@ impl VSurface {
         let pixel_map_path = out_dir.join("pixel-map.png");
         debug!("Saving RGB dump image to {}", pixel_map_path.display());
 
-        let entities = self.pixels.iter_xy_pixels();
-        // trace!("built entity array of {}", entities.len());
-        let mut output: Vec<u8> = vec![0; self.pixels.xy_array_length_from_radius() * 3];
-        for (i, pixel) in entities.enumerate() {
-            let color = &pixel.color();
-            let start = i * color.len();
-            output[start..(start + 3)].copy_from_slice(color);
-        }
-        trace!(
-            "built entity array of {} in {}",
-            output.len().to_formatted_string(&LOCALE),
-            build_watch
-        );
-
-        let size = self.pixels.diameter() as u32;
+        let (output, size) = self.save_pixel_colored_to_vec(None);
         save_png(&pixel_map_path, &output, size, size)?;
         Ok(())
     }
@@ -275,14 +261,7 @@ impl VSurface {
         );
 
         let size = self.pixels.diameter() as u32;
-        save_png_with_space(
-            &pixel_map_path,
-            &output,
-            size,
-            size,
-            ExtendedColorType::Rgba8,
-        )?;
-        Ok(())
+        (output, size)
     }
 
     fn save_entity_buffers(&self, out_dir: &Path) -> VResult<()> {
@@ -304,9 +283,7 @@ impl VSurface {
         Ok(())
     }
 
-    /// https://github.com/woelper/oculante
-    pub fn save_pixel_to_oculante(&self) {
-        let build_watch = BasicWatch::start();
+    fn save_to_oculante(output: Vec<u8>, diameter: u32) {
         let address: SocketAddr = ("peko.g.xana.sh", 5689)
             .to_socket_addrs()
             .unwrap()
@@ -315,15 +292,38 @@ impl VSurface {
         debug!("Saving RGB dump image to oculante {address}");
         let stream = TcpStream::connect(address).unwrap();
 
+        let encoder =
+            PngEncoder::new_with_quality(stream, CompressionType::Fast, FilterType::NoFilter);
+        encoder
+            .write_image(&output, diameter, diameter, ExtendedColorType::Rgb8)
+            .unwrap();
+    }
+
+    /// https://github.com/woelper/oculante
+    pub fn save_pixel_to_oculante_zoomed(&self) {
         let crop_circle = VArea::from_arbitrary_points_pair(
             VPoint::new(0, -self.get_radius_i32() / 2),
             VPoint::new(self.get_radius_i32() - 1, (self.get_radius_i32() / 2) - 1),
         );
-        // let crop_circle: VArea = self
-        //     .dummy_area_entire_surface()
-        //     .normalize_within_radius(self.get_radius_i32() - 5);
-        let crop_size = crop_circle.as_size() + VPOINT_ONE;
-        let output_size = (crop_size.x() * crop_size.y() * 3) as usize;
+        let (output, diameter) = self.save_pixel_colored_to_vec(Some(crop_circle));
+
+        Self::save_to_oculante(output, diameter)
+    }
+
+    pub fn save_pixel_to_oculante_entire(&self) {
+        let (output, diameter) = self.save_pixel_colored_to_vec(None);
+        Self::save_to_oculante(output, diameter)
+    }
+
+    fn save_pixel_colored_to_vec(&self, crop: Option<VArea>) -> (Vec<u8>, u32) {
+        let build_watch = BasicWatch::start();
+        if let Some(crop_circle) = crop {
+            // let crop_circle: VArea = self
+            //     .dummy_area_entire_surface()
+            //     .normalize_within_radius(self.get_radius_i32() - 5);
+            let crop_size = crop_circle.as_size() + VPOINT_ONE;
+            assert_eq!(crop_size.x(), crop_size.y());
+            let output_size = (crop_size.x() * crop_size.y() * 3) as usize;
 
         let entities = self.pixels.iter_xy_pixels();
 
@@ -874,11 +874,13 @@ mod test {
             hope.add_straight(5);
             hope.into_links().into_iter().next().unwrap()
         };
-        surface.set_pixels(Pixel::Rail, dummy_link.area()).unwrap();
+        surface
+            .set_pixels(Pixel::Rail, dummy_link.area_vec())
+            .unwrap();
 
         // test overwrite
         surface
-            .set_pixels(Pixel::EdgeWall, dummy_link.area())
+            .set_pixels(Pixel::EdgeWall, dummy_link.area_vec())
             .unwrap();
 
         let test_output_dir = Path::new("work/test-output");

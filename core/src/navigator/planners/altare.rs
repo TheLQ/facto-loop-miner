@@ -106,7 +106,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                         for path in paths {
                             surface.add_mine_path(path).unwrap();
                         }
-                        surface.save_pixel_to_oculante();
+                        surface.save_pixel_to_oculante_zoomed();
                     }
                     ExecutorResult::Failure { meta, seen_mines } => {
                         if false && is_prev_retry {
@@ -147,7 +147,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                                 &base_source_positive.borrow(),
                             );
 
-                            surface.save_pixel_to_oculante();
+                            surface.save_pixel_to_oculante_zoomed();
                         }
                     }
                 }
@@ -246,7 +246,10 @@ fn rollback_and_reapply(
     {
         ExecutorResult::Failure { meta, .. } => {
             debug_failing(surface, meta);
-            surface.save_pixel_to_oculante();
+            // surface
+            //     .add_mine_path_with_pixel(old_path, Pixel::Highlighter)
+            //     .unwrap();
+            surface.save_pixel_to_oculante_zoomed();
             panic!("uhh")
         }
         ExecutorResult::Success { mut paths, routes } => {

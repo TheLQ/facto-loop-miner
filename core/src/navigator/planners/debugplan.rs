@@ -49,7 +49,7 @@ pub fn start_debug_planner(surface: &mut VSurface) -> VResult<()> {
         let plan = get_possible_routes_for_batch(&surface, batch);
         debug_draw_complete_plan(surface, plan)?;
     }
-    surface.save_pixel_to_oculante();
+    surface.save_pixel_to_oculante_zoomed();
 
     Ok(())
 }

@@ -151,7 +151,7 @@ pub fn debug_failing(
             .location
             .draw_area_buffered_replacing(surface, Pixel::SteelChest);
     }
-    surface.save_pixel_to_oculante();
+    surface.save_pixel_to_oculante_zoomed();
 }
 
 pub(super) fn draw_prep(surface: &mut VSurface, batches: &[MineSelectBatch]) {
