@@ -1,4 +1,5 @@
 use crate::navigator::mori_cost::calculate_cost_for_link;
+use crate::navigator::planners::debug_draw_segment;
 use crate::state::tuneables::MoriTunables;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_common::duration::{BasicWatch, BasicWatchResult};
@@ -60,11 +61,6 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
             // p.start.distance_bird(&end_link.start) < 5.0
         },
         |path| {
-            // max depth alarm
-            if path.len() > 200 {
-                return false;
-            }
-
             // sequential compare
             path.sort_by_key(|v| v.pos_start());
             let mut i = 0;
@@ -94,6 +90,13 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
         BasicWatchResult(res_sum),
         total_watch
     );
+    // if let Err(_) = &pathfind {
+    //     let mut new_surface = surface.clone();
+    //     debug_draw_segment(&mut new_surface, endpoints);
+    //     new_surface.save_pixel_to_oculante();
+    //
+    //     exit(0);
+    // }
 
     match pathfind {
         Ok((path, cost)) => {
