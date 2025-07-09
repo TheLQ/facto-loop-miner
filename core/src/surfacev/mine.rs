@@ -1,3 +1,4 @@
+use crate::surface;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::{RemovedEntity, VSurface};
@@ -6,13 +7,16 @@ use facto_loop_miner_fac_engine::common::varea::{VArea, VAreaSugar};
 use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_SECTION};
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
-use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, SECTION_POINTS_I32};
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
+use facto_loop_miner_fac_engine::game_entities::direction::{
+    FacDirectionEighth, FacDirectionQuarter,
+};
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use std::{hint, ptr, slice};
-use tracing::warn;
+use tracing::{trace, warn};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 pub struct MinePath {
@@ -110,30 +114,96 @@ impl MineLocation {
         })
     }
 
-    fn new_endpoints(surface: &VSurface, area: &VArea) -> Option<Vec<VPoint>> {
-        let centered_rounded = area.point_center().move_round_rail_down();
-        let destination_top =
-            VPoint::new(centered_rounded.x(), area.point_top_left().y()).move_round_rail_down();
-        destination_top.assert_step_rail();
-        let destination_bottom =
-            VPoint::new(centered_rounded.x(), area.point_bottom_right().y()).move_round_rail_up();
-        destination_bottom.assert_step_rail();
+    fn new_endpoints(surface: &VSurface, area_no_touch: &VArea) -> Option<Vec<VPoint>> {
+        const DIRECTION: FacDirectionQuarter = FacDirectionQuarter::East;
+        let centered_rounded = area_no_touch.point_center().move_round_rail_down();
 
-        let endpoints: Vec<VPoint> = [destination_top, destination_bottom]
-            .into_iter()
-            .filter(|destination| !surface.is_point_out_of_bounds(destination))
-            .collect();
+        let mut destination_top_raw =
+            VPoint::new(centered_rounded.x(), area_no_touch.point_top_left().y())
+                .move_round_rail_down();
+        destination_top_raw.assert_step_rail();
+
+        let mut destination_bottom_raw =
+            VPoint::new(centered_rounded.x(), area_no_touch.point_bottom_right().y())
+                .move_round_rail_up();
+        destination_bottom_raw.assert_step_rail();
+
+        let endpoints: Vec<VPoint> = [
+            Self::move_endpoint_to_buildable(
+                surface,
+                area_no_touch,
+                destination_top_raw,
+                DIRECTION,
+                -1,
+            ),
+            Self::move_endpoint_to_buildable(
+                surface,
+                area_no_touch,
+                destination_bottom_raw,
+                DIRECTION,
+                1,
+            ),
+        ]
+        .into_iter()
+        .filter_map(|v| v)
+        .filter(|destination| !surface.is_point_out_of_bounds(destination))
+        .collect();
         // assert_ne!(
         //     endpoints.len(),
         //     0,
         //     "stripped all possible destinations from {area_min} in {surface}"
         // );
         if endpoints.is_empty() {
-            warn!("excluding mine top {destination_top} bottom {destination_bottom} for {area}");
+            warn!("excluding mine top {destination_top_raw} bottom {destination_bottom_raw} for {area_no_touch}");
             None
         } else {
             Some(endpoints)
         }
+    }
+
+    fn move_endpoint_to_buildable(
+        surface: &VSurface,
+        area_no_touch: &VArea,
+        origin: VPoint,
+        link_direction: FacDirectionQuarter,
+        change_sign: i32,
+    ) -> Option<VPoint> {
+        for i in 0.. {
+            let new_origin = origin
+                .move_direction_sideways_int(link_direction, change_sign * i * SECTION_POINTS_I32);
+            let end_link_points =
+                HopeSodaLink::new_soda_straight(new_origin, link_direction).area_vec();
+
+            let is_free = surface.is_points_free_truncating(&end_link_points);
+            let is_inside_no_touch = area_no_touch.contains_points_any(&end_link_points);
+            if is_free && !is_inside_no_touch {
+                trace!("extra advance up at {new_origin} depth {i}");
+                return Some(new_origin);
+            }
+
+            // Did we hit another mine?
+            let mut pixels = end_link_points
+                .iter()
+                .filter(|v| !surface.is_point_out_of_bounds(v))
+                .map(|v| surface.get_pixel(v))
+                .collect_vec();
+            pixels.sort();
+            pixels.dedup();
+            if pixels.iter().all(|p| *p == Pixel::Empty) && !is_free {
+                panic!("???");
+            } else if !is_free
+                && !pixels
+                    .iter()
+                    .all(|v| Pixel::is_resource(v) || *v == Pixel::Empty)
+            {
+                // we probably hit another mine
+                trace!("eliminate {new_origin}");
+                return None;
+            }
+
+            assert_ne!(i, 3);
+        }
+        panic!("uhh")
     }
 
     pub fn area_min(&self) -> &VArea {

@@ -427,6 +427,10 @@ impl VSurface {
         self.pixels.is_point_out_of_bounds(point)
     }
 
+    pub fn is_points_free_truncating(&self, points: &[VPoint]) -> bool {
+        self.pixels.is_points_free_safe(points)
+    }
+
     pub fn is_points_free_unchecked(&self, points: &[VPoint]) -> bool {
         /*self.pixels.is_points_free(points)*/
         self.pixels.is_points_free_unchecked_iter(points)

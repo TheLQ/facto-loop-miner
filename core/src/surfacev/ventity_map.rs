@@ -140,33 +140,39 @@ where
         }
     }
 
-    pub fn is_points_free(&self, points: &[VPoint]) -> bool {
-        let mut is_out_of_bounds = false;
-        for point in points {
-            is_out_of_bounds = is_out_of_bounds || self.is_point_out_of_bounds(point);
-        }
-        if is_out_of_bounds {
-            return false;
-        }
-
+    pub fn is_points_free_safe(&self, points: &[VPoint]) -> bool {
         let xy_lookup = self.xy_to_entity.as_slice();
-        let mut not_free = false;
-        for point in points {
-            let index = self.xy_to_index_unchecked(point.x(), point.y());
-            let is_not_empty = xy_lookup[index] != EMPTY_XY_INDEX;
-            not_free = not_free || is_not_empty;
-        }
-        !not_free
+
+        points.iter().all(|v| {
+            if self.is_point_out_of_bounds(v) {
+                // silent
+                true
+            } else {
+                xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX
+            }
+        })
+
+        // let mut is_out_of_bounds = false;
+        // for point in points {
+        //     is_out_of_bounds = is_out_of_bounds || self.is_point_out_of_bounds(point);
+        // }
+        // if is_out_of_bounds {
+        //     return false;
+        // }
+        //
+        // let xy_lookup = self.xy_to_entity.as_slice();
+        // let mut not_free = false;
+        // for point in points {
+        //     let index = self.xy_to_index_unchecked(point.x(), point.y());
+        //     let is_not_empty = xy_lookup[index] != EMPTY_XY_INDEX;
+        //     not_free = not_free || is_not_empty;
+        // }
+        // !not_free
     }
 
     // #[inline(never)]
     pub fn is_points_free_unchecked_iter(&self, points: &[VPoint]) -> bool {
         let xy_lookup = self.xy_to_entity.as_slice();
-
-        // todo: sanity wtf? Why is every
-        if !matches!(points.len(), 104) {
-            panic!("processing {}", points.len());
-        }
 
         // This is an extremely hot function. Attempt SIMD
         if false {
@@ -174,6 +180,10 @@ where
                 .iter()
                 .all(|v| xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX)
         } else {
+            // todo: sanity wtf? Why is every
+            if !matches!(points.len(), 104) {
+                panic!("processing {}", points.len());
+            }
             const POINTS_SIZE: usize = 8;
 
             let radius = Simd::splat(self.radius as i32);
