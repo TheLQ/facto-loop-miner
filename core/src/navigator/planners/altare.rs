@@ -1,8 +1,9 @@
 use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
-use crate::navigator::mine_executor::{execute_route_batch, ExecuteFlags, ExecutorResult};
+use crate::navigator::circleify::draw_circle_around;
+use crate::navigator::mine_executor::{ExecuteFlags, ExecutorResult, execute_route_batch};
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{
-    group_nearby_patches, MineSelectBatch, PERPENDICULAR_SCAN_WIDTH,
+    MineSelectBatch, PERPENDICULAR_SCAN_WIDTH, group_nearby_patches,
 };
 use crate::navigator::planners::common::{
     debug_draw_failing_mines, debug_failing, draw_prep, draw_prep_mines,
@@ -15,18 +16,23 @@ use crate::surfacev::vsurface::{RemovedEntity, VSurface};
 use facto_loop_miner_common::err_bt::pretty_print_error;
 use facto_loop_miner_fac_engine::admiral::lua_command::fac_surface_create_tile::FacSurfaceCreateLua;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ZERO};
+use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
+use std::collections::HashSet;
 use std::sync::Mutex;
 use strum::VariantArray;
 use tracing::{debug, error, info, trace, warn};
 
 const BATCH_SIZE_MAX: usize = 1;
 
+/// Planner v2 "Regis Altare 🎇"
+///
+/// Pathfinding with medium-difficulty backtracking.
+/// because v0 Mori and v1 Ruze Planner can mask valid routes
 pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
     let base_source = BaseSource::from_central_base(&surface).into_refcells();
     let base_source_positive = base_source.positive_rc();
@@ -83,6 +89,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                     trace!("batch pop from patches");
                     mines.push(patches.pop().unwrap().clone());
                 }
+                assert_eq!(mines.len(), BATCH_SIZE_MAX);
                 drop(patches);
 
                 // let buffer_areas: Vec<RemovedEntity> = mines
@@ -96,7 +103,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                         mines,
                     },
                 );
-                info!("found {} sequences", possible_routes.sequences.len());
+                // info!("batch has {} sequences", possible_routes.sequences.len());
 
                 // if let Err(e) = surface.load_clone_prep(&params.step_out_dir) {
                 //     pretty_print_error(e);
@@ -121,13 +128,15 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                         surface.paint_pixel_colored_zoomed().save_to_oculante();
                     }
                     ExecutorResult::Failure { meta, seen_mines } => {
-                        if false && is_prev_retry {
+                        // || is_prev_retry todo
+                        if surface.get_mine_paths().is_empty() {
                             error!("failed to pathfind! but no rollback after another rollback");
                             debug_failing(surface, meta);
                             break;
                         } else {
                             is_prev_retry = true;
                             info!("attempting retry");
+                            assert!(!surface.get_mine_paths().is_empty(), "too early to retry");
 
                             assert_ne!(meta.all_routes.len(), seen_mines.len());
 
@@ -145,21 +154,36 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                             let never_mined = never_mined.remove(0);
 
                             // where tf are we
-                            surface.draw_square_area_forced(
-                                &VArea::from_radius(never_mined.area_min().point_center(), 20)
-                                    .normalize_within_radius(surface.get_radius_i32() - 1),
-                                Pixel::Highlighter,
-                            );
+                            // surface.draw_square_area_forced(
+                            //     &VArea::from_radius(never_mined.area_min().point_center(), 20)
+                            //         .normalize_within_radius(surface.get_radius_i32() - 1),
+                            //     Pixel::Highlighter,
+                            // );
 
                             let nearest_rail = detect_nearby_rails_as_index(surface, &never_mined);
                             rollback_and_reapply(
                                 surface,
                                 nearest_rail,
                                 never_mined,
-                                &base_source_positive.borrow(),
+                                &mut base_source_positive.borrow_mut(),
                             );
 
                             surface.paint_pixel_colored_zoomed().save_to_oculante();
+                            // we may took another attempt
+
+                            let scan_sign = if quester.origin_sign_pos { 1 } else { -1 };
+                            quester.origin_index -= match quester.origin_index.unsigned_abs() {
+                                3.. => scan_sign * 3,
+                                2 => scan_sign * 2,
+                                1 => scan_sign,
+                                0 => 0,
+                            };
+
+                            if quester.origin_index > 1 {
+                                quester.origin_index -= 1;
+                            } else if quester.origin_index < 1 {
+                                quester.origin_index += 1;
+                            }
                         }
                     }
                 }
@@ -176,37 +200,56 @@ fn detect_nearby_rails_as_index(surface: &VSurface, mine_location: &MineLocation
     origin.assert_even_position();
 
     let mut closest_rail = None;
-    for direction in FacDirectionQuarter::VARIANTS {
-        for depth in 0.. {
-            let cursor = origin.move_direction_int(direction, depth * 2);
-            if surface.is_point_out_of_bounds(&cursor) {
-                trace!("no rail at {depth} direction {direction}");
-                break;
+    let mut seen_points = HashSet::new();
+    'depth: for depth in 2.. {
+        assert!(
+            depth < surface.get_radius(),
+            "uhh {depth} total {}",
+            surface.get_radius()
+        );
+
+        let mut stop_after = false;
+        for cursor in draw_circle_around(&origin, depth * 200) {
+            if !cursor.is_even() || surface.is_point_out_of_bounds(&cursor) {
+                continue;
             }
+
+            if seen_points.contains(&cursor) {
+                continue;
+            }
+            seen_points.insert(cursor);
+
+            let distance = origin.distance_bird(&cursor).abs();
             match surface.get_pixel(cursor) {
                 Pixel::Empty | Pixel::MineNoTouch | Pixel::Highlighter => {
                     // the vast expanse...
                 }
                 Pixel::Rail => {
                     closest_rail = match closest_rail {
-                        None => Some((cursor, depth)),
-                        Some((prev_cursor, prev_depth)) if depth < prev_depth => {
-                            Some((cursor, depth))
+                        None => {
+                            trace!("found rail at {distance}");
+                            Some((cursor, distance))
+                        }
+                        Some((prev_cursor, prev_distance)) if distance < prev_distance => {
+                            trace!("found rail at {distance} better than {prev_distance}");
+                            Some((cursor, distance))
                         }
                         Some(good) => Some(good),
                     };
-                    trace!("found rail at {depth} direction {direction}");
-                    break;
+                    stop_after = true;
                 }
                 pixel if Pixel::is_resource(&pixel) => {
                     // ignore resources
                 }
                 pixel => {
                     // resource buffer area probably
-                    trace!("hit limit at depth {depth} at {pixel:?} direction {direction}");
-                    break;
+                    trace!("hit limit at depth {depth} at {pixel:?}");
+                    stop_after = true;
                 }
             }
+        }
+        if stop_after {
+            break;
         }
     }
     let (closest_rail, _) = closest_rail.unwrap();
@@ -226,7 +269,7 @@ fn rollback_and_reapply(
     surface: &mut VSurface,
     old_rail_index: usize,
     new_mine: MineLocation,
-    base_source: &BaseSourceEighth,
+    base_source: &mut BaseSourceEighth,
 ) {
     // remove old rail
     let old_path = surface.remove_mine_path_at(old_rail_index).unwrap();
@@ -248,8 +291,7 @@ fn rollback_and_reapply(
         assert_eq!(sequence.routes.len(), 1);
         trace!(
             "plan sequence location {:?} segment {}",
-            sequence.routes[0].location,
-            sequence.routes[0].segment
+            sequence.routes[0].location, sequence.routes[0].segment
         )
     }
     // assert_eq!(plan.sequences.len(), 1);
@@ -277,6 +319,7 @@ fn rollback_and_reapply(
             surface.get_mine_paths().len()
         );
         surface.remove_mine_path_pop().unwrap();
+        base_source.undo_one();
     }
     surface.add_mine_path(new_path).unwrap();
 }

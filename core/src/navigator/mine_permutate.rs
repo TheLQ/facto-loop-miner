@@ -108,7 +108,7 @@ fn find_all_combinations(mines: Vec<MineLocation>) -> Vec<Vec<PartialEntry>> {
             for destination in mine.destinations() {
                 let mut next_path = path.clone();
                 next_path.push(PartialEntry {
-                    destination: *destination,
+                    destination,
                     location: mine.clone(),
                 });
                 recurse(next_path, &remain[1..], output);

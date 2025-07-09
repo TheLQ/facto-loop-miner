@@ -217,7 +217,7 @@ impl BaseSourceEntry {
 #[cfg(test)]
 mod test {
     use crate::navigator::base_source::{BaseSourceEighth, BaseSourceEntry, INTRA_OFFSET};
-    use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ZERO};
+    use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
     use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
     use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;

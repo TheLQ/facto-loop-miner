@@ -63,9 +63,13 @@ pub(super) fn debug_draw_complete_plan(
 
 pub fn debug_draw_segment(surface: &mut VSurface, segment: VSegment) {
     let VSegment { start, end } = segment;
-    surface
-        .set_pixels(Pixel::Highlighter, vec![*start.point(), *end.point()])
-        .unwrap();
+    let mut positions = Vec::new();
+    positions.extend(start.point().get_entity_area_3x3());
+    positions.extend((start.point() - &VPoint::new(3, 3)).get_entity_area_3x3());
+    positions.extend(end.point().get_entity_area_3x3());
+    positions.extend((end.point() - &VPoint::new(3, 3)).get_entity_area_3x3());
+    // let positions = vec![*start.point(), *end.point()];
+    surface.set_pixels(Pixel::Highlighter, positions).unwrap();
 }
 
 pub(super) fn debug_draw_failing_mines<'a>(
