@@ -240,7 +240,9 @@ where
             let entity_index = self.xy_to_entity.as_slice()[xy_index];
 
             self.xy_to_entity.as_mut_slice()[xy_index] = EMPTY_XY_INDEX;
-            self.entity_to_xy[entity_index].retain(|v| v != point)
+            if entity_index != EMPTY_XY_INDEX {
+                self.entity_to_xy[entity_index].retain(|v| v != point)
+            }
         }
     }
 

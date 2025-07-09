@@ -403,7 +403,12 @@ impl VSurface {
     }
 
     pub fn set_pixels(&mut self, pixel: Pixel, positions: Vec<VPoint>) -> VResult<()> {
-        self.pixels.add(VPixel { pixel }, positions)
+        if pixel == Pixel::Empty {
+            self.pixels.remove_positions(&positions);
+            Ok(())
+        } else {
+            self.pixels.add(VPixel { pixel }, positions)
+        }
     }
 
     pub fn add_patches(&mut self, patches: &[VPatch]) {
