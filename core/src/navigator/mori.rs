@@ -1,18 +1,24 @@
 use crate::navigator::mori_cost::calculate_cost_for_link;
 use crate::navigator::planners::debug_draw_segment;
 use crate::state::tuneables::MoriTunables;
+use crate::surface::pixel::Pixel;
+use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_common::duration::{BasicWatch, BasicWatchResult};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
+use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ZERO};
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{sodas_to_links, HopeSodaLink};
+use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
+use itertools::Itertools;
 use num_format::ToFormattedString;
-use pathfinding::prelude::astar_mori;
+use pathfinding::prelude::{astar_mori, AStarErr};
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
-use tracing::info;
+use tracing::{info, trace};
 
 /// Pathfinder v1.2, Mori Calliope💀
 ///
@@ -87,23 +93,43 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
         BasicWatchResult(res_sum),
         total_watch
     );
-    if let Err((all, links)) = &pathfind {
+    if let Err(err) = &pathfind {
         let mut new_surface = surface.clone();
-        // todo
-        // new_surface
-        //     .add_mine_path(MinePath {
-        //         segment: VSegment {
-        //             start: VPointDirectionQ(VPOINT_ZERO.clone(), FacDirectionQuarter::North),
-        //             end: VPointDirectionQ(VPOINT_ZERO.clone(), FacDirectionQuarter::North),
-        //         },
-        //         cost: 44,
-        //         links: [HopeLink::],
-        //     })
-        //     .unwrap();
+
+        let links = sodas_to_links([end_link.add_turn90(true), end_link]).collect_vec();
+
+        let debug_free = links
+            .iter()
+            .map(|v| {
+                let area = v.area_vec();
+                if new_surface.is_points_free_unchecked(&area) {
+                    "free".into()
+                } else {
+                    let mut points = area
+                        .into_iter()
+                        .map(|v| new_surface.get_pixel(v))
+                        .collect_vec();
+                    points.sort();
+                    points.dedup();
+                    format!(
+                        "({})",
+                        points.into_iter().map(|v| v.as_ref().to_string()).join(",")
+                    )
+                }
+            })
+            .join(",");
+        trace!("debug free {debug_free}");
+
+        new_surface
+            .set_pixels(
+                Pixel::Highlighter,
+                links.into_iter().flat_map(|v| v.area_vec()).collect(),
+            )
+            .unwrap();
         debug_draw_segment(&mut new_surface, endpoints);
         new_surface
             //.paint_pixel_graduated(watch_data.was_unfree_check)
-            .paint_pixel_graduated(count_link_origins(links))
+            .paint_pixel_graduated(count_link_origins(&err.seen))
             .save_to_oculante();
 
         std::process::exit(0);
@@ -125,7 +151,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
                 cost,
             }
         }
-        Err((parents, all)) => MoriResult::FailingDebug { debug_tree: all },
+        Err(err) => MoriResult::FailingDebug { err },
     }
 }
 
@@ -135,11 +161,12 @@ struct WatchData {
     cost: Duration,
     executions: usize,
     found_successors: usize,
+    was_unfree_check: HashMap<VPoint, u32>,
 }
 
 pub enum MoriResult {
     Route { path: Vec<HopeLink>, cost: u32 },
-    FailingDebug { debug_tree: Vec<HopeSodaLink> },
+    FailingDebug { err: AStarErr<HopeSodaLink, u32> },
 }
 
 impl MoriResult {
@@ -167,9 +194,14 @@ fn successors(
 
     let watch = BasicWatch::start();
     let nexts = [
-        into_buildable_link(surface, finding_limiter, head.add_straight_section()),
-        into_buildable_link(surface, finding_limiter, head.add_turn90(false)),
-        into_buildable_link(surface, finding_limiter, head.add_turn90(true)),
+        into_buildable_link(
+            surface,
+            finding_limiter,
+            head.add_straight_section(),
+            watch_data,
+        ),
+        into_buildable_link(surface, finding_limiter, head.add_turn90(false), watch_data),
+        into_buildable_link(surface, finding_limiter, head.add_turn90(true), watch_data),
     ];
     watch_data.nexts += watch.duration();
 
@@ -190,6 +222,7 @@ fn into_buildable_link(
     surface: &VSurface,
     finding_limiter: &VArea,
     new_link: HopeSodaLink,
+    watch_data: &mut WatchData,
 ) -> Option<HopeSodaLink> {
     // todo: fix the limiter and just check center
     if !new_link
@@ -205,6 +238,22 @@ fn into_buildable_link(
     if surface.is_points_free_unchecked(&area) {
         Some(new_link)
     } else {
+        for point in area {
+            watch_data
+                .was_unfree_check
+                .entry(point)
+                .and_modify(|v| *v += 1)
+                .or_default();
+        }
         None
     }
+}
+
+fn count_link_origins(links: &[HopeSodaLink]) -> HashMap<VPoint, u32> {
+    let mut compressed = HashMap::new();
+    for link in links {
+        let val = compressed.entry(link.pos_next()).or_default();
+        *val += 1;
+    }
+    compressed
 }

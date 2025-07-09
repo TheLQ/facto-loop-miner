@@ -95,7 +95,7 @@ pub fn debug_failing(
     FailingMeta {
         found_paths,
         mut all_routes,
-        debug_tree,
+        astar_err,
     }: FailingMeta,
 ) {
     // draw all endpoints

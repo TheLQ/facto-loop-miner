@@ -340,12 +340,12 @@ fn execute_route_combination(
                 found_paths.push(path.clone());
                 working_surface.add_mine_path(path).unwrap();
             }
-            MoriResult::FailingDebug { debug_tree } => {
+            MoriResult::FailingDebug { err } => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
                 return ExecutorResult::Failure {
                     meta: FailingMeta {
                         all_routes: route_combination,
-                        debug_tree,
+                        astar_err: err,
                         found_paths,
                     },
                     seen_mines: Vec::new(),
@@ -395,11 +395,24 @@ impl ExecutorResult {
     }
 }
 
-#[derive(Default)]
+// #[derive(Default)]
 pub struct FailingMeta {
     pub found_paths: Vec<MinePath>,
     pub all_routes: Vec<ExecutionRoute>,
-    pub debug_tree: Vec<HopeSodaLink>,
+    pub astar_err: AStarErr<HopeSodaLink, u32>,
+}
+
+impl Default for FailingMeta {
+    fn default() -> Self {
+        Self {
+            astar_err: AStarErr {
+                seen: Vec::new(),
+                parents: Default::default(),
+            },
+            found_paths: Vec::new(),
+            all_routes: Vec::new(),
+        }
+    }
 }
 
 #[derive(PartialEq)]
