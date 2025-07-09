@@ -1,9 +1,12 @@
 [workspace]
 members = ["common", "core", "fac-engine", "io_experiments"]
 resolver = "3"
-#edition = "2024"
-
 default-members = ["core"]
+
+[workspace.package]
+version = "0.3.0"
+edition = "2024"
+
 
 [profile.release]
 #lto = "fat"

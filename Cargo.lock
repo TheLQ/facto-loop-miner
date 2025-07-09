@@ -671,7 +671,7 @@ dependencies = [
 
 [[package]]
 name = "facto-loop-miner"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "bitvec",
  "colorgrad",
@@ -700,7 +700,7 @@ dependencies = [
 
 [[package]]
 name = "facto-loop-miner-common"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "nu-ansi-term 0.50.1",
@@ -713,7 +713,7 @@ dependencies = [
 
 [[package]]
 name = "facto-loop-miner-fac-engine"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "base64ct",
  "criterion",
@@ -738,7 +738,7 @@ dependencies = [
 
 [[package]]
 name = "facto-loop-miner-io"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "facto-loop-miner-common",
  "itertools 0.14.0",
