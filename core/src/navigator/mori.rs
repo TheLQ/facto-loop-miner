@@ -29,12 +29,10 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
 
     let tunables = &surface.tunables().mori;
     let mut watch_data = WatchData::default();
-    let dummy_processor = ParentProcessor::default();
 
     let total_watch = BasicWatch::start();
     let mut successor_sum = Duration::default();
     let res_sum = Duration::default();
-    // ::<_, _, _, _, _, _, _, ParentProcessor>
     let pathfind = astar_mori::<_, _, _, _, _, _, _, 5>(
         start_link.clone(),
         |head| {
@@ -44,7 +42,6 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
                 &endpoints,
                 head,
                 // processor,
-                &dummy_processor,
                 finding_limiter,
                 tunables,
                 &mut watch_data,
@@ -124,12 +121,6 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
 }
 
 #[derive(Default)]
-pub(crate) struct ParentProcessor {
-    // parent_turns: usize,
-    // total_links: usize,
-}
-
-#[derive(Default)]
 struct WatchData {
     nexts: Duration,
     cost: Duration,
@@ -159,8 +150,6 @@ fn successors(
     surface: &VSurface,
     segment_points: &VSegment,
     head: &HopeSodaLink,
-    // path: &[&HopeLink],
-    processor: &ParentProcessor,
     finding_limiter: &VArea,
     tune: &MoriTunables,
     watch_data: &mut WatchData,
@@ -178,7 +167,7 @@ fn successors(
     let watch = BasicWatch::start();
     let mut successors = Vec::with_capacity(3);
     for next in nexts.into_iter().flatten() {
-        let cost = calculate_cost_for_link(&next, segment_points, processor, tune);
+        let cost = calculate_cost_for_link(&next, segment_points, tune);
         successors.push((next, cost));
     }
     watch_data.cost += watch.duration();

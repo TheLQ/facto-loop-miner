@@ -1,4 +1,3 @@
-use crate::navigator::mori::ParentProcessor;
 use crate::state::tuneables::MoriTunables;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
@@ -17,7 +16,6 @@ pub enum MoriCostMode {
 pub fn calculate_cost_for_link(
     next: &impl RailHopeLink,
     segment_points: &VSegment,
-    processor: &ParentProcessor,
     tune: &MoriTunables,
 ) -> u32 {
     let result = match tune.cost_mode {
@@ -26,7 +24,7 @@ pub fn calculate_cost_for_link(
             distance_by_basic_manhattan(next, &segment_points.end)
         }
         MoriCostMode::Complete => {
-            let cost = distance_by_punish_turns(processor, next, &segment_points.end, tune);
+            let cost = distance_by_punish_turns(next, &segment_points.end, tune);
             let bias = axis_bias(next, tune);
             //cost
             cost + ((cost as f32 * bias) as u32)
@@ -70,7 +68,6 @@ fn distance_by_basic_manhattan(next: &impl RailHopeLink, end: &VPointDirectionQ)
 }
 
 fn distance_by_punish_turns(
-    _processor: &ParentProcessor,
     next: &impl RailHopeLink,
     end: &VPointDirectionQ,
     tune: &MoriTunables,
