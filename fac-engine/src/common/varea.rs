@@ -1,4 +1,4 @@
-use crate::common::vpoint::VPoint;
+use crate::common::vpoint::{VPOINT_ONE, VPoint};
 use crate::util::ansi::C_ARROW_TO_CORNER_SE;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
@@ -31,6 +31,19 @@ impl VArea {
         VArea {
             top_left: VPoint::new(x_min, y_min),
             bottom_right: VPoint::new(x_max, y_max),
+        }
+    }
+
+    pub fn from_radius(origin: VPoint, depth: u32) -> Self {
+        let mut top_left = origin;
+        let mut bottom_right = origin;
+        for i in 0..depth {
+            top_left -= VPOINT_ONE;
+            bottom_right += VPOINT_ONE;
+        }
+        VArea {
+            top_left,
+            bottom_right,
         }
     }
 

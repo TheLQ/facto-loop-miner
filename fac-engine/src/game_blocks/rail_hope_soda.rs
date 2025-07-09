@@ -1,4 +1,5 @@
 use crate::common::vpoint::VPoint;
+use crate::common::vpoint_direction::VPointDirectionQ;
 use crate::game_blocks::rail_hope::RailHopeLink;
 use crate::game_blocks::rail_hope_single::{HopeFactoRail, HopeLink, HopeLinkType};
 use crate::game_entities::direction::FacDirectionQuarter;
@@ -117,6 +118,10 @@ impl HopeSodaLink {
             self.center
                 .move_xy(SODA_CENTER_OFFSET_I32, SODA_CENTER_OFFSET_I32),
         ]
+    }
+
+    pub fn my_q(&self) -> VPointDirectionQ {
+        VPointDirectionQ(self.center, self.source_direction)
     }
 }
 

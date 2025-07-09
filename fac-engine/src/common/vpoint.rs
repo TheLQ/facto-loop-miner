@@ -66,12 +66,12 @@ impl VPoint {
         }
     }
 
-    // pub fn from_cv_point(point: Point) -> Self {
-    //     VPoint {
-    //         x: point.x,
-    //         y: point.y,
-    //     }
-    // }
+    pub fn from_cv_point(point: Point) -> Self {
+        VPoint {
+            x: point.x,
+            y: point.y,
+        }
+    }
 
     pub const fn from_value(value: i32) -> Self {
         VPoint { x: value, y: value }
@@ -178,6 +178,10 @@ impl VPoint {
     pub fn assert_odd_position(&self) {
         assert_eq!((self.x - 1) % 2, 0, "x={} is not odd", self.x);
         assert_eq!((self.y - 1) % 2, 0, "y={} is not odd", self.y);
+    }
+
+    pub fn is_even(&self) -> bool {
+        self.x % 2 == 0 && self.y % 2 == 0
     }
 
     pub const fn move_x(&self, steps: i32) -> Self {
@@ -445,6 +449,10 @@ impl VPoint {
         self.move_round_down(SECTION_POINTS_I32)
     }
 
+    pub const fn move_round_even_down(&self) -> Self {
+        self.move_round_up(2)
+    }
+
     const fn move_round_down(&self, size: i32) -> Self {
         VPoint {
             x: self.x - (self.x.rem_euclid(size)),
@@ -454,6 +462,10 @@ impl VPoint {
 
     pub const fn move_round_rail_up(&self) -> Self {
         self.move_round_up(SECTION_POINTS_I32)
+    }
+
+    pub const fn move_round_even_up(&self) -> Self {
+        self.move_round_up(2)
     }
 
     const fn move_round_up(&self, size: i32) -> Self {
@@ -507,6 +519,10 @@ impl VPoint {
     pub const fn subtract_y(&self, other: &Self) -> i32 {
         self.y - other.y
     }
+
+    // pub fn sugar(&self) -> VPointSugar {
+    //     VPointSugar(self.x, self.y)
+    // }
 }
 
 impl Display for VPoint {
@@ -577,6 +593,15 @@ impl SubAssign for VPoint {
         self.y -= rhs.y;
     }
 }
+
+// pub struct VPointSugar(pub i32, pub i32);
+//
+// impl Display for VPointSugar {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//         let Self(x, y) = self;
+//         display_any_pos(f, format_args!("{x:>4}"), format_args!("{y:>4}"))
+//     }
+// }
 
 fn is_integer_f32(point: impl Borrow<FacBpPosition>) -> bool {
     let point = point.borrow();
