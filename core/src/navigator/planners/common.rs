@@ -61,6 +61,13 @@ pub(super) fn debug_draw_complete_plan(
     surface.set_pixels(Pixel::Highlighter, pixels)
 }
 
+pub fn debug_draw_segment(surface: &mut VSurface, segment: VSegment) {
+    let VSegment { start, end } = segment;
+    surface
+        .set_pixels(Pixel::Highlighter, vec![*start.point(), *end.point()])
+        .unwrap();
+}
+
 pub(super) fn debug_draw_failing_mines<'a>(
     surface: &mut VSurface,
     routes: impl IntoIterator<Item = &'a ExecutionRoute>,
