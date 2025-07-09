@@ -109,8 +109,7 @@ fn process_batch(
             let FailingMeta {
                 found_paths,
                 all_routes: failing_routes,
-                failing_dump,
-                failing_all,
+                debug_tree,
             } = meta;
 
             error!("failed to pathfind");

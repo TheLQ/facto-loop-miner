@@ -139,7 +139,7 @@ fn execute_batch(
 
                 success_routes.push(mine_result)
             }
-            MoriResult::FailingDebug(_, _) => {
+            MoriResult::FailingDebug { .. } => {
                 // todo: collect remaining routes?
                 return Err(mine);
             }

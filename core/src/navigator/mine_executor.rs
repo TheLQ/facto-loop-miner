@@ -6,6 +6,7 @@ use facto_loop_miner_common::{EXECUTOR_TAG, LOCALE};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
@@ -339,13 +340,12 @@ fn execute_route_combination(
                 found_paths.push(path.clone());
                 working_surface.add_mine_path(path).unwrap();
             }
-            MoriResult::FailingDebug(debug_rail, debug_all) => {
+            MoriResult::FailingDebug { debug_tree } => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
                 return ExecutorResult::Failure {
                     meta: FailingMeta {
                         all_routes: route_combination,
-                        failing_all: debug_rail,
-                        failing_dump: debug_all,
+                        debug_tree,
                         found_paths,
                     },
                     seen_mines: Vec::new(),
@@ -399,8 +399,7 @@ impl ExecutorResult {
 pub struct FailingMeta {
     pub found_paths: Vec<MinePath>,
     pub all_routes: Vec<ExecutionRoute>,
-    pub failing_dump: Vec<HopeLink>,
-    pub failing_all: Vec<HopeLink>,
+    pub debug_tree: Vec<HopeSodaLink>,
 }
 
 #[derive(PartialEq)]

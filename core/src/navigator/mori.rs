@@ -87,12 +87,13 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
         BasicWatchResult(res_sum),
         total_watch
     );
-    // if let Err(_) = &pathfind {
+    // if let Err((all, links)) = &pathfind {
     //     let mut new_surface = surface.clone();
     //     debug_draw_segment(&mut new_surface, endpoints);
-    //     new_surface.save_pixel_to_oculante();
-    //
-    //     exit(0);
+    //     new_surface.save_pixel_img_graduated_oculante(links);
+    //     // new_surface.save_pixel_to_oculante_entire();
+    // 
+    //     std::process::exit(0);
     // }
 
     match pathfind {
@@ -111,12 +112,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
                 cost,
             }
         }
-        Err((_dump, _all)) => MoriResult::FailingDebug(
-            // duals_into_single_vec(dump.into_iter().map(|(v, (i, r))| v)),
-            // duals_into_single_vec(all),
-            Vec::new(),
-            Vec::new(),
-        ),
+        Err((parents, all)) => MoriResult::FailingDebug { debug_tree: all },
     }
 }
 
@@ -130,14 +126,14 @@ struct WatchData {
 
 pub enum MoriResult {
     Route { path: Vec<HopeLink>, cost: u32 },
-    FailingDebug(Vec<HopeLink>, Vec<HopeLink>),
+    FailingDebug { debug_tree: Vec<HopeSodaLink> },
 }
 
 impl MoriResult {
     pub fn is_route(&self) -> bool {
         match &self {
             MoriResult::Route { .. } => true,
-            MoriResult::FailingDebug(..) => false,
+            MoriResult::FailingDebug { .. } => false,
         }
     }
 }

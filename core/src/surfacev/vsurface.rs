@@ -12,6 +12,9 @@ use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ONE};
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
@@ -213,19 +216,43 @@ impl VSurface {
         let pixel_map_path = out_dir.join("pixel-map.png");
         debug!("Saving RGB dump image to {}", pixel_map_path.display());
 
-        let (output, size) = self.save_pixel_colored_to_vec(None);
-        save_png(&pixel_map_path, &output, size, size)?;
+        let (output, size, color_type) = self.save_pixel_colored_to_vec(None);
+        save_png(&pixel_map_path, &output, size, size, color_type)?;
         Ok(())
     }
 
-    pub(crate) fn save_pixel_img_colorized_grad(
+    pub(crate) fn save_pixel_img_graduated_oculante(&self, internal_links: &[HopeSodaLink]) {
+        trace!("dumping {}", internal_links.len());
+        let mut compressed: HashMap<VPoint, usize> = HashMap::new();
+        for internal_link in internal_links {
+            let val = compressed.entry(internal_link.pos_next()).or_default();
+            *val += 1;
+        }
+
+        let (output, size, color_type) = self.save_pixel_img_graduated(compressed);
+        Self::save_to_oculante(output, size, color_type)
+    }
+
+    pub(crate) fn save_pixel_img_graduated_disk(
         &self,
         out_dir: &Path,
         compressed: HashMap<VPoint, usize>,
     ) -> VResult<()> {
-        let build_watch = BasicWatch::start();
         let pixel_map_path = out_dir.join("pixel-map-grad.png");
         debug!("Saving RGB dump image to {}", pixel_map_path.display());
+
+        let (output, size, color_type) = self.save_pixel_img_graduated(compressed);
+
+        save_png(&pixel_map_path, &output, size, size, color_type)?;
+        Ok(())
+    }
+
+    fn save_pixel_img_graduated(
+        &self,
+        compressed: HashMap<VPoint, usize>,
+    ) -> (Vec<u8>, u32, ExtendedColorType) {
+        assert!(!compressed.is_empty());
+        let build_watch = BasicWatch::start();
 
         let max_count = *compressed.values().max().unwrap() as f32;
         let index_to_compressed: HashMap<usize, (VPoint, f32)> = compressed
@@ -261,7 +288,7 @@ impl VSurface {
         );
 
         let size = self.pixels.diameter() as u32;
-        (output, size)
+        (output, size, ExtendedColorType::Rgba8)
     }
 
     fn save_entity_buffers(&self, out_dir: &Path) -> VResult<()> {
@@ -283,7 +310,7 @@ impl VSurface {
         Ok(())
     }
 
-    fn save_to_oculante(output: Vec<u8>, diameter: u32) {
+    fn save_to_oculante(output: Vec<u8>, diameter: u32, color_type: ExtendedColorType) {
         let address: SocketAddr = ("peko.g.xana.sh", 5689)
             .to_socket_addrs()
             .unwrap()
@@ -295,7 +322,7 @@ impl VSurface {
         let encoder =
             PngEncoder::new_with_quality(stream, CompressionType::Fast, FilterType::NoFilter);
         encoder
-            .write_image(&output, diameter, diameter, ExtendedColorType::Rgb8)
+            .write_image(&output, diameter, diameter, color_type)
             .unwrap();
     }
 
@@ -305,17 +332,17 @@ impl VSurface {
             VPoint::new(0, -self.get_radius_i32() / 2),
             VPoint::new(self.get_radius_i32() - 1, (self.get_radius_i32() / 2) - 1),
         );
-        let (output, diameter) = self.save_pixel_colored_to_vec(Some(crop_circle));
+        let (output, diameter, color_type) = self.save_pixel_colored_to_vec(Some(crop_circle));
 
-        Self::save_to_oculante(output, diameter)
+        Self::save_to_oculante(output, diameter, color_type)
     }
 
     pub fn save_pixel_to_oculante_entire(&self) {
-        let (output, diameter) = self.save_pixel_colored_to_vec(None);
-        Self::save_to_oculante(output, diameter)
+        let (output, diameter, color_type) = self.save_pixel_colored_to_vec(None);
+        Self::save_to_oculante(output, diameter, color_type)
     }
 
-    fn save_pixel_colored_to_vec(&self, crop: Option<VArea>) -> (Vec<u8>, u32) {
+    fn save_pixel_colored_to_vec(&self, crop: Option<VArea>) -> (Vec<u8>, u32, ExtendedColorType) {
         let build_watch = BasicWatch::start();
         if let Some(crop_circle) = crop {
             // let crop_circle: VArea = self
@@ -325,40 +352,51 @@ impl VSurface {
             assert_eq!(crop_size.x(), crop_size.y());
             let output_size = (crop_size.x() * crop_size.y() * 3) as usize;
 
-        let entities = self.pixels.iter_xy_pixels();
-
-        let mut output: Vec<u8> = Vec::with_capacity(output_size);
-        // trace!(
-        //     "area {crop_circle} size {} output {} width {}",
-        //     output.len(),
-        //     crop_size,
-        //     output.len() / 3 / self.get_radius() as usize
-        // );
-        for (i, pixel) in entities.enumerate() {
-            if !crop_circle.contains_point(&self.pixels.index_to_xy(i)) {
-                continue;
+            let entities = self.pixels.iter_xy_pixels();
+            let mut output: Vec<u8> = Vec::with_capacity(output_size);
+            // trace!(
+            //     "area {crop_circle} size {} output {} width {}",
+            //     output.len(),
+            //     crop_size,
+            //     output.len() / 3 / self.get_radius() as usize
+            // );
+            for (i, pixel) in entities.enumerate() {
+                if !crop_circle.contains_point(&self.pixels.index_to_xy(i)) {
+                    continue;
+                }
+                let color = &pixel.color();
+                output.extend(color);
             }
-            let color = &pixel.color();
-            output.extend(color);
-        }
-        assert_eq!(output.len(), output_size);
-        trace!(
-            "built entity array of {} in {}",
-            output.len().to_formatted_string(&LOCALE),
-            build_watch
-        );
+            assert_eq!(output.len(), output_size);
 
-        let encoder =
-            PngEncoder::new_with_quality(stream, CompressionType::Fast, FilterType::NoFilter);
-        encoder
-            .write_image(
-                &output,
-                self.get_radius(),
-                self.get_radius(),
+            trace!(
+                "built entity array of {} in {}",
+                output.len().to_formatted_string(&LOCALE),
+                build_watch
+            );
+            (
+                output,
+                crop_size.x().try_into().unwrap(),
                 ExtendedColorType::Rgb8,
             )
-            .unwrap();
+        } else {
+            let entities = self.pixels.iter_xy_pixels();
+            // trace!("built entity array of {}", entities.len());
+            let mut output: Vec<u8> = vec![0; self.pixels.xy_array_length_from_radius() * 3];
+            for (i, pixel) in entities.enumerate() {
+                let color = &pixel.color();
+                let start = i * color.len();
+                output[start..(start + 3)].copy_from_slice(color);
+            }
+            trace!(
+                "built entity array of {} in {}",
+                output.len().to_formatted_string(&LOCALE),
+                build_watch
+            );
+            (output, self.get_radius() * 2, ExtendedColorType::Rgb8)
+        }
     }
+
     //</editor-fold>
 
     pub fn to_pixel_cv_image(&self, filter: Option<Pixel>) -> GeneratedMat {
@@ -776,11 +814,7 @@ fn display_patches(patches: &Vec<VPatch>) -> String {
 
 //<editor-fold desc="io common">
 
-fn save_png(path: &Path, rgb: &[u8], width: u32, height: u32) -> VResult<()> {
-    save_png_with_space(path, rgb, width, height, ExtendedColorType::Rgb8)
-}
-
-fn save_png_with_space(
+fn save_png(
     path: &Path,
     rgb: &[u8],
     width: u32,
