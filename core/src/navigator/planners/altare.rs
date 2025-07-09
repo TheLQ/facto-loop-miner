@@ -31,8 +31,20 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
     let base_source = BaseSource::from_central_base(&surface).into_refcells();
     let base_source_positive = base_source.positive_rc();
 
-    let all_mine_locations = group_nearby_patches(surface);
+    let mut all_mine_locations = group_nearby_patches(surface);
     draw_prep_mines(surface, &all_mine_locations, &base_source_positive);
+    all_mine_locations.retain_mut(|mine| {
+        mine.revalidate_endpoints_after_no_touch(surface);
+        // !mine.endpoints().is_empty()
+        if mine.endpoints().is_empty() {
+            trace!("removing empty mine {mine:?}");
+            false
+        } else {
+            true
+        }
+    });
+    assert!(!all_mine_locations.is_empty());
+
     let mut quester = Quester {
         all_mine_locations,
         origin_base: VPointDirectionQ(VPoint::new(0, 0), FacDirectionQuarter::East),

@@ -4,7 +4,7 @@ use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::{RemovedEntity, VSurface};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::{VArea, VAreaSugar};
-use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_SECTION};
+use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_SECTION, VPOINT_ZERO, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, SECTION_POINTS_I32};
@@ -15,6 +15,8 @@ use facto_loop_miner_fac_engine::game_entities::direction::{
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
+use std::borrow::Borrow;
+use std::fmt::{Arguments, Display};
 use std::{hint, ptr, slice};
 use tracing::{trace, warn};
 
@@ -33,7 +35,7 @@ pub struct MineLocation {
     area_no_touch: VArea,
     area_buffered: VArea,
     endpoints: Vec<VPoint>,
-    destinations: Vec<VPointDirectionQ>,
+    endpoints_adjust_direction: Vec<FacDirectionQuarter>,
 }
 
 impl MinePath {
@@ -85,14 +87,12 @@ impl MineLocation {
 
         assert!(area_no_touch.get_points().len() < area_buffered.get_points().len());
 
-        let Some(endpoints) = Self::new_endpoints(surface, &area_no_touch) else {
+        let Some((endpoints, endpoints_adjust_direction)) =
+            Self::new_endpoints(surface, &area_no_touch)
+        else {
             warn!("Excluding mine at {}", area_no_touch);
             return None;
         };
-        let destinations = endpoints
-            .iter()
-            .map(|p| VPointDirectionQ(*p, FacDirectionQuarter::East))
-            .collect();
 
         // fn expanded_mine_no_touching_zone(surface: &VSurface, mine: &MineLocation) -> VArea {
         // const MINE_RAIL_BUFFER_PIXELS: i32 = RAIL_STRAIGHT_DIAMETER_I32 * 2 * 2;
@@ -110,12 +110,17 @@ impl MineLocation {
             area_no_touch,
             area_buffered,
             endpoints,
-            destinations,
+            endpoints_adjust_direction,
         })
     }
 
-    fn new_endpoints(surface: &VSurface, area_no_touch: &VArea) -> Option<Vec<VPoint>> {
+    fn new_endpoints(
+        surface: &VSurface,
+        area_no_touch: &VArea,
+    ) -> Option<(Vec<VPoint>, Vec<FacDirectionQuarter>)> {
+        // Adjust same direction so sign adjust works
         const DIRECTION: FacDirectionQuarter = FacDirectionQuarter::East;
+
         let centered_rounded = area_no_touch.point_center().move_round_rail_down();
 
         let mut destination_top_raw =
@@ -128,82 +133,236 @@ impl MineLocation {
                 .move_round_rail_up();
         destination_bottom_raw.assert_step_rail();
 
-        let endpoints: Vec<VPoint> = [
-            Self::move_endpoint_to_buildable(
-                surface,
-                area_no_touch,
-                destination_top_raw,
-                DIRECTION,
-                -1,
-            ),
-            Self::move_endpoint_to_buildable(
-                surface,
-                area_no_touch,
-                destination_bottom_raw,
-                DIRECTION,
-                1,
-            ),
-        ]
-        .into_iter()
-        .filter_map(|v| v)
-        .filter(|destination| !surface.is_point_out_of_bounds(destination))
-        .collect();
-        // assert_ne!(
-        //     endpoints.len(),
-        //     0,
-        //     "stripped all possible destinations from {area_min} in {surface}"
-        // );
+        let mut endpoints = Vec::with_capacity(2);
+        let mut endpoints_adjust_direction = Vec::with_capacity(2);
+        for (cur_endpoint, change_sign) in [
+            (destination_top_raw, FacDirectionQuarter::West),
+            (destination_bottom_raw, FacDirectionQuarter::East),
+        ] {
+            // basic pre-filter to not screw up later
+            if surface.is_point_out_of_bounds(&cur_endpoint) {
+                continue;
+            }
+
+            endpoints.push(cur_endpoint);
+            endpoints_adjust_direction.push(change_sign);
+        }
         if endpoints.is_empty() {
-            warn!("excluding mine top {destination_top_raw} bottom {destination_bottom_raw} for {area_no_touch}");
+            warn!(
+                "excluding mine top {destination_top_raw} bottom {destination_bottom_raw} for {area_no_touch}"
+            );
             None
         } else {
-            Some(endpoints)
+            Some((endpoints, endpoints_adjust_direction))
         }
     }
 
-    fn move_endpoint_to_buildable(
-        surface: &VSurface,
-        area_no_touch: &VArea,
-        origin: VPoint,
-        link_direction: FacDirectionQuarter,
-        change_sign: i32,
-    ) -> Option<VPoint> {
-        for i in 0.. {
-            let new_origin = origin
-                .move_direction_sideways_int(link_direction, change_sign * i * SECTION_POINTS_I32);
-            let end_link_points =
-                HopeSodaLink::new_soda_straight(new_origin, link_direction).area_vec();
+    pub fn revalidate_endpoints_after_no_touch(&mut self, surface: &mut VSurface) {
+        assert_eq!(self.endpoints.len(), self.endpoints_adjust_direction.len());
+        trace!("start {}", self.area_min().point_center());
 
-            let is_free = surface.is_points_free_truncating(&end_link_points);
-            let is_inside_no_touch = area_no_touch.contains_points_any(&end_link_points);
-            if is_free && !is_inside_no_touch {
-                trace!("extra advance up at {new_origin} depth {i}");
-                return Some(new_origin);
+        'endpoints: for endpoint_index in (0..self.endpoints.len()).rev() {
+            let endpoint = self.endpoints[endpoint_index];
+            let adjust_direction = self.endpoints_adjust_direction[endpoint_index];
+            trace!("dir {adjust_direction}");
+
+            /// See [crate::navigator::base_source::BaseSourceEighth]
+            /// This is always applied vertically
+            const MAX_INTRA_OFFSET: VPoint = VPoint::new(0, 4 * 6);
+
+            for adjust_i in 0..2 {
+                let mut new_origin = endpoint
+                    .move_direction_sideways_int(adjust_direction, (adjust_i * SECTION_POINTS_I32));
+
+                match self.adjust_endpoint(
+                    &surface,
+                    new_origin,
+                    format_args!("mine endpoint {endpoint} at {adjust_i}-natty (cur {new_origin})"),
+                ) {
+                    Adjustment::Usable => {
+                        // more tests below
+                    }
+                    Adjustment::AdjustMore => {
+                        continue;
+                    }
+                    Adjustment::BadEndpoint => {
+                        self.remove_bad_endpoint_index(endpoint_index);
+                        continue 'endpoints;
+                    }
+                }
+                // best natty endpoint
+                self.endpoints[endpoint_index] = new_origin;
+                trace!("uopdat! {endpoint_index}");
+
+                // now try with intra offset
+                new_origin += MAX_INTRA_OFFSET;
+                match self.adjust_endpoint(
+                    &surface,
+                    new_origin,
+                    format_args!("mine endpoint {endpoint} at {adjust_i}-intra (cur {new_origin})"),
+                ) {
+                    Adjustment::Usable => {
+                        // success!
+                        trace!("final good!");
+                        continue 'endpoints;
+                    }
+                    Adjustment::AdjustMore => {
+                        // just skip ahead
+                        continue;
+                    }
+                    Adjustment::BadEndpoint => {
+                        // maybe the next adjustment is better?
+                        continue;
+                    }
+                }
             }
-
-            // Did we hit another mine?
-            let mut pixels = end_link_points
-                .iter()
-                .filter(|v| !surface.is_point_out_of_bounds(v))
-                .map(|v| surface.get_pixel(v))
-                .collect_vec();
-            pixels.sort();
-            pixels.dedup();
-            if pixels.iter().all(|p| *p == Pixel::Empty) && !is_free {
-                panic!("???");
-            } else if !is_free
-                && !pixels
-                    .iter()
-                    .all(|v| Pixel::is_resource(v) || *v == Pixel::Empty)
-            {
-                // we probably hit another mine
-                trace!("eliminate {new_origin}");
-                return None;
-            }
-
-            assert_ne!(i, 3);
+            trace!("out of adjustment");
+            self.remove_bad_endpoint_index(endpoint_index);
         }
-        panic!("uhh")
+    }
+
+    fn remove_bad_endpoint_index(&mut self, i: usize) {
+        // trace!("remove {i}");
+        self.endpoints.remove(i);
+        self.endpoints_adjust_direction.remove(i);
+        trace!(
+            "remove {i} remain {}",
+            self.endpoints.iter().map(|v| v.to_string()).join(",")
+        );
+    }
+
+    fn adjust_endpoint(
+        &self,
+        scratch_surface: &VSurface,
+        new_origin: VPoint,
+        debug_prefix: Arguments,
+    ) -> Adjustment {
+        // todo: Multi-approach
+        const ONLY_CURRENT_ENDPOINT_DIRECTION: FacDirectionQuarter = FacDirectionQuarter::East;
+
+        let end_link = HopeSodaLink::new_soda_straight(new_origin, ONLY_CURRENT_ENDPOINT_DIRECTION);
+        let end_link_points = end_link.area_vec();
+
+        // does link fit inside the surface?
+        if end_link_points
+            .iter()
+            .any(|v| scratch_surface.is_point_out_of_bounds(v))
+        {
+            // cannot go further out of bounds
+            trace!(
+                "{debug_prefix} out of bounds, remain {}",
+                self.endpoints.len() - 1
+            );
+            return Adjustment::BadEndpoint;
+        }
+
+        // is link still inside the no-touch zone?
+        if self.area_no_touch.contains_points_any(&end_link_points) {
+            // try the next one
+            trace!("{debug_prefix} inside self no touch");
+            return Adjustment::AdjustMore;
+        }
+
+        // is link points valid?
+        if !self.is_surface_points_free_excluding_buffered(
+            scratch_surface,
+            end_link_points,
+            &debug_prefix,
+        ) {
+            return Adjustment::BadEndpoint;
+        }
+
+        // is the link able to be reached?
+        let link_backwards = HopeSodaLink::new_soda_straight_flipped(&end_link);
+        for link in [
+            link_backwards.add_straight_section(),
+            link_backwards.add_turn90(true),
+            link_backwards.add_turn90(false),
+        ] {
+            if !self.is_surface_points_free_excluding_buffered(
+                scratch_surface,
+                link.area_vec(),
+                &debug_prefix,
+            ) {
+                trace!(
+                    "{debug_prefix} is unreachable, remain {}",
+                    self.endpoints.len() - 1
+                );
+                return Adjustment::BadEndpoint;
+            }
+        }
+
+        // it's valid!
+        trace!("{debug_prefix} is valid");
+        Adjustment::Usable
+    }
+
+    fn is_surface_points_free_excluding_buffered(
+        &self,
+        surface: &VSurface,
+        points: impl IntoIterator<Item = impl Borrow<VPoint>>,
+        debug_prefix: &Arguments,
+    ) -> bool {
+        let mut pixels = points
+            .into_iter()
+            .filter_map(|p| {
+                let p = p.borrow();
+                if surface.is_point_out_of_bounds(p) {
+                    return None;
+                }
+                let pixel = surface.get_pixel(p);
+                if pixel == Pixel::MineNoTouch
+                    && self.area_buffered.contains_point(p)
+                    && !self.area_no_touch.contains_point(p)
+                {
+                    // exclude self
+                    None
+                } else {
+                    Some(pixel)
+                }
+            })
+            .collect_vec();
+        pixels.sort();
+        pixels.dedup();
+
+        if pixels.iter().all(|p| *p == Pixel::Empty) {
+            // good all empty!
+            true
+        } else if pixels
+            .iter()
+            .all(|p| matches!(*p, Pixel::Empty | Pixel::MineNoTouch))
+        {
+            // // Are we touching only our own area_buffered?
+            // if self.area_buffered.contains_points_all(
+            //     end_link_points
+            //         .iter()
+            //         .filter(|p| surface.get_pixel(*p) == Pixel::MineNoTouch),
+            // ) {
+            //     trace!("{debug_prefix} is in free space")
+            // } else {
+            trace!(
+                "{debug_prefix} is not in mine touch, maybe touching another?, remain {}",
+                self.endpoints.len() - 1
+            );
+            false
+            // }
+            // let mut new_surface = surface.clone();
+            // new_surface
+            //     .set_pixels(Pixel::Highlighter, end_link_points)
+            //     .unwrap();
+            // // new_surface.draw_square_area_forced(self.area_no_touch(), Pixel::EdgeWall);
+            // new_surface.paint_pixel_colored_entire().save_to_oculante();
+            // std::process::exit(1);
+        } else if pixels
+            .iter()
+            .all(|v| Pixel::is_resource(v) || *v == Pixel::Empty)
+        {
+            // todo: do this ever happen?
+            panic!("{debug_prefix} hit another mine");
+        } else {
+            // panic!("{debug_prefix} is {pixels_debug}");
+            panic!("{debug_prefix}");
+        }
     }
 
     pub fn area_min(&self) -> &VArea {
@@ -270,8 +429,11 @@ impl MineLocation {
         &self.endpoints
     }
 
-    pub fn destinations(&self) -> &[VPointDirectionQ] {
-        &self.destinations
+    pub fn destinations(&self) -> impl Iterator<Item = VPointDirectionQ> {
+        // todo
+        self.endpoints
+            .iter()
+            .map(|v| VPointDirectionQ(*v, FacDirectionQuarter::East))
     }
 
     pub fn surface_patches_len(&self) -> usize {
@@ -302,6 +464,12 @@ impl MineLocation {
     // }
 }
 
+enum Adjustment {
+    AdjustMore,
+    BadEndpoint,
+    Usable,
+}
+
 #[cfg(test)]
 mod test {
     use crate::surface::pixel::Pixel;
@@ -310,7 +478,7 @@ mod test {
     use crate::surfacev::vsurface::VSurface;
     use facto_loop_miner_fac_engine::common::varea::VArea;
     use facto_loop_miner_fac_engine::common::vpoint::{
-        VPoint, VPOINT_SECTION, VPOINT_SECTION_NEGATIVE,
+        VPOINT_SECTION, VPOINT_SECTION_NEGATIVE, VPoint,
     };
     use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
