@@ -191,10 +191,10 @@ where
                 }
 
                 let indexes = diameter * (as_y + radius) + (as_x + radius);
-                if !indexes
-                    .as_array()
+                if indexes
+                    .to_array()
                     .into_iter()
-                    .all(|i| xy_lookup[*i as usize] == EMPTY_XY_INDEX)
+                    .any(|i| xy_lookup[i as usize] != EMPTY_XY_INDEX)
                 {
                     return false;
                 }

@@ -92,7 +92,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
     //     debug_draw_segment(&mut new_surface, endpoints);
     //     new_surface.save_pixel_img_graduated_oculante(links);
     //     // new_surface.save_pixel_to_oculante_entire();
-    // 
+    //
     //     std::process::exit(0);
     // }
 
