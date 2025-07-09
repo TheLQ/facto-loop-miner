@@ -87,14 +87,27 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
         BasicWatchResult(res_sum),
         total_watch
     );
-    // if let Err((all, links)) = &pathfind {
-    //     let mut new_surface = surface.clone();
-    //     debug_draw_segment(&mut new_surface, endpoints);
-    //     new_surface.save_pixel_img_graduated_oculante(links);
-    //     // new_surface.save_pixel_to_oculante_entire();
-    //
-    //     std::process::exit(0);
-    // }
+    if let Err((all, links)) = &pathfind {
+        let mut new_surface = surface.clone();
+        // todo
+        // new_surface
+        //     .add_mine_path(MinePath {
+        //         segment: VSegment {
+        //             start: VPointDirectionQ(VPOINT_ZERO.clone(), FacDirectionQuarter::North),
+        //             end: VPointDirectionQ(VPOINT_ZERO.clone(), FacDirectionQuarter::North),
+        //         },
+        //         cost: 44,
+        //         links: [HopeLink::],
+        //     })
+        //     .unwrap();
+        debug_draw_segment(&mut new_surface, endpoints);
+        new_surface
+            //.paint_pixel_graduated(watch_data.was_unfree_check)
+            .paint_pixel_graduated(count_link_origins(links))
+            .save_to_oculante();
+
+        std::process::exit(0);
+    }
 
     match pathfind {
         Ok((path, cost)) => {

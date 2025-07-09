@@ -15,6 +15,7 @@ use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ONE};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
+use facto_loop_miner_io::err::{VIoResult, VStdIoResult};
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
@@ -25,11 +26,11 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, Write};
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::{Path, PathBuf};
-use std::thread;
 use std::thread::JoinHandle;
+use std::{io, thread};
 use tracing::{debug, info, trace};
 
 /// A map of background pixels (eg resources, water) and the large entities on top
@@ -184,7 +185,7 @@ impl VSurface {
         let total_save_watch = BasicWatch::start();
         self.save_state(out_dir)?;
 
-        self.save_pixel_img_colorized(out_dir)?;
+        self.paint_pixel_colored_entire().save_to_file(out_dir)?;
         self.save_entity_buffers(out_dir)?;
         self.save_tuning_parameters(out_dir)?;
         info!("+++ Saved in {} to {}", total_save_watch, out_dir.display());
@@ -211,46 +212,7 @@ impl VSurface {
         Ok(())
     }
 
-    fn save_pixel_img_colorized(&self, out_dir: &Path) -> VResult<()> {
-        let build_watch = BasicWatch::start();
-        let pixel_map_path = out_dir.join("pixel-map.png");
-        debug!("Saving RGB dump image to {}", pixel_map_path.display());
-
-        let (output, size, color_type) = self.save_pixel_colored_to_vec(None);
-        save_png(&pixel_map_path, &output, size, size, color_type)?;
-        Ok(())
-    }
-
-    pub(crate) fn save_pixel_img_graduated_oculante(&self, internal_links: &[HopeSodaLink]) {
-        trace!("dumping {}", internal_links.len());
-        let mut compressed: HashMap<VPoint, usize> = HashMap::new();
-        for internal_link in internal_links {
-            let val = compressed.entry(internal_link.pos_next()).or_default();
-            *val += 1;
-        }
-
-        let (output, size, color_type) = self.save_pixel_img_graduated(compressed);
-        Self::save_to_oculante(output, size, color_type)
-    }
-
-    pub(crate) fn save_pixel_img_graduated_disk(
-        &self,
-        out_dir: &Path,
-        compressed: HashMap<VPoint, usize>,
-    ) -> VResult<()> {
-        let pixel_map_path = out_dir.join("pixel-map-grad.png");
-        debug!("Saving RGB dump image to {}", pixel_map_path.display());
-
-        let (output, size, color_type) = self.save_pixel_img_graduated(compressed);
-
-        save_png(&pixel_map_path, &output, size, size, color_type)?;
-        Ok(())
-    }
-
-    fn save_pixel_img_graduated(
-        &self,
-        compressed: HashMap<VPoint, usize>,
-    ) -> (Vec<u8>, u32, ExtendedColorType) {
+    pub fn paint_pixel_graduated(&self, compressed: HashMap<VPoint, u32>) -> SurfacePainting {
         assert!(!compressed.is_empty());
         let build_watch = BasicWatch::start();
 
@@ -287,8 +249,13 @@ impl VSurface {
             build_watch
         );
 
-        let size = self.pixels.diameter() as u32;
-        (output, size, ExtendedColorType::Rgba8)
+        SurfacePainting {
+            output,
+            diameter: self.pixels.diameter() as u32,
+            color_type: ExtendedColorType::Rgba8,
+            file_name: "pixel-map-grad.png".into(),
+            debug_description: "color gradient",
+        }
     }
 
     fn save_entity_buffers(&self, out_dir: &Path) -> VResult<()> {
@@ -310,39 +277,21 @@ impl VSurface {
         Ok(())
     }
 
-    fn save_to_oculante(output: Vec<u8>, diameter: u32, color_type: ExtendedColorType) {
-        let address: SocketAddr = ("peko.g.xana.sh", 5689)
-            .to_socket_addrs()
-            .unwrap()
-            .next()
-            .unwrap();
-        debug!("Saving RGB dump image to oculante {address}");
-        let stream = TcpStream::connect(address).unwrap();
-
-        let encoder =
-            PngEncoder::new_with_quality(stream, CompressionType::Fast, FilterType::NoFilter);
-        encoder
-            .write_image(&output, diameter, diameter, color_type)
-            .unwrap();
-    }
-
     /// https://github.com/woelper/oculante
-    pub fn save_pixel_to_oculante_zoomed(&self) {
+    pub fn paint_pixel_colored_zoomed(&self) -> SurfacePainting {
         let crop_circle = VArea::from_arbitrary_points_pair(
             VPoint::new(0, -self.get_radius_i32() / 2),
             VPoint::new(self.get_radius_i32() - 1, (self.get_radius_i32() / 2) - 1),
         );
-        let (output, diameter, color_type) = self.save_pixel_colored_to_vec(Some(crop_circle));
-
-        Self::save_to_oculante(output, diameter, color_type)
+        self.paint_pixel_colored(Some(crop_circle))
     }
 
-    pub fn save_pixel_to_oculante_entire(&self) {
-        let (output, diameter, color_type) = self.save_pixel_colored_to_vec(None);
-        Self::save_to_oculante(output, diameter, color_type)
+    pub fn paint_pixel_colored_entire(&self) -> SurfacePainting {
+        self.paint_pixel_colored(None)
     }
 
-    fn save_pixel_colored_to_vec(&self, crop: Option<VArea>) -> (Vec<u8>, u32, ExtendedColorType) {
+    fn paint_pixel_colored(&self, crop: Option<VArea>) -> SurfacePainting {
+        const FILENAME: &str = "pixel-map.png";
         let build_watch = BasicWatch::start();
         if let Some(crop_circle) = crop {
             // let crop_circle: VArea = self
@@ -374,11 +323,13 @@ impl VSurface {
                 output.len().to_formatted_string(&LOCALE),
                 build_watch
             );
-            (
+            SurfacePainting {
                 output,
-                crop_size.x().try_into().unwrap(),
-                ExtendedColorType::Rgb8,
-            )
+                diameter: crop_size.x().try_into().unwrap(),
+                color_type: ExtendedColorType::Rgb8,
+                file_name: FILENAME,
+                debug_description: "colored cropped",
+            }
         } else {
             let entities = self.pixels.iter_xy_pixels();
             // trace!("built entity array of {}", entities.len());
@@ -393,7 +344,13 @@ impl VSurface {
                 output.len().to_formatted_string(&LOCALE),
                 build_watch
             );
-            (output, self.get_radius() * 2, ExtendedColorType::Rgb8)
+            SurfacePainting {
+                output,
+                diameter: self.get_radius() * 2,
+                color_type: ExtendedColorType::Rgb8,
+                file_name: FILENAME,
+                debug_description: "colored entire",
+            }
         }
     }
 
@@ -798,6 +755,74 @@ impl Display for VSurface {
     }
 }
 
+/// Generated image with various save outputs
+pub struct SurfacePainting {
+    output: Vec<u8>,
+    diameter: u32,
+    color_type: ExtendedColorType,
+    file_name: &'static str,
+    debug_description: &'static str,
+}
+
+impl SurfacePainting {
+    fn encoder<W: Write>(writer: W) -> PngEncoder<W> {
+        // For input 2000x2000 image:
+        // Custom takes 0.121 seconds to save
+        // Default takes 2.4 seconds to save
+        PngEncoder::new_with_quality(writer, CompressionType::Fast, FilterType::NoFilter)
+    }
+
+    pub fn save_to_oculante(self) {
+        let Self {
+            output,
+            diameter,
+            color_type,
+            file_name: _,
+            debug_description,
+        } = self;
+        let address: SocketAddr = ("peko.g.xana.sh", 5689)
+            .to_socket_addrs()
+            .unwrap()
+            .next()
+            .unwrap();
+        debug!("Painting {debug_description} to oculante {address}");
+        let stream = TcpStream::connect(address).unwrap();
+
+        Self::encoder(stream)
+            .write_image(&output, diameter, diameter, color_type)
+            .unwrap();
+    }
+
+    fn save_to_file(self, dir: &Path) -> VResult<()> {
+        let Self {
+            output,
+            diameter,
+            color_type,
+            file_name,
+            debug_description,
+        } = self;
+
+        let watch = BasicWatch::start();
+        let path = dir.join(file_name);
+        debug!("Painting {debug_description} to file {}", path.display());
+
+        let file = File::create(&path).convert(&path)?;
+        let writer = BufWriter::new(&file);
+        Self::encoder(writer)
+            .write_image(&output, diameter, diameter, color_type)
+            .convert(&path)?;
+
+        let size = file.metadata().convert(&path)?.len();
+        debug!(
+            "Saved {} byte image to {} in {}",
+            size.to_formatted_string(&LOCALE),
+            path.display(),
+            watch
+        );
+        Ok(())
+    }
+}
+
 fn display_patches(patches: &Vec<VPatch>) -> String {
     let mut map: HashMap<Pixel, usize> = HashMap::new();
     for patch in patches {
@@ -813,34 +838,6 @@ fn display_patches(patches: &Vec<VPatch>) -> String {
 }
 
 //<editor-fold desc="io common">
-
-fn save_png(
-    path: &Path,
-    rgb: &[u8],
-    width: u32,
-    height: u32,
-    space: ExtendedColorType,
-) -> VResult<()> {
-    let watch = BasicWatch::start();
-    let file = File::create(path).convert(path)?;
-    let writer = BufWriter::new(&file);
-
-    // For input 2000x2000 image:
-    // Custom takes 0.121 seconds to save
-    // Default takes 2.4 seconds to save
-    let encoder = PngEncoder::new_with_quality(writer, CompressionType::Fast, FilterType::NoFilter);
-    encoder
-        .write_image(rgb, width, height, space)
-        .convert(&path)?;
-    let size = file.metadata().convert(path)?.len();
-    debug!(
-        "Saved {} byte image to {} in {}",
-        size.to_formatted_string(&LOCALE),
-        path.display(),
-        watch
-    );
-    Ok(())
-}
 
 fn path_pixel_xy_indexes(out_dir: &Path) -> PathBuf {
     out_dir.join("pixel-xy-indexes.dat")

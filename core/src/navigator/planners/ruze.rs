@@ -150,19 +150,19 @@ fn process_batch(
             // surface.set_pixels(Pixel::SteelChest, pixels).unwrap();
 
             // let mut all_pos = failing_all.iter().map(|v| v.next_straight_position()).collect_vec();
-            if failing_all.is_empty() {
-                warn!("gradient dump disabled");
-            } else {
-                trace!("dumping {}", failing_all.len());
-                let mut compressed: HashMap<VPoint, usize> = HashMap::new();
-                for each in failing_all {
-                    let val = compressed.entry(each.pos_next()).or_default();
-                    *val += 1;
-                }
-                surface
-                    .save_pixel_img_colorized_grad(step_out_dir, compressed)
-                    .unwrap();
-            }
+            // if debug_tree.is_empty() {
+            //     warn!("gradient dump disabled");
+            // } else {
+            //     trace!("dumping {}", failing_all.len());
+            //     let mut compressed: HashMap<VPoint, usize> = HashMap::new();
+            //     for each in failing_all {
+            //         let val = compressed.entry(each.pos_next()).or_default();
+            //         *val += 1;
+            //     }
+            //     surface
+            //         .save_pixel_img_colorized_grad_disk(step_out_dir, compressed)
+            //         .unwrap();
+            // }
 
             false
         }
