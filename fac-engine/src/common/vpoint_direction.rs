@@ -43,7 +43,7 @@ impl VSegment {
     // }
 
     pub fn is_within_area(&self, area: &VArea) -> bool {
-        area.contains_points([self.start.point(), self.end.point()])
+        area.contains_points_all([self.start.point(), self.end.point()])
     }
 }
 

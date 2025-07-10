@@ -54,7 +54,17 @@ impl VArea {
             && target.y() <= self.bottom_right.y()
     }
 
-    pub fn contains_points(&self, targets: impl IntoIterator<Item = impl Borrow<VPoint>>) -> bool {
+    pub fn contains_points_any(
+        &self,
+        targets: impl IntoIterator<Item = impl Borrow<VPoint>>,
+    ) -> bool {
+        targets.into_iter().any(|p| self.contains_point(p.borrow()))
+    }
+
+    pub fn contains_points_all(
+        &self,
+        targets: impl IntoIterator<Item = impl Borrow<VPoint>>,
+    ) -> bool {
         targets.into_iter().all(|p| self.contains_point(p.borrow()))
     }
 
