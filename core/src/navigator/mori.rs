@@ -183,11 +183,8 @@ fn crude_dump_on_failure(
     trace!("debug free {debug_free}");
 
     new_surface
-        .set_pixels(
-            Pixel::Highlighter,
-            links.into_iter().flat_map(|v| v.area_vec()).collect(),
-        )
-        .unwrap();
+        .change_pixels(links.into_iter().flat_map(|v| v.area_vec()).collect())
+        .stomp(Pixel::Highlighter);
     debug_draw_segment(&mut new_surface, endpoints);
 
     new_surface

@@ -1,4 +1,4 @@
-use crate::gamedata::lua::{read_lua_tiles, LuaEntity, LuaThing};
+use crate::gamedata::lua::{LuaEntity, LuaThing, read_lua_tiles};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::pixel::Pixel;
@@ -32,7 +32,7 @@ impl Step for Step00 {
         let convert_watch = BasicWatch::start();
         let radius = find_radius(&lua_tiles) as u32;
         let mut surface = VSurface::new(radius);
-        translate_entities_to_image(&lua_tiles, &mut surface, &params)?;
+        translate_entities_to_image(&lua_tiles, &mut surface, &params);
         info!("Converted in {}", convert_watch);
 
         // let center = surface.get_pixel(VPoint::new(0, 0));
@@ -85,11 +85,7 @@ fn find_radius_max<T: LuaThing>(
     }
 }
 
-fn translate_entities_to_image<E>(
-    entities: &[E],
-    surface: &mut VSurface,
-    params: &StepParams,
-) -> VResult<()>
+fn translate_entities_to_image<E>(entities: &[E], surface: &mut VSurface, params: &StepParams)
 where
     E: LuaThing,
 {
@@ -108,7 +104,6 @@ where
     }
 
     for (pixel, points) in mega_init_entities {
-        surface.set_pixels(pixel, points)?;
+        surface.change_pixels(points).stomp(pixel);
     }
-    Ok(())
 }

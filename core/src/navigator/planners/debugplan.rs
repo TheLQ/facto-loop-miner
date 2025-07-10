@@ -1,14 +1,12 @@
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::select_mines_and_sources;
 use crate::navigator::planners::common::{debug_draw_complete_plan, draw_prep};
-use crate::surfacev::err::VResult;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
 use tracing::{info, trace};
 
-pub fn start_debug_planner(surface: &mut VSurface) -> VResult<()> {
+pub fn start_debug_planner(surface: &mut VSurface) {
     let select_batches = select_mines_and_sources(&surface, 5)
         .into_success()
         .unwrap();
@@ -47,9 +45,7 @@ pub fn start_debug_planner(surface: &mut VSurface) -> VResult<()> {
     for (i, batch) in select_batches.into_iter().enumerate() {
         trace!("batch {i}");
         let plan = get_possible_routes_for_batch(&surface, batch);
-        debug_draw_complete_plan(surface, plan)?;
+        debug_draw_complete_plan(surface, plan);
     }
     surface.paint_pixel_colored_zoomed().save_to_oculante();
-
-    Ok(())
 }

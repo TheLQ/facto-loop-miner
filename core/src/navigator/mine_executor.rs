@@ -338,7 +338,7 @@ fn execute_route_combination(
                     segment: route.segment.clone(),
                 };
                 found_paths.push(path.clone());
-                working_surface.add_mine_path(path).unwrap();
+                working_surface.add_mine_path(path);
             }
             MoriResult::FailingDebug { err } => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);

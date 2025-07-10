@@ -12,7 +12,7 @@ use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::{RemovedEntity, VSurface};
+use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_common::err_bt::pretty_print_error;
 use facto_loop_miner_fac_engine::admiral::lua_command::fac_surface_create_tile::FacSurfaceCreateLua;
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -123,7 +123,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                             .unwrap();
                         routes.last().unwrap().location.draw_area_buffered(surface);
                         for path in paths {
-                            surface.add_mine_path(path).unwrap();
+                            surface.add_mine_path(path);
                         }
                         surface.paint_pixel_colored_zoomed().save_to_oculante();
                     }
@@ -300,9 +300,7 @@ fn rollback_and_reapply(
     {
         ExecutorResult::Failure { meta, .. } => {
             debug_failing(surface, meta);
-            // surface
-            //     .add_mine_path_with_pixel(old_path, Pixel::Highlighter)
-            //     .unwrap();
+            surface.add_mine_path_with_pixel(old_path, Pixel::Highlighter);
             surface.paint_pixel_colored_zoomed().save_to_oculante();
             panic!("uhh")
         }
@@ -321,7 +319,7 @@ fn rollback_and_reapply(
         surface.remove_mine_path_pop().unwrap();
         base_source.undo_one();
     }
-    surface.add_mine_path(new_path).unwrap();
+    surface.add_mine_path(new_path);
 }
 
 struct Quester {

@@ -4,7 +4,9 @@ use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_io::err::{UringError, VStdIoError};
 use image::ImageError;
 use itertools::Itertools;
+use simd_json::prelude::ArrayTrait;
 use std::backtrace::Backtrace;
+use std::fmt::{Debug, Display, Formatter};
 use std::io;
 use std::path::Path;
 use thiserror::Error;
@@ -14,9 +16,9 @@ pub type VResult<R> = Result<R, VError>;
 
 #[derive(Error, Debug)]
 pub enum VError {
-    #[error("XYOutOfBounds positions {}", positions_to_strings(positions))]
-    XYOutOfBounds {
-        positions: Vec<VPoint>,
+    #[error("XYOutOfBounds positions {}", positions_to_strings(pos))]
+    MiniXYOutOfBounds {
+        pos: Vec<VPoint>,
         backtrace: Backtrace,
     },
     #[error("IoError {path} {err}")]
@@ -48,7 +50,7 @@ pub enum VError {
 impl MyBacktrace for VError {
     fn my_backtrace(&self) -> &Backtrace {
         match self {
-            VError::XYOutOfBounds { backtrace, .. }
+            VError::MiniXYOutOfBounds { backtrace, .. }
             | VError::IoError { backtrace, .. }
             | VError::UnknownName { backtrace, .. }
             | VError::SimdJsonFail { backtrace, .. }
@@ -104,5 +106,39 @@ impl<T> CoreConvertPathResult<T, VError> for Result<T, ImageError> {
             backtrace: xbt(),
             path: path.as_ref().to_string_lossy().to_string(),
         })
+    }
+}
+
+pub type XYOutOfBoundsResult<V> = Result<V, XYOutOfBoundsError>;
+
+pub struct XYOutOfBoundsError {
+    pos: Vec<VPoint>,
+    backtrace: Backtrace,
+}
+
+impl XYOutOfBoundsError {
+    pub fn new(pos: Vec<VPoint>) -> Self {
+        XYOutOfBoundsError {
+            pos,
+            backtrace: Backtrace::capture(),
+        }
+    }
+}
+
+impl From<XYOutOfBoundsError> for VError {
+    fn from(XYOutOfBoundsError { pos, backtrace }: XYOutOfBoundsError) -> Self {
+        Self::MiniXYOutOfBounds { pos, backtrace }
+    }
+}
+
+impl Debug for XYOutOfBoundsError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "XYOutOfBoundsError {}", self.pos.iter().join(","))
+    }
+}
+
+impl Display for XYOutOfBoundsError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self, f)
     }
 }

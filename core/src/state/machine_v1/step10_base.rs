@@ -5,7 +5,7 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::err::VResult;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ZERO};
+use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
 use itertools::Itertools;
 
 pub struct Step10 {}
@@ -27,22 +27,20 @@ impl Step for Step10 {
 
         // surface.remove_patches_within_radius(tunables.resource_clear_chunks.as_tiles_u32());
         surface.remove_patches_in_column(tunables.resource_clear_chunks.as_tiles_u32());
-        draw_mega_box(&mut surface, tunables)?;
+        draw_mega_box(&mut surface, tunables);
 
         surface.save(&params.step_out_dir)?;
         Ok(())
     }
 }
 
-fn draw_mega_box(surface: &mut VSurface, tunables: &BaseTunables) -> VResult<()> {
+fn draw_mega_box(surface: &mut VSurface, tunables: &BaseTunables) {
     let base_tiles = tunables.base_chunks.as_tiles_u32();
     let box_points = points_in_centered_box(base_tiles, VPOINT_ZERO)
         .into_iter()
         .filter(|v| !v.is_within_center_radius(base_tiles as u32 - 50))
         .collect_vec();
-    surface.set_pixels(Pixel::EdgeWall, box_points)?;
-
-    Ok(())
+    surface.change_pixels(box_points).stomp(Pixel::EdgeWall);
 }
 
 fn points_in_centered_box(radius: u32, center: VPoint) -> Vec<VPoint> {

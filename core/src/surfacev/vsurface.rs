@@ -5,13 +5,14 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{CoreConvertPathResult, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::mine::MinePath;
-use crate::surfacev::ventity_map::VEntityMap;
+use crate::surfacev::ventity_map::{VEntityMap, VMapChange};
 use crate::surfacev::vpatch::VPatch;
 use colorgrad::Gradient;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ONE, VPoint};
+use facto_loop_miner_fac_engine::opencv_re::core::Point;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
@@ -227,7 +228,7 @@ impl VSurface {
             .flat_map(|(pos, count)| pos.area_2x2().map(|v| (v, count)))
             .map(|(pos, count)| {
                 (
-                    self.pixels.point_to_index(&pos),
+                    self.pixels.point_to_index_unchecked(&pos),
                     (pos, count as f32 / max_count),
                 )
             })
@@ -405,13 +406,12 @@ impl VSurface {
             })
     }
 
-    pub fn set_pixels(&mut self, pixel: Pixel, positions: Vec<VPoint>) -> VResult<()> {
-        if pixel == Pixel::Empty {
-            self.pixels.remove_positions(&positions);
-            Ok(())
-        } else {
-            self.pixels.add(VPixel { pixel }, positions)
-        }
+    #[must_use]
+    pub fn change_pixels<I>(&mut self, positions: I) -> VMapChange<VPixel, I>
+    where
+        I: IntoIterator<Item = VPoint>,
+    {
+        self.pixels.change(positions)
     }
 
     pub fn add_patches(&mut self, patches: &[VPatch]) {
@@ -420,10 +420,6 @@ impl VSurface {
 
     pub fn get_patches_slice(&self) -> &[VPatch] {
         &self.patches
-    }
-
-    pub fn is_xy_out_of_bounds(&self, x: i32, y: i32) -> bool {
-        self.pixels.is_xy_out_of_bounds(x, y)
     }
 
     pub fn is_point_out_of_bounds(&self, point: &VPoint) -> bool {
@@ -467,7 +463,7 @@ impl VSurface {
             removed_points.len(),
             radius
         );
-        self.pixels.remove_positions(&removed_points);
+        self.pixels.change(removed_points).remove();
 
         patches_to_remove.reverse();
         for patch_index in patches_to_remove {
@@ -491,7 +487,7 @@ impl VSurface {
             removed_points.len(),
             radius
         );
-        self.pixels.remove_positions(&removed_points);
+        self.pixels.change(removed_points).remove();
 
         patches_to_remove.reverse();
         for patch_index in patches_to_remove {
@@ -543,38 +539,19 @@ impl VSurface {
         metrics.log_final();
     }
 
-    pub fn draw_square_area(&mut self, area: &VArea, empty_map: Pixel) {
-        let mut empty_pos = Vec::new();
-        for point in area.get_points() {
-            assert!(
-                !self.pixels.is_point_out_of_bounds(&point),
-                "Area point {point} is out of bounds {area}",
-            );
-            let existing_pixel = self.get_pixel(point);
-            if existing_pixel == Pixel::Empty {
-                empty_pos.push(point);
-            }
-        }
-        self.set_pixels(empty_map, empty_pos).unwrap();
-    }
-
-    pub fn draw_square_area_replacing(&mut self, area: &VArea, search: Pixel, replace: Pixel) {
-        let mut found_pos = Vec::new();
-        for point in area.get_points() {
-            assert!(
-                !self.pixels.is_point_out_of_bounds(&point),
-                "Area point {point} is out of bounds {area}",
-            );
-            let existing_pixel = self.get_pixel(point);
-            if existing_pixel == search {
-                found_pos.push(point);
-            }
-        }
-        self.set_pixels(replace, found_pos).unwrap();
-    }
-
-    pub fn draw_square_area_forced(&mut self, area: &VArea, new: Pixel) {
-        self.set_pixels(new, area.get_points()).unwrap()
+    #[must_use]
+    pub fn change_square(&mut self, area: &VArea) -> VMapChange<VPixel, Vec<VPoint>> {
+        assert!(
+            !self.pixels.is_point_out_of_bounds(&area.point_top_left()),
+            "Area is out of bounds {area}",
+        );
+        assert!(
+            !self
+                .pixels
+                .is_point_out_of_bounds(&area.point_bottom_right()),
+            "Area is out of bounds {area}",
+        );
+        self.pixels.change(area.get_points())
     }
 
     //
@@ -620,18 +597,18 @@ impl VSurface {
     //     self.set_pixels(empty_map, empty_pos).unwrap();
     // }
 
-    pub fn add_mine_path(&mut self, mine_path: MinePath) -> VResult<()> {
+    pub fn add_mine_path(&mut self, mine_path: MinePath) {
         self.add_mine_path_with_pixel(mine_path, Pixel::Rail)
     }
 
-    pub fn add_mine_path_with_pixel(&mut self, mine_path: MinePath, pixel: Pixel) -> VResult<()> {
+    pub fn add_mine_path_with_pixel(&mut self, mine_path: MinePath, pixel: Pixel) {
         trace!(
             "{} {}",
             nu_ansi_term::Color::Red.paint("mine add"),
             mine_path.segment
         );
         let new_points = mine_path.total_area();
-        self.set_pixels(pixel, new_points)?;
+        self.change_pixels(new_points).stomp(pixel);
 
         // todo
         // // add markers for start points
@@ -639,7 +616,6 @@ impl VSurface {
         // self.set_pixels(Pixel::EdgeWall, start_points)?;
 
         self.rail_paths.push(mine_path);
-        Ok(())
     }
 
     pub fn remove_mine_path_at(&mut self, index: usize) -> Option<MinePath> {
@@ -676,8 +652,7 @@ impl VSurface {
                 panic!("existing {existing:?} is not Rail")
             }
         }
-
-        self.pixels.remove_positions(&removed_points);
+        self.pixels.change(removed_points).remove();
     }
 
     //
@@ -869,8 +844,8 @@ fn path_state(out_dir: &Path) -> PathBuf {
 //</editor-fold>
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
-pub(super) struct VPixel {
-    pixel: Pixel,
+pub struct VPixel {
+    pub(super) pixel: Pixel,
 }
 
 impl VPixel {

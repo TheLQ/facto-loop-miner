@@ -376,7 +376,9 @@ impl MineLocation {
     }
 
     pub fn draw_area_buffered_with(&self, surface: &mut VSurface, pixel: Pixel) {
-        surface.draw_square_area(&self.area_buffered, pixel)
+        surface
+            .change_pixels(self.area_buffered.get_points())
+            .stomp(pixel)
     }
 
     pub fn draw_area_buffered_to_no_touch(&self, surface: &mut VSurface) {
@@ -397,15 +399,15 @@ impl MineLocation {
             .get_points()
             .into_iter()
             .filter(|p| matches!(surface.get_pixel(p), Pixel::MineNoTouch))
-            .collect();
-        surface
-            .set_pixels(Pixel::Empty, removed_buffer_pixels)
-            .unwrap();
-        surface.set_pixels(Pixel::MineNoTouch, new_points).unwrap();
+            .collect_vec();
+        surface.change_pixels(removed_buffer_pixels).remove();
+        surface.change_pixels(new_points).stomp(Pixel::MineNoTouch);
     }
 
-    pub fn draw_area_buffered_replacing(&self, surface: &mut VSurface, pixel: Pixel) {
-        surface.draw_square_area_replacing(&self.area_buffered, Pixel::MineNoTouch, pixel)
+    pub fn draw_area_buffered_highlight_pixel(&self, surface: &mut VSurface, pixel: Pixel) {
+        surface
+            .change_pixels(self.area_buffered.get_points())
+            .find_into(Pixel::MineNoTouch, pixel)
     }
 
     /// Don't take self as MineLocation already moved / don't need it

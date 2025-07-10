@@ -1,16 +1,11 @@
-use crate::navigator::mine_executor::{
-    execute_route_batch, ExecuteFlags, ExecutorResult, FailingMeta,
-};
+use crate::navigator::mine_executor::{ExecutorResult, FailingMeta, execute_route_batch};
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
-use crate::navigator::mine_selector::{select_mines_and_sources, MineSelectBatch};
+use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
 use crate::navigator::planners::common::{debug_failing, draw_prep};
 use crate::state::machine::StepParams;
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::VSurface;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
-use std::collections::HashMap;
 use std::path::Path;
 use tracing::{error, info, trace, warn};
 
@@ -96,7 +91,7 @@ fn process_batch(
                 .advance_by(paths.len())
                 .unwrap();
             for path in paths {
-                surface.add_mine_path(path).unwrap();
+                surface.add_mine_path(path);
             }
             true
         }
@@ -114,9 +109,7 @@ fn process_batch(
 
             error!("failed to pathfind");
             for path in found_paths {
-                surface
-                    .add_mine_path_with_pixel(path, Pixel::Highlighter)
-                    .unwrap();
+                surface.add_mine_path_with_pixel(path, Pixel::Highlighter);
             }
 
             let (trigger_mine, rest) = failing_routes.split_first().unwrap();

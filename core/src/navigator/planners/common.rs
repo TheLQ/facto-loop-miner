@@ -41,7 +41,7 @@ pub(super) fn debug_draw_complete_plan(
         sequences,
         base_sources,
     }: CompletePlan,
-) -> VResult<()> {
+) {
     let mut pixels = Vec::new();
     let route_len = sequences[0].routes.len();
     for sequence in &sequences {
@@ -58,7 +58,7 @@ pub(super) fn debug_draw_complete_plan(
     }
     base_sources.borrow_mut().advance_by(route_len).unwrap();
 
-    surface.set_pixels(Pixel::Highlighter, pixels)
+    surface.change_pixels(pixels).stomp(Pixel::Highlighter)
 }
 
 pub fn debug_draw_segment(surface: &mut VSurface, segment: VSegment) {
@@ -69,7 +69,7 @@ pub fn debug_draw_segment(surface: &mut VSurface, segment: VSegment) {
     positions.extend(end.point().get_entity_area_3x3());
     positions.extend((end.point() - &VPoint::new(3, 3)).get_entity_area_3x3());
     // let positions = vec![*start.point(), *end.point()];
-    surface.set_pixels(Pixel::Highlighter, positions).unwrap();
+    surface.change_pixels(positions).stomp(Pixel::Highlighter);
 }
 
 pub(super) fn debug_draw_failing_mines<'a>(
@@ -83,7 +83,9 @@ pub(super) fn debug_draw_failing_mines<'a>(
         if seen_mines.contains(mine_area) {
             continue;
         }
-        surface.draw_square_area_replacing(mine_area, Pixel::MineNoTouch, Pixel::Highlighter);
+        surface
+            .change_square(mine_area)
+            .find_into(Pixel::MineNoTouch, Pixel::Highlighter);
         seen_mines.push(mine_area);
 
         let destination = *route.segment.end.point();
@@ -91,7 +93,7 @@ pub(super) fn debug_draw_failing_mines<'a>(
             destinations.push(destination);
         }
     }
-    surface.set_pixels(Pixel::EdgeWall, destinations).unwrap();
+    surface.change_pixels(destinations).stomp(Pixel::EdgeWall);
 }
 
 pub fn debug_failing(
@@ -104,15 +106,14 @@ pub fn debug_failing(
 ) {
     // draw all endpoints
     surface
-        .set_pixels(
-            Pixel::Highlighter,
+        .change_pixels(
             all_routes
                 .iter()
                 .flat_map(|v| [v.segment.start, v.segment.end])
                 .map(|v| *v.point())
                 .collect(),
         )
-        .unwrap();
+        .stomp(Pixel::Highlighter);
 
     // split all_routes
     let routes_found: Vec<ExecutionRoute> = all_routes
@@ -131,9 +132,7 @@ pub fn debug_failing(
     );
     for path in found_paths {
         // path.
-        surface
-            .add_mine_path_with_pixel(path, Pixel::Water)
-            .unwrap();
+        surface.add_mine_path_with_pixel(path, Pixel::Water);
     }
 
     warn!(
@@ -145,14 +144,14 @@ pub fn debug_failing(
     for route in routes_found {
         route
             .location
-            .draw_area_buffered_replacing(surface, Pixel::Stone);
+            .draw_area_buffered_highlight_pixel(surface, Pixel::Stone);
     }
     // draw not found
     for route in routes_notfound {
         warn!("failing at {:?}", route.location.area_buffered());
         route
             .location
-            .draw_area_buffered_replacing(surface, Pixel::SteelChest);
+            .draw_area_buffered_highlight_pixel(surface, Pixel::SteelChest);
     }
 }
 
@@ -183,8 +182,8 @@ pub(super) fn draw_prep_mines(
         .map(|i| VPoint::new(anti_backside_x, i))
         .collect_vec();
     surface
-        .set_pixels(Pixel::MineNoTouch, anti_backside_points)
-        .unwrap()
+        .change_pixels(anti_backside_points)
+        .stomp(Pixel::MineNoTouch)
 }
 
 /*
