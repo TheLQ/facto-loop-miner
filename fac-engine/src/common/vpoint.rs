@@ -27,6 +27,10 @@ pub const VPOINT_SECTION: VPoint = VPoint {
     x: SECTION_POINTS_I32,
     y: SECTION_POINTS_I32,
 };
+pub const VPOINT_SECTION_Y_ONLY: VPoint = VPoint {
+    x: 0,
+    y: SECTION_POINTS_I32,
+};
 pub const VPOINT_SECTION_NEGATIVE: VPoint = VPoint {
     x: -SECTION_POINTS_I32,
     y: -SECTION_POINTS_I32,
@@ -675,8 +679,13 @@ mod test {
 
     #[test]
     fn rounding_sanity_divisor() {
-        let pos = VPoint::new(SECTION_POINTS_I32, SECTION_POINTS_I32);
-        assert_eq!(pos.move_round_rail_down(), pos);
-        assert_eq!(pos.move_round_rail_up(), pos);
+        fn check(v: i32) {
+            let pos = VPoint::new(v, v);
+            assert_eq!(pos.move_round_rail_down(), pos);
+            assert_eq!(pos.move_round_rail_up(), pos);
+        }
+        check(SECTION_POINTS_I32);
+        check(0);
+        check(-SECTION_POINTS_I32);
     }
 }
