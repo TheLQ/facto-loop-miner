@@ -1,23 +1,18 @@
-use crate::surface;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::{RemovedEntity, VSurface};
+use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_common::LOCALE;
-use facto_loop_miner_fac_engine::common::varea::{VArea, VAreaSugar};
-use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_SECTION, VPOINT_ZERO, VPoint};
+use facto_loop_miner_fac_engine::common::varea::VArea;
+use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_SECTION, VPOINT_SECTION_Y_ONLY, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, SECTION_POINTS_I32};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
-use facto_loop_miner_fac_engine::game_entities::direction::{
-    FacDirectionEighth, FacDirectionQuarter,
-};
+use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
-use std::fmt::{Arguments, Display};
-use std::{hint, ptr, slice};
+use std::fmt::Arguments;
 use tracing::{trace, warn};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
@@ -79,9 +74,22 @@ impl MineLocation {
         let area_no_touch = area_min
             .normalize_step_rail(0)
             .normalize_within_radius(surface.get_radius_i32() - 1);
+        // -- sanity --
+        {
+            if !surface.is_point_out_of_bounds(&(area_no_touch.point_top_left() - VPOINT_SECTION))
+                && !surface
+                    .is_point_out_of_bounds(&(area_no_touch.point_bottom_right() + VPOINT_SECTION))
+            {
+                let size = area_no_touch.as_size();
+                assert_eq!(size.x() % SECTION_POINTS_I32, 0, "{size}");
+                assert_eq!(size.y() % SECTION_POINTS_I32, 0, "{size}");
+            }
+        }
+        // ^^ sanity ^^
+
         let area_buffered = VArea::from_arbitrary_points_pair(
-            area_no_touch.point_top_left() - VPOINT_SECTION,
-            area_no_touch.point_bottom_right() + VPOINT_SECTION,
+            area_no_touch.point_top_left() - VPOINT_SECTION_Y_ONLY,
+            area_no_touch.point_bottom_right() + VPOINT_SECTION_Y_ONLY,
         )
         .normalize_within_radius(surface.get_radius_i32() - 1);
 
@@ -93,16 +101,6 @@ impl MineLocation {
             warn!("Excluding mine at {}", area_no_touch);
             return None;
         };
-
-        // fn expanded_mine_no_touching_zone(surface: &VSurface, mine: &MineLocation) -> VArea {
-        // const MINE_RAIL_BUFFER_PIXELS: i32 = RAIL_STRAIGHT_DIAMETER_I32 * 2 * 2;
-        // VArea::from_arbitrary_points_pair(
-        //     area.point_top_left()
-        //         .move_xy(-MINE_RAIL_BUFFER_PIXELS, -MINE_RAIL_BUFFER_PIXELS),
-        //     area.point_bottom_right()
-        //         .move_xy(MINE_RAIL_BUFFER_PIXELS, MINE_RAIL_BUFFER_PIXELS),
-        // )
-        //     .normalize_within_radius(surface.get_radius_i32())
 
         Some(Self {
             patch_indexes,
@@ -116,20 +114,16 @@ impl MineLocation {
 
     fn new_endpoints(
         surface: &VSurface,
-        area_no_touch: &VArea,
+        area_min: &VArea,
     ) -> Option<(Vec<VPoint>, Vec<FacDirectionQuarter>)> {
-        // Adjust same direction so sign adjust works
-        const DIRECTION: FacDirectionQuarter = FacDirectionQuarter::East;
+        let centered_rounded = area_min.point_center().move_round_rail_down();
 
-        let centered_rounded = area_no_touch.point_center().move_round_rail_down();
-
-        let mut destination_top_raw =
-            VPoint::new(centered_rounded.x(), area_no_touch.point_top_left().y())
-                .move_round_rail_down();
+        let destination_top_raw =
+            VPoint::new(centered_rounded.x(), area_min.point_top_left().y()).move_round_rail_down();
         destination_top_raw.assert_step_rail();
 
-        let mut destination_bottom_raw =
-            VPoint::new(centered_rounded.x(), area_no_touch.point_bottom_right().y())
+        let destination_bottom_raw =
+            VPoint::new(centered_rounded.x(), area_min.point_bottom_right().y())
                 .move_round_rail_up();
         destination_bottom_raw.assert_step_rail();
 
@@ -149,7 +143,7 @@ impl MineLocation {
         }
         if endpoints.is_empty() {
             warn!(
-                "excluding mine top {destination_top_raw} bottom {destination_bottom_raw} for {area_no_touch}"
+                "excluding mine top {destination_top_raw} bottom {destination_bottom_raw} for {area_min}"
             );
             None
         } else {
@@ -172,7 +166,7 @@ impl MineLocation {
 
             for adjust_i in 0..2 {
                 let mut new_origin = endpoint
-                    .move_direction_sideways_int(adjust_direction, (adjust_i * SECTION_POINTS_I32));
+                    .move_direction_sideways_int(adjust_direction, adjust_i * SECTION_POINTS_I32);
 
                 match self.adjust_endpoint(
                     &surface,
@@ -386,8 +380,8 @@ impl MineLocation {
     }
 
     pub fn draw_area_buffered_to_no_touch(&self, surface: &mut VSurface) {
-        let needle = self.area_buffered.point_top_left();
-        let existing_pixel = surface.get_pixel(needle);
+        // let needle = self.area_buffered.point_top_left();
+        // let existing_pixel = surface.get_pixel(needle);
         // assert_eq!(existing_pixel, Pixel::MineNoTouch, "at {needle}");
 
         let new_points = self
@@ -415,15 +409,15 @@ impl MineLocation {
     }
 
     /// Don't take self as MineLocation already moved / don't need it
-    pub fn draw_area_no_touch_to_buffered(
-        surface: &mut VSurface,
-        mut removed_entity: RemovedEntity,
-    ) -> RemovedEntity {
-        removed_entity
-            .points
-            .retain(|p| matches!(surface.get_pixel(p), Pixel::MineNoTouch | Pixel::Empty));
-        surface.set_pixel_entity_swap(removed_entity.entity_id, removed_entity.points, false)
-    }
+    // pub fn draw_area_no_touch_to_buffered(
+    //     surface: &mut VSurface,
+    //     mut removed_entity: RemovedEntity,
+    // ) -> RemovedEntity {
+    //     removed_entity
+    //         .points
+    //         .retain(|p| matches!(surface.get_pixel(p), Pixel::MineNoTouch | Pixel::Empty));
+    //     surface.set_pixel_entity_swap(removed_entity.entity_id, removed_entity.points, false)
+    // }
 
     pub fn endpoints(&self) -> &[VPoint] {
         &self.endpoints

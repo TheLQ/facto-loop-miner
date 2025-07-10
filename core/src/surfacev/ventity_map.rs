@@ -3,10 +3,10 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{CoreConvertPathResult, VError, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::vsurface::VPixel;
-use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::LOCALE;
+use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_io::varray::{VArray, EMPTY_XY_INDEX};
+use facto_loop_miner_io::varray::{EMPTY_XY_INDEX, VArray};
 use facto_loop_miner_io::{
     get_mebibytes_of_slice_usize, read_entire_file_varray_mmap_lib, write_entire_file,
 };
@@ -287,7 +287,7 @@ where
 
     //<editor-fold desc="io">
     pub fn save_xy_file(&self, path: &Path) -> VResult<()> {
-        let mut write_watch = BasicWatch::start();
+        let write_watch = BasicWatch::start();
         let source = self.xy_to_entity.as_slice();
         let source_len = source.len();
         let (before, data, after) = unsafe { source.align_to() };
@@ -614,6 +614,14 @@ impl VEntityMap<VPixel> {
             data,
         }
     }
+
+    // pub fn assert_no_empty_pixels(&self) {
+    //     for entity_id in self.xy_to_entity.as_slice() {
+    //         if *entity_id != EMPTY_XY_INDEX {
+    //             assert_ne!(self.entities[*entity_id].pixel().as_ref(), "Empty");
+    //         }
+    //     }
+    // }
 }
 
 #[cfg(test)]

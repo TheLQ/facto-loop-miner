@@ -8,14 +8,10 @@ use crate::surfacev::mine::MinePath;
 use crate::surfacev::ventity_map::VEntityMap;
 use crate::surfacev::vpatch::VPatch;
 use colorgrad::Gradient;
-use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::LOCALE;
+use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ONE};
-use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
-use facto_loop_miner_io::err::{VIoResult, VStdIoResult};
+use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ONE, VPoint};
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
@@ -29,8 +25,8 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::{Path, PathBuf};
+use std::thread;
 use std::thread::JoinHandle;
-use std::{io, thread};
 use tracing::{debug, info, trace};
 
 /// A map of background pixels (eg resources, water) and the large entities on top
@@ -79,11 +75,18 @@ impl VSurface {
             .pixels
             .load_xy_from_other(pixel_thread.join().expect("pixel thread failed")?);
 
+        // todo: error check
+        // new_surface.pixels.assert_no_empty_pixels();
+
         info!("Loaded {}", new_surface);
         new_surface.log_pixel_stats("vsurface load");
         info!("+++ Loaded in {} from {}", load_time, out_dir.display());
         Ok(new_surface)
     }
+
+    // pub fn assert_no_empty(&self) {
+    //     self.pixels.assert_no_empty_pixels();
+    // }
 
     fn load_state(out_dir: &Path) -> VResult<Self> {
         match 1 {
@@ -171,7 +174,7 @@ impl VSurface {
         path_pixel_xy_indexes(params.previous_step_dir())
     }
 
-    pub fn load_clone_prep(&mut self, clone_prep_dir: &Path) -> VResult<()> {
+    pub fn load_clone_prep(&mut self) -> VResult<()> {
         self.pixels.load_clone_prep(&path_pixel_xy_indexes_clone())
     }
 
@@ -432,7 +435,6 @@ impl VSurface {
     }
 
     pub fn is_points_free_unchecked(&self, points: &[VPoint]) -> bool {
-        /*self.pixels.is_points_free(points)*/
         self.pixels.is_points_free_unchecked_iter(points)
     }
 
@@ -501,16 +503,16 @@ impl VSurface {
         self.pixels.get_entity_id_at(point)
     }
 
-    pub fn set_pixel_entity_swap(
-        &mut self,
-        entity_id: usize,
-        mut points: Vec<VPoint>,
-        overwrite_non_empty: bool,
-    ) -> RemovedEntity {
-        self.pixels
-            .set_entity_points_swap(entity_id, &mut points, overwrite_non_empty);
-        RemovedEntity { entity_id, points }
-    }
+    // pub fn set_pixel_entity_swap(
+    //     &mut self,
+    //     entity_id: usize,
+    //     mut points: Vec<VPoint>,
+    //     overwrite_non_empty: bool,
+    // ) -> RemovedEntity {
+    //     self.pixels
+    //         .set_entity_points_swap(entity_id, &mut points, overwrite_non_empty);
+    //     RemovedEntity { entity_id, points }
+    // }
 
     pub fn set_entity_replace(&mut self, pos: VPoint, expected: Pixel, new: Pixel) {
         let entity = self
@@ -802,7 +804,7 @@ impl SurfacePainting {
             .unwrap();
     }
 
-    fn save_to_file(self, dir: &Path) -> VResult<()> {
+    pub fn save_to_file(self, dir: &Path) -> VResult<()> {
         let Self {
             output,
             diameter,
@@ -877,23 +879,13 @@ impl VPixel {
     }
 }
 
-// #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
-// pub(crate) struct VEntity {
-//     start: VPoint,
-// }
-
-pub struct RemovedEntity {
-    pub entity_id: usize,
-    pub points: Vec<VPoint>,
-}
-
 #[cfg(test)]
 mod test {
     use crate::surface::pixel::Pixel;
     use crate::surfacev::vsurface::VSurface;
     use facto_loop_miner_common::log_init_trace;
     use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
-    use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ZERO};
+    use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
     use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
     use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
