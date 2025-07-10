@@ -1,24 +1,26 @@
+use crate::navigator::mine_executor::FailingMeta;
 use crate::navigator::mori_cost::calculate_cost_for_link;
 use crate::navigator::planners::debug_draw_segment;
 use crate::state::tuneables::MoriTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::VSurface;
-use facto_loop_miner_common::duration::{BasicWatch, BasicWatchResult};
 use facto_loop_miner_common::LOCALE;
+use facto_loop_miner_common::duration::{BasicWatch, BasicWatchResult};
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ZERO};
+use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{sodas_to_links, HopeSodaLink};
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{HopeSodaLink, sodas_to_links};
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use num_format::ToFormattedString;
-use pathfinding::prelude::{astar_mori, AStarErr};
+use pathfinding::prelude::{AStarErr, astar_mori};
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 use std::time::Duration;
-use tracing::{info, trace};
+use tracing::{error, info, trace, warn};
 
 /// Pathfinder v1.2, Mori Calliope💀
 ///
@@ -32,6 +34,26 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
 
     let start_link = new_straight_link_from_vd(&endpoints.start);
     let end_link = new_straight_link_from_vd(&endpoints.end);
+
+    if !surface.is_points_free_unchecked(&end_link.area_vec()) {
+        // // todo: lock?
+        // error!("endpoint {}", endpoints.end);
+        // let new_surface = crude_dump_on_failure(surface, end_link, endpoints);
+        // new_surface.paint_pixel_colored_entire().save_to_oculante();
+        // // new_surface
+        // //     .paint_pixel_colored_entire()
+        // //     .save_to_file(Path::new("work/out0"))
+        // //     .unwrap();
+        // new_surface.assert_no_empty();
+        //
+        // panic!("waste of time")
+
+        // we need this when 100% blocked
+        warn!("waste of time {endpoints}");
+        return MoriResult::FailingDebug {
+            err: FailingMeta::default().astar_err,
+        };
+    }
 
     let tunables = &surface.tunables().mori;
     let mut watch_data = WatchData::default();
@@ -93,47 +115,17 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
         BasicWatchResult(res_sum),
         total_watch
     );
-    if let Err(err) = &pathfind {
-        let mut new_surface = surface.clone();
-
-        let links = sodas_to_links([end_link.add_turn90(true), end_link]).collect_vec();
-
-        let debug_free = links
-            .iter()
-            .map(|v| {
-                let area = v.area_vec();
-                if new_surface.is_points_free_unchecked(&area) {
-                    "free".into()
-                } else {
-                    let mut points = area
-                        .into_iter()
-                        .map(|v| new_surface.get_pixel(v))
-                        .collect_vec();
-                    points.sort();
-                    points.dedup();
-                    format!(
-                        "({})",
-                        points.into_iter().map(|v| v.as_ref().to_string()).join(",")
-                    )
-                }
-            })
-            .join(",");
-        trace!("debug free {debug_free}");
-
-        new_surface
-            .set_pixels(
-                Pixel::Highlighter,
-                links.into_iter().flat_map(|v| v.area_vec()).collect(),
-            )
-            .unwrap();
-        debug_draw_segment(&mut new_surface, endpoints);
-        new_surface
-            //.paint_pixel_graduated(watch_data.was_unfree_check)
-            .paint_pixel_graduated(count_link_origins(&err.seen))
-            .save_to_oculante();
-
-        std::process::exit(0);
-    }
+    // if let Err(err) = &pathfind
+    //     && err.parents.len() > 0
+    // {
+    //     let new_surface = crude_dump_on_failure(surface, end_link, endpoints);
+    //
+    //     new_surface
+    //         //.paint_pixel_graduated(watch_data.was_unfree_check)
+    //         .paint_pixel_graduated(count_link_origins(&err.seen))
+    //         .save_to_oculante();
+    //     std::process::exit(0)
+    // }
 
     match pathfind {
         Ok((path, cost)) => {
@@ -153,6 +145,52 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
         }
         Err(err) => MoriResult::FailingDebug { err },
     }
+}
+
+fn crude_dump_on_failure(
+    surface: &VSurface,
+    end_link: HopeSodaLink,
+    endpoints: VSegment,
+) -> VSurface {
+    let mut new_surface = surface.clone();
+
+    let links = sodas_to_links([
+        end_link.add_turn90(true),
+        HopeSodaLink::new_soda_straight_flipped(&end_link).add_turn90(true),
+    ])
+    .collect_vec();
+
+    let debug_free = links
+        .iter()
+        .map(|v| {
+            let area = v.area_vec();
+            if new_surface.is_points_free_truncating(&area) {
+                "free".into()
+            } else {
+                let mut points = area
+                    .into_iter()
+                    .map(|v| new_surface.get_pixel(v))
+                    .collect_vec();
+                points.sort();
+                points.dedup();
+                format!(
+                    "({})",
+                    points.into_iter().map(|v| v.as_ref().to_string()).join(",")
+                )
+            }
+        })
+        .join(",");
+    trace!("debug free {debug_free}");
+
+    new_surface
+        .set_pixels(
+            Pixel::Highlighter,
+            links.into_iter().flat_map(|v| v.area_vec()).collect(),
+        )
+        .unwrap();
+    debug_draw_segment(&mut new_surface, endpoints);
+
+    new_surface
 }
 
 #[derive(Default)]
