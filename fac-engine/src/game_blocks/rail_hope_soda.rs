@@ -17,7 +17,7 @@ pub struct HopeSodaLink {
     center: VPoint,
 }
 
-#[derive(Eq, PartialEq, Hash, Clone)]
+#[derive(Eq, PartialEq, Hash, Clone, Debug)]
 enum SodaType {
     Straight,
     Turn90 { clockwise: bool },
@@ -33,6 +33,15 @@ impl HopeSodaLink {
             stype: SodaType::Straight,
             center,
             source_direction,
+        }
+    }
+
+    pub fn new_soda_straight_flipped(other: &Self) -> Self {
+        assert_eq!(other.stype, SodaType::Straight);
+        Self {
+            stype: other.stype.clone(),
+            center: other.center,
+            source_direction: other.source_direction.rotate_flip(),
         }
     }
 
