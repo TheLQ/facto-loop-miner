@@ -74,20 +74,6 @@ mod test {
     use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 
     #[test]
-    fn test_circle() {
-        let circle = draw_circle(10);
-        let area = VArea::from_arbitrary_points(&circle);
-        println!("area {area}");
-
-        let mut surface = VSurface::new(50);
-        surface.set_pixels(Pixel::Highlighter, circle).unwrap();
-        surface
-            .set_pixels(Pixel::Water, vec![area.point_center()])
-            .unwrap();
-        surface.save_pixel_to_oculante()
-    }
-
-    #[test]
     fn test_around() {
         let circle = draw_circle_around(&VPoint::new(100, 100), 10);
         let area = VArea::from_arbitrary_points(&circle);

@@ -698,19 +698,19 @@ mod test {
         let test = VPoint::new(25, 20);
         assert_eq!(
             test,
-            buffer.index_to_xy(buffer.xy_to_index(test.x(), test.y())),
+            buffer.index_to_xy(buffer.xy_to_index_safe(test.x(), test.y())),
         );
 
         let test = VPoint::new(-25, -20);
         assert_eq!(
             test,
-            buffer.index_to_xy(buffer.xy_to_index(test.x(), test.y())),
+            buffer.index_to_xy(buffer.xy_to_index_safe(test.x(), test.y())),
         );
 
         let test = VPoint::new(-49, -49);
         assert_eq!(
             test,
-            buffer.index_to_xy(buffer.xy_to_index(test.x(), test.y())),
+            buffer.index_to_xy(buffer.xy_to_index_safe(test.x(), test.y())),
         );
     }
 }

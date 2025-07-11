@@ -426,17 +426,6 @@ impl MineLocation {
             .find_into(Pixel::MineNoTouch, pixel)
     }
 
-    /// Don't take self as MineLocation already moved / don't need it
-    // pub fn draw_area_no_touch_to_buffered(
-    //     surface: &mut VSurface,
-    //     mut removed_entity: RemovedEntity,
-    // ) -> RemovedEntity {
-    //     removed_entity
-    //         .points
-    //         .retain(|p| matches!(surface.get_pixel(p), Pixel::MineNoTouch | Pixel::Empty));
-    //     surface.set_pixel_entity_swap(removed_entity.entity_id, removed_entity.points, false)
-    // }
-
     pub fn endpoints(&self) -> &[VPoint] {
         &self.endpoints
     }
@@ -495,6 +484,7 @@ mod test {
     use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
     use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
+    use itertools::Itertools;
 
     #[test]
     fn test_destinations() {
@@ -522,7 +512,7 @@ mod test {
         );
 
         assert_eq!(
-            mine.destinations,
+            mine.destinations().collect_vec(),
             [
                 VPointDirectionQ(
                     VPoint::new(0, -SECTION_POINTS_I32),
