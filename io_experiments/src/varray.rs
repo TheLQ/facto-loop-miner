@@ -1,4 +1,3 @@
-use crate::read_entire_file_varray_mmap_lib;
 use memmap2::MmapMut;
 use std::fs::File;
 use std::mem::ManuallyDrop;
@@ -113,7 +112,7 @@ impl Clone for VArray {
                 // if *is_dirty {
                 //     panic!("Cannot clone dirty mmap");
                 // }
-                // read_entire_file_varray_mmap_lib(backing_path)
+                // crate::read_entire_file_varray_mmap_lib(backing_path)
                 //     .unwrap_or_else(|e| panic!("unable to clone"))
                 VArray {
                     inner: BackingMemory::RegularOldeVec {

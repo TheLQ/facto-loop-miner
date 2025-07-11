@@ -5,11 +5,11 @@ use libc::munmap;
 use memmap2::{Mmap, MmapMut, MmapOptions};
 use std::fs::File;
 use std::io::{Read, Write};
-use std::mem::{transmute, ManuallyDrop};
+use std::mem::{ManuallyDrop, transmute};
 use std::os::fd::AsRawFd;
 use std::path::Path;
 use std::{io, mem, ptr, slice};
-use tracing::{debug, info};
+use tracing::info;
 
 pub const USIZE_BYTES: usize = (usize::BITS / u8::BITS) as usize;
 
@@ -26,7 +26,7 @@ pub fn read_entire_file(path: &Path, preallocate_vec: bool) -> VStdIoResult<Vec<
     Ok(xy_array_u8_raw)
 }
 
-#[cfg(feature = "lol")]
+#[cfg(feature = "broken")]
 pub fn read_entire_file_usize_aligned_vec_broken(path: &Path) -> VIoResult<Vec<usize>> {
     let mut file = File::open(path)?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
@@ -179,11 +179,7 @@ pub fn read_entire_file_usize_mmap_custom(
 }
 
 fn enable_if(value: libc::c_int, enable: bool) -> libc::c_int {
-    if enable {
-        value
-    } else {
-        0
-    }
+    if enable { value } else { 0 }
 }
 
 /// Must Drop with munmap() not the normal free()
@@ -199,7 +195,7 @@ pub fn drop_mmap_vec(mut mmap_vec: ManuallyDrop<Vec<usize>>) {
     }
 }
 
-#[cfg(feature = "lol")]
+#[cfg(feature = "broken")]
 pub fn read_entire_file_usize_memmap_u8(path: &Path) -> VIoResult<Vec<usize>> {
     let file = File::open(path)?;
 
@@ -242,7 +238,7 @@ pub fn read_entire_file_usize_memmap_u8(path: &Path) -> VIoResult<Vec<usize>> {
     Ok(vec)
 }
 
-#[cfg(feature = "lol")]
+#[cfg(feature = "broken")]
 pub unsafe fn read_entire_file_usize_aligned_vec_golfed(path: &Path) -> VIoResult<Vec<usize>> {
     let mut file = File::open(path)?;
     let xy_array_len_u8 = get_file_size(&file, path)? as usize;
@@ -293,7 +289,7 @@ pub fn read_entire_file_varray_mmap_lib(path: &Path) -> VStdIoResult<VArray> {
             // .populate()
             .map_copy(&file)?
     };
-    debug!("mapped {} in {watch}", path.display());
+    // debug!("mapped {} in {watch}", path.display());
 
     // Pull the underlying slice
     let xy_array_u8: &mut [u8] = &mut mmap;

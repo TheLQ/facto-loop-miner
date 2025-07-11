@@ -2,18 +2,19 @@
 
 extern crate test;
 
-use num_format::ToFormattedString;
-use std::env;
-use std::path::PathBuf;
-
+use crate::LOCALE;
+use crate::err::VPathUnwrapper;
 use crate::io::{
-    drop_mmap_vec, map_u8_to_usize_iter, map_u8_to_usize_iter_ref, map_u8_to_usize_slice,
-    read_entire_file, read_entire_file_usize_aligned_vec, read_entire_file_usize_mmap_custom,
-    read_entire_file_usize_transmute_broken, read_entire_file_varray_mmap_lib, USIZE_BYTES,
+    USIZE_BYTES, drop_mmap_vec, map_u8_to_usize_iter, map_u8_to_usize_iter_ref,
+    map_u8_to_usize_slice, read_entire_file, read_entire_file_usize_aligned_vec,
+    read_entire_file_usize_mmap_custom, read_entire_file_usize_transmute_broken,
+    read_entire_file_varray_mmap_lib,
 };
 use crate::io_uring::IoUring;
 use crate::io_uring_file_copying::IoUringFileCopying;
-use crate::LOCALE;
+use num_format::ToFormattedString;
+use std::env;
+use std::path::PathBuf;
 
 fn input_path() -> PathBuf {
     PathBuf::from(BENCH_XY_PATH)
@@ -58,7 +59,7 @@ fn bench_included_map_iter(bencher: &mut test::Bencher) {
 #[bench]
 fn bench_read_minimum_unconverted(bencher: &mut test::Bencher) {
     bencher.iter(|| {
-        let output = read_entire_file(&input_path(), true).unwrap();
+        let output = read_entire_file(&input_path(), true).unwrap_path(&input_path());
         checksum_vec_u8(&output)
     })
 }
@@ -68,7 +69,8 @@ fn bench_read_aligned_vec(bencher: &mut test::Bencher) {
     println!("init");
     bencher.iter(|| {
         println!("interation");
-        let output = read_entire_file_usize_aligned_vec(&input_path()).unwrap();
+        let path = input_path();
+        let output = read_entire_file_usize_aligned_vec(&input_path()).unwrap_path(&input_path());
         println!("output");
         checksum_vec_usize(&output);
     })
@@ -81,7 +83,9 @@ fn bench_read_transmute_broken(bencher: &mut test::Bencher) {
         return;
     }
     bencher.iter(|| {
-        let output = read_entire_file_usize_transmute_broken(&input_path()).unwrap();
+        let path = input_path();
+        let output =
+            read_entire_file_usize_transmute_broken(&input_path()).unwrap_path(&input_path());
         checksum_vec_usize(&output)
     });
 }
@@ -89,7 +93,7 @@ fn bench_read_transmute_broken(bencher: &mut test::Bencher) {
 #[bench]
 fn bench_read_mmap_lib(bencher: &mut test::Bencher) {
     bencher.iter(|| {
-        let output = read_entire_file_varray_mmap_lib(&input_path()).unwrap();
+        let output = read_entire_file_varray_mmap_lib(&input_path()).unwrap_path(&input_path());
         let bench_result = output.as_slice().iter().sum::<usize>();
         bench_result
     });
@@ -99,7 +103,8 @@ fn bench_read_mmap_lib(bencher: &mut test::Bencher) {
 fn bench_read_mmap_custom(bencher: &mut test::Bencher) {
     bencher.iter(|| {
         println!("interation {}", env::current_dir().unwrap().display());
-        let output = read_entire_file_usize_mmap_custom(&input_path(), true, true, true).unwrap();
+        let output = read_entire_file_usize_mmap_custom(&input_path(), true, true, true)
+            .unwrap_path(&input_path());
         let bench_result: usize = output.iter().sum::<usize>();
         drop_mmap_vec(output);
         bench_result
@@ -109,7 +114,7 @@ fn bench_read_mmap_custom(bencher: &mut test::Bencher) {
 #[bench]
 fn bench_read_iter(bencher: &mut test::Bencher) {
     bencher.iter(|| {
-        let data = read_entire_file(&input_path(), true).unwrap();
+        let data = read_entire_file(&input_path(), true).unwrap_path(&input_path());
         let output: Vec<usize> = map_u8_to_usize_iter(data).collect();
         checksum_vec_usize(&output)
     });
@@ -118,7 +123,7 @@ fn bench_read_iter(bencher: &mut test::Bencher) {
 #[bench]
 fn bench_read_slice(bencher: &mut test::Bencher) {
     bencher.iter(|| {
-        let data = read_entire_file(&input_path(), true).unwrap();
+        let data = read_entire_file(&input_path(), true).unwrap_path(&input_path());
         let mut usize_data = vec![0; data.len() / USIZE_BYTES];
         map_u8_to_usize_slice(&data, &mut usize_data);
         checksum_vec_usize(&usize_data)

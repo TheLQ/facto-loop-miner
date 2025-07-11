@@ -18,4 +18,5 @@ memmap2 = "0.9.5"
 uring-sys2 = { path = "../../uring-sys" }
 
 [features]
-lol = []
+uring = []
+broken = []

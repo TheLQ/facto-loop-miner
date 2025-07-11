@@ -6,108 +6,61 @@
 #![feature(error_generic_member_access)]
 #![allow(clippy::new_without_default)]
 
-extern crate core;
-
 pub mod err;
+pub mod io;
+mod io_uring_common;
 pub mod varray;
 
-// #[cfg(test)]
+#[cfg(feature = "uring")]
 mod io_bench;
-
-mod io;
+#[cfg(feature = "uring")]
 pub mod io_uring;
-mod io_uring_common;
-// mod io_uring_file;
+#[cfg(feature = "uring")]
 mod io_uring_file_copying;
 
-use crate::err::VPathUnwrapper;
-use crate::io::read_entire_file_usize_mmap_custom;
-use crate::io_bench::checksum_vec_usize;
-use crate::io_uring::io_uring_main;
-use facto_loop_miner_common::log_init_trace;
 pub use io::{
     get_mebibytes_of_slice_usize, read_entire_file, read_entire_file_varray_mmap_lib,
     write_entire_file,
 };
-use num_format::{Locale, ToFormattedString};
-use std::path::{Path, PathBuf};
-use std::thread::sleep;
-use std::time::{Duration, Instant};
-use tracing::info;
+#[cfg(feature = "uring")]
+pub use io_bench::checksum_vec_u8;
 
-pub const LOCALE: Locale = Locale::en;
+use libc::{CPU_COUNT, CPU_ISSET, CPU_SET, cpu_set_t};
+use std::mem;
+use std::ops::BitOr;
 
-pub fn io_experiment_main() {
-    log_init_trace();
+const NUM_CPUS: usize = 32;
 
-    tracing::debug!("hello io_experiment");
+pub fn force_affinity() {
+    unsafe {
+        get_affinity();
 
-    let file_path: PathBuf = match 2 {
-        1 => "/xf-megafile/data/pages.db.index",
-        2 => "README.md",
-        3 => {
-            "/home/desk/IdeaProjects/facto-loop-miner/work/out0/step00-import/pixel-xy-indexes.dat"
+        let mut cpuset: cpu_set_t = mem::zeroed();
+        for cpu in 0..NUM_CPUS {
+            CPU_SET(cpu, &mut cpuset)
         }
-        4 => "/home/desk/IdeaProjects/facto-loop-miner/work/out0/step10-base/pixel-xy-indexes.dat",
-        5 => "/hugetemp/pixel-xy-indexes.dat",
-        _ => unimplemented!("fuck"),
-    }
-    .into();
-    info!("io_experiments processing {}", file_path.display());
+        let res = libc::sched_setaffinity(0, size_of::<cpu_set_t>(), &cpuset);
+        assert_eq!(res, 0);
 
-    match 1 {
-        1 => test_u8(&file_path),
-        2 => io_uring_main(&file_path).expect("Asd"),
-        _ => panic!("nope"),
+        get_affinity();
     }
 }
 
-fn test_u8(path: &Path) {
-    let watch = Instant::now();
-    // let output = read_entire_file(path, true).unwrap();
-    // let checksum = checksum_vec_u8(output);
+fn get_affinity() {
+    unsafe {
+        let mut existing_cpuset: cpu_set_t = mem::zeroed();
+        let res = libc::sched_getaffinity(0, size_of::<cpu_set_t>(), &mut existing_cpuset);
+        println!("get affinity res {res}");
+        let enabled_cpus = CPU_COUNT(&existing_cpuset);
 
-    info!("asdf");
-    let stopwatch = Instant::now();
-    let output = read_entire_file_usize_mmap_custom(path, true, true, true).unwrap_path(path);
-    // let output = read_entire_file_mmap_copy(path).unwrap();
-    info!(
-        "file read in {}",
-        (Instant::now() - stopwatch)
-            .as_secs()
-            .to_formatted_string(&LOCALE)
-    );
-
-    // let tester = MmapOptions::new()
-    //     .huge(None)
-    //     .len(1024 ^ 3)
-    //     .map_anon()
-    //     .map_err(VIoError::io_error(path))
-    //     .unwrap();
-    // let checksum = checksum_vec_u8(&tester[..]);
-    // info!(
-    //     "tester checksum in {}",
-    //     (Instant::now() - stopwatch)
-    //         .as_secs()
-    //         .to_formatted_string(&LOCALE)
-    // );
-
-    sleep(Duration::new(999999, 0));
-
-    let stopwatch = Instant::now();
-    let checksum = checksum_vec_usize(&output);
-    info!(
-        "checksum in {}",
-        (Instant::now() - stopwatch)
-            .as_secs()
-            .to_formatted_string(&LOCALE)
-    );
-    println!("checksum {}", checksum);
-
-    let time = Instant::now() - watch;
-    info!(
-        "InnerMain u8_unconverted {} in {}",
-        path.display(),
-        time.as_millis().to_formatted_string(&LOCALE)
-    );
+        let mut setsize = 0usize;
+        for i in 0..NUM_CPUS {
+            if CPU_ISSET(i, &existing_cpuset) {
+                let mutator = 1usize.rotate_left(i as u32);
+                // println!("applying {mutator:b}");
+                setsize = setsize.bitor(mutator);
+            }
+        }
+        println!("CPUs enabled {enabled_cpus:>2} encoded {setsize:b}");
+    }
 }
