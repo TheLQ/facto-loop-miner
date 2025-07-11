@@ -5,7 +5,6 @@ use std::fmt::{Display, Formatter};
 use crate::{
     common::vpoint::{VPoint, display_any_pos},
     game_entities::direction::FacDirectionQuarter,
-    util::ansi::C_BLOCK_LINE,
 };
 
 use super::FacBpFloat;

@@ -493,7 +493,7 @@ impl Display for HopeLinkType {
             HopeLinkType::Turn90 { clockwise } => {
                 write!(f, "Turn90-{}", if *clockwise { "clw" } else { "ccw" })
             }
-            HopeLinkType::Shift45 { clockwise, length } => todo!(),
+            HopeLinkType::Shift45 { .. } => todo!(),
         }
     }
 }

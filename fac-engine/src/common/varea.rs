@@ -37,7 +37,7 @@ impl VArea {
     pub fn from_radius(origin: VPoint, depth: u32) -> Self {
         let mut top_left = origin;
         let mut bottom_right = origin;
-        for i in 0..depth {
+        for _ in 0..depth {
             top_left -= VPOINT_ONE;
             bottom_right += VPOINT_ONE;
         }

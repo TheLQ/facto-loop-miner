@@ -126,7 +126,7 @@ impl HopeSodaLink {
 }
 
 impl RailHopeLink for HopeSodaLink {
-    fn add_straight(&self, length: usize) -> Self {
+    fn add_straight(&self, _length: usize) -> Self {
         todo!()
     }
 
@@ -148,7 +148,7 @@ impl RailHopeLink for HopeSodaLink {
         next
     }
 
-    fn add_shift45(&self, clockwise: bool, length: usize) -> Self {
+    fn add_shift45(&self, _clockwise: bool, _length: usize) -> Self {
         todo!()
     }
 
