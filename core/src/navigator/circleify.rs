@@ -1,12 +1,9 @@
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::opencv_re::core::{Mat, Point, Scalar, CV_8U};
+use facto_loop_miner_fac_engine::opencv_re::core::{CV_8U, Mat, Point, Scalar};
 use facto_loop_miner_fac_engine::opencv_re::imgproc::{FILLED, LINE_4};
 use facto_loop_miner_fac_engine::opencv_re::prelude::*;
 use itertools::Itertools;
-use std::collections::HashMap;
-use std::rc::Rc;
-use std::sync::Arc;
 use tracing::trace;
 
 /// We already dragged in opencv, why not use it's easy circle function

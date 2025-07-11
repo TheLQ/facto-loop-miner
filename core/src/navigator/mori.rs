@@ -3,22 +3,19 @@ use crate::navigator::mori_cost::calculate_cost_for_link;
 use crate::navigator::planners::debug_draw_segment;
 use crate::state::tuneables::MoriTunables;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::{BasicWatch, BasicWatchResult};
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{HopeSodaLink, sodas_to_links};
-use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use pathfinding::prelude::{AStarErr, astar_mori};
-use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use std::collections::HashMap;
 use std::time::Duration;
 use tracing::{error, info, trace, warn};
 
@@ -103,7 +100,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
 
     let depth: String = match &pathfind {
         Err(_) => "FAIL".into(),
-        Ok((links, cost)) => format!("{}", links.len()),
+        Ok((links, _)) => format!("{}", links.len()),
     };
     info!(
         " - {:>9} executions {:>9} found {:>8} nexts {:>6} cost {:>6} summed {:>5} res {:>8} total  {success:>5} success {depth:>4} depth",
@@ -205,12 +202,12 @@ pub enum MoriResult {
 }
 
 impl MoriResult {
-    pub fn is_route(&self) -> bool {
-        match &self {
-            MoriResult::Route { .. } => true,
-            MoriResult::FailingDebug { .. } => false,
-        }
-    }
+    // pub fn is_route(&self) -> bool {
+    //     match &self {
+    //         MoriResult::Route { .. } => true,
+    //         MoriResult::FailingDebug { .. } => false,
+    //     }
+    // }
 }
 
 fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeSodaLink {
