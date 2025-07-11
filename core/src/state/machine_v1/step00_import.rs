@@ -2,7 +2,6 @@ use crate::gamedata::lua::{LuaEntity, LuaThing, read_lua_tiles};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::pixel::Pixel;
-use crate::surfacev::err::VResult;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;

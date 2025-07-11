@@ -5,29 +5,22 @@ use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{
     MineSelectBatch, PERPENDICULAR_SCAN_WIDTH, group_nearby_patches,
 };
-use crate::navigator::planners::common::{
-    debug_draw_failing_mines, debug_failing, draw_prep, draw_prep_mines,
-};
+use crate::navigator::planners::common::{debug_failing, draw_prep_mines};
 use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
-use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::VSurface;
-use facto_loop_miner_common::err_bt::pretty_print_error;
-use facto_loop_miner_fac_engine::admiral::lua_command::fac_surface_create_tile::FacSurfaceCreateLua;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
 use std::collections::HashSet;
-use std::sync::Mutex;
-use strum::VariantArray;
 use tracing::{debug, error, info, trace, warn};
 
-const BATCH_SIZE_MAX: usize = 1;
+const BATCH_SIZE_MAX: usize = 2;
 
 /// Planner v2 "Regis Altare 🎇"
 ///
@@ -201,13 +194,7 @@ fn detect_nearby_rails_as_index(surface: &VSurface, mine_location: &MineLocation
 
     let mut closest_rail = None;
     let mut seen_points = HashSet::new();
-    'depth: for depth in 2.. {
-        assert!(
-            depth < surface.get_radius(),
-            "uhh {depth} total {}",
-            surface.get_radius()
-        );
-
+    for depth in 2.. {
         let mut stop_after = false;
         for cursor in draw_circle_around(&origin, depth * 200) {
             if !cursor.is_even() || surface.is_point_out_of_bounds(&cursor) {

@@ -12,7 +12,6 @@ use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ONE, VPoint};
-use facto_loop_miner_fac_engine::opencv_re::core::Point;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
@@ -407,7 +406,7 @@ impl VSurface {
     }
 
     #[must_use]
-    pub fn change_pixels<I>(&mut self, positions: I) -> VMapChange<VPixel, I>
+    pub fn change_pixels<I>(&mut self, positions: I) -> VMapChange<'_, VPixel, I>
     where
         I: IntoIterator<Item = VPoint>,
     {
@@ -540,7 +539,7 @@ impl VSurface {
     }
 
     #[must_use]
-    pub fn change_square(&mut self, area: &VArea) -> VMapChange<VPixel, Vec<VPoint>> {
+    pub fn change_square(&mut self, area: &VArea) -> VMapChange<'_, VPixel, Vec<VPoint>> {
         assert!(
             !self.pixels.is_point_out_of_bounds(&area.point_top_left()),
             "Area is out of bounds {area}",

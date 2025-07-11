@@ -215,7 +215,7 @@ impl<E> VEntityMap<E>
     //</editor-fold>
 
     #[must_use]
-    pub fn change<I>(&mut self, positions: I) -> VMapChange<E, I>
+    pub fn change<I>(&mut self, positions: I) -> VMapChange<'_, E, I>
     where
         I: IntoIterator<Item = VPoint>,
     {

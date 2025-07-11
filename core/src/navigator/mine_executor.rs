@@ -1,21 +1,21 @@
-use crate::navigator::mori::{mori2_start, MoriResult};
+use crate::navigator::mori::{MoriResult, mori2_start};
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::{EXECUTOR_TAG, LOCALE};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
 use itertools::Itertools;
 use num_format::ToFormattedString;
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+use pathfinding::prelude::AStarErr;
 use rayon::ThreadPool;
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::LazyLock;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;
-use tracing::{info, span, trace, Level};
+use tracing::{Level, info, span, trace};
 
 /// Given thousands of possible route combinations, execute in parallel and find the best
 pub fn execute_route_batch(
@@ -136,7 +136,7 @@ pub fn execute_route_batch(
         lowest: u32,
         highest: u32,
         tested: u32,
-    };
+    }
     impl CostMeta {
         fn new() -> Self {
             Self {
@@ -322,6 +322,17 @@ fn execute_route_combination(
                     .draw_area_buffered(&mut working_surface)
             }
         }
+
+        trace!(
+            "for mine {} endpoints {}",
+            route.location.area_min().point_center(),
+            route
+                .location
+                .endpoints()
+                .iter()
+                .map(|v| v.to_string())
+                .join(",")
+        );
         let route_result = mori2_start(
             &working_surface,
             route.segment.clone(),

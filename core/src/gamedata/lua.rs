@@ -1,20 +1,14 @@
 use crate::gamedata::compressed_export::parse_exported_lua_data;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
-use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::LOCALE;
+use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use std::fs::read;
 use std::path::Path;
 use tracing::{debug, info};
-
-#[derive(Deserialize)]
-pub struct LuaData {
-    pub entities: Vec<LuaEntity>,
-    pub tiles: Vec<LuaTile>,
-}
 
 pub fn read_lua_tiles(input_dir: &Path) -> Vec<LuaEntity> {
     let read_watch = BasicWatch::start();
