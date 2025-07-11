@@ -553,49 +553,6 @@ impl VSurface {
         self.pixels.change(area.get_points())
     }
 
-    //
-    // pub fn draw_square_around_point(
-    //     &mut self,
-    //     point: &VPoint,
-    //     padding: i32,
-    //     empty_map: Pixel,
-    //     existing_map: Option<Pixel>,
-    // ) {
-    //     self.draw_square(
-    //         point.x() - padding,
-    //         point.x() + padding,
-    //         point.y() - padding,
-    //         point.y() + padding,
-    //         empty_map,
-    //         existing_map,
-    //     )
-    // }
-
-    // fn draw_square(
-    //     &mut self,
-    //     start_x: i32,
-    //     end_x_exclusive: i32,
-    //     start_y: i32,
-    //     end_y_exclusive: i32,
-    //     empty_map: Pixel,
-    // ) {
-    //     let mut empty_pos = Vec::new();
-    //     for x in start_x..end_x_exclusive {
-    //         for y in start_y..end_y_exclusive {
-    //             let cur = VPoint::new(x, y);
-    //             if self.pixels.is_point_out_of_bounds(&cur) {
-    //                 continue;
-    //             }
-    //
-    //             let existing_pixel = self.get_pixel(cur);
-    //             if existing_pixel == Pixel::Empty {
-    //                 empty_pos.push(cur);
-    //             }
-    //         }
-    //     }
-    //     self.set_pixels(empty_map, empty_pos).unwrap();
-    // }
-
     pub fn add_mine_path(&mut self, mine_path: MinePath) {
         self.add_mine_path_with_pixel(mine_path, Pixel::Rail)
     }

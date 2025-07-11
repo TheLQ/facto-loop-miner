@@ -621,8 +621,8 @@ impl<'m, I> VMapChange<'m, VPixel, I>
 where
     I: IntoIterator<Item = VPoint>,
 {
-    pub fn find_empty_into(self, entity: Pixel) {
-        assert_ne!(entity, Pixel::Empty);
+    pub fn find_empty_into(self, replace: Pixel) {
+        assert_ne!(replace, Pixel::Empty);
 
         let entity_index = self.map.entities.len();
 
@@ -637,6 +637,11 @@ where
                 actual_positions.push(position);
             }
         }
+
+        assert_eq!(self.map.entity_to_xy.len(), entity_index);
+        self.map.entity_to_xy.push(actual_positions);
+        assert_eq!(self.map.entities.len(), entity_index);
+        self.map.entities.push(VPixel { pixel: replace });
     }
 
     pub fn find_into(self, find: Pixel, replace: Pixel) {
@@ -653,6 +658,7 @@ where
             if *existing_entity_index != EMPTY_XY_INDEX
                 && self.map.entities[*existing_entity_index].pixel == find
             {
+                self.map.entity_to_xy[*existing_entity_index].retain(|v| *v != position);
                 *existing_entity_index = entity_index;
                 actual_positions.push(position);
             }

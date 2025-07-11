@@ -2,7 +2,9 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_SECTION, VPOINT_SECTION_Y_ONLY, VPoint};
+use facto_loop_miner_fac_engine::common::vpoint::{
+    VPOINT_SECTION, VPOINT_SECTION_Y_ONLY, VPOINT_TEN, VPoint,
+};
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, SECTION_POINTS_I32};
@@ -164,7 +166,7 @@ impl MineLocation {
             /// This is always applied vertically
             const MAX_INTRA_OFFSET: VPoint = VPoint::new(0, 4 * 6);
 
-            for adjust_i in 0..2 {
+            for adjust_i in 0..3 {
                 let mut new_origin = endpoint
                     .move_direction_sideways_int(adjust_direction, adjust_i * SECTION_POINTS_I32);
 
@@ -352,7 +354,8 @@ impl MineLocation {
             .all(|v| Pixel::is_resource(v) || *v == Pixel::Empty)
         {
             // todo: do this ever happen?
-            panic!("{debug_prefix} hit another mine");
+            trace!("{debug_prefix} hit another mine");
+            false
         } else {
             // panic!("{debug_prefix} is {pixels_debug}");
             panic!("{debug_prefix}");
@@ -378,7 +381,7 @@ impl MineLocation {
     pub fn draw_area_buffered_with(&self, surface: &mut VSurface, pixel: Pixel) {
         surface
             .change_pixels(self.area_buffered.get_points())
-            .stomp(pixel)
+            .find_empty_into(pixel)
     }
 
     pub fn draw_area_buffered_to_no_touch(&self, surface: &mut VSurface) {
@@ -386,22 +389,35 @@ impl MineLocation {
         // let existing_pixel = surface.get_pixel(needle);
         // assert_eq!(existing_pixel, Pixel::MineNoTouch, "at {needle}");
 
-        let new_points = self
-            .area_no_touch
-            .get_points()
-            .into_iter()
-            .filter(|p| matches!(surface.get_pixel(p), Pixel::MineNoTouch | Pixel::Empty))
-            .collect_vec();
-        // surface.set_pixel_entity_swap(surface.get_pixel_entity_id_at(&needle), new_points, false)
-
-        let removed_buffer_pixels = self
+        // --sanity--
+        for point in self
             .area_buffered
             .get_points()
             .into_iter()
-            .filter(|p| matches!(surface.get_pixel(p), Pixel::MineNoTouch))
-            .collect_vec();
-        surface.change_pixels(removed_buffer_pixels).remove();
-        surface.change_pixels(new_points).stomp(Pixel::MineNoTouch);
+            .filter(|v| !self.area_no_touch.contains_point(v))
+        {
+            // assert_eq!(surface.get_pixel(point), Pixel::MineNoTouch);
+            let pixel = surface.get_pixel(point);
+            if !matches!(pixel, Pixel::MineNoTouch | Pixel::Empty) {
+                surface
+                    .change_square(&VArea::from_arbitrary_points_pair(
+                        point,
+                        point + VPOINT_TEN,
+                    ))
+                    .stomp(Pixel::Highlighter);
+                surface.paint_pixel_colored_zoomed().save_to_oculante();
+                panic!("for {point} is {pixel:?}")
+            }
+        }
+
+        surface
+            .change_pixels(
+                self.area_buffered
+                    .get_points()
+                    .into_iter()
+                    .filter(|v| !self.area_no_touch.contains_point(v)),
+            )
+            .remove();
     }
 
     pub fn draw_area_buffered_highlight_pixel(&self, surface: &mut VSurface, pixel: Pixel) {
