@@ -153,9 +153,7 @@ fn build_routes_from_destinations(
             },
         ) in combination.into_iter().enumerate()
         {
-            let segment = base_source
-                .peek_at(i)
-                .segment_for_mine(&destination, &location);
+            let segment = base_source.peek_at(i).segment_for_mine(&destination);
             if !segment.is_within_area(&fixed_finding_limiter) {
                 trace!("segment out of bounds {}", segment);
                 continue 'combinations;

@@ -7,6 +7,7 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;
+use tracing::trace;
 
 pub struct BaseSource {
     positive: BaseSourceEighth,
@@ -170,7 +171,6 @@ impl BaseSourceEntry {
     pub fn segment_for_mine(
         &self,
         VPointDirectionQ(pos, direction): &VPointDirectionQ,
-        location: &MineLocation,
     ) -> VSegment {
         let test_origin = *self.origin.point() - self.applied_intra_offset;
         assert_eq!(
@@ -188,24 +188,8 @@ impl BaseSourceEntry {
             pos,
         );
 
-        // apply offset without moving away from center
-        let distance_test = &location.area_min().point_center();
-        let init_distance = pos.distance_to(distance_test);
-        let mut new_pos = *pos + self.applied_intra_offset;
-        if new_pos.distance_to(distance_test) < init_distance {
-            // todo: support x somehow
-            let pos = pos.move_y(SECTION_POINTS_I32 * self.applied_intra_offset.y().signum() * -1);
-            new_pos = pos + self.applied_intra_offset;
-            assert!(new_pos.distance_to(distance_test) > init_distance);
-        }
-
-        let bad_area = location.area_no_touch();
-        if bad_area.contains_point(&new_pos) {
-            panic!(
-                "orig {pos} new {new_pos} with offset {} still inside no_touch {bad_area}",
-                self.applied_intra_offset
-            )
-        }
+        let new_pos = *pos + self.applied_intra_offset;
+        // trace!("adjusted {pos} to {new_pos} diff {}", new_pos - *pos);
 
         VSegment {
             start: self.origin,
