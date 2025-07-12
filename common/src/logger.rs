@@ -6,7 +6,7 @@ use tracing_log::NormalizeEvent;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::{FmtContext, FormatEvent, FormatFields};
 use tracing_subscriber::registry::LookupSpan;
-use tracing_subscriber::{EnvFilter, Registry, prelude::*};
+use tracing_subscriber::{EnvFilter, Registry, filter, prelude::*};
 
 const TRACE_NO_ADMIRAL_NETWORK: &str = "trace,\
 facto_loop_miner_fac_engine::admiral::executor::client=debug,\
@@ -27,7 +27,11 @@ fn log_init_internal(default_env: &str) {
     let env_layer = EnvFilter::builder().parse(env_var).expect("bad env");
 
     // let print_layer = tracing_subscriber::fmt::Layer::default().compact();
-    let print_layer = tracing_subscriber::fmt::Layer::default().event_format(LoopFormatter);
+    let print_layer = tracing_subscriber::fmt::Layer::default()
+        .event_format(LoopFormatter)
+        .with_filter(filter::filter_fn(|metadata| {
+            std::thread::current().name() == Some("main")
+        }));
 
     Registry::default().with(env_layer).with(print_layer).init()
 }
