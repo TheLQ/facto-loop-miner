@@ -14,6 +14,7 @@ use itertools::Itertools;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
+use std::collections::HashSet;
 use std::fmt::Arguments;
 use tracing::{trace, warn};
 
@@ -170,8 +171,8 @@ impl MineLocation {
                 let mut new_origin = endpoint
                     .move_direction_sideways_int(adjust_direction, adjust_i * SECTION_POINTS_I32);
 
-                match self.adjust_endpoint(
-                    &surface,
+                match self.is_adjust_endpoint(
+                    surface,
                     new_origin,
                     format_args!("mine endpoint {endpoint} at {adjust_i}-natty (cur {new_origin})"),
                 ) {
@@ -192,8 +193,8 @@ impl MineLocation {
 
                 // now try with intra offset
                 new_origin += MAX_INTRA_OFFSET;
-                match self.adjust_endpoint(
-                    &surface,
+                match self.is_adjust_endpoint(
+                    surface,
                     new_origin,
                     format_args!("mine endpoint {endpoint} at {adjust_i}-intra (cur {new_origin})"),
                 ) {
@@ -227,7 +228,7 @@ impl MineLocation {
         );
     }
 
-    fn adjust_endpoint(
+    fn is_adjust_endpoint(
         &self,
         scratch_surface: &VSurface,
         new_origin: VPoint,
@@ -260,7 +261,7 @@ impl MineLocation {
         }
 
         // is link points valid?
-        if !self.is_surface_points_free_excluding_buffered(
+        if !self.is_surface_points_free_excluding_self_area(
             scratch_surface,
             end_link_points,
             &debug_prefix,
@@ -275,7 +276,19 @@ impl MineLocation {
             link_backwards.add_turn90(true),
             link_backwards.add_turn90(false),
         ] {
-            if !self.is_surface_points_free_excluding_buffered(
+            if link
+                .area_vec()
+                .iter()
+                .any(|v| scratch_surface.is_point_out_of_bounds(v))
+            {
+                trace!(
+                    "{debug_prefix} is out of bounds, remain {}",
+                    self.endpoints.len() - 1
+                );
+                return Adjustment::BadEndpoint;
+            }
+
+            if !self.is_surface_points_free_excluding_self_area(
                 scratch_surface,
                 link.area_vec(),
                 &debug_prefix,
@@ -293,7 +306,7 @@ impl MineLocation {
         Adjustment::Usable
     }
 
-    fn is_surface_points_free_excluding_buffered(
+    fn is_surface_points_free_excluding_self_area(
         &self,
         surface: &VSurface,
         points: impl IntoIterator<Item = impl Borrow<VPoint>>,
@@ -424,6 +437,27 @@ impl MineLocation {
         surface
             .change_pixels(self.area_buffered.get_points())
             .find_into(Pixel::MineNoTouch, pixel)
+    }
+
+    pub fn restore_area_buffered(
+        mines: &[Self],
+        surface: &mut VSurface,
+        removed_rail: Vec<VPoint>,
+    ) {
+        let mut intersected_mines = HashSet::new();
+        for point in removed_rail {
+            for mine in mines {
+                if mine.area_buffered().contains_point(&point) {
+                    intersected_mines.insert(mine);
+                }
+            }
+        }
+
+        for mine in intersected_mines {
+            surface
+                .change_pixels(mine.area_buffered().get_points())
+                .find_empty_into(Pixel::MineNoTouch)
+        }
     }
 
     pub fn endpoints(&self) -> &[VPoint] {

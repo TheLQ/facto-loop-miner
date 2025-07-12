@@ -19,7 +19,7 @@ use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
 use std::borrow::Borrow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
@@ -574,7 +574,7 @@ impl VSurface {
         self.rail_paths.push(mine_path);
     }
 
-    pub fn remove_mine_path_at(&mut self, index: usize) -> Option<MinePath> {
+    pub fn remove_mine_path_at(&mut self, index: usize) -> Option<(MinePath, Vec<VPoint>)> {
         let mine_path = self.rail_paths.remove(index);
         trace!(
             "{} at {index} total {} - {}",
@@ -583,24 +583,22 @@ impl VSurface {
             mine_path.segment,
         );
 
-        self.remove_mine_path_cleanup(&mine_path);
-        Some(mine_path)
+        let removed_points = self.remove_mine_path_cleanup(&mine_path);
+        Some((mine_path, removed_points))
     }
 
-    pub fn remove_mine_path_pop(&mut self) -> Option<MinePath> {
+    pub fn remove_mine_path_pop(&mut self) -> Option<(MinePath, Vec<VPoint>)> {
         trace!(
             "{} pop total {}",
             nu_ansi_term::Color::Red.paint("mine remove"),
             self.rail_paths.len()
         );
-        let Some(mine_path) = self.rail_paths.pop() else {
-            return None;
-        };
-        self.remove_mine_path_cleanup(&mine_path);
-        Some(mine_path)
+        let mine_path = self.rail_paths.pop()?;
+        let removed_points = self.remove_mine_path_cleanup(&mine_path);
+        Some((mine_path, removed_points))
     }
 
-    fn remove_mine_path_cleanup(&mut self, mine_path: &MinePath) {
+    fn remove_mine_path_cleanup(&mut self, mine_path: &MinePath) -> Vec<VPoint> {
         let removed_points = mine_path.total_area();
         for point in &removed_points {
             let existing = self.get_pixel(point);
@@ -608,7 +606,8 @@ impl VSurface {
                 panic!("existing {existing:?} is not Rail")
             }
         }
-        self.pixels.change(removed_points).remove();
+        self.pixels.change(removed_points.clone()).remove();
+        removed_points
     }
 
     //

@@ -8,6 +8,7 @@ use crate::navigator::mine_selector::{
 use crate::navigator::planners::common::{debug_failing, draw_prep_mines};
 use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
+use crate::surface::pixel::Pixel::MineNoTouch;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -72,8 +73,13 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                 let mut mines: Vec<MineLocation> = Vec::new();
 
                 for _ in 0..BATCH_SIZE_MAX.saturating_sub(1) {
-                    if let Some(mine) = surface.remove_mine_path_pop() {
+                    if let Some((mine, removed_points)) = surface.remove_mine_path_pop() {
                         trace!("batch pop from mine {BATCH_SIZE_MAX}");
+                        MineLocation::restore_area_buffered(
+                            &quester.all_mine_locations,
+                            surface,
+                            removed_points,
+                        );
                         mines.push(mine.mine_base);
                         base_source_positive.borrow_mut().undo_one();
                     }
@@ -114,7 +120,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                             .borrow_mut()
                             .advance_by(paths.len())
                             .unwrap();
-                        routes.last().unwrap().location.draw_area_buffered(surface);
+                        // routes.last().unwrap().location.draw_area_buffered(surface);
                         for path in paths {
                             surface.add_mine_path(path);
                         }
@@ -159,6 +165,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                                 nearest_rail,
                                 never_mined,
                                 &mut base_source_positive.borrow_mut(),
+                                &quester.all_mine_locations,
                             );
 
                             surface.paint_pixel_colored_zoomed().save_to_oculante();
@@ -257,9 +264,10 @@ fn rollback_and_reapply(
     old_rail_index: usize,
     new_mine: MineLocation,
     base_source: &mut BaseSourceEighth,
+    all_mines: &[MineLocation],
 ) {
     // remove old rail
-    let old_path = surface.remove_mine_path_at(old_rail_index).unwrap();
+    let (old_path, _) = surface.remove_mine_path_at(old_rail_index).unwrap();
 
     // re-pathfind with restricted barriers. this SHOULD succeed
     let mut base_source_dummy = base_source.regenerate();
@@ -303,7 +311,8 @@ fn rollback_and_reapply(
             "mines len {} or {old_rail_index}",
             surface.get_mine_paths().len()
         );
-        surface.remove_mine_path_pop().unwrap();
+        let (_, removed_points) = surface.remove_mine_path_pop().unwrap();
+        MineLocation::restore_area_buffered(all_mines, surface, removed_points);
         base_source.undo_one();
     }
     surface.add_mine_path(new_path);
