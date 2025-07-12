@@ -10,3 +10,5 @@
 /videos
 fac-engine/out.html
 fac-engine/debug-*
+/scripts/out.*
+/scripts/raw-output-stream.dat

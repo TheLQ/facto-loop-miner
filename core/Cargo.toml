@@ -35,3 +35,4 @@ derivative = "2.2.0"
 colorgrad = "0.7.0"
 
 nu-ansi-term = { workspace = true }
+tcmalloc-better = "0.1.19"
