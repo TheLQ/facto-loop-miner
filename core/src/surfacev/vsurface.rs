@@ -246,18 +246,18 @@ impl VSurface {
             let start = i * color.len();
             output[start..(start + 4)].copy_from_slice(&color);
         }
-        trace!(
-            "built entity array of {} in {}",
+
+        let debug_description = format!(
+            "colored cropped ({} in {})",
             output.len().to_formatted_string(&LOCALE),
             build_watch
         );
-
         SurfacePainting {
             output,
             diameter: self.pixels.diameter() as u32,
             color_type: ExtendedColorType::Rgba8,
-            file_name: "pixel-map-grad.png".into(),
-            debug_description: "color gradient",
+            file_name: "pixel-map-grad.png",
+            debug_description,
         }
     }
 
@@ -283,8 +283,8 @@ impl VSurface {
     /// https://github.com/woelper/oculante
     pub fn paint_pixel_colored_zoomed(&self) -> SurfacePainting {
         let crop_circle = VArea::from_arbitrary_points_pair(
-            VPoint::new(0, -self.get_radius_i32() / 2),
-            VPoint::new(self.get_radius_i32() - 1, (self.get_radius_i32() / 2) - 1),
+            VPoint::new(0, 0),
+            VPoint::new(self.get_radius_i32() - 1, self.get_radius_i32() - 1),
         );
         self.paint_pixel_colored(Some(crop_circle))
     }
@@ -321,8 +321,8 @@ impl VSurface {
             }
             assert_eq!(output.len(), output_size);
 
-            trace!(
-                "built entity array of {} in {}",
+            let debug_description = format!(
+                "colored cropped ({} in {})",
                 output.len().to_formatted_string(&LOCALE),
                 build_watch
             );
@@ -331,7 +331,7 @@ impl VSurface {
                 diameter: crop_size.x().try_into().unwrap(),
                 color_type: ExtendedColorType::Rgb8,
                 file_name: FILENAME,
-                debug_description: "colored cropped",
+                debug_description,
             }
         } else {
             let entities = self.pixels.iter_xy_pixels();
@@ -342,8 +342,9 @@ impl VSurface {
                 let start = i * color.len();
                 output[start..(start + 3)].copy_from_slice(color);
             }
-            trace!(
-                "built entity array of {} in {}",
+
+            let debug_description = format!(
+                "colored entire ({} in {})",
                 output.len().to_formatted_string(&LOCALE),
                 build_watch
             );
@@ -352,7 +353,7 @@ impl VSurface {
                 diameter: self.get_radius() * 2,
                 color_type: ExtendedColorType::Rgb8,
                 file_name: FILENAME,
-                debug_description: "colored entire",
+                debug_description,
             }
         }
     }
@@ -702,7 +703,7 @@ pub struct SurfacePainting {
     diameter: u32,
     color_type: ExtendedColorType,
     file_name: &'static str,
-    debug_description: &'static str,
+    debug_description: String,
 }
 
 impl SurfacePainting {
@@ -721,11 +722,9 @@ impl SurfacePainting {
             file_name: _,
             debug_description,
         } = self;
-        let address: SocketAddr = ("peko.g.xana.sh", 5689)
-            .to_socket_addrs()
-            .unwrap()
-            .next()
-            .unwrap();
+        const ADDR: (&str, u16) = ("peko.g.xana.sh", 5689);
+        // const ADDR: (&str, u16) = ("127.0.0.1", 5689);
+        let address: SocketAddr = ADDR.to_socket_addrs().unwrap().next().unwrap();
         debug!("Painting {debug_description} to oculante {address}");
         let stream = TcpStream::connect(address).unwrap();
 

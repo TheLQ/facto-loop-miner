@@ -8,7 +8,6 @@ use crate::navigator::mine_selector::{
 use crate::navigator::planners::common::{debug_failing, draw_prep_mines};
 use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
-use crate::surface::pixel::Pixel::MineNoTouch;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -21,7 +20,7 @@ use simd_json::prelude::ArrayTrait;
 use std::collections::HashSet;
 use tracing::{debug, error, info, trace, warn};
 
-const BATCH_SIZE_MAX: usize = 2;
+const BATCH_SIZE_MAX: usize = 4;
 
 /// Planner v2 "Regis Altare 🎇"
 ///
@@ -137,7 +136,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                             info!("attempting retry");
                             assert!(!surface.get_mine_paths().is_empty(), "too early to retry");
 
-                            assert_ne!(meta.all_routes.len(), seen_mines.len());
+                            // assert_ne!(meta.all_routes.len(), seen_mines.len());
 
                             let all_mines = meta
                                 .all_routes
@@ -149,6 +148,10 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                                 .into_iter()
                                 .filter(|all_mine| !seen_mines.contains(all_mine))
                                 .collect_vec();
+                            if never_mined.len() != 1 {
+                                error!("never_mined actual {} expected {}", never_mined.len(), 1);
+                                break;
+                            }
                             assert_eq!(never_mined.len(), 1);
                             let never_mined = never_mined.remove(0);
 
@@ -189,6 +192,11 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                 }
             }
         }
+    }
+
+    info!("post save to gif buffering");
+    for _ in 0..4 {
+        surface.paint_pixel_colored_zoomed().save_to_oculante();
     }
 }
 
@@ -315,6 +323,7 @@ fn rollback_and_reapply(
         MineLocation::restore_area_buffered(all_mines, surface, removed_points);
         base_source.undo_one();
     }
+    surface.paint_pixel_colored_zoomed().save_to_oculante();
     surface.add_mine_path(new_path);
 }
 
