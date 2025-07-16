@@ -71,10 +71,13 @@ impl FacBlkBeltCombiner {
                 if output_belt + 1 == self.output_belt_targets.len() && side_belt == 1 {
                     break;
                 }
-                cur_belt.add_split_priority(clockwise, FacEntBeltSplitPriority {
-                    input: FacExtPriority::None,
-                    output: output_priority,
-                });
+                cur_belt.add_split_priority(
+                    clockwise,
+                    FacEntBeltSplitPriority {
+                        input: FacExtPriority::None,
+                        output: output_priority,
+                    },
+                );
 
                 let other_belt = cur_belt.belt_for_splitter();
                 belts_stack.push(other_belt);
@@ -84,7 +87,7 @@ impl FacBlkBeltCombiner {
         belts_stack
     }
 
-    fn place_fill(&self, belts_stack: &mut Vec<FacBlkBettelBelt>) {
+    fn place_fill(&self, belts_stack: &mut [FacBlkBettelBelt]) {
         // fill depth output belts
         let belt_adjustment = belts_stack.len().saturating_sub(2);
         for (i, belt) in belts_stack.iter_mut().enumerate() {

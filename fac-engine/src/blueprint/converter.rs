@@ -38,7 +38,7 @@ pub fn encode_blueprint_to_string_auto_index(
     let blueprint = blueprint.borrow_mut();
     let mut auto_index = /*lua...*/1;
     for entity in &mut blueprint.blueprint.entities {
-        if entity.entity_number == None {
+        if entity.entity_number.is_none() {
             entity.entity_number = Some(auto_index);
             auto_index += 1;
         } else {

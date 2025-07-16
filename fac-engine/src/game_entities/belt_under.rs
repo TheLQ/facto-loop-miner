@@ -51,7 +51,7 @@ impl FacEntity for FacEntBeltUnder {
     }
 
     fn to_fac_belt_under_type(&self) -> Option<FacEntBeltUnderType> {
-        Some(self.utype.clone())
+        Some(self.utype)
     }
 }
 

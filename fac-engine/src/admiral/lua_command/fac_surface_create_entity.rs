@@ -61,7 +61,7 @@ impl LuaCommand for FacSurfaceCreateEntity {
             .iter()
             .map(|v| {
                 let (key, value) = v.to_param();
-                format!("{}={}", key, value)
+                format!("{key}={value}")
             })
             .join(",");
         lua.push(format!(

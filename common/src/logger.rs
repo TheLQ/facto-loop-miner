@@ -29,7 +29,7 @@ fn log_init_internal(default_env: &str) {
     // let print_layer = tracing_subscriber::fmt::Layer::default().compact();
     let print_layer = tracing_subscriber::fmt::Layer::default()
         .event_format(LoopFormatter)
-        .with_filter(filter::filter_fn(|metadata| {
+        .with_filter(filter::filter_fn(|_metadata| {
             std::thread::current().name() == Some("main")
         }));
 
@@ -76,7 +76,7 @@ where
                 // this is noise normally
             }
             Some(name) => {
-                write!(f, "[{}] ", name)?;
+                write!(f, "[{name}] ")?;
             }
             None => {
                 write!(f, "[u{:0>2?}] ", current_thread.id())?;

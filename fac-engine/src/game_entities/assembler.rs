@@ -8,8 +8,8 @@ pub type FacEntAssemblerModSlice = [Option<FacModule>; 3];
 
 #[derive(Debug, Clone)]
 pub struct FacEntAssembler {
-    recipe: FacEntityName,
     tier: FacTier,
+    recipe: FacEntityName,
     modules: FacEntAssemblerModSlice,
 }
 

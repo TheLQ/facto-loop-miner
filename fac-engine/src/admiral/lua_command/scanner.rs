@@ -14,26 +14,26 @@ pub fn facscan_mega_export_entities_compressed() -> Vec<RawLuaCommand> {
 
 fn extract_commands_from_scanner_mod(lua_function: &str) -> Vec<RawLuaCommand> {
     // grab the define
-    let start_str = format!("function {}", lua_function);
+    let start_str = format!("function {lua_function}");
 
     // local function ->hyper_scan()<-
     let Some(start_pos) = RAW_SCAN.find(&start_str) else {
-        panic!("{} not found in scanner", start_str)
+        panic!("{start_str} not found in scanner")
     };
 
     // function is called immediately after definition
     let end_search_pos = start_pos + lua_function.len();
     let Some(end_pos) = RAW_SCAN[end_search_pos..].find(lua_function) else {
-        panic!("{} not found in scanner", lua_function)
+        panic!("{lua_function} not found in scanner")
     };
     let end_pos = end_search_pos + end_pos;
 
     let extracted_command = &RAW_SCAN[start_pos..end_pos].trim();
 
-    let mut res = Vec::new();
-    res.push(RawLuaCommand::new(extracted_command.to_string()));
-    res.push(RawLuaCommand::new(lua_function.to_string()));
-    res
+    vec![
+        RawLuaCommand::new(extracted_command.to_string()),
+        RawLuaCommand::new(lua_function.to_string()),
+    ]
 }
 
 #[derive(Debug)]

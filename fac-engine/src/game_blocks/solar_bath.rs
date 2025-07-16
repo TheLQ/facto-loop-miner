@@ -19,10 +19,9 @@ impl FacBlock for FacBlkSolarBath {
     fn generate(&self, origin: VPoint) {
         for width in 0..self.width {
             for height in 0..self.height {
-                let _ = &mut self.output.context_handle(
-                    ContextLevel::Block,
-                    format!("SolarFarm-{}-{}", width, height),
-                );
+                let _ = &mut self
+                    .output
+                    .context_handle(ContextLevel::Block, format!("SolarFarm-{width}-{height}"));
                 let offset = FacEntSolar::area_diameter() * 5;
                 self.place_solar_block(origin.move_xy_usize(offset * width, offset * height));
             }

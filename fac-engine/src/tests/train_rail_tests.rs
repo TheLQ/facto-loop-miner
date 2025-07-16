@@ -110,7 +110,7 @@ pub fn make_rail_dual_powered(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         // FacDirectionQuarter::South,
         // FacDirectionQuarter::West,
     ] {
-        let origin = VPOINT_ZERO.move_direction_usz(&direction, 6);
+        let origin = VPOINT_ZERO.move_direction_usz(direction, 6);
 
         let mut hope = RailHopeDual::new(origin, direction, output.clone());
         hope.add_straight_section();

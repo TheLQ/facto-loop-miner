@@ -34,10 +34,11 @@ impl<C: FacBlock> FacBlock for FacBlkBeaconFarm<C> {
                     FacEntBeacon::new([Some(self.module), Some(self.module)]).into_boxed(),
                     pos.point(),
                 ));
-            } else if pos.ix % zero_cell_size == 1 && pos.iy % zero_cell_size == 1 {
-                if let Some(inner) = &self.cell {
-                    inner.generate(pos.point());
-                }
+            } else if pos.ix % zero_cell_size == 1
+                && pos.iy % zero_cell_size == 1
+                && let Some(inner) = &self.cell
+            {
+                inner.generate(pos.point());
             }
         }
     }

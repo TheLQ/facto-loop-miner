@@ -15,7 +15,7 @@ const RUZE_MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
 ///
 /// Super parallel batch based planner
 pub fn start_ruze_planner(surface: &mut VSurface, params: &StepParams) {
-    let select_batches = select_mines_and_sources(&surface, RUZE_MAXIMUM_MINE_COUNT_PER_BATCH)
+    let select_batches = select_mines_and_sources(surface, RUZE_MAXIMUM_MINE_COUNT_PER_BATCH)
         .into_success()
         .unwrap();
 

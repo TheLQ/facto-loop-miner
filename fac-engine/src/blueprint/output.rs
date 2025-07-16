@@ -112,7 +112,7 @@ impl FacItemOutput {
     }
 
     pub fn write_tile(&self, blueprint: FacBpTile) {
-        let item_debug = format!("{:?}", blueprint);
+        let item_debug = format!("{blueprint:?}");
         let message_pos = format!("blueprint facpos {}", blueprint.position);
 
         let mut odata = self.odata.borrow_mut();

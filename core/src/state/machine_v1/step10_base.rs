@@ -37,7 +37,7 @@ fn draw_mega_box(surface: &mut VSurface, tunables: &BaseTunables) {
     let base_tiles = tunables.base_chunks.as_tiles_u32();
     let box_points = points_in_centered_box(base_tiles, VPOINT_ZERO)
         .into_iter()
-        .filter(|v| !v.is_within_center_radius(base_tiles as u32 - 50))
+        .filter(|v| !v.is_within_center_radius(base_tiles - 50))
         .collect_vec();
     surface.change_pixels(box_points).stomp(Pixel::EdgeWall);
 }

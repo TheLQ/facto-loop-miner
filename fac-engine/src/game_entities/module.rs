@@ -62,7 +62,7 @@ impl Visitor<'_> for FacModuleVisitor {
             "speed-module-" => FacModule::Speed(tier),
             "production-module-" => FacModule::Production(tier),
             "efficency-module-" => FacModule::Efficency(tier),
-            _ => panic!("invalid name {}", name),
+            _ => panic!("invalid name {name}"),
         };
         Ok(module)
     }

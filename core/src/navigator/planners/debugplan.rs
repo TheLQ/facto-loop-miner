@@ -7,9 +7,7 @@ use simd_json::prelude::ArrayTrait;
 use tracing::{info, trace};
 
 pub fn start_debug_planner(surface: &mut VSurface) {
-    let select_batches = select_mines_and_sources(&surface, 5)
-        .into_success()
-        .unwrap();
+    let select_batches = select_mines_and_sources(surface, 5).into_success().unwrap();
     let mines: usize = select_batches
         .iter()
         .flat_map(|v| &v.mines)

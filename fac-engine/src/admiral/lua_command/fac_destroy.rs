@@ -74,7 +74,7 @@ impl FacDestroy {
         let filters = self
             .entity_names
             .iter()
-            .map(|v| format!("\"{}\"", v))
+            .map(|v| format!("\"{v}\""))
             .join(",");
         format!(
             r"
@@ -100,7 +100,7 @@ end
         let filters = self
             .entity_names
             .iter()
-            .map(|v| format!("\"{}\"", v))
+            .map(|v| format!("\"{v}\""))
             .join(",");
         format!(
             r"

@@ -64,7 +64,7 @@ impl FacBlock for FacBlkAssemblerCell {
                     FacDirectionQuarter::North
                 };
                 self.output.write(BlueprintItem::new(
-                    FacEntInserter::new(entry.inserter.clone(), inserter_direction).into_boxed(),
+                    FacEntInserter::new(entry.inserter, inserter_direction).into_boxed(),
                     row_point,
                 ));
 

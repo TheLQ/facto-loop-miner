@@ -49,7 +49,7 @@ impl FacBpEntity {
         let mut create = FacSurfaceCreateEntity::new(&self.name, self.position.clone());
 
         if let Some(v) = &self.direction {
-            create.with_param(CreateParam::DirectionFacto(v.clone()));
+            create.with_param(CreateParam::DirectionFacto(*v));
         }
         if let Some(v) = &self.recipe {
             create.with_param(CreateParam::Lua {

@@ -36,5 +36,5 @@ impl FError {
 }
 
 fn positions_to_strings(positions: &[VPoint]) -> String {
-    positions.iter().map(|e| format!("{:?}", e)).join(",")
+    positions.iter().map(|e| format!("{e:?}")).join(",")
 }

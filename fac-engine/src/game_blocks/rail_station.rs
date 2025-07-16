@@ -216,7 +216,7 @@ impl FacBlkRailStop {
         for car in 0..self.wagons {
             let _ = &mut self
                 .output
-                .context_handle(ContextLevel::Micro, format!("🔚Car-{}-Inserter", car));
+                .context_handle(ContextLevel::Micro, format!("🔚Car-{car}-Inserter"));
 
             let car_x_offset = self.get_wagon_x_offset(car);
 
@@ -283,7 +283,7 @@ impl FacBlkRailStop {
                     let start = self
                         .stop_rail_pos
                         .move_direction_usz(
-                            &self.fill_x_direction,
+                            self.fill_x_direction,
                             /*pre-pole*/ 1 + car_x_offset + exit,
                         )
                         .move_y(centered_y_offset(negative, 2));
@@ -316,18 +316,18 @@ impl FacBlkRailStop {
             let start = self
                 .stop_rail_pos
                 .move_direction_usz(
-                    &self.fill_x_direction,
+                    self.fill_x_direction,
                     /*pre-pole*/ 1 + car_x_offset + INSERTERS_PER_CAR,
                 )
                 .move_y(centered_y_offset(self.rotation, 1));
             self.output.writei(
-                FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction.clone()),
+                FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction),
                 start,
             );
         }
 
         self.output.writei(
-            FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction.clone()),
+            FacEntRailSignal::new(FacEntRailSignalType::Basic, self.fill_x_direction),
             self.stop_rail_pos
                 .move_direction_usz(self.fill_x_direction.rotate_flip(), 2)
                 .move_y(centered_y_offset(self.rotation, 1)),
@@ -471,8 +471,8 @@ impl FacBlkRailStop {
     ) -> VPoint {
         let neg = if is_inside { -1 } else { 1 };
         self.stop_rail_pos
-            .move_direction_int(&self.fill_x_direction, (7 * roller as i32) + offset_x)
-            .move_direction_int(&self.fill_x_direction.rotate_once(), neg * offset_y)
+            .move_direction_int(self.fill_x_direction, (7 * roller as i32) + offset_x)
+            .move_direction_int(self.fill_x_direction.rotate_once(), neg * offset_y)
     }
 
     // fn get_wagon_point_at_xy(&self, roller: usize, offset_x: i32, offset_y: i32) -> VPoint {

@@ -22,7 +22,7 @@ impl FacTier {
             1 => FacTier::Tier1,
             2 => FacTier::Tier2,
             3 => FacTier::Tier3,
-            _ => panic!("invalid tier {}", n),
+            _ => panic!("invalid tier {n}"),
         }
     }
 
@@ -30,7 +30,7 @@ impl FacTier {
         let str = str.as_ref();
         let num: u8 = str
             .parse()
-            .unwrap_or_else(|_| panic!("invalid digit {}", str));
+            .unwrap_or_else(|_| panic!("invalid digit {str}"));
         Self::from_number(num)
     }
 }

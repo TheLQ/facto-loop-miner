@@ -363,7 +363,7 @@ impl RailHopeLink for HopeLink {
         match &self.rtype {
             HopeLinkType::Straight { length } => self
                 .start
-                .move_direction_usz(&self.next_direction, length * RAIL_STRAIGHT_DIAMETER),
+                .move_direction_usz(self.next_direction, length * RAIL_STRAIGHT_DIAMETER),
             HopeLinkType::Turn90 { clockwise } => {
                 let unrotated = if *clockwise {
                     self.next_direction.rotate_opposite()

@@ -16,7 +16,7 @@ impl LuaCommand for FacExectionDefine {
             .into_iter()
             .enumerate()
             .map(|(i, v)| {
-                let mut inner_function = format!("chunk = {} function megachunk()\n", i);
+                let mut inner_function = format!("chunk = {i} function megachunk()\n");
                 inner_function.push_str("\nlocal admiral_create = nil\n");
                 inner_function.push_str(&join_commands(v));
                 inner_function.push_str("\nend");
@@ -29,9 +29,8 @@ impl LuaCommand for FacExectionDefine {
         format!(
             r"
 function megacall()
-{}
-end rcon.print('facexecution_define')",
-            all_function_chunks
+{all_function_chunks}
+end rcon.print('facexecution_define')"
         )
     }
 }

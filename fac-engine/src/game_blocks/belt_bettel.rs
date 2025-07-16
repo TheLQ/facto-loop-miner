@@ -168,12 +168,12 @@ impl FacBlkBettelBelt {
                 output.writei(
                     FacEntBeltUnder::new(self.btype, link.direction, FacEntBeltUnderType::Output),
                     self.write_cursor
-                        .move_direction_usz(&link.direction, *length + 1),
+                        .move_direction_usz(link.direction, *length + 1),
                 );
 
                 self.write_cursor = self
                     .write_cursor
-                    .move_direction_usz(&link.direction, *length + 2)
+                    .move_direction_usz(link.direction, *length + 2)
             }
             FacBlkBettelBeltLinkType::Splitter {
                 clockwise,
@@ -187,7 +187,7 @@ impl FacBlkBettelBelt {
                     split_pos,
                 );
 
-                self.write_cursor = self.write_cursor.move_direction_int(&link.direction, 1)
+                self.write_cursor = self.write_cursor.move_direction_int(link.direction, 1)
             }
         };
         self.links.push(link);

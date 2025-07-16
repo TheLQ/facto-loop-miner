@@ -160,7 +160,7 @@ impl FacBlkRailLoop {
             FacDirectionQuarter::East => {
                 origin = origin.move_y(-4);
             }
-            dir => panic!("unsupported dir {}", dir),
+            dir => panic!("unsupported dir {dir}"),
         }
         station.generate(origin);
     }
@@ -203,7 +203,7 @@ impl FacBlkRailLoop {
                     .into(),
                 },
                 FacBpScheduleData {
-                    station: self.station_input_to_name(!true),
+                    station: self.station_input_to_name(false),
                     wait_conditions: [FacBpScheduleWait {
                         compare_type: FacBpLogic::Or,
                         ctype: FacBpWaitType::Empty,

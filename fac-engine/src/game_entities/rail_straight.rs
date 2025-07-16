@@ -19,7 +19,7 @@ impl FacEntity for FacEntRailStraight {
     def_entity_name!(FacEntityName::RailStraight);
 
     fn to_fac_direction(&self) -> Option<FacDirectionEighth> {
-        Some(self.direction.clone())
+        Some(self.direction)
     }
 }
 

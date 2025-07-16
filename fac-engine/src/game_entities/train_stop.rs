@@ -35,8 +35,8 @@ impl SquareArea for FacEntTrainStop {
 impl FacEntTrainStop {
     pub fn new(direction: FacDirectionQuarter, station_name: String) -> Self {
         Self {
-            station_name,
             direction,
+            station_name,
         }
     }
 }
