@@ -2,10 +2,10 @@ use crate::surface::pixel::Pixel;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::opencv_re::boxed_ref::BoxedRefMut;
 use facto_loop_miner_fac_engine::opencv_re::core::{
-    rotate, Mat, Point, Rect, Vector, ROTATE_90_COUNTERCLOCKWISE,
+    Mat, Point, ROTATE_90_COUNTERCLOCKWISE, Rect, Vector, rotate,
 };
 use facto_loop_miner_fac_engine::opencv_re::imgproc::{
-    bounding_rect, get_font_scale_from_height, put_text, FONT_HERSHEY_SIMPLEX, LINE_8,
+    FONT_HERSHEY_SIMPLEX, LINE_8, bounding_rect, get_font_scale_from_height, put_text,
 };
 // pub fn load_raw_image_with_surface(
 //     path: &Path,
@@ -143,7 +143,7 @@ pub struct GeneratedMat {
 }
 
 impl GeneratedMat {
-    pub fn as_mat(&mut self) -> BoxedRefMut<Mat> {
+    pub fn as_mat(&mut self) -> BoxedRefMut<'_, Mat> {
         Mat::new_rows_cols_with_data_mut(self.rows as i32, self.cols as i32, &mut self.data)
             .unwrap()
     }

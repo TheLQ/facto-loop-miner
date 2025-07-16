@@ -1,4 +1,3 @@
-use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
@@ -7,7 +6,6 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;
-use tracing::trace;
 
 pub struct BaseSource {
     positive: BaseSourceEighth,

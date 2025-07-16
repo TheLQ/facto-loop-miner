@@ -19,7 +19,7 @@ use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
 use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
@@ -818,8 +818,6 @@ mod test {
     use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
     use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
-    use std::path::Path;
-    use tracing::info;
 
     fn test_basic_surface() {
         log_init_trace();

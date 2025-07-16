@@ -17,7 +17,7 @@ use num_format::ToFormattedString;
 use pathfinding::prelude::{AStarErr, astar_mori};
 use std::collections::HashMap;
 use std::time::Duration;
-use tracing::{error, info, trace, warn};
+use tracing::{info, trace, warn};
 
 /// Pathfinder v1.2, Mori Calliope💀
 ///

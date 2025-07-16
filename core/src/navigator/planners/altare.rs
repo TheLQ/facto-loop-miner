@@ -18,7 +18,7 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
 use std::collections::HashSet;
-use tracing::{debug, error, info, trace, warn};
+use tracing::{error, info, trace, warn};
 
 const BATCH_SIZE_MAX: usize = 4;
 
@@ -282,7 +282,7 @@ fn rollback_and_reapply(
     while base_source_dummy.peek_single().origin != old_path.segment.start {
         base_source_dummy.next();
     }
-    let mut plan = get_possible_routes_for_batch(
+    let plan = get_possible_routes_for_batch(
         surface,
         MineSelectBatch {
             base_sources: base_source_dummy.into_rc_refcell(),
@@ -335,7 +335,7 @@ struct Quester {
 }
 
 impl Quester {
-    fn scan_patches(&self, surface: &VSurface) -> QuesterScanResult {
+    fn scan_patches(&self, surface: &VSurface) -> QuesterScanResult<'_> {
         let scan_sign = if self.origin_sign_pos { 1 } else { -1 };
         let scan_start = self.origin_base.point().move_direction_sideways_int(
             self.origin_base.direction(),

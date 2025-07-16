@@ -1,3 +1,4 @@
+use crate::PixelKdTree;
 use crate::opencv::combine_rects_into_big_rect;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
@@ -5,15 +6,14 @@ use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::VSurface;
-use crate::PixelKdTree;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPoint, VPOINT_ONE};
+use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ONE, VPoint};
 use facto_loop_miner_fac_engine::opencv_re::core::{
     Point, Rect, ToInputArray, ToInputOutputArray, Vector,
 };
 use facto_loop_miner_fac_engine::opencv_re::imgcodecs::imwrite;
 use facto_loop_miner_fac_engine::opencv_re::imgproc::{
-    bounding_rect, find_contours, rectangle, CHAIN_APPROX_NONE, LINE_8, RETR_EXTERNAL,
+    CHAIN_APPROX_NONE, LINE_8, RETR_EXTERNAL, bounding_rect, find_contours, rectangle,
 };
 use facto_loop_miner_fac_engine::opencv_re::prelude::*;
 use itertools::Itertools;
@@ -45,7 +45,7 @@ impl Step for Step04 {
         let mut surface = VSurface::load_from_last_step(&params)?;
 
         let disk_patches = detector(&surface, &params.step_out_dir);
-        surface.add_patches(&disk_patches);
+        surface.add_patches(disk_patches);
 
         // if WRITE_DEBUG_IMAGE {
         //     write_surface_with_all_patches_wrapped(&mut surface);
@@ -335,9 +335,7 @@ fn detect_merge_nearby_patches(patch_rects: &mut Vec<Rect>, cloud: &PixelKdTree)
             Ordering::Less => {
                 trace!(
                     "increasing search distance to {} because found from {} to {} points",
-                    search_distance,
-                    last_nearby_points_count,
-                    nearby_points_count
+                    search_distance, last_nearby_points_count, nearby_points_count
                 );
                 last_nearby_points_count = nearby_points_count;
             }

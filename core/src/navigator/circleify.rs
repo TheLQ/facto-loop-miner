@@ -67,9 +67,7 @@ pub fn draw_circle_around(point: &VPoint, radius: u32) -> Vec<VPoint> {
 
 #[cfg(test)]
 mod test {
-    use crate::navigator::circleify::{draw_circle, draw_circle_around};
-    use crate::surface::pixel::Pixel;
-    use crate::surfacev::vsurface::VSurface;
+    use crate::navigator::circleify::draw_circle_around;
     use facto_loop_miner_fac_engine::common::varea::VArea;
     use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 

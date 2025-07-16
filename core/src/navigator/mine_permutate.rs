@@ -6,7 +6,6 @@ use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
-use facto_loop_miner_fac_engine::constants::TILES_PER_CHUNK;
 use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;

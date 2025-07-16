@@ -3,7 +3,6 @@ use crate::navigator::mine_executor::{ExecutionRoute, FailingMeta};
 use crate::navigator::mine_permutate::CompletePlan;
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::err::VResult;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
