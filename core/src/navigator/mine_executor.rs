@@ -124,7 +124,7 @@ pub fn execute_route_batch(
             .into_iter()
             // .take(40)
             .map(|ExecutionSequence { routes }| {
-                execute_route_combination(&execution_surface, routes, total_sequences, flags)
+                execute_route_combination(execution_surface, routes, total_sequences, flags)
             })
             .collect()
     };

@@ -29,7 +29,7 @@ const BATCH_SIZE_MAX: usize = 4;
 /// Pathfinding with medium-difficulty backtracking.
 /// because v0 Mori and v1 Ruze Planner can mask valid routes
 pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
-    let base_source = BaseSource::from_central_base(&surface).into_refcells();
+    let base_source = BaseSource::from_central_base(surface).into_refcells();
     let base_source_positive = base_source.positive_rc();
 
     let mut all_mine_locations = group_nearby_patches(surface);
@@ -56,7 +56,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
     let mut limiter_counter = 0;
     let mut is_prev_retry = false;
     loop {
-        match quester.scan_patches(&surface) {
+        match quester.scan_patches(surface) {
             QuesterScanResult::YAxisEnding => {
                 info!("end of processing");
 
