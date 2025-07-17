@@ -215,6 +215,7 @@ impl VSurface {
         Ok(())
     }
 
+    #[must_use]
     pub fn paint_pixel_graduated(&self, compressed: HashMap<VPoint, u32>) -> SurfacePainting {
         assert!(!compressed.is_empty());
         let build_watch = BasicWatch::start();
@@ -224,7 +225,11 @@ impl VSurface {
             .into_iter()
             //todo: filter shouldn't be needed
             .filter(|(pos, _)| pos.is_within_center_radius(self.get_radius()))
-            .flat_map(|(pos, count)| pos.area_2x2().map(|v| (v, count)))
+            .flat_map(|(pos, count)| {
+                pos.get_entity_area_square(10)
+                    .into_iter()
+                    .map(move |v| (v, count))
+            })
             .map(|(pos, count)| {
                 (
                     self.pixels.point_to_index_unchecked(&pos),
@@ -248,7 +253,7 @@ impl VSurface {
         }
 
         let debug_description = format!(
-            "colored cropped ({} in {})",
+            "graduated ({} in {})",
             output.len().to_formatted_string(&LOCALE),
             build_watch
         );
@@ -281,6 +286,7 @@ impl VSurface {
     }
 
     /// https://github.com/woelper/oculante
+    #[must_use]
     pub fn paint_pixel_colored_zoomed(&self) -> SurfacePainting {
         let crop_circle = VArea::from_arbitrary_points_pair(
             VPoint::new(0, 0),
@@ -289,10 +295,12 @@ impl VSurface {
         self.paint_pixel_colored(Some(crop_circle))
     }
 
+    #[must_use]
     pub fn paint_pixel_colored_entire(&self) -> SurfacePainting {
         self.paint_pixel_colored(None)
     }
 
+    #[must_use]
     fn paint_pixel_colored(&self, crop: Option<VArea>) -> SurfacePainting {
         const FILENAME: &str = "pixel-map.png";
         let build_watch = BasicWatch::start();

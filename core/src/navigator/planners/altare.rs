@@ -5,6 +5,7 @@ use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{
     MineSelectBatch, PERPENDICULAR_SCAN_WIDTH, group_nearby_patches,
 };
+use crate::navigator::mori::{MoriResult, count_link_origins, mori2_start};
 use crate::navigator::planners::common::{debug_failing, draw_prep_mines};
 use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
@@ -12,8 +13,9 @@ use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
+use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
@@ -51,7 +53,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
         origin_sign_pos: true,
     };
 
-    // let mut limiter_counter = 0;
+    let mut limiter_counter = 0;
     let mut is_prev_retry = false;
     loop {
         match quester.scan_patches(&surface) {
@@ -64,11 +66,38 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                 quester.origin_index += 1;
             }
             QuesterScanResult::NewPatchesInScanArea(mut patches) => {
-                // if limiter_counter >= 2 {
-                //     info!("limiter {limiter_counter}");
-                //     break;
-                // }
-                // limiter_counter += 1;
+                // DEBUG - Generate partial graduated images
+                if limiter_counter >= 99999 {
+                    // best = 16
+                    // better = 28, 30, 32
+                    info!("limiter {limiter_counter}");
+                    let base_source = base_source_positive.borrow_mut().next().unwrap();
+                    let start = base_source.origin;
+                    let end = VPointDirectionQ(
+                        VPoint::new(SECTION_POINTS_I32 * 100, SECTION_POINTS_I32 * 100),
+                        FacDirectionQuarter::East,
+                    );
+
+                    let fixed_radius = surface.get_radius_i32();
+                    let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
+                        VPoint::new(0, -fixed_radius),
+                        // Must give spacing from Edge, because hope_link.area() can extend past it.
+                        // range checks are disabled for theoretical performance
+                        VPoint::new(fixed_radius, fixed_radius),
+                    );
+
+                    let result =
+                        mori2_start(surface, VSegment { start, end }, &fixed_finding_limiter);
+                    let MoriResult::FailingDebug { err } = result else {
+                        panic!("it worked? {end}")
+                    };
+                    surface
+                        .paint_pixel_graduated(count_link_origins(&err.seen))
+                        .save_to_oculante();
+
+                    break;
+                }
+                limiter_counter += 1;
                 let mut mines: Vec<MineLocation> = Vec::new();
 
                 for _ in 0..BATCH_SIZE_MAX.saturating_sub(1) {

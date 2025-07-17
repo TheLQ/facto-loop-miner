@@ -505,6 +505,19 @@ impl VPoint {
         ]
     }
 
+    pub fn get_entity_area_square(&self, size: u8) -> Vec<VPoint> {
+        let capacity = (size as usize * 2).pow(2);
+        let mut total = Vec::with_capacity(capacity);
+        let size = size as i32;
+        for x in (-size)..size {
+            for y in (-size)..size {
+                total.push(self.move_xy(x, y))
+            }
+        }
+        assert_eq!(total.len(), capacity, "{size}");
+        total
+    }
+
     // aka Manhattan distance
     pub const fn distance_to(&self, other: &Self) -> u32 {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y)

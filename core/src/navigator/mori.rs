@@ -281,7 +281,8 @@ fn into_buildable_link(
     }
 }
 
-fn count_link_origins(links: &[HopeSodaLink]) -> HashMap<VPoint, u32> {
+/// Process AStarErr into graduated image
+pub fn count_link_origins(links: &[HopeSodaLink]) -> HashMap<VPoint, u32> {
     let mut compressed = HashMap::new();
     for link in links {
         let val = compressed.entry(link.pos_next()).or_default();
