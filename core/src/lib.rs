@@ -27,8 +27,6 @@
 // TODO #![deny(let-underscore)]
 // TODO #![deny(nonstandard-style)]
 
-extern crate core;
-
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
 use facto_loop_miner_common::duration::BasicWatch;
@@ -36,6 +34,8 @@ use facto_loop_miner_common::log_init_trace;
 use kiddo::float;
 use std::path::Path;
 use tracing::info;
+
+pub use facto_loop_miner_common::util::always_true_test;
 
 mod gamedata;
 mod navigator;
@@ -67,8 +67,4 @@ pub fn inner_main() {
         _ => panic!("wtf"),
     }
     info!("Total time {watch}")
-}
-
-fn always_true_test() -> bool {
-    true
 }
