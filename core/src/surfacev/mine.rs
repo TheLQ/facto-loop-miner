@@ -1,4 +1,5 @@
 use crate::surface::pixel::Pixel;
+use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -13,6 +14,7 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
+use simd_json::prelude::ArrayTrait;
 use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::fmt::Arguments;
@@ -132,17 +134,19 @@ impl MineLocation {
 
         let mut endpoints = Vec::with_capacity(2);
         let mut endpoints_adjust_direction = Vec::with_capacity(2);
-        for (cur_endpoint, change_sign) in [
+        for (cur_endpoint, adjust_direction) in [
             (destination_top_raw, FacDirectionQuarter::West),
             (destination_bottom_raw, FacDirectionQuarter::East),
         ] {
+            // adjust more to account for link
+
             // basic pre-filter to not screw up later
             if surface.is_point_out_of_bounds(&cur_endpoint) {
                 continue;
             }
 
             endpoints.push(cur_endpoint);
-            endpoints_adjust_direction.push(change_sign);
+            endpoints_adjust_direction.push(adjust_direction);
         }
         if endpoints.is_empty() {
             warn!(
@@ -154,18 +158,22 @@ impl MineLocation {
         }
     }
 
-    pub fn revalidate_endpoints_after_no_touch(&mut self, surface: &mut VSurface) {
+    pub fn revalidate_endpoints_after_no_touch(&mut self, surface: &VSurface) {
         assert_eq!(self.endpoints.len(), self.endpoints_adjust_direction.len());
         trace!("start {}", self.area_min().point_center());
 
         'endpoints: for endpoint_index in (0..self.endpoints.len()).rev() {
-            let endpoint = self.endpoints[endpoint_index];
+            let mut endpoint = self.endpoints[endpoint_index];
             let adjust_direction = self.endpoints_adjust_direction[endpoint_index];
             trace!("dir {adjust_direction}");
 
             /// See [crate::navigator::base_source::BaseSourceEighth]
             /// This is always applied vertically
             const MAX_INTRA_OFFSET: VPoint = VPoint::new(0, 4 * 6);
+
+            /// Given endpoint is center of dual rail, which always is inside of area
+            const DUAL_RAIL_OFFSET: i32 = 4;
+            endpoint = endpoint.move_direction_sideways_int(adjust_direction, DUAL_RAIL_OFFSET);
 
             for adjust_i in 0..3 {
                 let mut new_origin = endpoint
@@ -188,7 +196,8 @@ impl MineLocation {
                     }
                 }
                 // best natty endpoint
-                self.endpoints[endpoint_index] = new_origin;
+                self.endpoints[endpoint_index] =
+                    new_origin.move_direction_sideways_int(adjust_direction, -DUAL_RAIL_OFFSET);
                 trace!("uopdat! {endpoint_index}");
 
                 // now try with intra offset
@@ -312,17 +321,17 @@ impl MineLocation {
         points: impl IntoIterator<Item = impl Borrow<VPoint>>,
         debug_prefix: &Arguments,
     ) -> bool {
-        let mut pixels = points
+        let mut pixels: Vec<Pixel> = points
             .into_iter()
             .filter_map(|p| {
                 let p = p.borrow();
                 if surface.is_point_out_of_bounds(p) {
-                    return None;
+                    panic!("we already checked this?");
                 }
                 let pixel = surface.get_pixel(p);
                 if pixel == Pixel::MineNoTouch
                     && self.area_buffered.contains_point(p)
-                    && !self.area_no_touch.contains_point(p)
+                    && !self.area_min.contains_point(p)
                 {
                     // exclude self
                     None
@@ -333,6 +342,7 @@ impl MineLocation {
             .collect_vec();
         pixels.sort();
         pixels.dedup();
+        let pixels_debug = pixels.iter().map(|v| v.as_ref()).join(",");
 
         if pixels.iter().all(|p| *p == Pixel::Empty) {
             // good all empty!
@@ -364,14 +374,14 @@ impl MineLocation {
             // std::process::exit(1);
         } else if pixels
             .iter()
-            .all(|v| Pixel::is_resource(v) || *v == Pixel::Empty)
+            .all(|p| Pixel::is_resource(p) || matches!(*p, Pixel::Empty | Pixel::MineNoTouch))
         {
             // todo: do this ever happen?
             trace!("{debug_prefix} hit another mine");
             false
         } else {
             // panic!("{debug_prefix} is {pixels_debug}");
-            panic!("{debug_prefix}");
+            panic!("{debug_prefix} is {pixels_debug}");
         }
     }
 
@@ -449,6 +459,7 @@ impl MineLocation {
             for mine in mines {
                 if mine.area_buffered().contains_point(&point) {
                     intersected_mines.insert(mine);
+                    break;
                 }
             }
         }
@@ -460,9 +471,9 @@ impl MineLocation {
         }
     }
 
-    pub fn endpoints(&self) -> &[VPoint] {
-        &self.endpoints
-    }
+    // pub fn endpoints(&self) -> &[VPoint] {
+    //     &self.endpoints
+    // }
 
     pub fn destinations(&self) -> impl Iterator<Item = VPointDirectionQ> {
         // todo
@@ -475,16 +486,10 @@ impl MineLocation {
         self.patch_indexes.len()
     }
 
-    // pub fn surface_patches<'s>(
-    //     &self,
-    //     surface: &'s VSurface,
-    // ) -> impl IntoIterator<Item = &'s VPatch> {
-    //     surface
-    //         .get_mine_paths()
-    //         .into_iter()
-    //         .flat_map(|v| v.mine_base.patch_indexes)
-    //         .map(|v| surface.get_patches_slice()[v])
-    // }
+    pub fn surface_patches<'s>(&self, surface: &'s VSurface) -> impl Iterator<Item = &'s VPatch> {
+        let patches = surface.get_patches_slice();
+        self.patch_indexes.iter().map(|v| &patches[*v])
+    }
 
     // pub fn surface_patches_iter<'s>(
     //     mines: impl IntoIterator<Item = &'s Self>,
@@ -505,25 +510,38 @@ enum Adjustment {
     Usable,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct DebugMinePatch {
+    pub pixel: Pixel,
+    pub points: Vec<VPoint>,
+}
+
 #[cfg(test)]
 mod test {
     use crate::surface::pixel::Pixel;
-    use crate::surfacev::mine::MineLocation;
+    use crate::surfacev::mine::{DebugMinePatch, MineLocation};
     use crate::surfacev::vpatch::VPatch;
     use crate::surfacev::vsurface::VSurface;
+    use facto_loop_miner_common::duration::BasicWatch;
+    use facto_loop_miner_common::log_init_trace;
     use facto_loop_miner_fac_engine::common::varea::VArea;
     use facto_loop_miner_fac_engine::common::vpoint::{
         VPOINT_SECTION, VPOINT_SECTION_NEGATIVE, VPoint,
     };
     use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
+    use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
+    use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
     use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
     use itertools::Itertools;
+    use serde::{Deserialize, Serialize};
+    use simd_json::prelude::ArrayTrait;
+    use std::env;
 
     #[test]
     fn test_destinations() {
         let mut surface = VSurface::new(300);
-        surface.add_patches(&[VPatch {
+        surface.add_patches([VPatch {
             area: VArea::from_arbitrary_points_pair(VPoint::new(-5, -5), VPoint::new(6, 6)),
             resource: Pixel::CrudeOil,
             pixel_indexes: Vec::new(),
@@ -558,5 +576,87 @@ mod test {
                 )
             ]
         );
+    }
+
+    #[test]
+    fn test() {
+        log_init_trace();
+
+        let surface = &mut VSurface::new(550);
+
+        let patches = load_mine_patch();
+        for patch in &patches {
+            let area = VArea::from_arbitrary_points(&patch.points);
+            println!("area {area}");
+        }
+        surface.add_patches(patches.iter().map(|v| VPatch {
+            pixel_indexes: v.points.clone(),
+            resource: v.pixel,
+            area: VArea::from_arbitrary_points(&v.points),
+        }));
+
+        // blank surface doesn't have pixels
+        for patch in &patches {
+            surface
+                .change_pixels(patch.points.clone())
+                .stomp(patch.pixel);
+        }
+
+        let mut mine = MineLocation::from_patch_indexes(
+            surface,
+            (0..surface.get_patches_slice().len()).collect_vec(),
+        )
+        .unwrap();
+        mine.draw_area_buffered(surface);
+
+        // for destination in mine.destinations() {
+        //     let link = HopeSodaLink::new_soda_straight(destination.0, destination.1);
+        //     surface.change_pixels(link.area_vec()).stomp(Pixel::Rail);
+        // }
+
+        // <<<
+        mine.revalidate_endpoints_after_no_touch(surface);
+
+        assert_ne!(mine.destinations().next(), None);
+        for destination in mine.destinations() {
+            let link = HopeSodaLink::new_soda_straight(destination.0, destination.1);
+            surface.change_pixels(link.area_vec()).stomp(Pixel::Rail);
+        }
+
+        let watch = BasicWatch::start();
+        let mut grid = Vec::new();
+        for x in 0..surface.get_radius_i32() {
+            for y in 0..surface.get_radius_i32() {
+                if x % SECTION_POINTS_I32 == 0 || y % SECTION_POINTS_I32 == 0 {
+                    grid.push(VPoint::new(x, y));
+                }
+            }
+        }
+        println!("gen in {watch} total {}", grid.len());
+        let watch = BasicWatch::start();
+        surface.change_pixels(grid).stomp(Pixel::Highlighter);
+        println!("stomp in {watch}");
+
+        surface.paint_pixel_colored_entire().save_to_oculante();
+    }
+
+    fn load_mine_patch() -> Vec<DebugMinePatch> {
+        const INPUT: &str = include_str!("example_mine.json");
+        let mut input = Vec::from(INPUT.as_bytes());
+        let mut patches: Vec<DebugMinePatch> = simd_json::from_slice(&mut input).unwrap();
+
+        let area = VArea::from_arbitrary_points(patches.iter().flat_map(|v| &v.points));
+        let top_left = area.point_top_left();
+        let area_offset = VPoint::new(
+            (top_left.x() - (SECTION_POINTS_I32 * 2)).next_multiple_of(SECTION_POINTS_I32),
+            (top_left.y() - (SECTION_POINTS_I32 * 2)).next_multiple_of(SECTION_POINTS_I32),
+        );
+
+        for patch in &mut patches {
+            for point in &mut patch.points {
+                *point -= area_offset;
+            }
+        }
+        patches
     }
 }

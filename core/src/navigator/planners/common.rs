@@ -8,6 +8,8 @@ use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
 use itertools::Itertools;
 use std::borrow::Borrow;
 use std::cell::RefCell;
@@ -183,6 +185,28 @@ pub(super) fn draw_prep_mines(
     surface
         .change_pixels(anti_backside_points)
         .stomp(Pixel::MineNoTouch)
+}
+
+pub fn debug_draw_mine_index_labels(surface: &mut VSurface, mines: &[MineLocation]) {
+    for (i, mine) in mines.iter().enumerate() {
+        surface.draw_text_at(mine.area_min().point_center(), &i.to_string());
+    }
+}
+
+pub fn debug_draw_mine_links(surface: &mut VSurface, mines: &[MineLocation]) {
+    for (i, mine) in mines.iter().enumerate() {
+        for destination in mine.destinations() {
+            let link = HopeSodaLink::new_soda_straight(destination.0, destination.1);
+            surface
+                .change_pixels(
+                    link.area_vec()
+                        .into_iter()
+                        .filter(|p| !surface.is_point_out_of_bounds(p))
+                        .collect(),
+                )
+                .stomp(Pixel::Rail);
+        }
+    }
 }
 
 /*

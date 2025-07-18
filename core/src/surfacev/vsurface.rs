@@ -648,10 +648,12 @@ impl VSurface {
     pub fn draw_text_at(&mut self, pos: VPoint, text: &str) {
         let watch = BasicWatch::start();
 
-        let text_height = 100;
-        let text_thickness = 10;
+        let text_height = 25;
+        let text_thickness = 3;
         let text_size = draw_text_size(text, text_height, text_thickness);
+        // TIL: new_size/new_rows_cols will reuse allocations!
         let mut mat = unsafe { Mat::new_size(text_size.to_cv_size(), CV_8U).unwrap() };
+        mat.set_scalar(Scalar::all(0.0)).unwrap();
 
         let color = u8::MAX;
         draw_text_cv(
@@ -659,21 +661,25 @@ impl VSurface {
             text,
             Point {
                 x: 0,
-                y: text_size.y(),
+                // draw_text_size adds thickness we must remove
+                y: text_size.y() - text_thickness,
             },
             Scalar::all(color.into()),
             text_height,
             text_thickness,
         );
         // imwrite("out.png", &mat, &Vector::new()).unwrap();
-        let new_points = mat_into_points(mat, color, pos);
-        trace!("Text \"{text}\" generated in {watch}");
+        let new_points = mat_into_points(mat, color, pos)
+            .into_iter()
+            .filter(|v| !self.is_point_out_of_bounds(v))
+            .collect();
+        trace!("Text \"{text}\" at {pos} generated in {watch}");
 
-        // self.change_square(&VArea::from_arbitrary_points_pair(
-        //     pos,
-        //     pos + draw_text_size(text, text_height, 10),
-        // ))
-        // .stomp(Pixel::EdgeWall);
+        // self.change_square(&VArea::from_arbitrary_points_pair(pos, pos + text_size))
+        //     .stomp(Pixel::EdgeWall);
+
+        // let gen_area = VArea::from_arbitrary_points(&new_points);
+        // trace!("from area {gen_area}");
 
         // let watch = BasicWatch::start();
         // let new_points_len = new_points.len();
