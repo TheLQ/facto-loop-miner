@@ -1,7 +1,8 @@
 use crate::opencv::mat_into_points;
 use facto_loop_miner_common::duration::BasicWatch;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::opencv_re::core::{CV_8U, Mat, Point, Scalar};
+use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
+use facto_loop_miner_fac_engine::opencv_re::core::{CV_8U, Mat, Point, Scalar, Vector};
+use facto_loop_miner_fac_engine::opencv_re::imgcodecs::imwrite;
 use facto_loop_miner_fac_engine::opencv_re::imgproc::{FILLED, LINE_4};
 use facto_loop_miner_fac_engine::opencv_re::prelude::*;
 use itertools::Itertools;
@@ -19,6 +20,8 @@ fn draw_circle(radius: u32) -> Vec<VPoint> {
     let diameter = (radius_i32 * 2) + /*extra rounding*/1;
 
     let mut mat = unsafe { Mat::new_rows_cols(diameter, diameter, CV_8U).unwrap() };
+    // this buffer might be re-used
+    mat.set_scalar(Scalar::all(0.0)).unwrap();
     let flag_color = u8::MAX;
     let center = Point {
         x: radius_i32,
@@ -36,7 +39,7 @@ fn draw_circle(radius: u32) -> Vec<VPoint> {
     )
     .unwrap();
 
-    mat_into_points(mat, flag_color, center_v)
+    mat_into_points(mat, flag_color, VPOINT_ZERO - center_v)
 
     // mat.iter::<u8>().unwrap().filter_map(|(point, value)| {
     //     if value == flag_color {
