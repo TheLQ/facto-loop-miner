@@ -222,12 +222,10 @@ pub fn execute_route_batch(
                         cost = CostMeta::new();
                         cost.apply_and_is_lowest(total_cost);
                         cur_result
+                    } else if cost.apply_and_is_lowest(total_cost) {
+                        cur_result
                     } else {
-                        if cost.apply_and_is_lowest(total_cost) {
-                            cur_result
-                        } else {
-                            best
-                        }
+                        best
                     }
                 }
             }

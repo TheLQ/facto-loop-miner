@@ -518,6 +518,7 @@ pub struct DebugMinePatch {
 
 #[cfg(test)]
 mod test {
+    use crate::navigator::planners::{debug_draw_mine_links, debug_draw_segment};
     use crate::surface::pixel::Pixel;
     use crate::surfacev::mine::{DebugMinePatch, MineLocation};
     use crate::surfacev::vpatch::VPatch;
@@ -534,9 +535,7 @@ mod test {
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
     use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
     use itertools::Itertools;
-    use serde::{Deserialize, Serialize};
     use simd_json::prelude::ArrayTrait;
-    use std::env;
 
     #[test]
     fn test_destinations() {
@@ -594,7 +593,6 @@ mod test {
             resource: v.pixel,
             area: VArea::from_arbitrary_points(&v.points),
         }));
-
         // blank surface doesn't have pixels
         for patch in &patches {
             surface
@@ -604,24 +602,19 @@ mod test {
 
         let mut mine = MineLocation::from_patch_indexes(
             surface,
-            (0..surface.get_patches_slice().len()).collect_vec(),
+            (0..surface.get_patches_slice().len()).collect(),
         )
         .unwrap();
         mine.draw_area_buffered(surface);
 
-        // for destination in mine.destinations() {
-        //     let link = HopeSodaLink::new_soda_straight(destination.0, destination.1);
-        //     surface.change_pixels(link.area_vec()).stomp(Pixel::Rail);
-        // }
+        debug_draw_mine_links(surface, [&mine]);
 
         // <<<
         mine.revalidate_endpoints_after_no_touch(surface);
 
         assert_ne!(mine.destinations().next(), None);
-        for destination in mine.destinations() {
-            let link = HopeSodaLink::new_soda_straight(destination.0, destination.1);
-            surface.change_pixels(link.area_vec()).stomp(Pixel::Rail);
-        }
+
+        debug_draw_mine_links(surface, [&mine]);
 
         let watch = BasicWatch::start();
         let mut grid = Vec::new();

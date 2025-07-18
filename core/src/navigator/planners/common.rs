@@ -187,14 +187,22 @@ pub(super) fn draw_prep_mines(
         .stomp(Pixel::MineNoTouch)
 }
 
-pub fn debug_draw_mine_index_labels(surface: &mut VSurface, mines: &[MineLocation]) {
-    for (i, mine) in mines.iter().enumerate() {
+pub fn debug_draw_mine_index_labels(
+    surface: &mut VSurface,
+    mines: impl IntoIterator<Item = impl Borrow<MineLocation>>,
+) {
+    for (i, mine) in mines.into_iter().enumerate() {
+        let mine = mine.borrow();
         surface.draw_text_at(mine.area_min().point_center(), &i.to_string());
     }
 }
 
-pub fn debug_draw_mine_links(surface: &mut VSurface, mines: &[MineLocation]) {
-    for (i, mine) in mines.iter().enumerate() {
+pub fn debug_draw_mine_links(
+    surface: &mut VSurface,
+    mines: impl IntoIterator<Item = impl Borrow<MineLocation>>,
+) {
+    for (i, mine) in mines.into_iter().enumerate() {
+        let mine = mine.borrow();
         for destination in mine.destinations() {
             let link = HopeSodaLink::new_soda_straight(destination.0, destination.1);
             surface
