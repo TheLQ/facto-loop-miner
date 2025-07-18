@@ -142,7 +142,7 @@ impl BaseSourceEighth {
 
     pub fn undo_one(&mut self) {
         self.next -= 1;
-        assert!(self.next > 1)
+        assert!(self.next >= 1)
     }
 
     pub fn into_rc_refcell(self) -> Rc<RefCell<Self>> {
