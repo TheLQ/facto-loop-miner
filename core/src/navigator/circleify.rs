@@ -1,3 +1,4 @@
+use crate::opencv::mat_into_points;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::opencv_re::core::{CV_8U, Mat, Point, Scalar};
@@ -35,13 +36,7 @@ fn draw_circle(radius: u32) -> Vec<VPoint> {
     )
     .unwrap();
 
-    let mut points = Vec::with_capacity(diameter as usize * 2);
-    for (point, value) in mat.iter::<u8>().unwrap() {
-        if value == flag_color {
-            points.push(VPoint::from_cv_point(point) - center_v);
-        }
-    }
-    points
+    mat_into_points(mat, flag_color, center_v)
 
     // mat.iter::<u8>().unwrap().filter_map(|(point, value)| {
     //     if value == flag_color {
