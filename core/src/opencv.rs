@@ -2,11 +2,14 @@ use crate::surface::pixel::Pixel;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::opencv_re::boxed_ref::BoxedRefMut;
 use facto_loop_miner_fac_engine::opencv_re::core::{
-    Mat, Point, ROTATE_90_COUNTERCLOCKWISE, Rect, Vector, rotate,
+    Mat, MatTraitConst, MatTraitConstManual, Point, ROTATE_90_COUNTERCLOCKWISE, Rect, Scalar,
+    Vector, rotate,
 };
 use facto_loop_miner_fac_engine::opencv_re::imgproc::{
-    FONT_HERSHEY_SIMPLEX, LINE_8, bounding_rect, get_font_scale_from_height, put_text,
+    FONT_HERSHEY_SIMPLEX, LINE_8, bounding_rect, get_font_scale_from_height, get_text_size,
+    put_text,
 };
+use tracing::trace;
 // pub fn load_raw_image_with_surface(
 //     path: &Path,
 //     surface_meta: &VSurface,
@@ -96,21 +99,46 @@ pub fn combine_rects_into_big_rect<'a>(rects: impl IntoIterator<Item = &'a Rect>
     get_cv_bounding_rect(corners)
 }
 
-#[allow(dead_code)]
-pub fn draw_text_cv(img: &mut Mat, text: &str, origin: Point) {
-    tracing::debug!("drawing {} at {:?}", text, origin);
+pub fn draw_text_cv(
+    img: &mut Mat,
+    text: &str,
+    origin: Point,
+    color: Scalar,
+    height: i32,
+    thickness: i32,
+) {
+    tracing::debug!(
+        "drawing {text} at {origin:?} for img {}x{}, height {height}, thick {thickness}",
+        img.rows(),
+        img.cols()
+    );
     put_text(
         img,
         text,
         origin,
         FONT_HERSHEY_SIMPLEX,
-        get_font_scale_from_height(FONT_HERSHEY_SIMPLEX, 100, 10).unwrap(),
-        Pixel::EdgeWall.scalar_cv(),
-        10,
+        get_font_scale_from_height(FONT_HERSHEY_SIMPLEX, height, thickness).unwrap(),
+        color,
+        thickness,
         LINE_8,
         false,
     )
     .unwrap();
+}
+
+pub fn draw_text_size(text: &str, height: i32, thickness: i32) -> VPoint {
+    let mut out_y = 0;
+    let size_cv = get_text_size(
+        text,
+        FONT_HERSHEY_SIMPLEX,
+        get_font_scale_from_height(FONT_HERSHEY_SIMPLEX, height, thickness).unwrap(),
+        thickness,
+        &mut out_y,
+    )
+    .unwrap();
+    let size = VPoint::new(size_cv.width, size_cv.height);
+    trace!("text \"{text}\" is size {size} for y {out_y}");
+    size
 }
 
 #[allow(dead_code)]
@@ -133,6 +161,16 @@ pub fn draw_text_vertical_cv(_img: &mut Mat, text: &str, origin: Point) {
 
     let mut rotated_text_img = unsafe { Mat::new_rows_cols(1000, 500, 0).unwrap() };
     rotate(&text_img, &mut rotated_text_img, ROTATE_90_COUNTERCLOCKWISE).unwrap();
+}
+
+pub fn mat_into_points(mat: Mat, needle: u8, offset: VPoint) -> Vec<VPoint> {
+    let mut points = Vec::new();
+    for (point, value) in mat.iter::<u8>().unwrap() {
+        if value == needle {
+            points.push(VPoint::from_cv_point(point) - offset);
+        }
+    }
+    points
 }
 
 /// Owned Mat datastore, to create referenced backed Mat

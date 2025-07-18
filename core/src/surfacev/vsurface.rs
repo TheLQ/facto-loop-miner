@@ -1,4 +1,4 @@
-use crate::opencv::GeneratedMat;
+use crate::opencv::{GeneratedMat, draw_text_cv, draw_text_size, mat_into_points};
 use crate::state::machine::StepParams;
 use crate::state::tuneables::Tunables;
 use crate::surface::pixel::Pixel;
@@ -12,6 +12,7 @@ use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ONE, VPoint};
+use facto_loop_miner_fac_engine::opencv_re::core::{CV_8U, Mat, Point, Scalar};
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
@@ -644,6 +645,42 @@ impl VSurface {
         )
     }
 
+    pub fn draw_text_at(&mut self, pos: VPoint, text: &str) {
+        let watch = BasicWatch::start();
+
+        let text_height = 100;
+        let text_thickness = 10;
+        let text_size = draw_text_size(text, text_height, text_thickness);
+        let mut mat = unsafe { Mat::new_size(text_size.to_cv_size(), CV_8U).unwrap() };
+
+        let color = u8::MAX;
+        draw_text_cv(
+            &mut mat,
+            text,
+            Point {
+                x: 0,
+                y: text_size.y(),
+            },
+            Scalar::all(color.into()),
+            text_height,
+            text_thickness,
+        );
+        // imwrite("out.png", &mat, &Vector::new()).unwrap();
+        let new_points = mat_into_points(mat, color, pos);
+        trace!("Text \"{text}\" generated in {watch}");
+
+        // self.change_square(&VArea::from_arbitrary_points_pair(
+        //     pos,
+        //     pos + draw_text_size(text, text_height, 10),
+        // ))
+        // .stomp(Pixel::EdgeWall);
+
+        // let watch = BasicWatch::start();
+        // let new_points_len = new_points.len();
+        self.change_pixels(new_points).stomp(Pixel::Highlighter);
+        // trace!("set {new_points_len} points in {watch}");
+    }
+
     // pub fn draw_debug_square(&mut self, point: &VPoint) {
     //     let center_entity = VPixel {
     //         pixel: Pixel::EdgeWall,
@@ -822,6 +859,7 @@ mod test {
     use crate::surfacev::vsurface::VSurface;
     use facto_loop_miner_common::log_init_trace;
     use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
+    use facto_loop_miner_fac_engine::common::varea::VArea;
     use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
     use facto_loop_miner_fac_engine::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, RailHopeSingle};
@@ -852,6 +890,20 @@ mod test {
         // let test_output_dir = Path::new("work/test-output");
         // info!("writing to {}", test_output_dir.display());
         // surface.save_pixel_img_colorized(&test_output_dir).unwrap()
+    }
+
+    #[test]
+    fn text_test() {
+        log_init_trace();
+
+        let mut surface = VSurface::new(500);
+        surface
+            .change_square(&VArea::from_radius(VPOINT_ZERO, 4))
+            .stomp(Pixel::EdgeWall);
+
+        surface.draw_text_at(VPOINT_ZERO, "1234");
+
+        surface.paint_pixel_colored_entire().save_to_oculante();
     }
 
     #[test]

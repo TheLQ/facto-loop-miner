@@ -4,7 +4,7 @@ use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use crate::game_entities::direction::FacDirectionQuarter;
 use crate::util::ansi::C_BLOCK_LINE;
 use core::fmt;
-use opencv::core::{Point, Rect};
+use opencv::core::{Point, Rect, Size};
 use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::borrow::Borrow;
@@ -535,6 +535,13 @@ impl VPoint {
 
     pub const fn subtract_y(&self, other: &Self) -> i32 {
         self.y - other.y
+    }
+
+    pub fn to_cv_size(&self) -> Size {
+        Size {
+            height: self.y,
+            width: self.x,
+        }
     }
 
     // pub fn sugar(&self) -> VPointSugar {
