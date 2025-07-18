@@ -29,7 +29,6 @@ pub struct VEntityMap<E> {
     /// More efficient to store a (radius * 2)^2 length Array as a raw file instead of JSON
     #[serde(skip)]
     xy_to_entity: VArray,
-    entity_to_xy: Vec<Vec<VPoint>>,
     /// A *square* centered on 0,0
     radius: u32,
 }
@@ -42,7 +41,6 @@ impl<E> VEntityMap<E>
         let res = VEntityMap {
             entities: Vec::new(),
             xy_to_entity: VArray::new_length(Self::_xy_array_length_from_radius(radius)),
-            entity_to_xy: Vec::new(),
             radius,
         };
         res
@@ -227,31 +225,33 @@ impl<E> VEntityMap<E>
 
     /// crop entities then rebuild xy_to_entity lookup
     pub fn crop(&mut self, new_radius: u32) {
-        let old_entity_length = self.entities.len();
-        let old_xy_length = self.xy_to_entity.len();
-
-        self.radius = new_radius;
-        for positions in self.entity_to_xy.iter_mut() {
-            positions.retain(|e| e.is_within_center_radius(new_radius));
-        }
-
-        self.xy_to_entity = VArray::new_length(self.xy_array_length_from_radius());
+        let mut new = Self {
+            radius: new_radius,
+            entities: Vec::new(), // dummy
+            xy_to_entity: VArray::new_length(Self::_xy_array_length_from_radius(new_radius)),
+        };
         debug!(
             "Reduce entities from {} to {}, xy_map from {} to {}",
-            old_entity_length.to_formatted_string(&LOCALE),
             self.entities.len().to_formatted_string(&LOCALE),
-            old_xy_length.to_formatted_string(&LOCALE),
-            self.xy_to_entity.len().to_formatted_string(&LOCALE)
+            new.entities.len().to_formatted_string(&LOCALE),
+            self.xy_to_entity.len().to_formatted_string(&LOCALE),
+            new.xy_to_entity.len().to_formatted_string(&LOCALE)
         );
 
-        for entity_index in 0..self.entities.len() {
-            let res: &[VPoint] = &self.entity_to_xy[entity_index];
-            // self.sync_positions_to_xy(entity_index, res);
-            for position in res {
-                let xy_index = self.xy_to_index_unchecked(position.x(), position.y());
-                self.xy_to_entity.as_mut_slice()[xy_index] = entity_index;
-            }
+        let old_xy_to_entity = self.xy_to_entity.as_slice();
+        for xy_index in 0..new.xy_to_entity.as_mut_slice().len() {
+            let position = new.index_to_xy(xy_index);
+            new.xy_to_entity.as_mut_slice()[xy_index] =
+                old_xy_to_entity[self.xy_to_index_unchecked(position.x(), position.y())];
         }
+
+        let Self {
+            radius,
+            entities: _, // we didn't touch this
+            xy_to_entity,
+        } = new;
+        self.radius = radius;
+        self.xy_to_entity = xy_to_entity;
     }
 
     //<editor-fold desc="io">
@@ -469,29 +469,12 @@ impl<E> VEntityMap<E>
         E: Debug,
     {
         let mut checks = 0;
-        for (xy_i, entity_index) in self.xy_to_entity.as_slice().iter().enumerate() {
+        for entity_index in self.xy_to_entity.as_slice().iter() {
             if *entity_index == EMPTY_XY_INDEX {
                 continue;
             }
-            let entity_pos_all = &self
-                .entity_to_xy
-                .get(*entity_index)
-                .unwrap_or_else(|| panic!("fail on entity_index {entity_index}"));
-            let as_point = self.index_to_xy(xy_i);
-            assert!(entity_pos_all.contains(&as_point));
             assert!(*entity_index < self.entities.len());
             checks += 1;
-        }
-        for (entity_index, points) in self.entity_to_xy.iter().enumerate() {
-            for point in points {
-                let xy = self.point_to_index_unchecked(point);
-                assert_eq!(*self.xy_to_entity.as_slice().get(xy).unwrap(), entity_index);
-                checks += 1;
-            }
-            assert!(entity_index < self.entities.len());
-            if points.is_empty() {
-                tracing::warn!("empty {:?}", self.entities[entity_index])
-            }
         }
         debug!("validate {checks} checks");
     }
@@ -585,36 +568,12 @@ impl<'m> VMapChange<'m, VPixel, Vec<VPoint>> {
         for position in &self.positions {
             let xy_index = self.map.point_to_index_unchecked(position);
             let existing_entity_index = &mut self.map.xy_to_entity.as_mut_slice()[xy_index];
-
-            if existing_entity_index == &entity_index {
-                // we may be called with duplicate points, which we can't remove
-                continue;
-            } else if *existing_entity_index != EMPTY_XY_INDEX {
-                // remove existing
-                self.map.entity_to_xy[*existing_entity_index].retain(|v| v != position)
-            }
             *existing_entity_index = entity_index;
         }
 
-        assert_eq!(self.map.entity_to_xy.len(), entity_index);
-        self.map.entity_to_xy.push(self.positions);
         assert_eq!(self.map.entities.len(), entity_index);
         self.map.entities.push(VPixel { pixel: entity });
     }
-
-    // pub fn replace_entity_index(self, entity_index: usize) {
-    //     for pos in &self.map.entity_to_xy[entity_index] {
-    //         // use safe since iterator can't pre-pass
-    //         let index = self.map.point_to_index_safe(pos);
-    //         self.map.xy_to_entity.as_mut_slice()[index] == EMPTY_XY_INDEX;
-    //     }
-    //     for pos in &self.positions {
-    //         let index = self.map.point_to_index_unchecked(pos);
-    //         self.map.xy_to_entity.as_mut_slice()[index] == entity_index;
-    //     }
-    //
-    //     self.map.entity_to_xy[entity_index] = self.positions;
-    // }
 }
 
 impl<'m, I> VMapChange<'m, VPixel, I>
@@ -626,7 +585,6 @@ where
 
         let entity_index = self.map.entities.len();
 
-        let mut actual_positions = Vec::new();
         for position in self.positions {
             // use safe since iterator can't pre-pass
             let xy_index = self.map.point_to_index_safe(&position);
@@ -634,12 +592,9 @@ where
             if *existing_entity_index == EMPTY_XY_INDEX {
                 // remove existing
                 *existing_entity_index = entity_index;
-                actual_positions.push(position);
             }
         }
 
-        assert_eq!(self.map.entity_to_xy.len(), entity_index);
-        self.map.entity_to_xy.push(actual_positions);
         assert_eq!(self.map.entities.len(), entity_index);
         self.map.entities.push(VPixel { pixel: replace });
     }
@@ -650,7 +605,6 @@ where
 
         let entity_index = self.map.entities.len();
 
-        let mut actual_positions = Vec::new();
         for position in self.positions {
             // use safe since iterator can't pre-pass
             let xy_index = self.map.point_to_index_safe(&position);
@@ -658,14 +612,10 @@ where
             if *existing_entity_index != EMPTY_XY_INDEX
                 && self.map.entities[*existing_entity_index].pixel == find
             {
-                self.map.entity_to_xy[*existing_entity_index].retain(|v| *v != position);
                 *existing_entity_index = entity_index;
-                actual_positions.push(position);
             }
         }
 
-        assert_eq!(self.map.entity_to_xy.len(), entity_index);
-        self.map.entity_to_xy.push(actual_positions);
         assert_eq!(self.map.entities.len(), entity_index);
         self.map.entities.push(VPixel { pixel: replace });
     }
@@ -675,12 +625,7 @@ where
             assert!(!self.map.is_point_out_of_bounds(&point));
 
             let xy_index = self.map.point_to_index_unchecked(&point);
-            let entity_index = self.map.xy_to_entity.as_slice()[xy_index];
-
             self.map.xy_to_entity.as_mut_slice()[xy_index] = EMPTY_XY_INDEX;
-            if entity_index != EMPTY_XY_INDEX {
-                self.map.entity_to_xy[entity_index].retain(|v| *v != point)
-            }
         }
     }
 }

@@ -461,11 +461,6 @@ impl VSurface {
             }
             // trace!("hello {:?}", patch);
             removed_points.extend_from_slice(&patch.pixel_indexes);
-            // for index in &patch.pixel_indexes {
-            // let pixel = self.pixels.get_entity_by_index(*index);
-            // removed_points.push(*index);
-            // }
-
             patches_to_remove.push(patch_index);
         }
         info!(
@@ -510,17 +505,6 @@ impl VSurface {
         self.pixels.get_entity_id_at(point)
     }
 
-    // pub fn set_pixel_entity_swap(
-    //     &mut self,
-    //     entity_id: usize,
-    //     mut points: Vec<VPoint>,
-    //     overwrite_non_empty: bool,
-    // ) -> RemovedEntity {
-    //     self.pixels
-    //         .set_entity_points_swap(entity_id, &mut points, overwrite_non_empty);
-    //     RemovedEntity { entity_id, points }
-    // }
-
     pub fn set_entity_replace(&mut self, pos: VPoint, expected: Pixel, new: Pixel) {
         let entity = self
             .pixels
@@ -538,11 +522,6 @@ impl VSurface {
     }
 
     pub fn log_pixel_stats(&self, debug_message: &str) {
-        // let mut metrics = FastMetrics::new(format!("log_pixel_stats Entities {}", debug_message));
-        // for entity in self.pixels.iter_entities() {
-        //     metrics.increment(FastMetric::VSurface_Pixel(*entity.pixel()));
-        // }
-
         let mut metrics = FastMetrics::new(format!("log_pixel_counts Entities {}", debug_message));
         for entity in self.pixels.iter_xy_pixels() {
             metrics.increment(FastMetric::VSurface_Pixel(*entity));
