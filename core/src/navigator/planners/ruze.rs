@@ -1,3 +1,4 @@
+use crate::always_true_test;
 use crate::navigator::mine_executor::{ExecutorResult, FailingMeta, execute_route_batch};
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
@@ -96,7 +97,7 @@ fn process_batch(
             true
         }
         ExecutorResult::Failure { meta, .. } => {
-            if 1 + 1 == 2 {
+            if always_true_test() {
                 debug_failing(surface, meta);
                 return false;
             }

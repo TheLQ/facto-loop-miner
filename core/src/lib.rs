@@ -67,3 +67,7 @@ pub fn inner_main() {
     }
     info!("Total time {watch}")
 }
+
+fn always_true_test() -> bool {
+    true
+}
