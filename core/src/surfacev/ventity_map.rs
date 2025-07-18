@@ -366,6 +366,7 @@ impl<E> VEntityMap<E>
 
             self.save_xy_file(clone_prep_file)?;
             self.load_xy_file(clone_prep_file)?;
+            assert!(!self.xy_to_entity.is_dirty_for_clone());
         }
         Ok(())
     }

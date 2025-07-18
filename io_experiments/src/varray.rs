@@ -19,6 +19,8 @@ enum BackingMemory {
 
 pub const EMPTY_XY_INDEX: usize = usize::MAX;
 
+const MEMORY_MAP_MODE: bool = true;
+
 /// Gigantic memory-map or Slice backed storage
 #[derive(Default)]
 pub struct VArray {
@@ -69,6 +71,9 @@ impl VArray {
     }
 
     pub fn is_dirty_for_clone(&self) -> bool {
+        if !MEMORY_MAP_MODE {
+            return false;
+        }
         match &self.inner {
             BackingMemory::RegularOldeVec { .. } => {
                 // never needs to be written to disk first
@@ -88,17 +93,20 @@ impl Clone for VArray {
     fn clone(&self) -> Self {
         match &self.inner {
             BackingMemory::RegularOldeVec { data, is_dirty } => {
-                unimplemented!("does anything actually do this?")
-                // if *is_dirty {
-                //     panic!("Already dirty regular vec from mmap");
-                // }
-                // VArray {
-                //     inner: BackingMemory::RegularOldeVec {
-                //         data: Box::clone(data),
-                //         // stay false, safe to clone
-                //         is_dirty: false,
-                //     },
-                // }
+                if MEMORY_MAP_MODE {
+                    unimplemented!("does anything actually do this?")
+                } else {
+                    // if *is_dirty {
+                    //     panic!("Already dirty regular vec from mmap");
+                    // }
+                    VArray {
+                        inner: BackingMemory::RegularOldeVec {
+                            data: Box::clone(data),
+                            // stay false, safe to clone
+                            is_dirty: false,
+                        },
+                    }
+                }
             }
             BackingMemory::Mmap {
                 mmap,
@@ -106,16 +114,19 @@ impl Clone for VArray {
                 backing_path,
                 is_dirty,
             } => {
-                // if *is_dirty {
-                //     panic!("Cannot clone dirty mmap");
-                // }
-                // crate::read_entire_file_varray_mmap_lib(backing_path)
-                //     .unwrap_or_else(|e| panic!("unable to clone"))
-                VArray {
-                    inner: BackingMemory::RegularOldeVec {
-                        data: ManuallyDrop::into_inner(data.clone()),
-                        is_dirty: false,
-                    },
+                if MEMORY_MAP_MODE {
+                    if *is_dirty {
+                        panic!("Cannot clone dirty mmap");
+                    }
+                    crate::read_entire_file_varray_mmap_lib(backing_path)
+                        .unwrap_or_else(|e| panic!("unable to clone"))
+                } else {
+                    VArray {
+                        inner: BackingMemory::RegularOldeVec {
+                            data: ManuallyDrop::into_inner(data.clone()),
+                            is_dirty: false,
+                        },
+                    }
                 }
             }
         }

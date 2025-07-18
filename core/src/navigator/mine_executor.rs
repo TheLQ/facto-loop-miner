@@ -15,11 +15,29 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;
-use tracing::{Level, info, span, trace};
+use tracing::{Level, debug, info, span, trace};
+
+pub fn execute_route_batch_clone_prep(
+    surface: &mut VSurface,
+    sequences: Vec<ExecutionSequence>,
+    flags: &[ExecuteFlags],
+) -> ExecutorResult {
+    // At this point
+    //  - Surface is modified from disk with no-touching-zones + other changes
+    //  - Each thread needs to copy and modify its own Surface to work through a combination
+    //
+    // The mmap'd backed VArray can be re-mmap'd very quickly via clone
+    // HOWEVER disk and memory must be the same / is_dirty=false / memory is unmodified
+    // Caller will write our output result to the surface, then we repeat this safe/load
+    surface.load_clone_prep().unwrap();
+    debug!("load clone prep done");
+
+    execute_route_batch(surface, sequences, flags)
+}
 
 /// Given thousands of possible route combinations, execute in parallel and find the best
 pub fn execute_route_batch(
-    surface: &VSurface,
+    execution_surface: &VSurface,
     sequences: Vec<ExecutionSequence>,
     flags: &[ExecuteFlags],
 ) -> ExecutorResult {
@@ -63,29 +81,6 @@ pub fn execute_route_batch(
         // );
     };
 
-    // TODO: This isn't actually saving time
-    // // At this point
-    // //  - Surface is modified from disk with no-touching-zones + other changes
-    // //  - Each thread needs to copy and modify its own Surface to work through a combination
-    // //
-    // // The mmap'd backed VArray can be re-mmap'd very quickly via clone
-    // // HOWEVER disk and memory must be the same / is_dirty=false / memory is unmodified
-    // // Caller will write our output result to the surface, then we repeat this safe/load
-    // let temp_executor_path = PathBuf::from("work/temp_executor");
-    // if let Err(err) = create_dir(&temp_executor_path) {
-    //     debug!("recreating temp dir {}", temp_executor_path.display());
-    //     remove_dir_all(&temp_executor_path).unwrap();
-    //     create_dir(&temp_executor_path).unwrap();
-    // } else {
-    //     debug!("created temp dir {}", temp_executor_path.display());
-    // }
-    // surface.save(&temp_executor_path).unwrap();
-    // let execution_surface = &VSurface::load(&temp_executor_path).unwrap();
-    let execution_surface = surface;
-
-    // debug: Get all the original patches
-    // ???
-
     // reset counters
     TOTAL_COUNTER.store(0, Ordering::Relaxed);
     SUCCESS_COUNTER.store(0, Ordering::Relaxed);
@@ -95,7 +90,7 @@ pub fn execute_route_batch(
 
     static WRAPPING_POOL: LazyLock<ThreadPool> = LazyLock::new(|| {
         let default_threads = 32; // todo: numa rayon::current_num_threads();
-        const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 1.0;
+        const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 2.0;
         let num_threads = (default_threads as f32 * THREAD_OVERSUBSCRIBE_PERCENT) as usize;
         info!(
             "default threads are {} upgraded to {}",
