@@ -12,7 +12,7 @@ use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ONE, VPoint};
-use facto_loop_miner_fac_engine::opencv_re::core::{CV_8U, Mat, Point, Scalar};
+use facto_loop_miner_fac_engine::opencv_re::core::{CV_8U, Mat, MatTrait, Point, Scalar};
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
@@ -423,8 +423,8 @@ impl VSurface {
         self.pixels.change(positions)
     }
 
-    pub fn add_patches(&mut self, patches: &[VPatch]) {
-        self.patches.extend_from_slice(patches)
+    pub fn add_patches(&mut self, patches: impl IntoIterator<Item = VPatch>) {
+        self.patches.extend(patches)
     }
 
     pub fn get_patches_slice(&self) -> &[VPatch] {
@@ -444,7 +444,9 @@ impl VSurface {
     }
 
     pub fn crop(&mut self, new_radius: u32) {
-        info!("Crop from {} to {}", self.pixels.radius(), new_radius);
+        let old_radius = self.get_radius();
+        info!("Crop from {} to {}", old_radius, new_radius);
+        assert!(old_radius > new_radius);
         // self.entities.crop(new_radius);
         self.pixels.crop(new_radius);
     }

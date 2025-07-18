@@ -107,11 +107,11 @@ pub fn draw_text_cv(
     height: i32,
     thickness: i32,
 ) {
-    tracing::debug!(
-        "drawing {text} at {origin:?} for img {}x{}, height {height}, thick {thickness}",
-        img.rows(),
-        img.cols()
-    );
+    // tracing::debug!(
+    //     "drawing {text} at {origin:?} for img {}x{}, height {height}, thick {thickness}",
+    //     img.rows(),
+    //     img.cols()
+    // );
     put_text(
         img,
         text,
@@ -127,7 +127,7 @@ pub fn draw_text_cv(
 }
 
 pub fn draw_text_size(text: &str, height: i32, thickness: i32) -> VPoint {
-    let mut out_y = 0;
+    let mut out_y = 0; // ????
     let size_cv = get_text_size(
         text,
         FONT_HERSHEY_SIMPLEX,
@@ -136,7 +136,7 @@ pub fn draw_text_size(text: &str, height: i32, thickness: i32) -> VPoint {
         &mut out_y,
     )
     .unwrap();
-    let size = VPoint::new(size_cv.width, size_cv.height);
+    let size = VPoint::new(size_cv.width, size_cv.height + thickness);
     trace!("text \"{text}\" is size {size} for y {out_y}");
     size
 }
@@ -167,7 +167,7 @@ pub fn mat_into_points(mat: Mat, needle: u8, offset: VPoint) -> Vec<VPoint> {
     let mut points = Vec::new();
     for (point, value) in mat.iter::<u8>().unwrap() {
         if value == needle {
-            points.push(VPoint::from_cv_point(point) - offset);
+            points.push(VPoint::from_cv_point(point) + offset);
         }
     }
     points

@@ -54,13 +54,13 @@ pub fn execute_route_batch(
                 .map(|v| v.iter().map(|v| v.to_string()).join(","))
                 .join("\n")
         );
-        trace!(
-            "segments\n{}",
-            seq_segments
-                .iter()
-                .map(|v| v.iter().map(|v| v.to_string()).join(","))
-                .join("\n")
-        );
+        // trace!(
+        //     "segments\n{}",
+        //     seq_segments
+        //         .iter()
+        //         .map(|v| v.iter().map(|v| v.to_string()).join(","))
+        //         .join("\n")
+        // );
     };
 
     // TODO: This isn't actually saving time
@@ -328,8 +328,7 @@ fn execute_route_combination(
             route.location.area_min().point_center(),
             route
                 .location
-                .endpoints()
-                .iter()
+                .destinations()
                 .map(|v| v.to_string())
                 .join(",")
         );
