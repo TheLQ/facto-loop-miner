@@ -329,10 +329,7 @@ impl MineLocation {
                     panic!("we already checked this?");
                 }
                 let pixel = surface.get_pixel(p);
-                if pixel == Pixel::MineNoTouch
-                    && self.area_buffered.contains_point(p)
-                    && !self.area_min.contains_point(p)
-                {
+                if pixel == Pixel::MineNoTouch && self.area_buffered.contains_point(p) {
                     // exclude self
                     None
                 } else {
@@ -351,27 +348,11 @@ impl MineLocation {
             .iter()
             .all(|p| matches!(*p, Pixel::Empty | Pixel::MineNoTouch))
         {
-            // // Are we touching only our own area_buffered?
-            // if self.area_buffered.contains_points_all(
-            //     end_link_points
-            //         .iter()
-            //         .filter(|p| surface.get_pixel(*p) == Pixel::MineNoTouch),
-            // ) {
-            //     trace!("{debug_prefix} is in free space")
-            // } else {
             trace!(
                 "{debug_prefix} is not in mine touch, maybe touching another?, remain {}",
                 self.endpoints.len() - 1
             );
             false
-            // }
-            // let mut new_surface = surface.clone();
-            // new_surface
-            //     .set_pixels(Pixel::Highlighter, end_link_points)
-            //     .unwrap();
-            // // new_surface.draw_square_area_forced(self.area_no_touch(), Pixel::EdgeWall);
-            // new_surface.paint_pixel_colored_entire().save_to_oculante();
-            // std::process::exit(1);
         } else if pixels
             .iter()
             .all(|p| Pixel::is_resource(p) || matches!(*p, Pixel::Empty | Pixel::MineNoTouch))
@@ -530,9 +511,7 @@ mod test {
         VPOINT_SECTION, VPOINT_SECTION_NEGATIVE, VPoint,
     };
     use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
-    use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
-    use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
     use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
     use itertools::Itertools;
     use simd_json::prelude::ArrayTrait;
@@ -607,11 +586,10 @@ mod test {
         .unwrap();
         mine.draw_area_buffered(surface);
 
-        debug_draw_mine_links(surface, [&mine]);
+        // debug_draw_mine_links(surface, [&mine]);
 
         // <<<
         mine.revalidate_endpoints_after_no_touch(surface);
-
         assert_ne!(mine.destinations().next(), None);
 
         debug_draw_mine_links(surface, [&mine]);

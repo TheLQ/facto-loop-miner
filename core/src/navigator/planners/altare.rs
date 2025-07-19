@@ -1,12 +1,17 @@
 use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
 use crate::navigator::circleify::draw_circle_around;
-use crate::navigator::mine_executor::{ExecuteFlags, ExecutorResult, execute_route_batch};
+use crate::navigator::mine_executor::{
+    ExecuteFlags, ExecutorResult, execute_route_batch, execute_route_batch_clone_prep,
+};
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{
     MineSelectBatch, PERPENDICULAR_SCAN_WIDTH, group_nearby_patches,
 };
 use crate::navigator::mori::{MoriResult, count_link_origins, mori2_start};
-use crate::navigator::planners::common::{debug_failing, draw_prep_mines};
+use crate::navigator::planners::common::{
+    debug_draw_failing_mines, debug_draw_mine_index_labels, debug_draw_mine_links, debug_failing,
+    draw_prep_mines,
+};
 use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
@@ -34,10 +39,41 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
 
     let mut all_mine_locations = group_nearby_patches(surface);
     draw_prep_mines(surface, &all_mine_locations, &base_source_positive);
+
+    /////
+
+    // for mine in &mut all_mine_locations {
+    //     mine.revalidate_endpoints_after_no_touch(surface);
+    // }
+
+    // debug_draw_mine_index_labels(surface, &all_mine_locations);
+    // debug_draw_mine_links(surface, &all_mine_locations);
+    // surface.paint_pixel_colored_entire().save_to_oculante();
+
+    // let needle_mine = &all_mine_locations[62];
+    // let debug_patches = needle_mine
+    //     .surface_patches(surface)
+    //     .map(|patch| DebugMinePatch {
+    //         pixel: patch.resource,
+    //         points: patch.pixel_indexes.clone(),
+    //     })
+    //     .collect_vec();
+    // let converted = simd_json::to_string(&debug_patches).unwrap();
+    // let path = Path::new("example_mine.json");
+    // write_entire_file(path, converted.as_bytes())
+    //     .convert(path)
+    //     .unwrap();
+    //
+    // if crate::always_true_test() {
+    //     return;
+    // }
+
+    /////
+
     all_mine_locations.retain_mut(|mine| {
         mine.revalidate_endpoints_after_no_touch(surface);
         // !mine.endpoints().is_empty()
-        if mine.endpoints().is_empty() {
+        if mine.destinations().next().is_none() {
             trace!("removing empty mine {mine:?}");
             false
         } else {
@@ -45,6 +81,25 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
         }
     });
     assert!(!all_mine_locations.is_empty());
+
+    ////
+
+    // let radius = surface.get_radius_i32();
+    // let mut grid = Vec::new();
+    // for x in -radius..radius {
+    //     for y in -radius..radius {
+    //         if x % SECTION_POINTS_I32 == 0 || y % SECTION_POINTS_I32 == 0 {
+    //             grid.push(VPoint::new(x, y));
+    //         }
+    //     }
+    // }
+    // surface.change_pixels(grid).stomp(Pixel::Highlighter);
+
+    ////
+
+    // if crate::always_true_test() {
+    //     return;
+    // }
 
     let mut quester = Quester {
         all_mine_locations,
@@ -161,7 +216,14 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                             info!("attempting retry");
                             assert!(!surface.get_mine_paths().is_empty(), "too early to retry");
 
-                            // assert_ne!(meta.all_routes.len(), seen_mines.len());
+                            if meta.all_routes.len() == seen_mines.len() {
+                                debug_draw_failing_mines(surface, &seen_mines);
+
+                                surface.paint_pixel_colored_zoomed().save_to_oculante();
+                                error!("combination of {} mines cannot be found", seen_mines.len());
+                                break;
+                            }
+                            assert_ne!(meta.all_routes.len(), seen_mines.len());
 
                             let all_mines = meta
                                 .all_routes
@@ -236,6 +298,7 @@ fn detect_nearby_rails_as_index(surface: &VSurface, mine_location: &MineLocation
     let mut seen_points = HashSet::new();
     for depth in 2.. {
         let mut stop_after = false;
+        trace!("circling origin {origin} depth {depth}");
         for cursor in draw_circle_around(&origin, depth * 200) {
             if !cursor.is_even() || surface.is_point_out_of_bounds(&cursor) {
                 continue;
@@ -324,19 +387,20 @@ fn rollback_and_reapply(
     }
     // assert_eq!(plan.sequences.len(), 1);
     // assert_eq!(plan.sequences[0].routes.len(), 1);
-    let new_path = match execute_route_batch(surface, plan.sequences, &[ExecuteFlags::ShrinkBases])
-    {
-        ExecutorResult::Failure { meta, .. } => {
-            debug_failing(surface, meta);
-            surface.add_mine_path_with_pixel(old_path, Pixel::Highlighter);
-            surface.paint_pixel_colored_zoomed().save_to_oculante();
-            panic!("uhh")
-        }
-        ExecutorResult::Success { mut paths, routes } => {
-            assert_eq!(paths.len(), 1);
-            paths.remove(0)
-        }
-    };
+    let new_path =
+        match execute_route_batch_clone_prep(surface, plan.sequences, &[ExecuteFlags::ShrinkBases])
+        {
+            ExecutorResult::Failure { meta, .. } => {
+                debug_failing(surface, meta);
+                surface.add_mine_path_with_pixel(old_path, Pixel::Highlighter);
+                surface.paint_pixel_colored_zoomed().save_to_oculante();
+                panic!("uhh")
+            }
+            ExecutorResult::Success { mut paths, routes } => {
+                assert_eq!(paths.len(), 1);
+                paths.remove(0)
+            }
+        };
 
     // re-pathfind everything after
     while surface.get_mine_paths().len() != old_rail_index {

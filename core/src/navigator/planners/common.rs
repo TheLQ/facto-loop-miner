@@ -75,12 +75,12 @@ pub fn debug_draw_segment(surface: &mut VSurface, segment: VSegment) {
 
 pub(super) fn debug_draw_failing_mines<'a>(
     surface: &mut VSurface,
-    routes: impl IntoIterator<Item = &'a ExecutionRoute>,
+    mines: impl IntoIterator<Item = &'a MineLocation>,
 ) {
     let mut seen_mines: Vec<&VArea> = Vec::new();
     let mut destinations = Vec::new();
-    for route in routes {
-        let mine_area = &route.location.area_buffered();
+    for mine in mines {
+        let mine_area = &mine.area_buffered();
         if seen_mines.contains(mine_area) {
             continue;
         }
@@ -89,9 +89,8 @@ pub(super) fn debug_draw_failing_mines<'a>(
             .find_into(Pixel::MineNoTouch, Pixel::Highlighter);
         seen_mines.push(mine_area);
 
-        let destination = *route.segment.end.point();
-        if !destinations.contains(&destination) {
-            destinations.push(destination);
+        for destination in mine.destinations() {
+            destinations.push(destination.0)
         }
     }
     surface.change_pixels(destinations).stomp(Pixel::EdgeWall);

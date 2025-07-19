@@ -90,7 +90,7 @@ pub fn execute_route_batch(
 
     static WRAPPING_POOL: LazyLock<ThreadPool> = LazyLock::new(|| {
         let default_threads = 32; // todo: numa rayon::current_num_threads();
-        const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 2.0;
+        const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 1.0;
         let num_threads = (default_threads as f32 * THREAD_OVERSUBSCRIBE_PERCENT) as usize;
         info!(
             "default threads are {} upgraded to {}",

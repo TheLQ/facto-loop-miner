@@ -116,24 +116,6 @@ impl<E> VEntityMap<E>
         points.into_iter().any(|p| self.is_point_out_of_bounds(p))
     }
 
-    // todo: we might just need the simple bool versions
-    // fn gather_out_of_bounds_points<'a>(
-    //     &self,
-    //     points: impl IntoIterator<Item = &'a VPoint>,
-    // ) -> XYOutOfBoundsResult<()> {
-    //     let mut bad = Vec::new();
-    //     for point in points {
-    //         if self.is_point_out_of_bounds(point) {
-    //             bad.push(*point);
-    //         }
-    //     }
-    //     if bad.is_empty() {
-    //         Ok(())
-    //     } else {
-    //         Err(XYOutOfBoundsError::new(bad))
-    //     }
-    // }
-
     pub fn is_points_free_safe(&self, points: &[VPoint]) -> bool {
         let xy_lookup = self.xy_to_entity.as_slice();
 
