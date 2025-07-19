@@ -1,10 +1,13 @@
+use crate::util::always_true_test;
 use chrono::Local;
 use nu_ansi_term::{Color, Style};
 use std::env;
-use tracing::{Event, Level, Subscriber};
+use tracing::{Event, Level, Metadata, Subscriber};
 use tracing_log::NormalizeEvent;
+use tracing_subscriber::filter::FilterExt;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::{FmtContext, FormatEvent, FormatFields};
+use tracing_subscriber::layer::{Context, Filter};
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::{EnvFilter, Registry, filter, prelude::*};
 
@@ -12,6 +15,8 @@ const TRACE_NO_ADMIRAL_NETWORK: &str = "trace,\
 facto_loop_miner_fac_engine::admiral::executor::client=debug,\
 facto_loop_miner_fac_engine::admiral::lua_command::lua_batch=debug,\
 facto_loop_miner_fac_engine::game_blocks::rail_hope_single=debug";
+
+const FILTER_NON_MAIN_THREADS: bool = true;
 
 pub fn log_init_trace() {
     log_init_internal(TRACE_NO_ADMIRAL_NETWORK);
@@ -26,12 +31,9 @@ fn log_init_internal(default_env: &str) {
     let env_var = env::var(EnvFilter::DEFAULT_ENV).unwrap_or_else(|_| default_env.into());
     let env_layer = EnvFilter::builder().parse(env_var).expect("bad env");
 
-    // let print_layer = tracing_subscriber::fmt::Layer::default().compact();
     let print_layer = tracing_subscriber::fmt::Layer::default()
         .event_format(LoopFormatter)
-        .with_filter(filter::filter_fn(|_metadata| {
-            std::thread::current().name() == Some("main")
-        }));
+        .with_filter(LoopFilter);
 
     Registry::default().with(env_layer).with(print_layer).init()
 }
@@ -111,6 +113,21 @@ where
 
         // newline
         writeln!(f)
+    }
+}
+
+struct LoopFilter;
+
+impl<S> Filter<S> for LoopFilter
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+{
+    fn enabled(&self, meta: &Metadata<'_>, cx: &Context<'_, S>) -> bool {
+        if FILTER_NON_MAIN_THREADS {
+            std::thread::current().name() == Some("main")
+        } else {
+            true
+        }
     }
 }
 
