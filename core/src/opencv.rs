@@ -2,8 +2,7 @@ use crate::surface::pixel::Pixel;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::opencv_re::boxed_ref::BoxedRefMut;
 use facto_loop_miner_fac_engine::opencv_re::core::{
-    Mat, MatTraitConst, MatTraitConstManual, Point, ROTATE_90_COUNTERCLOCKWISE, Rect, Scalar,
-    Vector, rotate,
+    Mat, MatTraitConstManual, Point, ROTATE_90_COUNTERCLOCKWISE, Rect, Scalar, Vector, rotate,
 };
 use facto_loop_miner_fac_engine::opencv_re::imgproc::{
     FONT_HERSHEY_SIMPLEX, LINE_8, bounding_rect, get_font_scale_from_height, get_text_size,

@@ -30,7 +30,6 @@ pub fn execute_route_batch_clone_prep(
     // HOWEVER disk and memory must be the same / is_dirty=false / memory is unmodified
     // Caller will write our output result to the surface, then we repeat this safe/load
     surface.load_clone_prep().unwrap();
-    debug!("load clone prep done");
 
     execute_route_batch(surface, sequences, flags)
 }

@@ -1,8 +1,7 @@
 use crate::opencv::mat_into_points;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
-use facto_loop_miner_fac_engine::opencv_re::core::{CV_8U, Mat, Point, Scalar, Vector};
-use facto_loop_miner_fac_engine::opencv_re::imgcodecs::imwrite;
+use facto_loop_miner_fac_engine::opencv_re::core::{CV_8U, Mat, Point, Scalar};
 use facto_loop_miner_fac_engine::opencv_re::imgproc::{FILLED, LINE_4};
 use facto_loop_miner_fac_engine::opencv_re::prelude::*;
 use itertools::Itertools;

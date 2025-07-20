@@ -257,7 +257,7 @@ mod test {
         let points_num_before = points.len();
         points.sort();
         points.dedup();
-        // assert_eq!(points_num_before, points.len(), "dedupe detected");
+        assert_eq!(points_num_before, points.len(), "dedupe detected");
 
         for rail in rails {
             rail.write_output(&output);
