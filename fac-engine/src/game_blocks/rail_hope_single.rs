@@ -147,8 +147,6 @@ impl RailHopeLink for HopeLink {
             })
         }
         HopeLink {
-            // start: new_origin
-            //     .move_direction_usz(self.next_direction, (length + 1) * RAIL_STRAIGHT_DIAMETER),
             start: new_origin,
             next_direction: self.next_direction,
             rtype: HopeLinkType::Straight { length },
@@ -171,15 +169,16 @@ impl RailHopeLink for HopeLink {
         In Y, steps are 1 > 3 > 3
         (signs and axis depend on direction)
 
-        Compass rotations have no apparent pattern but stable in all turn directions
+        Compass rotations are stable in all turn directions
         "Clockwise" is 1 > -2 > -1
         "Counter-Clockwise" is 0 > 1 > 2
 
-        Directions appear arbitraty
+        Directions don't make immediate sense
         eg. curved rail from North to NorthWest in Factorio is... curved-rail North?
         */
         let cur_direction = self.next_direction;
-        trace!("cur direction {}", cur_direction);
+        let cur_direction_eighth = self.next_direction.to_direction_eighth();
+        trace!("cur direction {cur_direction}");
         // 1,1 to cancel RailStraight's to_fac offset
         let new_origin = self.pos_next();
         let new_origin_fac = new_origin + VPOINT_ONE;
@@ -189,18 +188,17 @@ impl RailHopeLink for HopeLink {
         let first_curve_pos = new_origin_fac
             .move_direction_usz(cur_direction, 3)
             .move_direction_sideways_int(cur_direction, neg_if_false(clockwise, 1));
-        let first_curve_direction = cur_direction.to_direction_eighth();
         let first_curve_direction = if clockwise {
-            first_curve_direction.rotate_once()
+            cur_direction_eighth.rotate_once()
         } else {
-            first_curve_direction
+            cur_direction_eighth
         };
         rails.push(HopeFactoRail {
             position: first_curve_pos,
             direction: first_curve_direction,
             rtype: FacEntRailType::Curved,
         });
-        trace!("first curve {:?}", first_curve_direction);
+        trace!("first curve {first_curve_direction:?}");
 
         // middle
         let middle_straight_pos = first_curve_pos
@@ -211,7 +209,7 @@ impl RailHopeLink for HopeLink {
         } else {
             first_curve_direction.rotate_once()
         };
-        trace!("middle straight {:?}", middle_straight_direction);
+        trace!("middle straight {middle_straight_direction:?}");
         rails.push(HopeFactoRail {
             // -1,-1 to cancel RailStraight's to_fac offset
             position: middle_straight_pos - VPOINT_ONE,
@@ -228,7 +226,7 @@ impl RailHopeLink for HopeLink {
         } else {
             middle_straight_direction.rotate_once().rotate_once()
         };
-        trace!("last curve {:?}", middle_straight_direction);
+        trace!("last curve {last_curve_direction:?}");
         rails.push(HopeFactoRail {
             position: last_curve_pos,
             direction: last_curve_direction,
@@ -241,10 +239,7 @@ impl RailHopeLink for HopeLink {
         } else {
             cur_direction.rotate_opposite()
         };
-        trace!(
-            "from start direction {} to end direction {}",
-            cur_direction, link_direction
-        );
+        trace!("from start direction {cur_direction} to end direction {link_direction}",);
         HopeLink {
             start: new_origin,
             next_direction: link_direction,
@@ -267,7 +262,8 @@ impl RailHopeLink for HopeLink {
         Between 2x pairs, the middle 2 rails are on the same Y axis
         */
         let cur_direction = self.next_direction;
-        trace!("cur direction {}", cur_direction);
+        let cur_direction_eighth = self.next_direction.to_direction_eighth();
+        trace!("cur direction {cur_direction}");
         // 1,1 to cancel RailStraight's to_fac offset
         let new_origin = self.pos_next();
         let new_origin_fac = new_origin + VPOINT_ONE;
@@ -277,11 +273,10 @@ impl RailHopeLink for HopeLink {
         let first_curve_pos = new_origin_fac
             .move_direction_usz(cur_direction, 3)
             .move_direction_sideways_int(cur_direction, neg_if_false(clockwise, 1));
-        let first_curve_direction = cur_direction.to_direction_eighth();
         let first_curve_direction = if clockwise {
-            first_curve_direction.rotate_once()
+            cur_direction_eighth.rotate_once()
         } else {
-            first_curve_direction
+            cur_direction_eighth
         };
         rails.push(HopeFactoRail {
             position: first_curve_pos,

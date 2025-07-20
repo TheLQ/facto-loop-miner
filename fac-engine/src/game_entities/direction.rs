@@ -247,8 +247,7 @@ mod test {
             assert_eq!(
                 &direction.rotate_flip(),
                 FacDirectionEighth::get_index(FacDirectionEighth::index_of(direction) + 4),
-                "from source dir {:?}",
-                direction,
+                "from source dir {direction:?}"
             )
         }
     }
@@ -259,8 +258,7 @@ mod test {
             assert_eq!(
                 &direction.rotate_once(),
                 FacDirectionEighth::get_index(FacDirectionEighth::index_of(direction) + 1),
-                "from source dir {:?}",
-                direction,
+                "from source dir {direction:?}"
             )
         }
     }
@@ -271,8 +269,7 @@ mod test {
             assert_eq!(
                 &direction.rotate_opposite(),
                 FacDirectionEighth::get_index(FacDirectionEighth::index_of(direction) + 7),
-                "from source dir {:?}",
-                direction,
+                "from source dir {direction:?}"
             )
         }
     }

@@ -7,8 +7,8 @@ use std::borrow::Borrow;
 
 /// Rail Dual v2 "Irys💎 Soda"
 ///
-/// Define as a grid of "Soda" (aka block, but term is overloaded)
-/// with limited information: centerpoint and direction.
+/// Define as a grid of "Soda" (aka block, but term is overloaded).
+/// Limited struct size as astar_mori makes 100,000s of these.
 /// Radically simpler movement API.
 #[derive(Eq, PartialEq, Hash, Clone)]
 pub struct HopeSodaLink {
@@ -58,17 +58,6 @@ impl HopeSodaLink {
     }
 
     fn links_source(&self) -> [HopeLink; 2] {
-        // let direction = match (self.stype, self.source_direction) {
-        //     (SodaType::Straight, _) => self.source_direction,
-        //     (SodaType::Turn90 { clockwise }, FacDirectionQuarter::North | FacDirectionQuarter::West) => {
-        //         // undo rotation
-        //         self.source_direction.rotate_clockwise(!clockwise)
-        //     }
-        //     (SodaType::Turn90 { clockwise }, direction) => {
-        //         // undo rotation
-        //         direction.rotate_clockwise(!clockwise)
-        //     }
-        // };
         let direction = match self.stype {
             SodaType::Straight => self.source_direction,
             SodaType::Turn90 { clockwise } => {
@@ -84,14 +73,21 @@ impl HopeSodaLink {
         source_a.assert_even_position();
         let source_b = border.move_direction_sideways_axis_int(direction, -2);
         source_b.assert_even_position();
-        [
+
+        let mut sources = [
             HopeLink::new_single(source_a, direction),
             HopeLink::new_single(source_b, direction),
-        ]
+        ];
+        if let SodaType::Turn90 { .. } = self.stype
+            && let FacDirectionQuarter::East | FacDirectionQuarter::South = self.source_direction
+        {
+            sources.swap(0, 1);
+        }
+        sources
     }
 
     fn links_for_soda(&self) -> Vec<HopeLink> {
-        let mut sources = self.links_source();
+        let sources = self.links_source();
         match self.stype {
             SodaType::Straight => {
                 let mut output = Vec::with_capacity(2);
@@ -100,13 +96,6 @@ impl HopeSodaLink {
                 output
             }
             SodaType::Turn90 { clockwise } => {
-                if let FacDirectionQuarter::East | FacDirectionQuarter::South =
-                    self.source_direction
-                {
-                    sources.swap(0, 1);
-                }
-
-                // sources.swap(0, 1);
                 let mut output = Vec::with_capacity(4);
                 output.extend(create_turn_link_from(&sources[0], clockwise));
                 output.push(sources[1].add_turn90(clockwise));
