@@ -402,7 +402,7 @@ impl MineLocation {
         {
             // assert_eq!(surface.get_pixel(point), Pixel::MineNoTouch);
             let pixel = surface.get_pixel(point);
-            if !matches!(pixel, Pixel::MineNoTouch | Pixel::Empty) {
+            if !matches!(pixel, Pixel::MineNoTouch | Pixel::Empty | Pixel::UraniumOre) {
                 surface
                     .change_square(&VArea::from_arbitrary_points_pair(
                         point,
