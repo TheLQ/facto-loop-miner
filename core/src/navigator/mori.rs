@@ -193,7 +193,7 @@ struct WatchData {
     cost: Duration,
     executions: usize,
     found_successors: usize,
-    was_unfree_check: HashMap<VPoint, u32>,
+    // was_unfree_check: HashMap<VPoint, u32>,
 }
 
 pub enum MoriResult {
@@ -270,13 +270,13 @@ fn into_buildable_link(
     if surface.is_points_free_unchecked(&area) {
         Some(new_link)
     } else {
-        for point in area {
-            watch_data
-                .was_unfree_check
-                .entry(point)
-                .and_modify(|v| *v += 1)
-                .or_default();
-        }
+        // for point in area {
+        //     watch_data
+        //         .was_unfree_check
+        //         .entry(point)
+        //         .and_modify(|v| *v += 1)
+        //         .or_default();
+        // }
         None
     }
 }

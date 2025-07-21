@@ -126,6 +126,7 @@ pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
                     // best = 16
                     // better = 28, 30, 32
                     info!("limiter {limiter_counter}");
+                    break;
                     let base_source = base_source_positive.borrow_mut().next().unwrap();
                     let start = base_source.origin;
                     let end = VPointDirectionQ(
