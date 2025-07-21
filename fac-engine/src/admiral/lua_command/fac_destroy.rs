@@ -1,4 +1,5 @@
 use crate::admiral::lua_command::LuaCommand;
+use crate::common::names::FacEntityName;
 use crate::common::varea::{VArea, VAreaSugar};
 use itertools::Itertools;
 use std::borrow::Borrow;
@@ -47,6 +48,16 @@ impl FacDestroy {
             entity_names,
             is_tiles: false,
         }
+    }
+
+    pub fn new_filtered_entities_area(
+        area: impl Borrow<VArea>,
+        entities: impl IntoIterator<Item = FacEntityName>,
+    ) -> Self {
+        Self::new_filtered_area(
+            area,
+            entities.into_iter().map(|v| v.to_fac_name()).collect(),
+        )
     }
 
     pub fn into_tiles(mut self) -> Self {
