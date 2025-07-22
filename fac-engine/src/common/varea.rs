@@ -95,6 +95,14 @@ impl VArea {
         self.bottom_right
     }
 
+    pub fn calc_point_top_right(&self) -> VPoint {
+        VPoint::new(self.bottom_right.x(), self.top_left.y())
+    }
+
+    pub fn calc_point_bottom_left(&self) -> VPoint {
+        VPoint::new(self.top_left.x(), self.bottom_right.y())
+    }
+
     pub fn point_center(&self) -> VPoint {
         self.top_left.midpoint(self.bottom_right)
     }
@@ -108,6 +116,13 @@ impl VArea {
         VArea {
             top_left: self.top_left.move_round_rail_down() - padding_point,
             bottom_right: self.bottom_right.move_round_rail_up() + padding_point,
+        }
+    }
+
+    pub fn normalize_3x3(&self) -> Self {
+        VArea {
+            top_left: self.top_left.move_round_3_down(),
+            bottom_right: self.bottom_right.move_round_3_up(),
         }
     }
 

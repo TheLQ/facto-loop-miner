@@ -24,7 +24,7 @@ pub struct FacBlkBettelBelt {
 }
 
 #[derive(Clone)]
-pub struct FacBlkBettelBeltLink {
+struct FacBlkBettelBeltLink {
     ltype: FacBlkBettelBeltLinkType,
     direction: FacDirectionQuarter,
 }

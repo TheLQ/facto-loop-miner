@@ -24,18 +24,18 @@ pub fn make_mine(output: Rc<FacItemOutput>) {
         output.writei(FacEntResourceType::IronOre.entity(), pos.point());
     }
 
-    let block = FacBlkMineOre {
-        height: 3,
-        width: 10,
-        build_direction: FacDirectionQuarter::East,
-        belt: FacEntBeltType::Basic,
-        drill_modules: Default::default(),
-        output,
-    };
-    let belts = block.generate(VPOINT_TEN);
-    for mut belt in belts {
-        belt.add_straight(75);
-    }
+    // let block = FacBlkMineOre {
+    //     height: 3,
+    //     width: 10,
+    //     build_direction: FacDirectionQuarter::East,
+    //     belt: FacEntBeltType::Basic,
+    //     drill_modules: Default::default(),
+    //     output,
+    // };
+    // let belts = block.generate(VPOINT_TEN);
+    // for mut belt in belts {
+    //     belt.add_straight(75);
+    // }
 }
 
 pub fn make_mine_and_rail(output: Rc<FacItemOutput>) {

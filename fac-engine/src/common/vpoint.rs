@@ -449,12 +449,18 @@ impl VPoint {
         VPoint::new(self.x().midpoint(other.x()), self.y().midpoint(other.y()))
     }
 
+    ////
+
     pub const fn move_round_rail_down(&self) -> Self {
         self.move_round_down(SECTION_POINTS_I32)
     }
 
     pub const fn move_round_even_down(&self) -> Self {
-        self.move_round_up(2)
+        self.move_round_down(2)
+    }
+
+    pub const fn move_round_3_down(&self) -> Self {
+        self.move_round_down(3)
     }
 
     const fn move_round_down(&self, size: i32) -> Self {
@@ -464,12 +470,18 @@ impl VPoint {
         }
     }
 
+    ////
+
     pub const fn move_round_rail_up(&self) -> Self {
         self.move_round_up(SECTION_POINTS_I32)
     }
 
     pub const fn move_round_even_up(&self) -> Self {
         self.move_round_up(2)
+    }
+
+    pub const fn move_round_3_up(&self) -> Self {
+        self.move_round_up(3)
     }
 
     const fn move_round_up(&self, size: i32) -> Self {
@@ -479,6 +491,8 @@ impl VPoint {
             y: self.y.next_multiple_of(size),
         }
     }
+
+    ////
 
     pub const fn area_2x2(&self) -> [Self; 4] {
         [

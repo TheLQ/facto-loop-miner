@@ -11,11 +11,14 @@ use facto_loop_miner_fac_engine::admiral::lua_command::fac_destroy::FacDestroy;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::entity::FacEntity;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::game_blocks::block::FacBlock2;
 use facto_loop_miner_fac_engine::game_blocks::mine_ore::FacBlkMineOre;
 use facto_loop_miner_fac_engine::game_entities::belt::FacEntBeltType;
 use facto_loop_miner_fac_engine::game_entities::chest::{FacEntChest, FacEntChestType};
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
+use facto_loop_miner_fac_engine::game_entities::electric_mini::FacEntElectricMiniType;
+use facto_loop_miner_fac_engine::game_entities::infinity_power::FacEntInfinityPower;
 use facto_loop_miner_fac_engine::game_entities::rail_signal::FacEntRailSignalType;
 use itertools::Itertools;
 use std::rc::Rc;
@@ -66,15 +69,23 @@ fn plotter(surface: &VSurface, output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     //     FacEntChest::new(FacEntChestType::Wood),
     //     needle_path.mine_base.area_min().point_center(),
     // );
+    let patch = needle_path
+        .mine_base
+        .surface_patches(surface)
+        .next()
+        .unwrap();
+    output.writei(
+        FacEntInfinityPower::new(),
+        patch.area.point_top_left() + VPoint::new(0, 20),
+    );
     FacBlkMineOre {
-        width: 2,
-        height: 2,
+        ore_points: patch.pixel_indexes.clone(),
         build_direction: FacDirectionQuarter::North,
         belt: FacEntBeltType::Basic,
         drill_modules: [None, None, None],
         output,
     }
-    .generate(needle_path.mine_base.area_min().point_center());
+    .generate();
 
     Ok(())
 }
@@ -86,9 +97,19 @@ fn destroy_mine_area(
     let command = FacDestroy::new_filtered_entities_area(
         mine.area_min(),
         [
-            FacEntityName::RailStraight,
-            FacEntityName::RailCurved,
-            FacEntityName::RailSignal(FacEntRailSignalType::Basic),
+            // FacEntityName::RailStraight,
+            // FacEntityName::RailCurved,
+            // FacEntityName::RailSignal(FacEntRailSignalType::Basic),
+            FacEntityName::ElectricMiningDrill,
+            FacEntityName::ElectricMini(FacEntElectricMiniType::Small),
+            FacEntityName::BeltTransport(FacEntBeltType::Basic),
+            FacEntityName::BeltTransport(FacEntBeltType::Fast),
+            FacEntityName::BeltTransport(FacEntBeltType::Express),
+            FacEntityName::BeltUnder(FacEntBeltType::Basic),
+            FacEntityName::BeltUnder(FacEntBeltType::Fast),
+            FacEntityName::BeltUnder(FacEntBeltType::Express),
+            FacEntityName::ElectricMini(FacEntElectricMiniType::Medium),
+            FacEntityName::InfinityPower,
         ]
         .to_vec(),
     );
