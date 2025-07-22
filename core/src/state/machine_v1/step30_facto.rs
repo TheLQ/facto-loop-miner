@@ -80,7 +80,8 @@ fn plotter(surface: &VSurface, output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     );
     FacBlkMineOre {
         ore_points: patch.pixel_indexes.clone(),
-        build_direction: FacDirectionQuarter::North,
+        exit_clockwise: true,
+        exit_direction: FacDirectionQuarter::North,
         belt: FacEntBeltType::Basic,
         drill_modules: [None, None, None],
         output,

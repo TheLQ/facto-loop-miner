@@ -17,7 +17,8 @@ use tracing::trace;
 
 pub struct FacBlkMineOre {
     pub ore_points: Vec<VPoint>,
-    pub build_direction: FacDirectionQuarter,
+    pub exit_clockwise: bool,
+    pub exit_direction: FacDirectionQuarter,
     pub belt: FacEntBeltType,
     pub drill_modules: [Option<FacModule>; 3],
     pub output: Rc<FacItemOutput>,
@@ -26,16 +27,17 @@ pub struct FacBlkMineOre {
 impl FacBlkMineOre {
     pub fn generate(&self) -> Vec<FacBlkBettelBelt> {
         let build_area = VArea::from_arbitrary_points(&self.ore_points).normalize_3x3();
-        let origin = match self.build_direction {
+        let origin = match self.exit_direction {
             FacDirectionQuarter::North => build_area.point_top_left(),
             FacDirectionQuarter::East => build_area.calc_point_top_right(),
             FacDirectionQuarter::South => build_area.point_bottom_right(),
             FacDirectionQuarter::West => build_area.calc_point_bottom_left(),
         };
 
+        let mut belts = Vec::new();
         for cell_column in 0.. {
             let column_head =
-                origin.move_direction_sideways_usz(self.build_direction, cell_column * 7);
+                origin.move_direction_sideways_usz(self.exit_direction, cell_column * 7);
             if !build_area.contains_point(&column_head) {
                 break;
             }
@@ -43,8 +45,8 @@ impl FacBlkMineOre {
 
             let mut last_row_head = None;
             for cell_row in 0.. {
-                let row_head = column_head
-                    .move_direction_usz(self.build_direction.rotate_flip(), cell_row * 3);
+                let row_head =
+                    column_head.move_direction_usz(self.exit_direction.rotate_flip(), cell_row * 3);
                 if !build_area.contains_point(&row_head) {
                     break;
                 }
@@ -52,10 +54,10 @@ impl FacBlkMineOre {
 
                 for (corner_start_steps, drill_flip) in [(0, false), (4, true)] {
                     let corner_start = row_head
-                        .move_direction_sideways_usz(self.build_direction, corner_start_steps);
+                        .move_direction_sideways_usz(self.exit_direction, corner_start_steps);
                     let corner_end = corner_start
-                        .move_direction_usz(self.build_direction.rotate_flip(), 3)
-                        .move_direction_sideways_usz(self.build_direction, 3);
+                        .move_direction_usz(self.exit_direction.rotate_flip(), 3)
+                        .move_direction_sideways_usz(self.exit_direction, 3);
 
                     const DRILL_FOR_ORE_PIXELS_MINIMUM: usize = 4;
                     let drill_area = VArea::from_arbitrary_points_pair(corner_start, corner_end);
@@ -71,9 +73,9 @@ impl FacBlkMineOre {
                     }
 
                     let drill_direction = if drill_flip {
-                        self.build_direction.rotate_opposite()
+                        self.exit_direction.rotate_opposite()
                     } else {
-                        self.build_direction.rotate_once()
+                        self.exit_direction.rotate_once()
                     };
                     trace!(
                         "distance from origin {}",
@@ -89,19 +91,29 @@ impl FacBlkMineOre {
             }
 
             if let Some((last_row_head, cell_row)) = last_row_head {
-                self.place_inner_belt(
+                let belt = self.place_inner_belt(
                     last_row_head
-                        .move_direction_sideways_usz(self.build_direction, 3)
+                        .move_direction_sideways_usz(self.exit_direction, 3)
                         // move belt start from top of drill to middle of drill
-                        .move_direction_usz(self.build_direction.rotate_flip(), 1),
+                        .move_direction_usz(self.exit_direction.rotate_flip(), 1),
                     (cell_row * 3) - /*last drill missing end*/1,
                 );
+                belts.push(belt);
             }
+        }
+
+        if self.exit_clockwise {
+            belts.reverse();
+        }
+        for (i, belt) in belts.iter_mut().enumerate() {
+            belt.add_straight(i);
+            belt.add_turn90(self.exit_clockwise);
+            belt.add_straight(i * 7);
         }
 
         self.output.flush();
 
-        todo!()
+        belts
     }
 
     fn place_inner_belt(&self, origin: VPoint, straight_distance: usize) -> FacBlkBettelBelt {
@@ -109,12 +121,12 @@ impl FacBlkMineOre {
         if (straight_distance - 3) % 9 > 7 {
             self.output.write(BlueprintItem::new(
                 FacEntElectricMini::new(FacEntElectricMiniType::Medium).into_boxed(),
-                origin.move_direction_usz(self.build_direction.rotate_flip(), 1),
+                origin.move_direction_usz(self.exit_direction.rotate_flip(), 1),
             ));
         }
 
         let mut belt =
-            FacBlkBettelBelt::new(self.belt, origin, self.build_direction, self.output.clone());
+            FacBlkBettelBelt::new(self.belt, origin, self.exit_direction, self.output.clone());
         let mut cur_distance = 0;
         while cur_distance < straight_distance {
             if (straight_distance - cur_distance + 2) % 9 == 0 {
