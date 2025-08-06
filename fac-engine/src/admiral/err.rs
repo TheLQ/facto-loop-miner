@@ -1,3 +1,4 @@
+use facto_loop_miner_common::err_bt::MyBacktrace;
 use rcon_client::RCONError;
 use std::backtrace::Backtrace;
 use std::io;
@@ -67,8 +68,8 @@ pub enum AdmiralError {
     // SurfaceError(#[from] VError),
 }
 
-impl AdmiralError {
-    pub fn my_backtrace(&self) -> &Backtrace {
+impl MyBacktrace for AdmiralError {
+    fn my_backtrace(&self) -> &Backtrace {
         match self {
             AdmiralError::Rcon { backtrace, .. }
             | AdmiralError::LuaBlankCommand { backtrace }
@@ -84,7 +85,9 @@ impl AdmiralError {
             // AdmiralError::SurfaceError(v) => v.my_backtrace(),
         }
     }
+}
 
+impl AdmiralError {
     pub fn my_command(&self) -> Option<&String> {
         match self {
             AdmiralError::Rcon { .. }

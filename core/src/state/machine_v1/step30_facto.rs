@@ -3,6 +3,7 @@ use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::VSurface;
+use facto_loop_miner_common::err_bt::PrettyUnwrapMyBacktrace;
 use facto_loop_miner_fac_engine::admiral::err::AdmiralResult;
 use facto_loop_miner_fac_engine::admiral::executor::client::AdmiralClient;
 use facto_loop_miner_fac_engine::admiral::executor::{ExecuteResponse, LuaCompiler};
@@ -39,14 +40,17 @@ impl Step for Step30 {
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let mut surface = VSurface::load_from_last_step(&params)?;
 
-        let mut client = AdmiralClient::new().unwrap();
-        client.auth().unwrap();
-        let output = FacItemOutput::new_admiral_dedupe(client).into_rc();
-
-        plotter(&mut surface, output);
+        let output = connect_admiral().pretty_unwrap();
+        plotter(&mut surface, output).unwrap();
 
         Ok(())
     }
+}
+
+fn connect_admiral() -> AdmiralResult<Rc<FacItemOutput>> {
+    let mut client = AdmiralClient::new()?;
+    client.auth()?;
+    Ok(FacItemOutput::new_admiral_dedupe(client).into_rc())
 }
 
 fn plotter_initial(surface: &mut VSurface) {
