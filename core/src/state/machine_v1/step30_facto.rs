@@ -67,7 +67,7 @@ fn plotter_initial(surface: &mut VSurface) {
 fn plotter(surface: &VSurface, output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     let needle_path = surface.get_mine_paths()[13].clone();
 
-    destroy_mine_area(&needle_path.mine_base, &output)?;
+    destroy_mine_area(&needle_path.mine_base, 20, &output)?;
 
     // output.writei(
     //     FacEntChest::new(FacEntChestType::Wood),
@@ -97,14 +97,16 @@ fn plotter(surface: &VSurface, output: Rc<FacItemOutput>) -> AdmiralResult<()> {
 
 fn destroy_mine_area(
     mine: &MineLocation,
+    margin: i32,
     output: &FacItemOutput,
 ) -> AdmiralResult<ExecuteResponse> {
     let command = FacDestroy::new_filtered_entities_area(
-        mine.area_min(),
+        mine.area_min().expand_margin(margin),
         [
-            // FacEntityName::RailStraight,
-            // FacEntityName::RailCurved,
-            // FacEntityName::RailSignal(FacEntRailSignalType::Basic),
+            FacEntityName::RailStraight,
+            FacEntityName::RailCurved,
+            FacEntityName::RailSignal(FacEntRailSignalType::Basic),
+            //
             FacEntityName::ElectricMiningDrill,
             FacEntityName::ElectricMini(FacEntElectricMiniType::Small),
             FacEntityName::BeltTransport(FacEntBeltType::Basic),

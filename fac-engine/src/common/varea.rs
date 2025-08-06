@@ -133,6 +133,14 @@ impl VArea {
         }
     }
 
+    pub fn expand_margin(&self, radius: i32) -> Self {
+        let expander = VPoint::new(radius, radius);
+        VArea {
+            top_left: self.top_left - expander,
+            bottom_right: self.bottom_right + expander,
+        }
+    }
+
     pub fn as_size(&self) -> VPoint {
         self.bottom_right - self.top_left
     }
