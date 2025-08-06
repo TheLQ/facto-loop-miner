@@ -1,5 +1,6 @@
 use super::{belt_bettel::FacBlkBettelBelt, block::FacBlock2};
 use crate::common::varea::VArea;
+use crate::common::vpoint::VPOINT_THREE;
 use crate::game_entities::electric_mini::FacEntElectricMini;
 use crate::{
     blueprint::{bpitem::BlueprintItem, output::FacItemOutput},
@@ -61,7 +62,7 @@ impl FacBlkMineOre {
 
                     const DRILL_FOR_ORE_PIXELS_MINIMUM: usize = 4;
                     let drill_area = VArea::from_arbitrary_points_pair(corner_start, corner_end);
-                    assert_eq!(drill_area.as_size(), VPoint::new(3, 3));
+                    assert_eq!(drill_area.as_size(), VPOINT_THREE);
                     if self
                         .ore_points
                         .iter()

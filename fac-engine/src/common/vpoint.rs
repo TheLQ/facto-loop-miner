@@ -21,6 +21,7 @@ pub struct VPoint {
 
 pub const VPOINT_ZERO: VPoint = VPoint { x: 0, y: 0 };
 pub const VPOINT_ONE: VPoint = VPoint { x: 1, y: 1 };
+pub const VPOINT_THREE: VPoint = VPoint { x: 3, y: 3 };
 pub const VPOINT_EIGHT: VPoint = VPoint { x: 8, y: 8 };
 pub const VPOINT_TEN: VPoint = VPoint { x: 10, y: 10 };
 pub const VPOINT_SECTION: VPoint = VPoint {

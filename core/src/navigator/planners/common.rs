@@ -6,7 +6,7 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_THREE, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
@@ -66,9 +66,9 @@ pub fn debug_draw_segment(surface: &mut VSurface, segment: VSegment) {
     let VSegment { start, end } = segment;
     let mut positions = Vec::new();
     positions.extend(start.point().get_entity_area_3x3());
-    positions.extend((start.point() - &VPoint::new(3, 3)).get_entity_area_3x3());
+    positions.extend((start.point() - &VPOINT_THREE).get_entity_area_3x3());
     positions.extend(end.point().get_entity_area_3x3());
-    positions.extend((end.point() - &VPoint::new(3, 3)).get_entity_area_3x3());
+    positions.extend((end.point() - &VPOINT_THREE).get_entity_area_3x3());
     // let positions = vec![*start.point(), *end.point()];
     surface.change_pixels(positions).stomp(Pixel::Highlighter);
 }
