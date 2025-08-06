@@ -1,4 +1,5 @@
 use crate::admiral::lua_command::LuaCommand;
+use rand::{RngCore, rng};
 
 #[derive(Debug)]
 pub struct CheckedLuaCommand {
@@ -9,8 +10,7 @@ pub struct CheckedLuaCommand {
 impl CheckedLuaCommand {
     pub fn new(inner: Box<dyn LuaCommand>) -> Self {
         CheckedLuaCommand {
-            // id can be arbitrary?
-            id: 9,
+            id: rng().next_u32(),
             inner,
         }
     }
