@@ -1,15 +1,18 @@
+use std::backtrace::Backtrace;
 use std::borrow::BorrowMut;
 use std::io::{Read, Write};
 
+use crate::{blueprint::bpfac::blueprint::FacBpBlueprintWrapper, err::FResult};
 use base64ct::{Base64, Encoding};
 use flate2::{Compression, read::ZlibDecoder};
-
-use crate::{blueprint::bpfac::blueprint::FacBpBlueprintWrapper, err::FResult};
+use thiserror::Error;
 
 const VERSION_BYTE: &str = "0";
 
 /// https://wiki.factorio.com/Blueprint_string_format
-pub fn decode_blueprint_string(bp_string_raw: impl AsRef<str>) -> FResult<FacBpBlueprintWrapper> {
+pub fn decode_blueprint_string(
+    bp_string_raw: impl AsRef<str>,
+) -> ConvertResult<FacBpBlueprintWrapper> {
     let (version_byte, bp_string) = bp_string_raw.as_ref().split_at(1);
     assert_eq!(version_byte, VERSION_BYTE, "unexpected Blueprint version");
 
@@ -17,8 +20,7 @@ pub fn decode_blueprint_string(bp_string_raw: impl AsRef<str>) -> FResult<FacBpB
 
     let mut raw_json = String::new();
     let mut zlib = ZlibDecoder::new(compressed.as_slice());
-    zlib.read_to_string(&mut raw_json)
-        .expect("Valid zlib after base64?");
+    zlib.read_to_string(&mut raw_json)?;
 
     // println!("JSON: {}", raw_json);
 
@@ -28,13 +30,13 @@ pub fn decode_blueprint_string(bp_string_raw: impl AsRef<str>) -> FResult<FacBpB
 /// https://wiki.factorio.com/Blueprint_string_format
 pub fn encode_blueprint_to_string_dangerous_index(
     blueprint: &FacBpBlueprintWrapper,
-) -> FResult<String> {
+) -> ConvertResult<String> {
     _encode_blueprint_to_string(blueprint)
 }
 
 pub fn encode_blueprint_to_string_auto_index(
     mut blueprint: impl BorrowMut<FacBpBlueprintWrapper>,
-) -> FResult<String> {
+) -> ConvertResult<String> {
     let blueprint = blueprint.borrow_mut();
     let mut auto_index = /*lua...*/1;
     for entity in &mut blueprint.blueprint.entities {
@@ -48,17 +50,35 @@ pub fn encode_blueprint_to_string_auto_index(
     _encode_blueprint_to_string(blueprint)
 }
 
-fn _encode_blueprint_to_string(blueprint: &FacBpBlueprintWrapper) -> FResult<String> {
+fn _encode_blueprint_to_string(blueprint: &FacBpBlueprintWrapper) -> ConvertResult<String> {
     let json = serde_json::to_string(blueprint)?;
     // println!("JSONify {}", json);
 
     let mut zlib = flate2::write::ZlibEncoder::new(Vec::new(), Compression::default());
-    zlib.write_all(json.as_bytes()).unwrap();
-    let compressed = zlib.finish().unwrap();
+    zlib.write_all(json.as_bytes())?;
+    let compressed = zlib.finish()?;
 
     let mut encoded = Base64::encode_string(&compressed);
     encoded.insert_str(0, VERSION_BYTE);
     Ok(encoded)
+}
+
+pub type ConvertResult<T> = Result<T, ConvertError>;
+
+#[derive(Error, Debug)]
+pub enum ConvertError {
+    #[error("Serde {e:?}")]
+    Serde {
+        #[from]
+        e: serde_json::Error,
+        backtrace: Backtrace,
+    },
+    #[error("IO {e:?}")]
+    IO {
+        #[from]
+        e: std::io::Error,
+        backtrace: Backtrace,
+    },
 }
 
 #[cfg(test)]

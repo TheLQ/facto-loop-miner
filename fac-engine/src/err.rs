@@ -18,21 +18,6 @@ pub enum FError {
         position: FacBpPosition,
         backtrace: Backtrace,
     },
-    #[error("Serde {}", err)]
-    Serde {
-        #[from]
-        err: serde_json::Error,
-        backtrace: Backtrace,
-    },
-}
-
-impl FError {
-    pub fn from_serde(err: serde_json::Error) -> Self {
-        Self::Serde {
-            err,
-            backtrace: Backtrace::capture(),
-        }
-    }
 }
 
 fn positions_to_strings(positions: &[VPoint]) -> String {
