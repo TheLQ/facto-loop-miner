@@ -142,7 +142,7 @@ impl FacBlkBettelBelt {
 
     pub fn write_link(&mut self, link: FacBlkBettelBeltLink) {
         let output = if self.dummy_nav_mode {
-            &FacItemOutput::new_blueprint()
+            &FacItemOutput::new_null()
         } else {
             &self.output
         };
