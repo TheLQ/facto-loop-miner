@@ -111,6 +111,9 @@ impl FacItemOutput {
     }
 
     pub fn write_tile(&self, blueprint: FacBpTile) {
+        if let FacItemOutputType::Null = self.odata.borrow().otype {
+            return;
+        }
         let item_debug = format!("{blueprint:?}");
         let message_pos = format!("blueprint facpos {}", blueprint.position);
 
