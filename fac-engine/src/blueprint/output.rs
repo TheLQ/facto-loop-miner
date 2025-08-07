@@ -378,7 +378,12 @@ impl FacItemOutputData {
                     // don't spam the console on micro writes
                     trace!("Flush Cache {} total {}", flush_count, total_write)
                 }
-                let res = inner.execute_checked_commands_in_wrapper_function(lua_commands);
+                let res = if flush_count == 1 {
+                    let lua_command = lua_commands.remove(0);
+                    inner.execute_checked_command(lua_command).map(|_| ())
+                } else {
+                    inner.execute_checked_commands_in_wrapper_function(lua_commands)
+                };
 
                 // Vec::push() does not normally fail
                 // For API sanity, do not make every FacBlk need to pass up the error
