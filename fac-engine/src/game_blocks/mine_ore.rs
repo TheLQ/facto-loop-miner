@@ -1,6 +1,9 @@
 use super::{belt_bettel::FacBlkBettelBelt, block::FacBlock2};
+use crate::common::entity::{FacArea, SquareArea};
 use crate::common::varea::VArea;
 use crate::common::vpoint::VPOINT_THREE;
+use crate::game_entities::belt_transport::FacEntBeltTransport;
+use crate::game_entities::chest::{FacEntChest, FacEntChestType};
 use crate::game_entities::electric_mini::FacEntElectricMini;
 use crate::{
     blueprint::{bpitem::BlueprintItem, output::FacItemOutput},
@@ -13,6 +16,7 @@ use crate::{
         module::FacModule,
     },
 };
+use facto_loop_miner_common::util::always_true_test;
 use std::rc::Rc;
 use tracing::trace;
 
@@ -35,30 +39,49 @@ impl FacBlkMineOre {
             FacDirectionQuarter::West => build_area.calc_point_bottom_left(),
         };
 
-        let mut belts = Vec::new();
-        for cell_column in 0.. {
-            let column_head =
-                origin.move_direction_sideways_usz(self.exit_direction, cell_column * 7);
-            if !build_area.contains_point(&column_head) {
+        let mut belts: Vec<FacBlkBettelBelt> = Vec::new();
+        'outer: for cell_row in 0.. {
+            let row_head = origin.move_direction_sideways_usz(
+                self.exit_direction,
+                cell_row
+                    * ((FacEntMiningDrillElectric::area_diameter() * 2)
+                        + FacEntBeltTransport::area_diameter()),
+            );
+            if !build_area.contains_point(&row_head) {
                 break;
             }
-            trace!("distance from origin column head {}", origin - column_head);
+            trace!("distance from origin column head {}", origin - row_head);
 
-            let mut last_row_head = None;
-            for cell_row in 0.. {
-                let row_head =
-                    column_head.move_direction_usz(self.exit_direction.rotate_flip(), cell_row * 3);
-                if !build_area.contains_point(&row_head) {
+            let mut last_column_head = None;
+            'row: for cell_column in 0.. {
+                let column_head = row_head.move_direction_usz(
+                    self.exit_direction.rotate_flip(),
+                    cell_column * FacEntMiningDrillElectric::area_diameter(),
+                );
+                if !build_area.contains_point(&column_head) {
                     break;
                 }
                 trace!("distance from origin row head {}", origin - column_head);
 
-                for (corner_start_steps, drill_flip) in [(0, false), (4, true)] {
-                    let corner_start = row_head
+                for (corner_start_steps, drill_flip) in [
+                    (0, false),
+                    (
+                        FacEntMiningDrillElectric::area_diameter()
+                            + FacEntBeltTransport::area_diameter(),
+                        true,
+                    ),
+                ] {
+                    let corner_start = column_head
                         .move_direction_sideways_usz(self.exit_direction, corner_start_steps);
                     let corner_end = corner_start
-                        .move_direction_usz(self.exit_direction.rotate_flip(), 3)
-                        .move_direction_sideways_usz(self.exit_direction, 3);
+                        .move_direction_usz(
+                            self.exit_direction.rotate_flip(),
+                            FacEntMiningDrillElectric::area_diameter(),
+                        )
+                        .move_direction_sideways_usz(
+                            self.exit_direction,
+                            FacEntMiningDrillElectric::area_diameter(),
+                        );
 
                     const DRILL_FOR_ORE_PIXELS_MINIMUM: usize = 4;
                     let drill_area = VArea::from_arbitrary_points_pair(corner_start, corner_end);
@@ -86,21 +109,39 @@ impl FacBlkMineOre {
                         FacEntMiningDrillElectric::new_modules(drill_direction, self.drill_modules),
                         // the only actual top_left regardless of direction
                         drill_area.point_top_left(),
+                        // corner_start,
                     );
-                    last_row_head = Some((row_head, cell_row));
+                    last_column_head = Some((column_head, cell_column));
+
+                    if always_true_test() {
+                        break 'row;
+                    }
                 }
             }
 
-            if let Some((last_row_head, cell_row)) = last_row_head {
+            if let Some((last_column_head, cell_column)) = last_column_head {
                 let belt = self.place_inner_belt(
-                    last_row_head
+                    last_column_head
+                        .move_alloc::<FacEntBeltTransport>(self.exit_direction)
                         .move_direction_sideways_usz(self.exit_direction, 3)
                         // move belt start from top of drill to middle of drill
-                        .move_direction_usz(self.exit_direction.rotate_flip(), 1),
-                    (cell_row * 3) - /*last drill missing end*/1,
+                        .move_direction_usz(self.exit_direction.rotate_flip(), 2),
+                    (cell_column + /*total*/1) * FacEntMiningDrillElectric::area_diameter(),
                 );
                 belts.push(belt);
+                // self.output.writei(
+                //     FacEntChest::new(FacEntChestType::Active),
+                //     last_column_head
+                //         .move_alloc_usz(self.exit_direction, 1)
+                //         .move_direction_sideways_usz(self.exit_direction, 3)
+                //         .move_direction_usz(self.exit_direction.rotate_flip(), 2),
+                // );
+                // break 'outer;
             }
+
+            // if always_true_test() {
+            //     break;
+            // }
         }
 
         if self.exit_clockwise {
@@ -118,8 +159,10 @@ impl FacBlkMineOre {
     }
 
     fn place_inner_belt(&self, origin: VPoint, straight_distance: usize) -> FacBlkBettelBelt {
+        assert_ne!(straight_distance, 0, "belt going 0 distance");
+
         // first pole outside of neatly spaced belt ones
-        if (straight_distance - 3) % 9 > 7 {
+        if (straight_distance) % 9 > /*magic tuning*/2 {
             self.output.write(BlueprintItem::new(
                 FacEntElectricMini::new(FacEntElectricMiniType::Medium).into_boxed(),
                 origin.move_direction_usz(self.exit_direction.rotate_flip(), 1),
@@ -129,8 +172,8 @@ impl FacBlkMineOre {
         let mut belt =
             FacBlkBettelBelt::new(self.belt, origin, self.exit_direction, self.output.clone());
         let mut cur_distance = 0;
-        while cur_distance < straight_distance {
-            if (straight_distance - cur_distance + 2) % 9 == 0 {
+        while cur_distance < (straight_distance - /*first drill missing 1 belt*/1) {
+            if (straight_distance - cur_distance + /*magic tuning*/1) % 9 == 0 {
                 let mut electro_pos_belt = belt.clone();
                 electro_pos_belt.set_dummy_nav_mode(true);
                 electro_pos_belt.add_straight(1);
@@ -144,6 +187,10 @@ impl FacBlkMineOre {
             } else {
                 belt.add_straight(1);
                 cur_distance += 1;
+            }
+
+            if cur_distance > 1000 {
+                panic!("uhh {cur_distance} and {straight_distance}");
             }
         }
         belt
