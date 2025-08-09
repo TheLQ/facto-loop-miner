@@ -427,12 +427,13 @@ impl RailHopeLink for HopeLink {
 
 impl HopeLink {
     pub(super) fn new_single(origin: VPoint, direction: FacDirectionQuarter) -> Self {
-        Self {
-            start: origin,
+        let prev = Self {
+            start: origin.move_direction_usz(direction.rotate_flip(), RAIL_STRAIGHT_DIAMETER),
             next_direction: direction,
             rtype: HopeLinkType::Straight { length: 0 },
             rails: Vec::new(),
-        }
+        };
+        prev.add_straight(1)
     }
 
     pub fn add_turn90_single_section(&self, clockwise: bool) -> Self {
