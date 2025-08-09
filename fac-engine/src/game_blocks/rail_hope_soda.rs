@@ -1,8 +1,9 @@
 use crate::common::vpoint::VPoint;
 use crate::common::vpoint_direction::VPointDirectionQ;
 use crate::game_blocks::rail_hope::RailHopeLink;
-use crate::game_blocks::rail_hope_single::{HopeFactoRail, HopeLink, HopeLinkType};
+use crate::game_blocks::rail_hope_single::{HopeFactoRail, HopeLink, HopeLinkType, RailHopeSingle};
 use crate::game_entities::direction::FacDirectionQuarter;
+use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 
 /// Rail Dual v2 "Irys💎 Soda"
@@ -10,14 +11,14 @@ use std::borrow::Borrow;
 /// Define as a grid of "Soda" (aka block, but term is overloaded).
 /// Limited struct size as astar_mori makes 100,000s of these.
 /// Radically simpler movement API.
-#[derive(Eq, PartialEq, Hash, Clone)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Hash, Clone, Debug)]
 pub struct HopeSodaLink {
     stype: SodaType,
     source_direction: FacDirectionQuarter,
     center: VPoint,
 }
 
-#[derive(Eq, PartialEq, Hash, Clone, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Hash, Clone, Debug)]
 enum SodaType {
     Straight,
     Turn90 { clockwise: bool },
@@ -57,7 +58,7 @@ impl HopeSodaLink {
         }
     }
 
-    fn links_source(&self) -> [HopeLink; 2] {
+    pub fn links_source(&self) -> [HopeLink; 2] {
         let direction = match self.stype {
             SodaType::Straight => self.source_direction,
             SodaType::Turn90 { clockwise } => {

@@ -33,8 +33,8 @@ pub enum RailStationSide {}
 /// Rail onload/offload station
 pub struct FacBlkRailStation {
     pub name: String,
-    pub wagons: usize,
-    pub front_engines: usize,
+    pub wagons: u32,
+    pub front_engines: u32,
     pub delivery: FacExtDelivery,
     pub inserter: FacEntInserterType,
     pub fuel_inserter: Option<FacEntInserterType>,
@@ -202,8 +202,8 @@ impl FacBlkRailStation {
 }
 
 struct FacBlkRailStop {
-    wagons: usize,
-    front_engines: usize,
+    wagons: u32,
+    front_engines: u32,
     stop_rail_pos: VPoint,
     fill_x_direction: FacDirectionQuarter,
     rotation: bool,
@@ -237,7 +237,7 @@ impl FacBlkRailStop {
                         .stop_rail_pos
                         .move_direction_usz(
                             self.fill_x_direction,
-                            /*pre-pole*/ 1 + car_x_offset + exit,
+                            /*pre-pole*/ 1 + car_x_offset as usize + exit,
                         )
                         .move_y(centered_y_offset(negative, 1));
                     self.output
@@ -406,7 +406,7 @@ impl FacBlkRailStop {
             belt.add_turn90_stacked_row_ccw(i);
             belt.add_straight_underground(4);
             belt.add_turn90_stacked_row_clk(i, belt_num);
-            belt.add_straight(self.wagons - wagon_offset);
+            belt.add_straight(self.wagons as usize - wagon_offset);
         }
 
         let top = FacBlkBeltTrainUnload {
@@ -464,7 +464,7 @@ impl FacBlkRailStop {
     fn get_rolling_point_at_xy(
         &self,
         is_inside: bool,
-        roller: usize,
+        roller: u32,
         offset_x: i32,
         offset_y: i32,
     ) -> VPoint {
@@ -479,11 +479,11 @@ impl FacBlkRailStop {
     //     self.get_rolling_point_at_xy(roller + self.front_engines, offset_x, offset_y)
     // }
 
-    fn get_wagon_x_offset(&self, wagon: usize) -> usize {
+    fn get_wagon_x_offset(&self, wagon: u32) -> usize {
         let engine_first_offset = 6;
         let engine_rest_offset = self.front_engines.saturating_sub(1) * 7;
         let wagon_offset = wagon * 7;
-        engine_first_offset + engine_rest_offset + wagon_offset
+        (engine_first_offset + engine_rest_offset + wagon_offset) as usize
     }
 }
 

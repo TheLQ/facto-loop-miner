@@ -28,8 +28,8 @@ use super::{
 /// Thousands of lines of Rust all to place this.
 pub struct FacBlkRailLoop {
     name_prefix: String,
-    wagons: usize,
-    front_engines: usize,
+    wagons: u32,
+    front_engines: u32,
     hope: RailHopeDual,
     origin: VPoint,
     // is_start_set: bool,
@@ -225,8 +225,8 @@ impl FacBlkRailLoop {
 
 pub struct FacBlkRailLoopProps {
     pub name_prefix: String,
-    pub wagons: usize,
-    pub front_engines: usize,
+    pub wagons: u32,
+    pub front_engines: u32,
     pub origin: VPoint,
     pub origin_direction: FacDirectionQuarter,
     pub delivery_input: FacExtDelivery,

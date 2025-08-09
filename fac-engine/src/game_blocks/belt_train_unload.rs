@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use tracing::trace;
 
+use super::belt_bettel::FacBlkBettelBelt;
 use crate::{
     blueprint::output::{ContextLevel, FacItemOutput},
     common::vpoint::VPoint,
@@ -9,15 +10,13 @@ use crate::{
     util::bool_num::bool_to_num_usize,
 };
 
-use super::belt_bettel::FacBlkBettelBelt;
-
 pub struct FacBlkBeltTrainUnload {
     pub belt_type: FacEntBeltType,
-    pub wagons: usize,
+    pub wagons: u32,
     pub output: Rc<FacItemOutput>,
-    pub padding_unmerged: usize,
-    pub padding_above: usize,
-    pub padding_after: usize,
+    pub padding_unmerged: u32,
+    pub padding_above: u32,
+    pub padding_after: u32,
     pub turn_clockwise: bool,
     pub origin_direction: FacDirectionQuarter,
 }
@@ -28,14 +27,15 @@ pub struct FacBlkBeltTrainUnload {
 
 impl FacBlkBeltTrainUnload {
     pub fn generate(&self, origin: VPoint) -> Vec<FacBlkBettelBelt> {
-        const DUALS_PER_WAGON: usize = 3;
-        const BELTS_PER_DUAL: usize = 2;
+        const DUALS_PER_WAGON: u32 = 3;
+        const BELTS_PER_DUAL: u32 = 2;
         // const BELTS_PER_WAGON: usize = DUALS_PER_WAGON * BELTS_PER_DUAL;
-        const WAGON_SIZE: usize = 7;
+        const WAGON_SIZE: u32 = 7;
 
         let mut belts = Vec::new();
         for wagon in 0..self.wagons {
-            let origin = origin.move_direction_sideways_usz(self.origin_direction, wagon * 7);
+            let origin =
+                origin.move_direction_sideways_usz(self.origin_direction, wagon as usize * 7);
             for output_belt in 0..DUALS_PER_WAGON {
                 let _ = &mut self.output.context_handle(
                     ContextLevel::Micro,
@@ -67,8 +67,8 @@ impl FacBlkBeltTrainUnload {
                     + (wagon * WAGON_SIZE)
                 };
 
-                let one_belt_origin =
-                    origin.move_direction_sideways_usz(self.origin_direction, 2 * output_belt);
+                let one_belt_origin = origin
+                    .move_direction_sideways_usz(self.origin_direction, (2 * output_belt) as usize);
                 trace!("one_belt from origin {origin} to {one_belt_origin}");
                 let merged_height = self.padding_above + turn_offset + wagon_offset;
                 let mut one_belt =
@@ -79,7 +79,7 @@ impl FacBlkBeltTrainUnload {
                         .output
                         .context_handle(ContextLevel::Micro, format!("Finish-{finish_straights}"));
                     one_belt.add_turn90(self.turn_clockwise);
-                    one_belt.add_straight(finish_straights);
+                    one_belt.add_straight(finish_straights as usize);
                 }
                 belts.push(one_belt);
             }
@@ -90,8 +90,8 @@ impl FacBlkBeltTrainUnload {
     fn add_dual_to_one(
         &self,
         origin: VPoint,
-        unmerged_height: usize,
-        merged_height: usize,
+        unmerged_height: u32,
+        merged_height: u32,
     ) -> FacBlkBettelBelt {
         let _ = &mut self.output.context_handle(
             ContextLevel::Micro,
@@ -113,7 +113,7 @@ impl FacBlkBeltTrainUnload {
         ];
 
         for belt in belts.iter_mut() {
-            belt.add_straight(unmerged_height + 1);
+            belt.add_straight(unmerged_height as usize + 1);
         }
 
         let clockwise = true;
@@ -125,7 +125,7 @@ impl FacBlkBeltTrainUnload {
             let [belt0, belt1] = belts;
             if clockwise { belt1 } else { belt0 }
         };
-        remaining_belt.add_straight(merged_height);
+        remaining_belt.add_straight(merged_height as usize);
         remaining_belt
     }
 }
