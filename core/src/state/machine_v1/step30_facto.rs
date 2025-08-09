@@ -12,6 +12,7 @@ use facto_loop_miner_fac_engine::admiral::lua_command::fac_destroy::FacDestroy;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::entity::FacEntity;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
+use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::game_blocks::block::FacBlock2;
 use facto_loop_miner_fac_engine::game_blocks::mine_ore::FacBlkMineOre;
@@ -23,6 +24,8 @@ use facto_loop_miner_fac_engine::game_entities::infinity_power::FacEntInfinityPo
 use facto_loop_miner_fac_engine::game_entities::rail_signal::FacEntRailSignalType;
 use itertools::Itertools;
 use std::rc::Rc;
+use strum::VariantArray;
+use tracing::info;
 
 pub(crate) struct Step30;
 
@@ -69,6 +72,21 @@ fn plotter(surface: &VSurface, output: Rc<FacItemOutput>) -> AdmiralResult<()> {
 
     destroy_mine_area(&needle_path.mine_base, 20, &output)?;
 
+    let actual_area = VArea::from_arbitrary_points(
+        needle_path
+            .mine_base
+            .surface_patches(surface)
+            .flat_map(|v| &v.pixel_indexes),
+    );
+    info!(
+        "DIFF start {}",
+        actual_area.point_top_left() - needle_path.mine_base.area_min().point_top_left()
+    );
+    info!(
+        "DIFF end   {}",
+        actual_area.point_bottom_right() - needle_path.mine_base.area_min().point_bottom_right()
+    );
+
     // output.writei(
     //     FacEntChest::new(FacEntChestType::Wood),
     //     needle_path.mine_base.area_min().point_center(),
@@ -85,12 +103,23 @@ fn plotter(surface: &VSurface, output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     FacBlkMineOre {
         ore_points: patch.pixel_indexes.clone(),
         exit_clockwise: true,
-        exit_direction: FacDirectionQuarter::North,
+        exit_direction: FacDirectionQuarter::South,
         belt: FacEntBeltType::Basic,
         drill_modules: [None, None, None],
         output,
     }
     .generate();
+    // for direct in FacDirectionQuarter::VARIANTS {
+    //     FacBlkMineOre {
+    //         ore_points: patch.pixel_indexes.clone(),
+    //         exit_clockwise: true,
+    //         exit_direction: *direct,
+    //         belt: FacEntBeltType::Basic,
+    //         drill_modules: [None, None, None],
+    //         output: output.clone(),
+    //     }
+    //     .generate();
+    // }
 
     Ok(())
 }
@@ -116,7 +145,9 @@ fn destroy_mine_area(
             FacEntityName::BeltUnder(FacEntBeltType::Fast),
             FacEntityName::BeltUnder(FacEntBeltType::Express),
             FacEntityName::ElectricMini(FacEntElectricMiniType::Medium),
+            //
             FacEntityName::InfinityPower,
+            FacEntityName::Chest(FacEntChestType::Active),
         ]
         .to_vec(),
     );

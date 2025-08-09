@@ -110,9 +110,9 @@ impl FacBlkMineOre {
                     );
                     last_column_head = Some((column_head, cell_column));
 
-                    if always_true_test() {
-                        break 'row;
-                    }
+                    // if always_true_test() {
+                    //     break 'row;
+                    // }
                 }
             }
 
@@ -159,6 +159,7 @@ impl FacBlkMineOre {
         assert_ne!(straight_distance, 0, "belt going 0 distance");
 
         // first pole outside of neatly spaced belt ones
+        // todo: this is horrible magic
         if (straight_distance) % 9 > /*magic tuning*/2 {
             self.output.write(BlueprintItem::new(
                 FacEntElectricMini::new(FacEntElectricMiniType::Medium).into_boxed(),
