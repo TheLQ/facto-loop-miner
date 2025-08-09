@@ -155,12 +155,12 @@ impl<T: SquareArea> FacArea for T {
 #[macro_export]
 macro_rules! impl_square_area_const {
     ($target:ident, $diameter:literal) => {
-        impl SquareAreaConst for $target {
+        impl $crate::common::entity::SquareAreaConst for $target {
             const DIAMETER: usize = $diameter;
         }
 
         /// todo workaround shouldn't be needed
-        impl SquareArea for $target {
+        impl $crate::common::entity::SquareArea for $target {
             fn area_diameter() -> usize {
                 $diameter
             }

@@ -1,5 +1,5 @@
 use super::{belt_bettel::FacBlkBettelBelt, block::FacBlock2};
-use crate::common::entity::{FacArea, SquareArea};
+use crate::common::entity::{FacArea, SquareArea, SquareAreaConst};
 use crate::common::varea::VArea;
 use crate::common::vpoint::VPOINT_THREE;
 use crate::game_entities::belt_transport::FacEntBeltTransport;
@@ -19,6 +19,8 @@ use crate::{
 use facto_loop_miner_common::util::always_true_test;
 use std::rc::Rc;
 use tracing::trace;
+
+const ROW_DEPTH: usize = (FacEntMiningDrillElectric::DIAMETER * 2) + FacEntBeltTransport::DIAMETER;
 
 pub struct FacBlkMineOre {
     pub ore_points: Vec<VPoint>,
@@ -41,12 +43,8 @@ impl FacBlkMineOre {
 
         let mut belts: Vec<FacBlkBettelBelt> = Vec::new();
         'outer: for cell_row in 0.. {
-            let row_head = origin.move_direction_sideways_usz(
-                self.exit_direction,
-                cell_row
-                    * ((FacEntMiningDrillElectric::area_diameter() * 2)
-                        + FacEntBeltTransport::area_diameter()),
-            );
+            let row_head =
+                origin.move_direction_sideways_usz(self.exit_direction, cell_row * ROW_DEPTH);
             if !build_area.contains_point(&row_head) {
                 break;
             }
@@ -56,7 +54,7 @@ impl FacBlkMineOre {
             'row: for cell_column in 0.. {
                 let column_head = row_head.move_direction_usz(
                     self.exit_direction.rotate_flip(),
-                    cell_column * FacEntMiningDrillElectric::area_diameter(),
+                    cell_column * FacEntMiningDrillElectric::DIAMETER,
                 );
                 if !build_area.contains_point(&column_head) {
                     break;
@@ -66,8 +64,7 @@ impl FacBlkMineOre {
                 for (corner_start_steps, drill_flip) in [
                     (0, false),
                     (
-                        FacEntMiningDrillElectric::area_diameter()
-                            + FacEntBeltTransport::area_diameter(),
+                        FacEntMiningDrillElectric::DIAMETER + FacEntBeltTransport::DIAMETER,
                         true,
                     ),
                 ] {
@@ -76,11 +73,11 @@ impl FacBlkMineOre {
                     let corner_end = corner_start
                         .move_direction_usz(
                             self.exit_direction.rotate_flip(),
-                            FacEntMiningDrillElectric::area_diameter(),
+                            FacEntMiningDrillElectric::DIAMETER,
                         )
                         .move_direction_sideways_usz(
                             self.exit_direction,
-                            FacEntMiningDrillElectric::area_diameter(),
+                            FacEntMiningDrillElectric::DIAMETER,
                         );
 
                     const DRILL_FOR_ORE_PIXELS_MINIMUM: usize = 4;
@@ -126,7 +123,7 @@ impl FacBlkMineOre {
                         .move_direction_sideways_usz(self.exit_direction, 3)
                         // move belt start from top of drill to middle of drill
                         .move_direction_usz(self.exit_direction.rotate_flip(), 2),
-                    (cell_column + /*total*/1) * FacEntMiningDrillElectric::area_diameter(),
+                    (cell_column + /*total*/1) * FacEntMiningDrillElectric::DIAMETER,
                 );
                 belts.push(belt);
                 // self.output.writei(
@@ -150,7 +147,7 @@ impl FacBlkMineOre {
         for (i, belt) in belts.iter_mut().enumerate() {
             belt.add_straight(i);
             belt.add_turn90(self.exit_clockwise);
-            belt.add_straight(i * 7);
+            belt.add_straight(i * ROW_DEPTH);
         }
 
         self.output.flush();

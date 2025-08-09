@@ -1,4 +1,6 @@
 use crate::blueprint::bpfac::position::FacBpPosition;
+use crate::common::entity::SquareAreaConst;
+use crate::common::varea::VArea;
 use crate::err::{FError, FResult};
 use crate::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use crate::game_entities::direction::FacDirectionQuarter;
@@ -363,13 +365,13 @@ impl VPoint {
     ///    ██
     /// ██ ██ ██
     /// FacPos Y is 10.5, 10.0, 10.5
-    /// VPoint Y is 10,   09,   10
+    /// VPoint Y is 10,    9,   10
     ///
     ///
-    /// In VPoint Integer, we must "if flip add_one else add_zero" which is... annoying
-    /// In VPoint converted float, (10 - 0.5).floor() = 9 (good), but (10 + 0.5).floor(10)
+    /// In Integer, we must "if flip add_one else add_zero" which is... annoying
     ///
-    /// In float we can consistently add or subtract 0.5 then backconvert to VPoint
+    /// In Float, we can (10 - 0.5).floor() = 9 (good) and (10 + 0.5).floor() = 10
+    /// Consistently add or subtract 0.5 is easier, then backconvert to float
     pub fn move_factorio_style_direction(
         &self,
         direction: FacDirectionQuarter,
@@ -377,6 +379,20 @@ impl VPoint {
     ) -> Self {
         self.to_fac_exact()
             .move_direction_and_vpoint_floor(direction, steps)
+    }
+
+    /// "Why Factorio uses floats" v2
+    ///
+    /// When using direction based building, we get confused as different directions cause
+    /// stacking off by 1 errors
+    pub fn move_alloc<T: SquareAreaConst>(&self, direction: FacDirectionQuarter) -> Self {
+        VArea::from_arbitrary_points_pair(
+            self,
+            &self
+                .move_direction_usz(direction, T::DIAMETER)
+                .move_direction_sideways_usz(direction, T::DIAMETER),
+        )
+        .point_top_left()
     }
 
     // pub fn move_direction_corrected(

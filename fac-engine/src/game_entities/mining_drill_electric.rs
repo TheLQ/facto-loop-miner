@@ -1,17 +1,18 @@
-use crate::{
-    common::{
-        entity::{FacEntity, SquareArea, unwrap_options_to_option_vec},
-        names::FacEntityName,
-    },
-    def_entity_name,
-};
-
 use super::{
     direction::{FacDirectionEighth, FacDirectionQuarter},
     module::FacModule,
 };
+use crate::common::entity::SquareAreaConst;
+use crate::{
+    common::{
+        entity::{FacEntity, unwrap_options_to_option_vec},
+        names::FacEntityName,
+    },
+    def_entity_name, impl_square_area_const,
+};
 
-pub const ELECTRIC_DRILL_SIZE: usize = 3;
+#[deprecated]
+pub const ELECTRIC_DRILL_SIZE: usize = FacEntMiningDrillElectric::DIAMETER;
 
 #[derive(Debug)]
 pub struct FacEntMiningDrillElectric {
@@ -31,11 +32,7 @@ impl FacEntity for FacEntMiningDrillElectric {
     }
 }
 
-impl SquareArea for FacEntMiningDrillElectric {
-    fn area_diameter() -> usize {
-        ELECTRIC_DRILL_SIZE
-    }
-}
+impl_square_area_const!(FacEntMiningDrillElectric, 3);
 
 impl FacEntMiningDrillElectric {
     pub fn new(direction: FacDirectionQuarter) -> Self {
