@@ -135,21 +135,37 @@ pub trait SquareArea {
     fn area_diameter() -> usize;
 }
 
-impl<T: SquareArea> FacArea for T {
-    // fn area(&self) -> Vec<VPoint> {
-    //     let diameter = T::area_diameter();
-    //     let mut res = vec![VPoint::zero(); diameter];
-    //     for x in 0..diameter {
-    //         for y in 0..diameter {
-    //             res[y * diameter + x] = VPoint::new_usize(x, y)
-    //         }
-    //     }
-    //     res
-    // }
+pub trait SquareAreaConst {
+    const DIAMETER: usize;
+}
 
+impl<T: SquareArea> FacArea for T {
     fn rectangle_size(&self) -> Size {
         Size::square(T::area_diameter())
     }
+}
+
+// todo: double trait impl, use macro instead
+// impl<T: SquareAreaConst> FacArea for T {
+//     fn rectangle_size(&self) -> Size {
+//         Size::square(T::DIAMETER)
+//     }
+// }
+
+#[macro_export]
+macro_rules! impl_square_area_const {
+    ($target:ident, $diameter:literal) => {
+        impl SquareAreaConst for $target {
+            const DIAMETER: usize = $diameter;
+        }
+
+        /// todo workaround shouldn't be needed
+        impl SquareArea for $target {
+            fn area_diameter() -> usize {
+                $diameter
+            }
+        }
+    };
 }
 
 pub fn unwrap_options_to_option_vec<T: Clone>(input: &[Option<T>]) -> Option<Vec<T>> {

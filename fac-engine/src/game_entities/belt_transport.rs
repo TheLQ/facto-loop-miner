@@ -1,12 +1,13 @@
-use crate::common::{
-    entity::{FacEntity, SquareArea},
-    names::FacEntityName,
-};
-
 use super::{
     belt::FacEntBeltType,
     direction::{FacDirectionEighth, FacDirectionQuarter},
 };
+use crate::common::entity::SquareAreaConst;
+use crate::common::{
+    entity::{FacEntity, SquareArea},
+    names::FacEntityName,
+};
+use crate::impl_square_area_const;
 
 #[derive(Debug)]
 pub struct FacEntBeltTransport {
@@ -24,11 +25,7 @@ impl FacEntity for FacEntBeltTransport {
     }
 }
 
-impl SquareArea for FacEntBeltTransport {
-    fn area_diameter() -> usize {
-        1
-    }
-}
+impl_square_area_const!(FacEntBeltTransport, 1);
 
 impl FacEntBeltTransport {
     pub fn new(btype: FacEntBeltType, direction: FacDirectionQuarter) -> Self {
