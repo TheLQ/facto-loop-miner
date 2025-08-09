@@ -39,11 +39,10 @@ pub struct FacBlkRailStation {
     pub inserter: FacEntInserterType,
     pub fuel_inserter: Option<FacEntInserterType>,
     pub fuel_inserter_chest: Option<FacEntChestType>,
-    pub schedule: Option<FacBpSchedule>,
     pub is_east: bool,
     pub is_up: bool,
     pub is_input: bool,
-    pub is_create_train: bool,
+    pub place_train: Option<Option<FacBpSchedule>>,
     pub is_electric_initial: bool,
     pub output: Rc<FacItemOutput>,
 }
@@ -168,10 +167,10 @@ impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
             hope.add_straight(base_straight + /*opposite of 45*/13);
         }
 
-        if self.is_create_train {
+        if let Some(schedule) = &self.place_train {
             // rails beneath must be placed already
             // otherwise it supposedly creates but doesn't show visually at least
-            stop_block.place_train(&self.schedule);
+            stop_block.place_train(&schedule);
         }
 
         belts.unwrap_or_default()

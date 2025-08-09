@@ -110,9 +110,8 @@ impl FacBlkRailLoop {
             is_east: true,
             is_up: true,
             is_input,
-            is_create_train: is_input,
             is_electric_initial: false,
-            schedule: Some(self.new_schedule()),
+            place_train: Some(Some(self.new_schedule())),
             output: self.output.clone(),
         };
 
@@ -146,11 +145,10 @@ impl FacBlkRailLoop {
             inserter: self.inserter_type,
             fuel_inserter: None,
             fuel_inserter_chest: None,
-            schedule: None,
+            place_train: None,
             is_east: true,
             is_up: true,
             is_input,
-            is_create_train: is_input,
             is_electric_initial: false,
             output: self.output.clone(),
         };

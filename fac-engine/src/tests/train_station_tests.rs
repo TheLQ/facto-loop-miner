@@ -36,9 +36,8 @@ pub fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         is_up: true,
         // is_up: false,
         is_input: true,
-        is_create_train: true,
         is_electric_initial: true,
-        schedule: Some(FacBpSchedule {
+        place_train: Some(Some(FacBpSchedule {
             locomotives: Vec::new(),
             schdata: [
                 FacBpScheduleData {
@@ -76,7 +75,7 @@ pub fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
                 },
             ]
             .into(),
-        }),
+        })),
         output,
     };
     let belts = station.generate(VPOINT_ZERO);
