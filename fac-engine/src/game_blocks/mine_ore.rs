@@ -2,6 +2,7 @@ use super::{belt_bettel::FacBlkBettelBelt, block::FacBlock2};
 use crate::common::entity::{FacArea, SquareArea, SquareAreaConst};
 use crate::common::varea::VArea;
 use crate::common::vpoint::VPOINT_THREE;
+use crate::game_blocks::block::FacBlockFancy;
 use crate::game_entities::belt_transport::FacEntBeltTransport;
 use crate::game_entities::chest::{FacEntChest, FacEntChestType};
 use crate::game_entities::electric_mini::FacEntElectricMini;
@@ -31,8 +32,8 @@ pub struct FacBlkMineOre {
     pub output: Rc<FacItemOutput>,
 }
 
-impl FacBlkMineOre {
-    pub fn generate(&self) -> Vec<FacBlkBettelBelt> {
+impl FacBlockFancy<Vec<FacBlkBettelBelt>> for FacBlkMineOre {
+    fn generate(&self) -> Vec<FacBlkBettelBelt> {
         let build_area = VArea::from_arbitrary_points(&self.ore_points).normalize_3x3();
         let origin = match self.exit_direction {
             FacDirectionQuarter::North => build_area.point_top_left(),
@@ -154,7 +155,9 @@ impl FacBlkMineOre {
 
         belts
     }
+}
 
+impl FacBlkMineOre {
     fn place_inner_belt(&self, origin: VPoint, straight_distance: usize) -> FacBlkBettelBelt {
         assert_ne!(straight_distance, 0, "belt going 0 distance");
 

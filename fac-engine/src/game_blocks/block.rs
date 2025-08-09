@@ -7,3 +7,7 @@ pub trait FacBlock {
 pub trait FacBlock2<R> {
     fn generate(&self, origin: VPoint) -> R;
 }
+
+pub trait FacBlockFancy<R> {
+    fn generate(&self) -> R;
+}
