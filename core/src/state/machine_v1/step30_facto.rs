@@ -1,7 +1,7 @@
 use crate::navigator::planners::{debug_draw_mine_index_labels, debug_draw_mine_links};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
-use crate::surfacev::mine::MineLocation;
+use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::VSurface;
 use facto_loop_miner_common::err_bt::PrettyUnwrapMyBacktrace;
 use facto_loop_miner_fac_engine::admiral::err::AdmiralResult;
@@ -23,6 +23,7 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use facto_loop_miner_fac_engine::game_entities::electric_large::FacEntElectricLargeType;
 use facto_loop_miner_fac_engine::game_entities::electric_mini::FacEntElectricMiniType;
 use facto_loop_miner_fac_engine::game_entities::infinity_power::FacEntInfinityPower;
+use facto_loop_miner_fac_engine::game_entities::inserter::FacEntInserterType;
 use facto_loop_miner_fac_engine::game_entities::rail_signal::FacEntRailSignalType;
 use itertools::Itertools;
 use std::rc::Rc;
@@ -46,7 +47,11 @@ impl Step for Step30 {
         let mut surface = VSurface::load_from_last_step(&params)?;
 
         let output = connect_admiral().pretty_unwrap();
-        plotter(&mut surface, output).unwrap();
+
+        let needle_path = surface.get_mine_paths()[13].clone();
+        plotter(&mut surface, output.clone(), &needle_path).unwrap();
+
+        output.flush();
 
         Ok(())
     }
@@ -69,10 +74,13 @@ fn plotter_initial(surface: &mut VSurface) {
     surface.paint_pixel_colored_zoomed().save_to_oculante();
 }
 
-fn plotter(surface: &VSurface, output: Rc<FacItemOutput>) -> AdmiralResult<()> {
-    let needle_path = surface.get_mine_paths()[13].clone();
-
-    destroy_mine_area(&needle_path.mine_base, 20, &output)?;
+fn plotter(
+    surface: &VSurface,
+    output: Rc<FacItemOutput>,
+    needle_path: &MinePath,
+) -> AdmiralResult<()> {
+    // destroy_mine_area(&needle_path.mine_base, 20, &output)?;
+    destroy_everything(surface, &output)?;
 
     let actual_area = VArea::from_arbitrary_points(
         needle_path
@@ -102,15 +110,16 @@ fn plotter(surface: &VSurface, output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         FacEntInfinityPower::new(),
         patch.area.point_top_left() + VPoint::new(0, 20),
     );
-    FacBlkMineOre {
-        ore_points: patch.pixel_indexes.clone(),
-        exit_clockwise: true,
-        exit_direction: FacDirectionQuarter::South,
-        belt: FacEntBeltType::Basic,
-        drill_modules: [None, None, None],
-        output,
-    }
-    .generate();
+
+    // FacBlkMineOre {
+    //     ore_points: patch.pixel_indexes.clone(),
+    //     exit_clockwise: true,
+    //     exit_direction: FacDirectionQuarter::South,
+    //     belt: FacEntBeltType::Basic,
+    //     drill_modules: [None, None, None],
+    //     output,
+    // }
+    // .generate();
     // for direct in FacDirectionQuarter::VARIANTS {
     //     FacBlkMineOre {
     //         ore_points: patch.pixel_indexes.clone(),
@@ -122,6 +131,22 @@ fn plotter(surface: &VSurface, output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     //     }
     //     .generate();
     // }
+
+    FacBlkMineIsland {
+        rail_entrance_link: needle_path.sodas.last().unwrap().clone(),
+        wagons: 3,
+        front_engines: 3,
+        drill_modules: [None, None, None],
+        belt: FacEntBeltType::Basic,
+        inserter: FacEntInserterType::Basic,
+        mines: needle_path
+            .mine_base
+            .surface_patches(surface)
+            .map(|v| v.pixel_indexes.clone())
+            .collect(),
+        output: output.clone(),
+    }
+    .generate();
 
     Ok(())
 }
