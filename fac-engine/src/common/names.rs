@@ -110,6 +110,116 @@ impl FacEntityName {
     }
 }
 
+pub struct FacEntityNameBuilder {
+    names: Vec<FacEntityName>,
+}
+
+impl FacEntityNameBuilder {
+    pub fn new() -> Self {
+        Self { names: Vec::new() }
+    }
+
+    pub fn into_vec(self) -> Vec<FacEntityName> {
+        self.names
+    }
+
+    //
+
+    pub fn new_all() -> Self {
+        Self::new()
+            .with_electric()
+            .with_belts()
+            .with_rail()
+            .with_chests()
+            .with_drill()
+            .with_inserters()
+    }
+
+    //
+
+    const fn group_electric() -> [FacEntityName; 5] {
+        [
+            FacEntityName::ElectricMini(FacEntElectricMiniType::Small),
+            FacEntityName::ElectricMini(FacEntElectricMiniType::Medium),
+            FacEntityName::ElectricLarge(FacEntElectricLargeType::Big),
+            FacEntityName::ElectricLarge(FacEntElectricLargeType::Substation),
+            FacEntityName::InfinityPower,
+        ]
+    }
+
+    pub fn with_electric(mut self) -> Self {
+        self.names.extend(Self::group_electric());
+        self
+    }
+
+    //
+
+    const fn group_belts() -> [FacEntityName; 9] {
+        [
+            FacEntityName::BeltTransport(FacEntBeltType::Basic),
+            FacEntityName::BeltTransport(FacEntBeltType::Fast),
+            FacEntityName::BeltTransport(FacEntBeltType::Express),
+            FacEntityName::BeltUnder(FacEntBeltType::Basic),
+            FacEntityName::BeltUnder(FacEntBeltType::Fast),
+            FacEntityName::BeltUnder(FacEntBeltType::Express),
+            FacEntityName::BeltSplit(FacEntBeltType::Basic),
+            FacEntityName::BeltSplit(FacEntBeltType::Fast),
+            FacEntityName::BeltSplit(FacEntBeltType::Express),
+        ]
+    }
+
+    pub fn with_belts(mut self) -> Self {
+        self.names.extend(Self::group_belts());
+        self
+    }
+
+    //
+
+    const fn group_rail() -> [FacEntityName; 5] {
+        [
+            FacEntityName::RailStraight,
+            FacEntityName::RailCurved,
+            FacEntityName::RailSignal(FacEntRailSignalType::Basic),
+            FacEntityName::RailSignal(FacEntRailSignalType::Chain),
+            FacEntityName::TrainStop,
+        ]
+    }
+
+    pub fn with_rail(mut self) -> Self {
+        self.names.extend(Self::group_rail());
+        self
+    }
+
+    // -- exhaustive generators
+
+    fn group_chests() -> impl Iterator<Item = FacEntityName> {
+        FacEntChestType::iter_exhaustive(None).map(FacEntityName::Chest)
+    }
+
+    pub fn with_chests(mut self) -> Self {
+        self.names.extend(Self::group_chests());
+        self
+    }
+
+    //
+
+    fn group_inserters() -> impl Iterator<Item = FacEntityName> {
+        FacEntInserterType::iter_exhaustive(None).map(FacEntityName::Inserter)
+    }
+
+    pub fn with_inserters(mut self) -> Self {
+        self.names.extend(Self::group_inserters());
+        self
+    }
+
+    // -- misc singles
+
+    pub fn with_drill(mut self) -> Self {
+        self.names.push(FacEntityName::ElectricMiningDrill);
+        self
+    }
+}
+
 // macro_rules! all_factory {
 //     ($($enum_name: expr_2021, $to_string: literal),+) => {
 //         /*const*/ fn to_facto_name_inner(&self) -> &'static str {

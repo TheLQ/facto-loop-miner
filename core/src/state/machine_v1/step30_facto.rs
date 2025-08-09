@@ -11,14 +11,16 @@ use facto_loop_miner_fac_engine::admiral::lua_command::LuaCommand;
 use facto_loop_miner_fac_engine::admiral::lua_command::fac_destroy::FacDestroy;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::entity::FacEntity;
-use facto_loop_miner_fac_engine::common::names::FacEntityName;
+use facto_loop_miner_fac_engine::common::names::{FacEntityName, FacEntityNameBuilder};
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::game_blocks::block::FacBlock2;
+use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
+use facto_loop_miner_fac_engine::game_blocks::block::{FacBlock2, FacBlockFancy};
+use facto_loop_miner_fac_engine::game_blocks::mine_island::FacBlkMineIsland;
 use facto_loop_miner_fac_engine::game_blocks::mine_ore::FacBlkMineOre;
 use facto_loop_miner_fac_engine::game_entities::belt::FacEntBeltType;
 use facto_loop_miner_fac_engine::game_entities::chest::{FacEntChest, FacEntChestType};
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
+use facto_loop_miner_fac_engine::game_entities::electric_large::FacEntElectricLargeType;
 use facto_loop_miner_fac_engine::game_entities::electric_mini::FacEntElectricMiniType;
 use facto_loop_miner_fac_engine::game_entities::infinity_power::FacEntInfinityPower;
 use facto_loop_miner_fac_engine::game_entities::rail_signal::FacEntRailSignalType;
@@ -124,6 +126,17 @@ fn plotter(surface: &VSurface, output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     Ok(())
 }
 
+fn destroy_everything(
+    surface: &VSurface,
+    output: &FacItemOutput,
+) -> AdmiralResult<ExecuteResponse> {
+    let command = FacDestroy::new_filtered_entities_area(
+        VArea::from_arbitrary_points_pair(VPOINT_ZERO, surface.point_bottom_right()),
+        FacEntityNameBuilder::new_all().into_vec(),
+    );
+    output.admiral_execute_command(command.into_boxed())
+}
+
 fn destroy_mine_area(
     mine: &MineLocation,
     margin: i32,
@@ -131,25 +144,7 @@ fn destroy_mine_area(
 ) -> AdmiralResult<ExecuteResponse> {
     let command = FacDestroy::new_filtered_entities_area(
         mine.area_min().expand_margin(margin),
-        [
-            FacEntityName::RailStraight,
-            FacEntityName::RailCurved,
-            FacEntityName::RailSignal(FacEntRailSignalType::Basic),
-            //
-            FacEntityName::ElectricMiningDrill,
-            FacEntityName::ElectricMini(FacEntElectricMiniType::Small),
-            FacEntityName::BeltTransport(FacEntBeltType::Basic),
-            FacEntityName::BeltTransport(FacEntBeltType::Fast),
-            FacEntityName::BeltTransport(FacEntBeltType::Express),
-            FacEntityName::BeltUnder(FacEntBeltType::Basic),
-            FacEntityName::BeltUnder(FacEntBeltType::Fast),
-            FacEntityName::BeltUnder(FacEntBeltType::Express),
-            FacEntityName::ElectricMini(FacEntElectricMiniType::Medium),
-            //
-            FacEntityName::InfinityPower,
-            FacEntityName::Chest(FacEntChestType::Active),
-        ]
-        .to_vec(),
+        FacEntityNameBuilder::new_all().into_vec(),
     );
     output.admiral_execute_command(command.into_boxed())
 }
