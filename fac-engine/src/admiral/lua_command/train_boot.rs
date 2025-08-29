@@ -19,7 +19,7 @@ pub fn train_boot(area: VArea, output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         for _,train in pairs({DEFAULT_SURFACE_VAR}.get_trains()) do
             engine = train.carriages[1]
             found_pos = found_pos .. "found " .. engine.position.x .. "{C_BLOCK_LINE}" .. engine.position.x .. " "   
-            if engine.position.x >= {start_x} and engine.position.x <= {end_x} and engine.position.y >= {start_y} and engine.position.x <= {end_y} then
+            if engine.position.x >= {start_x} and engine.position.x <= {end_x} and engine.position.y >= {start_y} and engine.position.y <= {end_y} then
                 is_found = true
                 train.manual_mode = false
             end
