@@ -5,15 +5,37 @@ use crate::common::vpoint::PSugar;
 
 #[derive(Debug)]
 pub struct FacRenderText {
-    pub text: String,
-    pub color: Option<[u8; 3]>,
-    pub pos: FacBpPosition,
+    text: String,
+    pos: FacBpPosition,
+    color: Option<[u8; 3]>,
+    scale: Option<f32>,
+}
+
+impl FacRenderText {
+    pub fn text(input: impl Into<String>, pos: FacBpPosition) -> Self {
+        let text = input.into();
+        assert!(!text.is_empty());
+        Self {
+            text,
+            pos,
+            color: None,
+            scale: None,
+        }
+    }
+
+    pub fn with_color(mut self, color: [u8; 3]) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    pub fn with_scale(mut self, scale: f32) -> Self {
+        self.scale = Some(scale);
+        self
+    }
 }
 
 impl LuaCommand for FacRenderText {
     fn make_lua(&self) -> String {
-        assert!(!self.text.is_empty());
-
         let PSugar { x, y } = self.pos.sugar();
         let text = &self.text;
         let [r, g, b] = self.color.unwrap_or([1, 1, 1]);
@@ -22,6 +44,7 @@ impl LuaCommand for FacRenderText {
             .arg("target", format!("{{ {x}, {y} }}"))
             .arg("text", format!(r#""{text}""#))
             .arg("color", format!("{{ r={r},g={g},b={b} }}"))
+            .arg_maybe("scale", self.scale, |v| v.to_string())
             .build()
     }
 }

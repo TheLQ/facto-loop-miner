@@ -18,12 +18,14 @@ use crate::{
     },
 };
 use enum_map::EnumMap;
+use itertools::Itertools;
 use std::{cell::RefCell, rc::Rc};
 use tracing::{debug, trace};
 use unicode_segmentation::UnicodeSegmentation;
 
+const FLAG_ENABLE_RENDER_TEXT: bool = true;
 const FLAG_ENABLE_LINE_REWRITE: bool = false;
-const CACHE_SIZE: usize = 1;
+const CACHE_SIZE: usize = 9898989;
 
 /// Middleware between entity output and blueprint/lua output
 /// Instead of generating everything "post", obscuring errors and logic
@@ -106,19 +108,8 @@ impl FacItemOutput {
             item.position(),
             blueprint.position,
         );
-
-        let local_context_map = odata.contexts.context_map.clone();
-        for block in local_context_map[ContextLevel::Block].iter().clone() {
-            let mut text = block.clone();
-            text.truncate(4);
-
-            odata.write(FacItemOutputWrite::RenderText {
-                render: FacRenderText {
-                    pos: item.position().to_fac_exact(),
-                    color: None,
-                    text,
-                },
-            })
+        if FLAG_ENABLE_RENDER_TEXT {
+            Self::render_context(&mut odata, &item);
         }
 
         Self::log_write(&mut odata.contexts, item_debug, message_pos);
@@ -228,6 +219,60 @@ impl FacItemOutput {
             println!("{message_entity}");
         } else {
             debug!("{message_pos} {message_entity} {message_context} {total_progress}",);
+        }
+    }
+
+    fn render_context(odata: &mut FacItemOutputData, item: &BlueprintItem) {
+        const MAX_LINE_LEN: usize = 15;
+
+        let mut line_num = 0;
+        let local_context_map = odata.contexts.context_map.clone();
+        for (level, blocks) in local_context_map {
+            let color = match level {
+                ContextLevel::Block => [19, 161, 14],
+                ContextLevel::Micro => [19, 171, 146],
+            };
+            for block in blocks {
+                // let mut text = block.clone();
+                // text.truncate(4);
+
+                let mut lines = block
+                    .split("-")
+                    .filter(|v| !v.is_empty())
+                    .map(str::to_string)
+                    .collect_vec();
+                for i in (0..lines.len()).rev() {
+                    if let Some(next) = lines.get(i + 1)
+                        && next.parse::<u32>().is_ok()
+                    {
+                        lines[i] = [&lines[i], "-", next].concat();
+                        lines.remove(i + 1);
+                    }
+                }
+                for i in (0..lines.len()).rev() {
+                    let cur = &lines[i];
+                    if let Some(next) = lines.get(i + 1)
+                        && next.len() + cur.len() < MAX_LINE_LEN
+                    {
+                        lines[i] = [cur, "-", next].concat();
+                        lines.remove(i + 1);
+                    }
+                }
+
+                for line in lines {
+                    odata.write(FacItemOutputWrite::RenderText {
+                        render: FacRenderText::text(
+                            line,
+                            item.position()
+                                .to_fac_exact()
+                                .move_y(0.25 * (line_num as f32)),
+                        )
+                        .with_scale(0.5)
+                        .with_color(color),
+                    });
+                    line_num += 1;
+                }
+            }
         }
     }
 

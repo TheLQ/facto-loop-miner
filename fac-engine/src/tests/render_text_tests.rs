@@ -22,28 +22,26 @@ pub fn make_render_text(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     );
 
     let sep = 0.25;
+
     output.admiral_execute_command(
-        FacRenderText {
-            text: "this_is_test".into(),
-            color: None,
-            pos: FacBpPosition::new(5.0, 0.0 + (sep * 0.0)),
-        }
+        FacRenderText::text(
+            "this_is_test", //
+            FacBpPosition::new(5.0, 0.0 + (sep * 0.0)),
+        )
         .into_boxed(),
     )?;
     output.admiral_execute_command(
-        FacRenderText {
-            text: "under".into(),
-            color: None,
-            pos: FacBpPosition::new(5.0, 0.0 + (sep * 1.0)),
-        }
+        FacRenderText::text(
+            "this is string", //
+            FacBpPosition::new(5.0, 0.0 + (sep * 1.0)),
+        )
         .into_boxed(),
     )?;
     output.admiral_execute_command(
-        FacRenderText {
-            text: "under".into(),
-            color: None,
-            pos: FacBpPosition::new(5.0, 0.0 + (sep * 2.0)),
-        }
+        FacRenderText::text(
+            "other", //
+            FacBpPosition::new(5.0, 0.0 + (sep * 2.0)),
+        )
         .into_boxed(),
     )?;
 
