@@ -12,6 +12,8 @@ pub struct FacRenderText {
 
 impl LuaCommand for FacRenderText {
     fn make_lua(&self) -> String {
+        assert!(!self.text.is_empty());
+
         let PSugar { x, y } = self.pos.sugar();
         let text = &self.text;
         let [r, g, b] = self.color.unwrap_or([1, 1, 1]);

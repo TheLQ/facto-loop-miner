@@ -3,12 +3,14 @@ use std::rc::Rc;
 
 use exhaustive::Exhaustive;
 use facto_loop_miner_common::log_init_trace;
+use facto_loop_miner_fac_engine::admiral::lua_command::fac_render_destroy::FacRenderDestroy;
 use facto_loop_miner_fac_engine::blueprint::bpfac::blueprint::FacBpBlueprintWrapper;
 use facto_loop_miner_fac_engine::blueprint::bpitem::BlueprintItem;
 use facto_loop_miner_fac_engine::blueprint::converter::encode_blueprint_to_string_dangerous_index;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::names::FacEntityName;
 use facto_loop_miner_fac_engine::common::names_tile::FacTileConcreteType;
+use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
 use facto_loop_miner_fac_engine::tests::assembler_tests::{make_assembler_thru, make_industry};
 use facto_loop_miner_fac_engine::tests::belt_tests::{
@@ -131,6 +133,10 @@ fn execute_destroy(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
     )
     .into_tiles();
     output.admiral_execute_command(command.into_boxed())?;
+
+    output.admiral_execute_command(
+        FacRenderDestroy::destroy_area(VArea::from_radius(VPOINT_ZERO, 150)).into_boxed(),
+    )?;
 
     Ok(())
 }

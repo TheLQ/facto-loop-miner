@@ -4,6 +4,7 @@ use super::{
     contents::BlueprintContents,
 };
 use crate::admiral::err::pretty_panic_admiral;
+use crate::admiral::lua_command::fac_render_text::FacRenderText;
 use crate::blueprint::converter::{ConvertResult, encode_blueprint_to_string_auto_index};
 use crate::{
     admiral::{
@@ -105,6 +106,20 @@ impl FacItemOutput {
             item.position(),
             blueprint.position,
         );
+
+        let local_context_map = odata.contexts.context_map.clone();
+        for block in local_context_map[ContextLevel::Block].iter().clone() {
+            let mut text = block.clone();
+            text.truncate(4);
+
+            odata.write(FacItemOutputWrite::RenderText {
+                render: FacRenderText {
+                    pos: item.position().to_fac_exact(),
+                    color: None,
+                    text,
+                },
+            })
+        }
 
         Self::log_write(&mut odata.contexts, item_debug, message_pos);
         odata.write(FacItemOutputWrite::Entity { item, blueprint })
@@ -332,6 +347,9 @@ enum FacItemOutputWrite {
     Tile {
         blueprint: FacBpTile,
     },
+    RenderText {
+        render: FacRenderText,
+    },
 }
 
 impl FacItemOutputData {
@@ -374,6 +392,9 @@ impl FacItemOutputData {
                         FacItemOutputWrite::Tile { blueprint } => {
                             lua_commands.push(blueprint.to_lua().into_boxed());
                         }
+                        FacItemOutputWrite::RenderText { render } => {
+                            lua_commands.push(render.into_boxed());
+                        }
                     }
                 }
                 let flush_count = lua_commands.len();
@@ -406,6 +427,9 @@ impl FacItemOutputData {
                         }
                         FacItemOutputWrite::Tile { blueprint } => {
                             inner.add_tile(blueprint);
+                        }
+                        FacItemOutputWrite::RenderText { render: _ } => {
+                            // todo: can't do this in a blueprint
                         }
                     }
                 }
