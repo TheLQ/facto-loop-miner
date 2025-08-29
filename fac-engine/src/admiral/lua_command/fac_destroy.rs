@@ -42,7 +42,7 @@ impl FacDestroy {
             start_y,
             end_x,
             end_y,
-        } = area.desugar();
+        } = area.sugar();
         Self {
             area: format!("{{ {{ {start_x}, {start_y} }} , {{ {end_x}, {end_y} }} }}"),
             entity_names,

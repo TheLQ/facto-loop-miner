@@ -575,9 +575,17 @@ impl VPoint {
         }
     }
 
-    // pub fn sugar(&self) -> VPointSugar {
-    //     VPointSugar(self.x, self.y)
-    // }
+    pub fn sugar(&self) -> PSugar<i32> {
+        PSugar {
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
+
+pub struct PSugar<T> {
+    pub x: T,
+    pub y: T,
 }
 
 impl Display for VPoint {
@@ -648,15 +656,6 @@ impl SubAssign for VPoint {
         self.y -= rhs.y;
     }
 }
-
-// pub struct VPointSugar(pub i32, pub i32);
-//
-// impl Display for VPointSugar {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-//         let Self(x, y) = self;
-//         display_any_pos(f, format_args!("{x:>4}"), format_args!("{y:>4}"))
-//     }
-// }
 
 fn is_integer_f32(point: impl Borrow<FacBpPosition>) -> bool {
     let point = point.borrow();

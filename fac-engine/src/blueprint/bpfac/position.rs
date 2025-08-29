@@ -2,12 +2,12 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::borrow::Borrow;
 use std::fmt::{Display, Formatter};
 
+use super::FacBpFloat;
+use crate::common::vpoint::PSugar;
 use crate::{
     common::vpoint::{VPoint, display_any_pos},
     game_entities::direction::FacDirectionQuarter,
 };
-
-use super::FacBpFloat;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -91,6 +91,13 @@ impl FacBpPosition {
 
     pub fn to_vpoint_exact(&self) -> VPoint {
         self.to_vpoint_with_offset(0.0, 0.0)
+    }
+
+    pub fn sugar(&self) -> PSugar<f32> {
+        PSugar {
+            x: self.x,
+            y: self.y,
+        }
     }
 }
 

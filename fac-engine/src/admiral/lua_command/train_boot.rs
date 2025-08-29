@@ -11,7 +11,7 @@ pub fn train_boot(area: VArea, output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         start_y,
         end_x,
         end_y,
-    } = area.desugar();
+    } = area.sugar();
     let command = RawLuaCommand::new(format!(
         r#"
         local found_pos = ""

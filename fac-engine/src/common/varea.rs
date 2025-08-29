@@ -78,7 +78,7 @@ impl VArea {
         points
     }
 
-    pub fn desugar(&self) -> VAreaSugar {
+    pub fn sugar(&self) -> VAreaSugar {
         VAreaSugar {
             start_x: self.top_left.x(),
             start_y: self.top_left.y(),

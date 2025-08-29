@@ -24,7 +24,7 @@ impl LuaCommand for FacRenderDestroy {
                 start_y,
                 end_x,
                 end_y,
-            } = area.desugar();
+            } = area.sugar();
             loop_pre = format!(
                 r"
 local position = rendering.get_target(id).position
