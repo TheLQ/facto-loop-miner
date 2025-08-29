@@ -9,6 +9,7 @@ use facto_loop_miner_fac_engine::admiral::executor::client::AdmiralClient;
 use facto_loop_miner_fac_engine::admiral::executor::{ExecuteResponse, LuaCompiler};
 use facto_loop_miner_fac_engine::admiral::lua_command::LuaCommand;
 use facto_loop_miner_fac_engine::admiral::lua_command::fac_destroy::FacDestroy;
+use facto_loop_miner_fac_engine::admiral::lua_command::fac_render_destroy::FacRenderDestroy;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
 use facto_loop_miner_fac_engine::common::entity::FacEntity;
 use facto_loop_miner_fac_engine::common::names::{FacEntityName, FacEntityNameBuilder};
@@ -155,11 +156,10 @@ fn destroy_everything(
     surface: &VSurface,
     output: &FacItemOutput,
 ) -> AdmiralResult<ExecuteResponse> {
-    let command = FacDestroy::new_filtered_entities_area(
+    destroy_area(
         VArea::from_arbitrary_points_pair(VPOINT_ZERO, surface.point_bottom_right()),
-        FacEntityNameBuilder::new_all().into_vec(),
-    );
-    output.admiral_execute_command(command.into_boxed())
+        output,
+    )
 }
 
 fn destroy_mine_area(
@@ -167,9 +167,17 @@ fn destroy_mine_area(
     margin: i32,
     output: &FacItemOutput,
 ) -> AdmiralResult<ExecuteResponse> {
-    let command = FacDestroy::new_filtered_entities_area(
-        mine.area_min().expand_margin(margin),
-        FacEntityNameBuilder::new_all().into_vec(),
-    );
-    output.admiral_execute_command(command.into_boxed())
+    destroy_area(mine.area_min().expand_margin(margin), output)
+}
+
+fn destroy_area(area: VArea, output: &FacItemOutput) -> AdmiralResult<ExecuteResponse> {
+    output.admiral_execute_command(
+        FacDestroy::new_filtered_entities_area(
+            area.clone(),
+            FacEntityNameBuilder::new_all().into_vec(),
+        )
+        .into_boxed(),
+    )?;
+
+    output.admiral_execute_command(FacRenderDestroy::destroy_area(area.clone()).into_boxed())
 }
