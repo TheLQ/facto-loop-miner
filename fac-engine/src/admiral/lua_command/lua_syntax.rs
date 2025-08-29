@@ -1,3 +1,7 @@
+use crate::blueprint::bpfac::position::FacBpPosition;
+use crate::common::vpoint::PSugar;
+use std::borrow::Borrow;
+
 pub struct LuaSyntax {
     pub method: String,
     pub args: Vec<SyntaxArg>,
@@ -22,6 +26,15 @@ impl LuaSyntax {
             value: value.into(),
         });
         self
+    }
+
+    pub fn arg_pos(self, key: impl Into<String>, value: FacBpPosition) -> Self {
+        let PSugar { x, y } = value.sugar();
+        self.arg(key, format!("{{ {x}, {y} }}"))
+    }
+
+    pub fn arg_color(self, key: impl Into<String>, [r, g, b]: [u8; 3]) -> Self {
+        self.arg(key, format!("{{ r={r},g={g},b={b} }}"))
     }
 
     pub fn arg_maybe<V>(

@@ -4,6 +4,7 @@ use super::{
     contents::BlueprintContents,
 };
 use crate::admiral::err::pretty_panic_admiral;
+use crate::admiral::lua_command::fac_render_rect::FacRenderRect;
 use crate::admiral::lua_command::fac_render_text::FacRenderText;
 use crate::blueprint::converter::{ConvertResult, encode_blueprint_to_string_auto_index};
 use crate::{
@@ -225,6 +226,7 @@ impl FacItemOutput {
     fn render_context(odata: &mut FacItemOutputData, item: &BlueprintItem) {
         const MAX_LINE_LEN: usize = 15;
 
+        let origin = item.position().to_fac_exact();
         let mut line_num = 0;
         let local_context_map = odata.contexts.context_map.clone();
         for (level, blocks) in local_context_map {
@@ -260,20 +262,24 @@ impl FacItemOutput {
                 }
 
                 for line in lines {
-                    odata.write(FacItemOutputWrite::RenderText {
-                        render: FacRenderText::text(
-                            line,
-                            item.position()
-                                .to_fac_exact()
-                                .move_y(0.25 * (line_num as f32)),
-                        )
-                        .with_scale(0.5)
-                        .with_color(color),
+                    odata.write(FacItemOutputWrite::Lua {
+                        command: FacRenderText::text(line, origin.move_y(0.25 * (line_num as f32)))
+                            .with_scale(0.5)
+                            .with_color(color)
+                            .into_boxed(),
                     });
                     line_num += 1;
                 }
             }
         }
+
+        odata.write(FacItemOutputWrite::Lua {
+            command: FacRenderRect::rectangle(
+                origin,
+                origin.move_x(1.0).move_y(line_num as f32 * 0.25),
+            )
+            .into_boxed(),
+        })
     }
 
     pub fn flush(&self) {
@@ -392,8 +398,8 @@ enum FacItemOutputWrite {
     Tile {
         blueprint: FacBpTile,
     },
-    RenderText {
-        render: FacRenderText,
+    Lua {
+        command: Box<dyn LuaCommand>,
     },
 }
 
@@ -437,8 +443,8 @@ impl FacItemOutputData {
                         FacItemOutputWrite::Tile { blueprint } => {
                             lua_commands.push(blueprint.to_lua().into_boxed());
                         }
-                        FacItemOutputWrite::RenderText { render } => {
-                            lua_commands.push(render.into_boxed());
+                        FacItemOutputWrite::Lua { command } => {
+                            lua_commands.push(command);
                         }
                     }
                 }
@@ -473,7 +479,7 @@ impl FacItemOutputData {
                         FacItemOutputWrite::Tile { blueprint } => {
                             inner.add_tile(blueprint);
                         }
-                        FacItemOutputWrite::RenderText { render: _ } => {
+                        FacItemOutputWrite::Lua { command: _ } => {
                             // todo: can't do this in a blueprint
                         }
                     }

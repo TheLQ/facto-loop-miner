@@ -7,6 +7,7 @@ pub mod fac_execution_define;
 pub mod fac_execution_run;
 pub mod fac_log;
 pub mod fac_render_destroy;
+pub mod fac_render_rect;
 pub mod fac_render_text;
 pub mod fac_surface_create_entity;
 pub mod fac_surface_create_tile;

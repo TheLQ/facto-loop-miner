@@ -9,7 +9,7 @@ use crate::{
     game_entities::direction::FacDirectionQuarter,
 };
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FacBpPosition {
     #[serde(serialize_with = "serialize_float_without_zero")]

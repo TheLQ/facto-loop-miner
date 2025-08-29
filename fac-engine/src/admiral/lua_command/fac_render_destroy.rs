@@ -27,8 +27,16 @@ impl LuaCommand for FacRenderDestroy {
             } = area.sugar();
             loop_pre = format!(
                 r"
-local position = rendering.get_target(id).position
-if position.x >= {start_x} and position.x <= {end_x} and position.y >= {start_y} and position.y <= {end_y} then
+local target  = rendering.get_left_top(id)
+if target == nil then
+    target = rendering.get_target(id)
+end
+
+if target.position.x >= {start_x}
+    and target.position.x <= {end_x}
+    and target.position.y >= {start_y}
+    and target.position.y <= {end_y}
+     then
 "
             );
             loop_post = "end";
