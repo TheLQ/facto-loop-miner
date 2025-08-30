@@ -3,6 +3,7 @@ use super::{
     rail_hope_single::RailHopeSingle,
 };
 use crate::common::vpoint_direction::VPointDirectionQ;
+use crate::game_blocks::belt_train_unload::{BELTS_PER_DUAL, DUAL_BELTS_PER_WAGON};
 use crate::game_blocks::block::FacBlockFancy;
 use crate::{
     blueprint::{
@@ -387,6 +388,8 @@ impl FacBlkRailStop {
     }
 
     fn place_belts_output_combined(&self, belt_type: &FacEntBeltType) -> Vec<FacBlkBettelBelt> {
+        const PADDING_MERGE: u32 = 1;
+
         let context_handle = self
             .output
             .context_handle(ContextLevel::Block, "Output".into());
@@ -399,7 +402,7 @@ impl FacBlkRailStop {
             ),
             padding_unmerged: 0,
             padding_above: 0,
-            padding_after: 4,
+            padding_after: PADDING_MERGE,
             turn_clockwise: self.rotation,
             wagons: self.wagons,
         }
@@ -407,12 +410,10 @@ impl FacBlkRailStop {
 
         let belt_num = output_belts.len();
         for (i, belt) in output_belts.iter_mut().enumerate() {
-            let wagon_offset = (i + 1).div_ceil(6);
-            // belt.add_straight(wagon_offset);
             belt.add_turn90_stacked_row_ccw(i);
+            belt.add_straight(PADDING_MERGE as usize); // assume spacing for electric poles
             belt.add_straight_underground(4);
             belt.add_turn90_stacked_row_clk(i, belt_num);
-            belt.add_straight(self.wagons as usize - wagon_offset);
         }
         drop(context_handle);
 
@@ -432,8 +433,8 @@ impl FacBlkRailStop {
                 self.fill_x_direction.rotate_once(),
             ),
             padding_unmerged: 0,
-            padding_above: (self.wagons * 3) - 1,
-            padding_after: (self.wagons * 4),
+            padding_above: (self.wagons * DUAL_BELTS_PER_WAGON) - 1,
+            padding_after: (self.wagons * DUAL_BELTS_PER_WAGON) + PADDING_MERGE,
             turn_clockwise: !self.rotation,
             wagons: self.wagons,
         }

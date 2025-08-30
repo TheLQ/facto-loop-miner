@@ -33,8 +33,8 @@ impl FacBlockFancy<Vec<FacBlkBettelBelt>> for FacBlkBeltTrainUnload {
     }
 }
 
-const DUALS_PER_WAGON: u32 = 3;
-const BELTS_PER_DUAL: u32 = 2;
+pub const DUAL_BELTS_PER_WAGON: u32 = 3;
+pub const BELTS_PER_DUAL: u32 = 2;
 // const BELTS_PER_WAGON: usize = DUALS_PER_WAGON * BELTS_PER_DUAL;
 // const WAGON_SIZE: u32 = 3;
 
@@ -47,9 +47,9 @@ impl FacBlkBeltTrainUnload {
                 let finish_straights = if self.turn_clockwise {
                     self.padding_after
                         // our belts
-                        + ((DUALS_PER_WAGON - (i as u32) - 1) * BELTS_PER_DUAL)
+                        + ((DUAL_BELTS_PER_WAGON - (i as u32) - 1) * BELTS_PER_DUAL)
                         // belts per wagon
-                        + ((self.wagons - wagon - 1) * DUALS_PER_WAGON * BELTS_PER_DUAL)
+                        + ((self.wagons - wagon - 1) * DUAL_BELTS_PER_WAGON * BELTS_PER_DUAL)
                         // empty wagon separator
                         + (self.wagons - wagon - 1)
                 } else {
@@ -57,7 +57,7 @@ impl FacBlkBeltTrainUnload {
                         // our belts
                         + (i as u32 * BELTS_PER_DUAL)
                         // belts per wagon
-                        + (wagon * DUALS_PER_WAGON * BELTS_PER_DUAL)
+                        + (wagon * DUAL_BELTS_PER_WAGON * BELTS_PER_DUAL)
                         // empty wagon separator
                         + wagon
                         // special always padding as this crosses
@@ -83,21 +83,21 @@ impl FacBlkBeltTrainUnload {
             .origin
             .point()
             .move_direction_sideways_usz(self.origin.direction(), wagon as usize * 7);
-        for output_belt in 0..DUALS_PER_WAGON {
+        for output_belt in 0..DUAL_BELTS_PER_WAGON {
             let _ = &mut self.output.context_handle(
                 ContextLevel::Micro,
                 format!("Unload-{}-{wagon}-{output_belt}", self.origin.direction()),
             );
 
             let turn_offset = if self.turn_clockwise {
-                DUALS_PER_WAGON - output_belt - 1
+                DUAL_BELTS_PER_WAGON - output_belt - 1
             } else {
                 output_belt
             };
             let wagon_offset = if self.turn_clockwise {
-                ((self.wagons - 1) * DUALS_PER_WAGON) - (wagon * DUALS_PER_WAGON)
+                ((self.wagons - 1) * DUAL_BELTS_PER_WAGON) - (wagon * DUAL_BELTS_PER_WAGON)
             } else {
-                wagon * DUALS_PER_WAGON
+                wagon * DUAL_BELTS_PER_WAGON
             };
 
             let one_belt_origin = origin

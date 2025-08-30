@@ -51,7 +51,7 @@ pub fn make_belt_bettel_train_unload(output: Rc<FacItemOutput>) -> AdmiralResult
     let block = FacBlkBeltTrainUnload {
         belt_type: FacEntBeltType::Basic,
         output: output.clone(),
-        wagons: 2,
+        wagons: 3,
         padding_unmerged: 0, // 2,
         padding_above: 1,
         padding_after: 1,
