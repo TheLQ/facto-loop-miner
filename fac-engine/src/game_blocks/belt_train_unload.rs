@@ -20,7 +20,13 @@ pub struct FacBlkBeltTrainUnload {
     pub padding_above: u32,
     pub padding_after: u32,
     pub turn_clockwise: bool,
+    pub mode: UnloadMode,
     pub origin: VPointDirectionQ,
+}
+
+pub enum UnloadMode {
+    Turn,
+    Straight,
 }
 
 impl FacBlockFancy<Vec<FacBlkBettelBelt>> for FacBlkBeltTrainUnload {
@@ -69,7 +75,30 @@ impl FacBlkBeltTrainUnload {
                     format!("Finish-{finish_straights}-{wagon}"),
                 );
                 output_belt.add_turn90(self.turn_clockwise);
-                output_belt.add_straight(finish_straights as usize);
+                match self.mode {
+                    UnloadMode::Turn => {
+                        output_belt.add_straight(finish_straights as usize);
+                    }
+                    UnloadMode::Straight => {
+                        let remove_finished =
+                            // turn point
+                            i as u32
+                            // wagon offset
+                            + (wagon * DUAL_BELTS_PER_WAGON)
+                            // remove special always padding
+                            + if self.turn_clockwise { 0 } else { 1 };
+                        let after_straights =
+                            // wagon offset
+                            ((self.wagons - wagon) * DUAL_BELTS_PER_WAGON)
+                            - i as u32
+                            - 1;
+                        // remove special always padding
+                        // + if self.turn_clockwise { 0 } else { 1 };
+                        output_belt.add_straight((finish_straights - remove_finished) as usize);
+                        output_belt.add_turn90(!self.turn_clockwise);
+                        output_belt.add_straight(after_straights as usize);
+                    }
+                }
 
                 belts.push(output_belt);
             }

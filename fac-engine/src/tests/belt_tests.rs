@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use crate::common::vpoint_direction::VPointDirectionQ;
+use crate::game_blocks::belt_train_unload::UnloadMode;
 use crate::game_blocks::block::FacBlockFancy;
 use crate::{
     admiral::err::AdmiralResult,
@@ -57,6 +58,7 @@ pub fn make_belt_bettel_train_unload(output: Rc<FacItemOutput>) -> AdmiralResult
         padding_after: 1,
         turn_clockwise: true,
         origin: VPointDirectionQ(VPOINT_ZERO, FacDirectionQuarter::East),
+        mode: UnloadMode::Turn,
     }
     .generate();
 

@@ -25,7 +25,7 @@ pub fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         name: "test".into(),
         wagons: 4,
         front_engines: 2,
-        delivery: FacExtDelivery::Belt {
+        delivery: FacExtDelivery::BeltSideways {
             btype: FacEntBeltType::Basic,
             turn_clockwise: true,
         },

@@ -3,7 +3,7 @@ use super::{
     rail_hope_single::RailHopeSingle,
 };
 use crate::common::vpoint_direction::VPointDirectionQ;
-use crate::game_blocks::belt_train_unload::{BELTS_PER_DUAL, DUAL_BELTS_PER_WAGON};
+use crate::game_blocks::belt_train_unload::{BELTS_PER_DUAL, DUAL_BELTS_PER_WAGON, UnloadMode};
 use crate::game_blocks::block::FacBlockFancy;
 use crate::{
     blueprint::{
@@ -143,11 +143,14 @@ impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
         let mut belts = None;
         match &self.delivery {
             FacExtDelivery::Chest(chests) => stop_block.place_side_chests(chests),
-            FacExtDelivery::Belt {
+            FacExtDelivery::BeltSideways {
                 btype,
                 turn_clockwise,
             } => {
                 belts = Some(stop_block.place_belts_output_combined(btype, *turn_clockwise));
+            }
+            FacExtDelivery::BeltEject { btype, out_top } => {
+                belts = Some(stop_block.place_belts_output_eject(btype, *out_top))
             }
             FacExtDelivery::None => {}
         }
@@ -412,6 +415,7 @@ impl FacBlkRailStop {
             padding_after: PADDING_MERGE,
             turn_clockwise: false, // todo always go around
             wagons: self.wagons,
+            mode: UnloadMode::Turn,
         }
         .generate();
 
@@ -428,10 +432,10 @@ impl FacBlkRailStop {
                 belt.add_straight(
                     // belts
                     ((self.wagons * DUAL_BELTS_PER_WAGON * BELTS_PER_DUAL)
-                    // wagon spacing
-                    + (self.wagons - 1)
-                    // padding
-                    + PADDING_MERGE) as usize,
+                        // wagon spacing
+                        + (self.wagons - 1)
+                        // padding
+                        + PADDING_MERGE) as usize,
                 )
             }
         }
@@ -465,43 +469,105 @@ impl FacBlkRailStop {
             },
             turn_clockwise,
             wagons: self.wagons,
+            mode: UnloadMode::Turn,
         }
         .generate();
 
         [input_belts, output_belts].concat().into_iter().collect()
     }
 
-    // #[allow(unused)]
-    // fn place_belts_output_pointy(&self, belt_type: &FacEntBeltType) {
-    //     let bottom = FacBlkBeltTrainUnload {
-    //         belt_type: *belt_type,
-    //         output: self.output.clone(),
-    //         origin_direction: self.fill_x_direction.rotate_opposite(),
-    //         padding_unmerged: 0,
-    //         padding_above: 0,
-    //         padding_after: 0,
-    //         turn_clockwise: self.rotation,
-    //         wagons: self.wagons,
-    //     };
-    //     bottom.generate(self.get_rolling_point_at_xy(true, self.front_engines, 0, 3));
-    //
-    //     let top = FacBlkBeltTrainUnload {
-    //         belt_type: *belt_type,
-    //         output: self.output.clone(),
-    //         origin_direction: self.fill_x_direction.rotate_once(),
-    //         padding_unmerged: 0,
-    //         padding_above: 0,
-    //         padding_after: 0,
-    //         turn_clockwise: !self.rotation,
-    //         wagons: self.wagons,
-    //     };
-    //     top.generate(self.get_rolling_point_at_xy(
-    //         false,
-    //         self.front_engines + self.wagons,
-    //         /*??*/ -2,
-    //         2,
-    //     ));
-    // }
+    fn place_belts_output_eject(
+        &self,
+        belt_type: &FacEntBeltType,
+        out_inside: bool,
+    ) -> Vec<FacBlkBettelBelt> {
+        let mut context_handle = self
+            .output
+            .context_handle(ContextLevel::Block, "Output".into());
+        let output_belts = FacBlkBeltTrainUnload {
+            belt_type: *belt_type,
+            output: self.output.clone(),
+            origin: VPointDirectionQ(
+                self.get_rolling_point_at_xy(true, self.front_engines, 0, 3),
+                self.fill_x_direction.rotate_opposite(),
+            ),
+            padding_unmerged: 0,
+            padding_above: 0,
+            padding_after: 0,
+            turn_clockwise: self.rotation,
+            wagons: self.wagons,
+            mode: if out_inside {
+                UnloadMode::Straight
+            } else {
+                UnloadMode::Turn
+            },
+        }
+        .generate();
+
+        context_handle = self
+            .output
+            .context_handle(ContextLevel::Block, "Input".into());
+        let input_belts = FacBlkBeltTrainUnload {
+            belt_type: *belt_type,
+            output: self.output.clone(),
+            origin: VPointDirectionQ(
+                self.get_rolling_point_at_xy(
+                    false,
+                    self.front_engines + self.wagons,
+                    /*??*/ -2,
+                    2,
+                ),
+                self.fill_x_direction.rotate_once(),
+            ),
+            padding_unmerged: 0,
+            padding_above: 0,
+            padding_after: 0,
+            turn_clockwise: !self.rotation,
+            wagons: self.wagons,
+            mode: if out_inside {
+                UnloadMode::Turn
+            } else {
+                UnloadMode::Straight
+            },
+        }
+        .generate();
+
+        let (mut short_belts, mut long_belts) = if out_inside {
+            (output_belts, input_belts)
+        } else {
+            (input_belts, output_belts)
+        };
+
+        context_handle = self
+            .output
+            .context_handle(ContextLevel::Block, "Long".into());
+        let total_belts = long_belts.len();
+        let inner_belt_makeup_len = (self.wagons * DUAL_BELTS_PER_WAGON);
+        for (i, belt) in long_belts.iter_mut().enumerate() {
+            belt.add_turn90_stacked_row_clk(i, total_belts);
+            // latest spot without maybe colliding
+            belt.add_straight(1);
+            belt.add_straight_underground(4);
+            // minimum height to merge and turn back
+            belt.add_straight(1);
+            belt.add_straight(inner_belt_makeup_len as usize);
+        }
+
+        let mut belts: Vec<FacBlkBettelBelt> =
+            [short_belts, long_belts].concat().into_iter().collect();
+        if out_inside {
+            const MAX_INSIDE_BELTS: u32 = 17;
+            context_handle = self
+                .output
+                .context_handle(ContextLevel::Block, "Inside-Makeup".into());
+            for belt in &mut belts {
+                belt.add_straight((MAX_INSIDE_BELTS - inner_belt_makeup_len - 2) as usize);
+                belt.add_straight_underground(4);
+            }
+        }
+
+        belts
+    }
 
     fn get_rolling_point_at_xy(
         &self,
@@ -540,9 +606,13 @@ fn centered_y_offset(negative: bool, entity_size: usize) -> i32 {
 #[derive(Clone)]
 pub enum FacExtDelivery {
     Chest(FacEntChestType),
-    Belt {
+    BeltSideways {
         btype: FacEntBeltType,
         turn_clockwise: bool,
+    },
+    BeltEject {
+        btype: FacEntBeltType,
+        out_top: bool,
     },
     None,
 }

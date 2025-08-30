@@ -27,9 +27,9 @@ pub struct FacBlkMineIsland {
 
 impl FacBlockFancy<()> for FacBlkMineIsland {
     fn generate(&self) {
-        for link in sodas_to_rails([self.rail_entrance_link.add_straight_section()]) {
-            link.write_output(&self.output);
-        }
+        // for link in sodas_to_rails([self.rail_entrance_link.add_straight_section()]) {
+        //     link.write_output(&self.output);
+        // }
 
         let start_hope: &HopeLink = &self
             .rail_entrance_link
@@ -38,9 +38,13 @@ impl FacBlockFancy<()> for FacBlkMineIsland {
         let origin = start_hope.rails.first().unwrap().position;
         FacBlkRailStation {
             name: "something".into(),
-            delivery: FacExtDelivery::Belt {
+            // delivery: FacExtDelivery::BeltSideways {
+            //     btype: self.belt,
+            //     turn_clockwise: false,
+            // },
+            delivery: FacExtDelivery::BeltEject {
                 btype: self.belt,
-                turn_clockwise: false,
+                out_top: true,
             },
             wagons: self.wagons,
             front_engines: self.front_engines,
