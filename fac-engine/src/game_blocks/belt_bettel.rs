@@ -111,9 +111,10 @@ impl FacBlkBettelBelt {
     }
 
     pub fn add_turn90_stacked_row_clk(&mut self, row_number: usize, total: usize) {
-        self.add_straight(total - row_number);
+        let edge_len = total - 1 - row_number;
+        self.add_straight(edge_len);
         self.add_turn90(true);
-        self.add_straight(total - 1 - row_number);
+        self.add_straight(edge_len);
     }
 
     pub fn add_split(&mut self, clockwise: bool) {
