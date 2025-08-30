@@ -278,6 +278,7 @@ impl FacItemOutput {
                 origin,
                 origin.move_x(1.0).move_y(line_num as f32 * 0.25),
             )
+            .with_color([2, 2, 2])
             .into_boxed(),
         })
     }
