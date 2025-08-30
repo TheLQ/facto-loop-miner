@@ -3,6 +3,8 @@ use std::rc::Rc;
 use tracing::trace;
 
 use super::belt_bettel::FacBlkBettelBelt;
+use crate::common::vpoint_direction::VPointDirectionQ;
+use crate::game_blocks::block::{FacBlock2, FacBlockFancy};
 use crate::{
     blueprint::output::{ContextLevel, FacItemOutput},
     common::vpoint::VPoint,
@@ -18,73 +20,95 @@ pub struct FacBlkBeltTrainUnload {
     pub padding_above: u32,
     pub padding_after: u32,
     pub turn_clockwise: bool,
-    pub origin_direction: FacDirectionQuarter,
+    pub origin: VPointDirectionQ,
 }
 
-// impl FacBlock for FacBlkBeltTrainUnload {
-//     fn generate(&self, origin: VPoint) {}
-// }
+impl FacBlockFancy<Vec<FacBlkBettelBelt>> for FacBlkBeltTrainUnload {
+    fn generate(&self) -> Vec<FacBlkBettelBelt> {
+        match 1 {
+            1 => self.generate_wrap_around_belts(),
+            // 2 => self.generate_thru_belts(),
+            _ => unimplemented!(),
+        }
+    }
+}
+
+const DUALS_PER_WAGON: u32 = 3;
+const BELTS_PER_DUAL: u32 = 2;
+// const BELTS_PER_WAGON: usize = DUALS_PER_WAGON * BELTS_PER_DUAL;
+// const WAGON_SIZE: u32 = 3;
 
 impl FacBlkBeltTrainUnload {
-    pub fn generate(&self, origin: VPoint) -> Vec<FacBlkBettelBelt> {
-        const DUALS_PER_WAGON: u32 = 3;
-        const BELTS_PER_DUAL: u32 = 2;
-        // const BELTS_PER_WAGON: usize = DUALS_PER_WAGON * BELTS_PER_DUAL;
-        const WAGON_SIZE: u32 = 7;
-
+    fn generate_wrap_around_belts(&self) -> Vec<FacBlkBettelBelt> {
         let mut belts = Vec::new();
         for wagon in 0..self.wagons {
-            let origin =
-                origin.move_direction_sideways_usz(self.origin_direction, wagon as usize * 7);
-            for output_belt in 0..DUALS_PER_WAGON {
-                let _ = &mut self.output.context_handle(
-                    ContextLevel::Micro,
-                    format!("Unload-{}-{wagon}-{output_belt}", self.origin_direction),
-                );
-
-                let turn_offset = if self.turn_clockwise {
-                    DUALS_PER_WAGON - output_belt - 1
-                } else {
-                    output_belt
-                };
-                let wagon_offset = if self.turn_clockwise {
-                    ((self.wagons - 1) * DUALS_PER_WAGON) - (wagon * DUALS_PER_WAGON)
-                } else {
-                    wagon * DUALS_PER_WAGON
-                };
-
+            for (i, mut output_belt) in self.place_duals_for_wagon(wagon, 0).into_iter().enumerate()
+            {
                 let finish_straights = if self.turn_clockwise {
                     self.padding_after
-                    // all belts
-                    + ((DUALS_PER_WAGON - output_belt - 1) * BELTS_PER_DUAL)
-                    // all wagons
-                    + ((self.wagons - wagon - 1) * WAGON_SIZE)
+                        // our belts
+                        + ((DUALS_PER_WAGON - (i as u32) - 1) * BELTS_PER_DUAL)
+                        // belts per wagon
+                        + ((self.wagons - wagon - 1) * DUALS_PER_WAGON * BELTS_PER_DUAL)
+                        // empty wagon separator
+                        + (self.wagons - wagon - 1)
                 } else {
                     self.padding_after
-                    // our belts
-                    + (output_belt * BELTS_PER_DUAL)
-                    // wagons
-                    + (wagon * WAGON_SIZE)
+                        // our belts
+                        + (i as u32 * BELTS_PER_DUAL)
+                        // belts per wagon
+                        + (wagon * DUALS_PER_WAGON * BELTS_PER_DUAL)
+                        // empty wagon separator
+                        + wagon
+                        // special always padding as this crosses
+                        + 1
                 };
 
-                let one_belt_origin = origin
-                    .move_direction_sideways_usz(self.origin_direction, (2 * output_belt) as usize);
-                trace!("one_belt from origin {origin} to {one_belt_origin}");
-                let merged_height = self.padding_above + turn_offset + wagon_offset;
-                let mut one_belt =
-                    self.add_dual_to_one(one_belt_origin, self.padding_unmerged, merged_height);
+                let _ = &mut self.output.context_handle(
+                    ContextLevel::Micro,
+                    format!("Finish-{finish_straights}-{wagon}"),
+                );
+                output_belt.add_turn90(self.turn_clockwise);
+                output_belt.add_straight(finish_straights as usize);
 
-                {
-                    let _ = &mut self
-                        .output
-                        .context_handle(ContextLevel::Micro, format!("Finish-{finish_straights}"));
-                    one_belt.add_turn90(self.turn_clockwise);
-                    one_belt.add_straight(finish_straights as usize);
-                }
-                belts.push(one_belt);
+                belts.push(output_belt);
             }
         }
         belts
+    }
+
+    fn place_duals_for_wagon(&self, wagon: u32, one_belt_length: u32) -> Vec<FacBlkBettelBelt> {
+        let mut res = Vec::new();
+        let origin = self
+            .origin
+            .point()
+            .move_direction_sideways_usz(self.origin.direction(), wagon as usize * 7);
+        for output_belt in 0..DUALS_PER_WAGON {
+            let _ = &mut self.output.context_handle(
+                ContextLevel::Micro,
+                format!("Unload-{}-{wagon}-{output_belt}", self.origin.direction()),
+            );
+
+            let turn_offset = if self.turn_clockwise {
+                DUALS_PER_WAGON - output_belt - 1
+            } else {
+                output_belt
+            };
+            let wagon_offset = if self.turn_clockwise {
+                ((self.wagons - 1) * DUALS_PER_WAGON) - (wagon * DUALS_PER_WAGON)
+            } else {
+                wagon * DUALS_PER_WAGON
+            };
+
+            let one_belt_origin = origin
+                .move_direction_sideways_usz(self.origin.direction(), (2 * output_belt) as usize);
+            trace!("one_belt from origin {origin} to {one_belt_origin}");
+            let merged_height = self.padding_above + turn_offset + wagon_offset;
+            let one_belt =
+                self.add_dual_to_one(one_belt_origin, self.padding_unmerged, merged_height);
+            res.push(one_belt);
+        }
+        res
     }
 
     fn add_dual_to_one(
@@ -101,13 +125,13 @@ impl FacBlkBeltTrainUnload {
             FacBlkBettelBelt::new(
                 self.belt_type,
                 origin,
-                self.origin_direction,
+                *self.origin.direction(),
                 self.output.clone(),
             ),
             FacBlkBettelBelt::new(
                 self.belt_type,
-                origin.move_direction_sideways_int(self.origin_direction, 1),
-                self.origin_direction,
+                origin.move_direction_sideways_int(self.origin.direction(), 1),
+                *self.origin.direction(),
                 self.output.clone(),
             ),
         ];
@@ -127,5 +151,11 @@ impl FacBlkBeltTrainUnload {
         };
         remaining_belt.add_straight(merged_height as usize);
         remaining_belt
+    }
+
+    //
+
+    fn generate_thru_belts(&self, origin: VPoint) -> Vec<FacBlkBettelBelt> {
+        todo!()
     }
 }

@@ -1,5 +1,7 @@
 use std::rc::Rc;
 
+use crate::common::vpoint_direction::VPointDirectionQ;
+use crate::game_blocks::block::FacBlockFancy;
 use crate::{
     admiral::err::AdmiralResult,
     blueprint::output::FacItemOutput,
@@ -51,12 +53,12 @@ pub fn make_belt_bettel_train_unload(output: Rc<FacItemOutput>) -> AdmiralResult
         output: output.clone(),
         wagons: 2,
         padding_unmerged: 0, // 2,
-        padding_above: 0,
-        padding_after: 0,
+        padding_above: 1,
+        padding_after: 1,
         turn_clockwise: true,
-        origin_direction: FacDirectionQuarter::East,
-    };
-    block.generate(VPOINT_ZERO);
+        origin: VPointDirectionQ(VPOINT_ZERO, FacDirectionQuarter::East),
+    }
+    .generate();
 
     Ok(())
 }

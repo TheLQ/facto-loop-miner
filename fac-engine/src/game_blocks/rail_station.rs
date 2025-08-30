@@ -1,3 +1,9 @@
+use super::{
+    belt_bettel::FacBlkBettelBelt, block::FacBlock2, rail_hope::RailHopeAppender,
+    rail_hope_single::RailHopeSingle,
+};
+use crate::common::vpoint_direction::VPointDirectionQ;
+use crate::game_blocks::block::FacBlockFancy;
 use crate::{
     blueprint::{
         bpfac::schedule::FacBpSchedule,
@@ -20,11 +26,6 @@ use crate::{
     },
 };
 use std::rc::Rc;
-
-use super::{
-    belt_bettel::FacBlkBettelBelt, block::FacBlock2, rail_hope::RailHopeAppender,
-    rail_hope_single::RailHopeSingle,
-};
 
 const INSERTERS_PER_CAR: usize = 6;
 
@@ -51,7 +52,7 @@ impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
     fn generate(&self, origin: VPoint) -> Vec<FacBlkBettelBelt> {
         let _ = &mut self
             .output
-            .context_handle(ContextLevel::Block, format!("Station-{}", self.name));
+            .context_handle(ContextLevel::Block, "Station".into());
         let base_direction;
         let fill_x_direction;
         let origin_after_straight;
@@ -386,80 +387,92 @@ impl FacBlkRailStop {
     }
 
     fn place_belts_output_combined(&self, belt_type: &FacEntBeltType) -> Vec<FacBlkBettelBelt> {
-        let bottom = FacBlkBeltTrainUnload {
+        let context_handle = self
+            .output
+            .context_handle(ContextLevel::Block, "Output".into());
+        let mut output_belts = FacBlkBeltTrainUnload {
             belt_type: *belt_type,
             output: self.output.clone(),
-            origin_direction: self.fill_x_direction.rotate_opposite(),
+            origin: VPointDirectionQ(
+                self.get_rolling_point_at_xy(true, self.front_engines, 0, 3),
+                self.fill_x_direction.rotate_opposite(),
+            ),
             padding_unmerged: 0,
             padding_above: 0,
-            padding_after: 1,
+            padding_after: 4,
             turn_clockwise: self.rotation,
             wagons: self.wagons,
-        };
-        let mut output_belts =
-            bottom.generate(self.get_rolling_point_at_xy(true, self.front_engines, 0, 3));
+        }
+        .generate();
 
         let belt_num = output_belts.len();
         for (i, belt) in output_belts.iter_mut().enumerate() {
             let wagon_offset = (i + 1).div_ceil(6);
-            belt.add_straight(wagon_offset);
+            // belt.add_straight(wagon_offset);
             belt.add_turn90_stacked_row_ccw(i);
             belt.add_straight_underground(4);
             belt.add_turn90_stacked_row_clk(i, belt_num);
             belt.add_straight(self.wagons as usize - wagon_offset);
         }
+        drop(context_handle);
 
-        let top = FacBlkBeltTrainUnload {
+        let context_handle = self
+            .output
+            .context_handle(ContextLevel::Block, "Input".into());
+        let input_belts = FacBlkBeltTrainUnload {
             belt_type: *belt_type,
             output: self.output.clone(),
-            origin_direction: self.fill_x_direction.rotate_once(),
+            origin: VPointDirectionQ(
+                self.get_rolling_point_at_xy(
+                    false,
+                    self.front_engines + self.wagons,
+                    /*??*/ -2,
+                    2,
+                ),
+                self.fill_x_direction.rotate_once(),
+            ),
             padding_unmerged: 0,
             padding_above: (self.wagons * 3) - 1,
             padding_after: (self.wagons * 4),
             turn_clockwise: !self.rotation,
             wagons: self.wagons,
-        };
-        let input_belts = top.generate(self.get_rolling_point_at_xy(
-            false,
-            self.front_engines + self.wagons,
-            /*??*/ -2,
-            2,
-        ));
+        }
+        .generate();
 
         [input_belts, output_belts].concat().into_iter().collect()
     }
 
-    #[allow(unused)]
-    fn place_belts_output_pointy(&self, belt_type: &FacEntBeltType) {
-        let bottom = FacBlkBeltTrainUnload {
-            belt_type: *belt_type,
-            output: self.output.clone(),
-            origin_direction: self.fill_x_direction.rotate_opposite(),
-            padding_unmerged: 0,
-            padding_above: 0,
-            padding_after: 0,
-            turn_clockwise: self.rotation,
-            wagons: self.wagons,
-        };
-        bottom.generate(self.get_rolling_point_at_xy(true, self.front_engines, 0, 3));
-
-        let top = FacBlkBeltTrainUnload {
-            belt_type: *belt_type,
-            output: self.output.clone(),
-            origin_direction: self.fill_x_direction.rotate_once(),
-            padding_unmerged: 0,
-            padding_above: 0,
-            padding_after: 0,
-            turn_clockwise: !self.rotation,
-            wagons: self.wagons,
-        };
-        top.generate(self.get_rolling_point_at_xy(
-            false,
-            self.front_engines + self.wagons,
-            /*??*/ -2,
-            2,
-        ));
-    }
+    // #[allow(unused)]
+    // fn place_belts_output_pointy(&self, belt_type: &FacEntBeltType) {
+    //     let bottom = FacBlkBeltTrainUnload {
+    //         belt_type: *belt_type,
+    //         output: self.output.clone(),
+    //         origin_direction: self.fill_x_direction.rotate_opposite(),
+    //         padding_unmerged: 0,
+    //         padding_above: 0,
+    //         padding_after: 0,
+    //         turn_clockwise: self.rotation,
+    //         wagons: self.wagons,
+    //     };
+    //     bottom.generate(self.get_rolling_point_at_xy(true, self.front_engines, 0, 3));
+    //
+    //     let top = FacBlkBeltTrainUnload {
+    //         belt_type: *belt_type,
+    //         output: self.output.clone(),
+    //         origin_direction: self.fill_x_direction.rotate_once(),
+    //         padding_unmerged: 0,
+    //         padding_above: 0,
+    //         padding_after: 0,
+    //         turn_clockwise: !self.rotation,
+    //         wagons: self.wagons,
+    //     };
+    //     top.generate(self.get_rolling_point_at_xy(
+    //         false,
+    //         self.front_engines + self.wagons,
+    //         /*??*/ -2,
+    //         2,
+    //     ));
+    // }
 
     fn get_rolling_point_at_xy(
         &self,
