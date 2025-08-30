@@ -143,8 +143,11 @@ impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
         let mut belts = None;
         match &self.delivery {
             FacExtDelivery::Chest(chests) => stop_block.place_side_chests(chests),
-            FacExtDelivery::Belt(belt_type) => {
-                belts = Some(stop_block.place_belts_output_combined(belt_type));
+            FacExtDelivery::Belt {
+                btype,
+                turn_clockwise,
+            } => {
+                belts = Some(stop_block.place_belts_output_combined(btype, *turn_clockwise));
             }
             FacExtDelivery::None => {}
         }
@@ -387,8 +390,12 @@ impl FacBlkRailStop {
         }
     }
 
-    fn place_belts_output_combined(&self, belt_type: &FacEntBeltType) -> Vec<FacBlkBettelBelt> {
-        const PADDING_MERGE: u32 = 1;
+    fn place_belts_output_combined(
+        &self,
+        belt_type: &FacEntBeltType,
+        turn_clockwise: bool,
+    ) -> Vec<FacBlkBettelBelt> {
+        const PADDING_MERGE: u32 = 2;
 
         let context_handle = self
             .output
@@ -403,7 +410,7 @@ impl FacBlkRailStop {
             padding_unmerged: 0,
             padding_above: 0,
             padding_after: PADDING_MERGE,
-            turn_clockwise: self.rotation,
+            turn_clockwise: false, // todo always go around
             wagons: self.wagons,
         }
         .generate();
@@ -413,7 +420,20 @@ impl FacBlkRailStop {
             belt.add_turn90_stacked_row_ccw(i);
             belt.add_straight(PADDING_MERGE as usize); // assume spacing for electric poles
             belt.add_straight_underground(4);
-            belt.add_turn90_stacked_row_clk(i, belt_num);
+            if turn_clockwise {
+                belt.add_turn90_stacked_row_clk(i, belt_num);
+            } else {
+                belt.add_straight((self.wagons * DUAL_BELTS_PER_WAGON) as usize);
+                belt.add_turn90_stacked_row_ccw(i);
+                belt.add_straight(
+                    // belts
+                    ((self.wagons * DUAL_BELTS_PER_WAGON * BELTS_PER_DUAL)
+                    // wagon spacing
+                    + (self.wagons - 1)
+                    // padding
+                    + PADDING_MERGE) as usize,
+                )
+            }
         }
         drop(context_handle);
 
@@ -433,9 +453,17 @@ impl FacBlkRailStop {
                 self.fill_x_direction.rotate_once(),
             ),
             padding_unmerged: 0,
-            padding_above: (self.wagons * DUAL_BELTS_PER_WAGON) - 1,
-            padding_after: (self.wagons * DUAL_BELTS_PER_WAGON) + PADDING_MERGE,
-            turn_clockwise: !self.rotation,
+            padding_above: if turn_clockwise {
+                (self.wagons * DUAL_BELTS_PER_WAGON) - 1
+            } else {
+                0
+            },
+            padding_after: if turn_clockwise {
+                (self.wagons * DUAL_BELTS_PER_WAGON) + PADDING_MERGE
+            } else {
+                0
+            },
+            turn_clockwise,
             wagons: self.wagons,
         }
         .generate();
@@ -512,6 +540,9 @@ fn centered_y_offset(negative: bool, entity_size: usize) -> i32 {
 #[derive(Clone)]
 pub enum FacExtDelivery {
     Chest(FacEntChestType),
-    Belt(FacEntBeltType),
+    Belt {
+        btype: FacEntBeltType,
+        turn_clockwise: bool,
+    },
     None,
 }

@@ -38,7 +38,10 @@ impl FacBlockFancy<()> for FacBlkMineIsland {
         let origin = start_hope.rails.first().unwrap().position;
         FacBlkRailStation {
             name: "something".into(),
-            delivery: FacExtDelivery::Belt(self.belt),
+            delivery: FacExtDelivery::Belt {
+                btype: self.belt,
+                turn_clockwise: false,
+            },
             wagons: self.wagons,
             front_engines: self.front_engines,
             fuel_inserter: None,

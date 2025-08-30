@@ -53,7 +53,10 @@ pub fn make_mine_and_rail(output: Rc<FacItemOutput>) {
         name: "test".into(),
         wagons: 2,
         front_engines: 2,
-        delivery: FacExtDelivery::Belt(FacEntBeltType::Basic),
+        delivery: FacExtDelivery::Belt {
+            btype: FacEntBeltType::Basic,
+            turn_clockwise: true,
+        },
         fuel_inserter: None,
         fuel_inserter_chest: None,
         inserter: FacEntInserterType::Basic,
