@@ -29,6 +29,7 @@ use crate::{
 use std::rc::Rc;
 
 const INSERTERS_PER_CAR: usize = 6;
+const MINIMUM_UNDERGROUND_BELT_LEN: usize = 4;
 
 pub enum RailStationSide {}
 
@@ -423,7 +424,7 @@ impl FacBlkRailStop {
         for (i, belt) in output_belts.iter_mut().enumerate() {
             belt.add_turn90_stacked_row_ccw(i);
             belt.add_straight(PADDING_MERGE as usize); // assume spacing for electric poles
-            belt.add_straight_underground(4);
+            belt.add_straight_underground(MINIMUM_UNDERGROUND_BELT_LEN);
             if turn_clockwise {
                 belt.add_turn90_stacked_row_clk(i, belt_num);
             } else {
@@ -547,7 +548,7 @@ impl FacBlkRailStop {
             belt.add_turn90_stacked_row_clk(i, total_belts);
             // latest spot without maybe colliding
             belt.add_straight(1);
-            belt.add_straight_underground(4);
+            belt.add_straight_underground(MINIMUM_UNDERGROUND_BELT_LEN);
             // minimum height to merge and turn back
             belt.add_straight(1);
             belt.add_straight(inner_belt_makeup_len as usize);
@@ -562,7 +563,7 @@ impl FacBlkRailStop {
                 .context_handle(ContextLevel::Block, "Inside-Makeup".into());
             for belt in &mut belts {
                 belt.add_straight((MAX_INSIDE_BELTS - inner_belt_makeup_len - 2) as usize);
-                belt.add_straight_underground(4);
+                belt.add_straight_underground(MINIMUM_UNDERGROUND_BELT_LEN);
             }
         }
 
