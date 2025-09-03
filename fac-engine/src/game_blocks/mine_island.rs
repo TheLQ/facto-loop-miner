@@ -1,13 +1,11 @@
 use crate::blueprint::output::FacItemOutput;
 use crate::common::vpoint::VPoint;
 use crate::game_blocks::block::{FacBlock2, FacBlockFancy};
-use crate::game_blocks::mine_ore::FacBlkMineOre;
 use crate::game_blocks::rail_hope::RailHopeLink;
 use crate::game_blocks::rail_hope_single::HopeLink;
-use crate::game_blocks::rail_hope_soda::{HopeSodaLink, sodas_to_links, sodas_to_rails};
+use crate::game_blocks::rail_hope_soda::HopeSodaLink;
 use crate::game_blocks::rail_station::{FacBlkRailStation, FacExtDelivery};
 use crate::game_entities::belt::FacEntBeltType;
-use crate::game_entities::direction::FacDirectionQuarter;
 use crate::game_entities::inserter::FacEntInserterType;
 use crate::game_entities::module::FacModule;
 use std::rc::Rc;

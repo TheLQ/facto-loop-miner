@@ -2,7 +2,7 @@ use std::backtrace::Backtrace;
 use std::borrow::BorrowMut;
 use std::io::{Read, Write};
 
-use crate::{blueprint::bpfac::blueprint::FacBpBlueprintWrapper, err::FResult};
+use crate::blueprint::bpfac::blueprint::FacBpBlueprintWrapper;
 use base64ct::{Base64, Encoding};
 use flate2::{Compression, read::ZlibDecoder};
 use thiserror::Error;

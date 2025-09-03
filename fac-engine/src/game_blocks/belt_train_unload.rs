@@ -4,11 +4,11 @@ use tracing::trace;
 
 use super::belt_bettel::FacBlkBettelBelt;
 use crate::common::vpoint_direction::VPointDirectionQ;
-use crate::game_blocks::block::{FacBlock2, FacBlockFancy};
+use crate::game_blocks::block::FacBlockFancy;
 use crate::{
     blueprint::output::{ContextLevel, FacItemOutput},
     common::vpoint::VPoint,
-    game_entities::{belt::FacEntBeltType, direction::FacDirectionQuarter},
+    game_entities::belt::FacEntBeltType,
     util::bool_num::bool_to_num_usize,
 };
 

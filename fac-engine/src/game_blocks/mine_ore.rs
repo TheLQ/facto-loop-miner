@@ -1,23 +1,19 @@
-use super::{belt_bettel::FacBlkBettelBelt, block::FacBlock2};
-use crate::common::entity::{FacArea, SquareArea, SquareAreaConst};
+use super::belt_bettel::FacBlkBettelBelt;
+use crate::common::entity::SquareAreaConst;
 use crate::common::varea::VArea;
 use crate::common::vpoint::VPOINT_THREE;
 use crate::game_blocks::block::FacBlockFancy;
 use crate::game_entities::belt_transport::FacEntBeltTransport;
-use crate::game_entities::chest::{FacEntChest, FacEntChestType};
 use crate::game_entities::electric_mini::FacEntElectricMini;
 use crate::{
     blueprint::{bpitem::BlueprintItem, output::FacItemOutput},
     common::{entity::FacEntity, vpoint::VPoint},
     game_entities::{
-        belt::FacEntBeltType,
-        direction::FacDirectionQuarter,
-        electric_mini::FacEntElectricMiniType,
-        mining_drill_electric::{ELECTRIC_DRILL_SIZE, FacEntMiningDrillElectric},
+        belt::FacEntBeltType, direction::FacDirectionQuarter,
+        electric_mini::FacEntElectricMiniType, mining_drill_electric::FacEntMiningDrillElectric,
         module::FacModule,
     },
 };
-use facto_loop_miner_common::util::always_true_test;
 use std::rc::Rc;
 use tracing::trace;
 

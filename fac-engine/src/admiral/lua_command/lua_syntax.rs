@@ -1,6 +1,5 @@
 use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::common::vpoint::PSugar;
-use std::borrow::Borrow;
 
 pub struct LuaSyntax {
     pub method: String,
@@ -43,7 +42,7 @@ impl LuaSyntax {
     }
 
     pub fn arg_maybe<V>(
-        mut self,
+        self,
         key: impl Into<String>,
         value: Option<V>,
         mapper: impl Fn(V) -> String,
