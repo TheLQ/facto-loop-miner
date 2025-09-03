@@ -36,12 +36,11 @@ impl FacRenderText {
 
 impl LuaCommand for FacRenderText {
     fn make_lua(&self) -> String {
-        let PSugar { x, y } = self.pos.sugar();
         let text = &self.text;
         let [r, g, b] = self.color.unwrap_or([1, 1, 1]);
         LuaSyntax::method("rendering.draw_text")
             .arg("surface", "game.surfaces[1]")
-            .arg("target", format!("{{ {x}, {y} }}"))
+            .arg_pos("target", self.pos)
             .arg("text", format!(r#""{text}""#))
             .arg("color", format!("{{ r={r},g={g},b={b} }}"))
             .arg_maybe("scale", self.scale, |v| v.to_string())
