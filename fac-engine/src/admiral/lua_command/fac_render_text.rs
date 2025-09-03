@@ -41,7 +41,7 @@ impl LuaCommand for FacRenderText {
         LuaSyntax::method("rendering.draw_text")
             .arg("surface", "game.surfaces[1]")
             .arg_pos("target", self.pos)
-            .arg("text", format!(r#""{text}""#))
+            .arg_string("text", text)
             .arg("color", format!("{{ r={r},g={g},b={b} }}"))
             .arg_maybe("scale", self.scale, |v| v.to_string())
             .build()

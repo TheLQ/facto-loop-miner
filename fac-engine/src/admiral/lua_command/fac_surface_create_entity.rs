@@ -1,3 +1,4 @@
+use crate::admiral::lua_command::lua_syntax::LuaSyntax;
 use crate::admiral::lua_command::{DEFAULT_FORCE_VAR, LuaCommand};
 use crate::admiral::trimmer::string_space_shrinker;
 use crate::blueprint::bpfac::infinity::{FacBpFilter, FacBpInfinitySettings};
@@ -56,23 +57,14 @@ impl LuaCommand for FacSurfaceCreateEntity {
             lua.push("local admiral_create =".to_string());
         }
 
-        let params_str = self
-            .params
-            .iter()
-            .map(|v| {
-                let (key, value) = v.to_param();
-                format!("{key}={value}")
-            })
-            .join(",");
-        lua.push(format!(
-            r#"game.surfaces[1].create_entity{{ 
-                    name="{name}", 
-                    position={{ {x}, {y} }}, 
-                    force={DEFAULT_FORCE_VAR}
-                    {}{params_str}
-                }}"#,
-            if params_str.is_empty() { "" } else { "," }
-        ));
+        lua.push(
+            LuaSyntax::method("game.surfaces[1].create_entity")
+                .arg_string("name", name)
+                .arg_pos("position", self.position)
+                .arg("force", DEFAULT_FORCE_VAR)
+                .args(self.params.iter().map(CreateParam::to_param))
+                .build(),
+        );
 
         lua.extend_from_slice(&self.commands);
 

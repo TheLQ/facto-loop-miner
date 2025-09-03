@@ -28,6 +28,11 @@ impl LuaSyntax {
         self
     }
 
+    pub fn arg_string(self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        let value = value.into();
+        self.arg(key, format!(r#""{value}""#))
+    }
+
     pub fn arg_pos(self, key: impl Into<String>, value: FacBpPosition) -> Self {
         let PSugar { x, y } = value.sugar();
         self.arg(key, format!("{{ {x}, {y} }}"))
@@ -48,6 +53,17 @@ impl LuaSyntax {
         } else {
             self
         }
+    }
+
+    pub fn args(
+        self,
+        args: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>,
+    ) -> Self {
+        let mut res = self;
+        for (key, value) in args {
+            res = res.arg(key.into(), value.into());
+        }
+        res
     }
 
     pub fn build(self) -> String {
