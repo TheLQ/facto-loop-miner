@@ -150,8 +150,8 @@ impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
             } => {
                 belts = Some(stop_block.place_belts_output_combined(btype, *turn_clockwise));
             }
-            FacExtDelivery::BeltEject { btype, out_top } => {
-                belts = Some(stop_block.place_belts_output_eject(btype, *out_top))
+            FacExtDelivery::BeltEject { btype, out_inside } => {
+                belts = Some(stop_block.place_belts_output_eject(btype, *out_inside))
             }
             FacExtDelivery::None => {}
         }
@@ -482,7 +482,7 @@ impl FacBlkRailStop {
         belt_type: &FacEntBeltType,
         out_inside: bool,
     ) -> Vec<FacBlkBettelBelt> {
-        let mut context_handle = self
+        let mut _context_handle = self
             .output
             .context_handle(ContextLevel::Block, "Output".into());
         let output_belts = FacBlkBeltTrainUnload {
@@ -504,8 +504,9 @@ impl FacBlkRailStop {
             },
         }
         .generate();
+        drop(_context_handle);
 
-        context_handle = self
+        let _context_handle = self
             .output
             .context_handle(ContextLevel::Block, "Input".into());
         let input_belts = FacBlkBeltTrainUnload {
@@ -532,6 +533,7 @@ impl FacBlkRailStop {
             },
         }
         .generate();
+        drop(_context_handle);
 
         let (mut short_belts, mut long_belts) = if out_inside {
             (output_belts, input_belts)
@@ -539,7 +541,7 @@ impl FacBlkRailStop {
             (input_belts, output_belts)
         };
 
-        context_handle = self
+        let _context_handle = self
             .output
             .context_handle(ContextLevel::Block, "Long".into());
         let total_belts = long_belts.len();
@@ -558,10 +560,11 @@ impl FacBlkRailStop {
             [short_belts, long_belts].concat().into_iter().collect();
         if out_inside {
             const MAX_INSIDE_BELTS: u32 = 17;
-            context_handle = self
-                .output
-                .context_handle(ContextLevel::Block, "Inside-Makeup".into());
-            for belt in &mut belts {
+
+            for (i, belt) in belts.iter_mut().enumerate() {
+                let _context_handle = self
+                    .output
+                    .context_handle(ContextLevel::Micro, format!("Makeup-{i}"));
                 belt.add_straight((MAX_INSIDE_BELTS - inner_belt_makeup_len - 2) as usize);
                 belt.add_straight_underground(MINIMUM_UNDERGROUND_BELT_LEN);
             }
@@ -613,7 +616,7 @@ pub enum FacExtDelivery {
     },
     BeltEject {
         btype: FacEntBeltType,
-        out_top: bool,
+        out_inside: bool,
     },
     None,
 }

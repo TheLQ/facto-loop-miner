@@ -44,7 +44,7 @@ impl FacBlockFancy<()> for FacBlkMineIsland {
             // },
             delivery: FacExtDelivery::BeltEject {
                 btype: self.belt,
-                out_top: true,
+                out_inside: true,
             },
             wagons: self.wagons,
             front_engines: self.front_engines,

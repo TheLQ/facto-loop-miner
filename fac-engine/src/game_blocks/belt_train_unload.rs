@@ -94,7 +94,9 @@ impl FacBlkBeltTrainUnload {
                             - 1;
                         // remove special always padding
                         // + if self.turn_clockwise { 0 } else { 1 };
-                        output_belt.add_straight((finish_straights - remove_finished) as usize);
+                        output_belt.add_straight(
+                            (finish_straights.saturating_sub(remove_finished)) as usize,
+                        );
                         output_belt.add_turn90(!self.turn_clockwise);
                         output_belt.add_straight(after_straights as usize);
                     }
@@ -180,11 +182,5 @@ impl FacBlkBeltTrainUnload {
         };
         remaining_belt.add_straight(merged_height as usize);
         remaining_belt
-    }
-
-    //
-
-    fn generate_thru_belts(&self, origin: VPoint) -> Vec<FacBlkBettelBelt> {
-        todo!()
     }
 }
