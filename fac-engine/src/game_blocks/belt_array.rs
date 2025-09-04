@@ -1,4 +1,5 @@
 use crate::game_blocks::belt_bettel::FacBlkBettelBelt;
+use crate::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 
 pub struct FacBlkBettelArray {
@@ -22,7 +23,6 @@ impl FacBlkBettelArray {
             (true, true) => panic!("all the same?"),
             (false, false) => panic!("belts are not on axis"),
         }
-        // uhh... the indexes must be reversed?
 
         Self { belts }
     }
@@ -41,15 +41,42 @@ impl FacBlkBettelArray {
 
     pub fn add_turn90_clk(&mut self) {
         let total = self.belts.len();
-        for (i, belt) in self.belts.iter_mut().enumerate() {
-            belt.add_turn90_stacked_row_clk(i, total);
-        }
+        let is_reverse = matches!(
+            self.belts[0].current_direction(),
+            FacDirectionQuarter::South | FacDirectionQuarter::West
+        );
+
+        reversible_for_each(is_reverse, self.belts.iter_mut(), |(i, belt)| {
+            belt.add_turn90_stacked_row_clk(i, total)
+        });
     }
 
     pub fn add_turn90_ccw(&mut self) {
-        let total = self.belts.len();
-        for (i, belt) in self.belts.iter_mut().enumerate() {
-            belt.add_turn90_stacked_row_ccw(total - 1 - i)
+        let is_reverse = matches!(
+            self.belts[0].current_direction(),
+            FacDirectionQuarter::South | FacDirectionQuarter::West
+        );
+
+        reversible_for_each(is_reverse, self.belts.iter_mut(), |(i, belt)| {
+            belt.add_turn90_stacked_row_ccw(i)
+        });
+    }
+}
+
+/// dumb workaround since generic arrays must be the same type
+/// and the only alternative is Box<dyn Iterator>
+fn reversible_for_each<T>(
+    is_reverse: bool,
+    arr: impl DoubleEndedIterator<Item = T>,
+    cb: impl Fn((usize, T)),
+) {
+    if is_reverse {
+        for v in arr.rev().enumerate() {
+            cb(v)
+        }
+    } else {
+        for v in arr.enumerate() {
+            cb(v)
         }
     }
 }

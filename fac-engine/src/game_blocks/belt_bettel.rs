@@ -227,7 +227,7 @@ impl FacBlkBettelBelt {
         }
     }
 
-    fn current_direction(&self) -> &FacDirectionQuarter {
+    pub(super) fn current_direction(&self) -> &FacDirectionQuarter {
         self.links
             .last()
             .map(|v| &v.direction)

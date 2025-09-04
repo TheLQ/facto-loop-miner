@@ -1,6 +1,9 @@
 use std::rc::Rc;
 
+use crate::blueprint::output::ContextLevel;
+use crate::common::vpoint::VPoint;
 use crate::common::vpoint_direction::VPointDirectionQ;
+use crate::game_blocks::belt_array::FacBlkBettelArray;
 use crate::game_blocks::belt_train_unload::UnloadMode;
 use crate::game_blocks::block::FacBlockFancy;
 use crate::{
@@ -66,12 +69,6 @@ pub fn make_belt_bettel_train_unload(output: Rc<FacItemOutput>) -> AdmiralResult
 }
 
 pub fn make_belt_combiner(output: Rc<FacItemOutput>) {
-    // let block = FacBlkBeltCombiner {
-    //     belt: FacEntBeltType::Basic,
-    //     output_belt_targets: [3, 1, 4].to_vec(),
-    //     direction: FacDirectionQuarter::East,
-    //     output,
-    // };
     let block =
         FacBlkBeltCombiner::new_wavy(FacEntBeltType::Basic, FacDirectionQuarter::East, 10, output);
     block.generate(VPOINT_TEN);
@@ -87,4 +84,51 @@ pub fn make_belt_grid(output: Rc<FacItemOutput>) {
     // };
     todo!()
     // block.generate(VPOINT_TEN);
+}
+
+pub fn make_belt_array(output: Rc<FacItemOutput>) {
+    let mut origin = VPoint::new(15, 15);
+    for direction in [
+        FacDirectionQuarter::North,
+        FacDirectionQuarter::South,
+        FacDirectionQuarter::East,
+        FacDirectionQuarter::West,
+    ] {
+        for rotation in [true, false] {
+            let context = output.context_handle(
+                ContextLevel::Block,
+                format!("{direction}{}", if rotation { "clk" } else { "ccw" }),
+            );
+
+            let mut belts = Vec::new();
+            for i in 0..5 {
+                let context = output.context_handle(ContextLevel::Micro, "init".into());
+                belts.push(FacBlkBettelBelt::new(
+                    FacEntBeltType::Basic,
+                    match direction {
+                        FacDirectionQuarter::North | FacDirectionQuarter::South => origin.move_x(i),
+                        FacDirectionQuarter::West => origin.move_x(0).move_y(i),
+                        FacDirectionQuarter::East => origin.move_y(i),
+                    },
+                    direction,
+                    output.clone(),
+                ))
+            }
+
+            let mut array = FacBlkBettelArray::new(belts);
+            let context = output.context_handle(ContextLevel::Micro, "arr".into());
+            array.add_straight(2);
+            drop(context);
+
+            let context = output.context_handle(ContextLevel::Micro, "tur".into());
+            if rotation {
+                array.add_turn90_clk();
+            } else {
+                array.add_turn90_ccw();
+            }
+            drop(context);
+
+            origin += VPoint::new(15, 0);
+        }
+    }
 }
