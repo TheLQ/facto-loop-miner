@@ -1,8 +1,6 @@
-use super::{
-    belt_bettel::FacBlkBettelBelt, block::FacBlock2, rail_hope::RailHopeAppender,
-    rail_hope_single::RailHopeSingle,
-};
+use super::{block::FacBlock2, rail_hope::RailHopeAppender, rail_hope_single::RailHopeSingle};
 use crate::common::vpoint_direction::VPointDirectionQ;
+use crate::game_blocks::belt_array::FacBlkBettelArray;
 use crate::game_blocks::belt_train_unload::{BELTS_PER_DUAL, DUAL_BELTS_PER_WAGON, UnloadMode};
 use crate::game_blocks::block::FacBlockFancy;
 use crate::{
@@ -50,8 +48,8 @@ pub struct FacBlkRailStation {
     pub output: Rc<FacItemOutput>,
 }
 
-impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
-    fn generate(&self, origin: VPoint) -> Vec<FacBlkBettelBelt> {
+impl FacBlock2<Option<FacBlkBettelArray>> for FacBlkRailStation {
+    fn generate(&self, origin: VPoint) -> Option<FacBlkBettelArray> {
         let _ = &mut self
             .output
             .context_handle(ContextLevel::Block, "Station".into());
@@ -182,7 +180,7 @@ impl FacBlock2<Vec<FacBlkBettelBelt>> for FacBlkRailStation {
             stop_block.place_train(&schedule);
         }
 
-        belts.unwrap_or_default()
+        belts
     }
 }
 
@@ -398,7 +396,7 @@ impl FacBlkRailStop {
         &self,
         belt_type: &FacEntBeltType,
         turn_clockwise: bool,
-    ) -> Vec<FacBlkBettelBelt> {
+    ) -> FacBlkBettelArray {
         const PADDING_MERGE: u32 = 2;
 
         let context_handle = self
@@ -474,14 +472,14 @@ impl FacBlkRailStop {
         }
         .generate();
 
-        [input_belts, output_belts].concat().into_iter().collect()
+        FacBlkBettelArray::new([output_belts, input_belts].concat().into_iter().collect())
     }
 
     fn place_belts_output_eject(
         &self,
         belt_type: &FacEntBeltType,
         out_inside: bool,
-    ) -> Vec<FacBlkBettelBelt> {
+    ) -> FacBlkBettelArray {
         let mut _context_handle = self
             .output
             .context_handle(ContextLevel::Block, "Output".into());
@@ -556,18 +554,16 @@ impl FacBlkRailStop {
             belt.add_straight(inner_belt_makeup_len as usize);
         }
 
-        let mut belts: Vec<FacBlkBettelBelt> =
-            [short_belts, long_belts].concat().into_iter().collect();
+        let mut belts =
+            FacBlkBettelArray::new([short_belts, long_belts].concat().into_iter().collect());
         if out_inside {
+            let straight_len = MAX_INSIDE_BELTS - inner_belt_makeup_len - 2;
+            let _context_handle = self
+                .output
+                .context_handle(ContextLevel::Micro, format!("Makeup-{straight_len}"));
             const MAX_INSIDE_BELTS: u32 = 17;
-
-            for (i, belt) in belts.iter_mut().enumerate() {
-                let _context_handle = self
-                    .output
-                    .context_handle(ContextLevel::Micro, format!("Makeup-{i}"));
-                belt.add_straight((MAX_INSIDE_BELTS - inner_belt_makeup_len - 2) as usize);
-                belt.add_straight_underground(MINIMUM_UNDERGROUND_BELT_LEN);
-            }
+            belts.add_straight(straight_len as usize);
+            belts.add_straight_underground(MINIMUM_UNDERGROUND_BELT_LEN);
         }
 
         belts

@@ -2,6 +2,7 @@ pub mod assembler_cell;
 pub mod assembler_industry;
 pub mod assembler_thru;
 pub mod beacon_farm;
+pub mod belt_array;
 pub mod belt_bettel;
 pub mod belt_bus;
 pub mod belt_combiner;

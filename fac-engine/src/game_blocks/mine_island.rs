@@ -34,7 +34,7 @@ impl FacBlockFancy<()> for FacBlkMineIsland {
             .add_straight_section()
             .links_source()[1];
         let origin = start_hope.rails.first().unwrap().position;
-        FacBlkRailStation {
+        let mut output_belts = FacBlkRailStation {
             name: "something".into(),
             // delivery: FacExtDelivery::BeltSideways {
             //     btype: self.belt,
@@ -56,7 +56,9 @@ impl FacBlockFancy<()> for FacBlkMineIsland {
             is_input: true,
             output: self.output.clone(),
         }
-        .generate(origin);
+        .generate(origin)
+        .unwrap();
+        output_belts.add_turn90_clk();
 
         // for mine in &self.mines {
         //     let output_belts = FacBlkMineOre {
