@@ -147,8 +147,6 @@ impl FacBlockFancy<Vec<FacBlkBettelBelt>> for FacBlkMineOre {
             belt.add_straight(i * ROW_DEPTH);
         }
 
-        self.output.flush();
-
         belts
     }
 }
