@@ -14,12 +14,11 @@ use std::rc::Rc;
 /// without pathfinding concerns or complicated loop math
 #[derive(Clone)]
 pub struct FacBlkBettelBelt {
-    origin: VPoint,
-    origin_direction: FacDirectionQuarter,
     btype: FacEntBeltType,
     links: Vec<FacBlkBettelBeltLink>,
     output: Rc<FacItemOutput>,
     write_cursor: VPoint,
+    initial_direction: FacDirectionQuarter,
     dummy_nav_mode: bool,
 }
 
@@ -52,11 +51,10 @@ impl FacBlkBettelBelt {
     ) -> Self {
         Self {
             btype,
-            origin,
-            origin_direction,
             links: Vec::new(),
             output,
             write_cursor: origin,
+            initial_direction: origin_direction,
             dummy_nav_mode: false,
         }
     }
@@ -149,7 +147,7 @@ impl FacBlkBettelBelt {
         };
         match &link.ltype {
             FacBlkBettelBeltLinkType::Transport { length } => {
-                let mut new_cursor = self.origin;
+                let mut new_cursor = self.write_cursor;
                 for i in 0..*length {
                     new_cursor = self.write_cursor.move_direction_usz(link.direction, i);
                     output.writei(
@@ -198,10 +196,9 @@ impl FacBlkBettelBelt {
         let Self {
             btype,
             links,
-            origin: _,
-            origin_direction,
             output,
             write_cursor,
+            initial_direction,
             dummy_nav_mode,
         } = self;
         if let FacBlkBettelBeltLink {
@@ -220,10 +217,9 @@ impl FacBlkBettelBelt {
             FacBlkBettelBelt {
                 btype: *btype,
                 links: Vec::new(),
-                origin,
-                origin_direction: *origin_direction,
                 output: output.clone(),
                 write_cursor: origin,
+                initial_direction: *initial_direction,
                 dummy_nav_mode: *dummy_nav_mode,
             }
         } else {
@@ -235,7 +231,7 @@ impl FacBlkBettelBelt {
         self.links
             .last()
             .map(|v| &v.direction)
-            .unwrap_or(&self.origin_direction)
+            .unwrap_or(&self.initial_direction)
     }
 
     pub fn u_turn_from_east(
