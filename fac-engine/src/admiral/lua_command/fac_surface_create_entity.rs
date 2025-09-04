@@ -26,6 +26,8 @@ pub struct FacSurfaceCreateEntity {
 impl LuaCommand for FacSurfaceCreateEntity {
     fn make_lua(&self) -> String {
         let mut lua: Vec<String> = Vec::new();
+        // Use do..end block to avoid "Too many local variables" limit
+        lua.push("do".into());
 
         let name = &self.name;
         let pos = &self.position;
@@ -78,6 +80,7 @@ impl LuaCommand for FacSurfaceCreateEntity {
             ));
         }
 
+        lua.push("end".into());
         string_space_shrinker(lua.join(" "))
     }
 }

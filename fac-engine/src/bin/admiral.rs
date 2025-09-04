@@ -2,6 +2,7 @@ use std::process::ExitCode;
 use std::rc::Rc;
 
 use exhaustive::Exhaustive;
+use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::log_init_trace;
 use facto_loop_miner_fac_engine::admiral::lua_command::fac_render_destroy::FacRenderDestroy;
 use facto_loop_miner_fac_engine::blueprint::bpfac::blueprint::FacBpBlueprintWrapper;
@@ -14,10 +15,13 @@ use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPOINT_ZERO;
 use facto_loop_miner_fac_engine::tests::assembler_tests::{make_assembler_thru, make_industry};
 use facto_loop_miner_fac_engine::tests::belt_tests::{
-    make_belt_bettel, make_belt_bettel_train_unload, make_belt_combiner, make_belt_grid,
+    make_belt_array, make_belt_bettel, make_belt_bettel_train_unload, make_belt_combiner,
+    make_belt_grid,
 };
 use facto_loop_miner_fac_engine::tests::ore_tests::{make_mine, make_mine_and_rail};
-use facto_loop_miner_fac_engine::tests::other_tests::make_solar_bath_test;
+use facto_loop_miner_fac_engine::tests::other_tests::{
+    make_solar_bath_test, max_command_size_finder,
+};
 use facto_loop_miner_fac_engine::tests::render_text_tests::make_render_text;
 use facto_loop_miner_fac_engine::tests::train_area::make_area_finder;
 use facto_loop_miner_fac_engine::tests::train_loop_tests::make_rail_loop;
@@ -36,6 +40,7 @@ use facto_loop_miner_fac_engine::{
     common::entity::FacEntity,
     game_entities::chest::{FacEntChest, FacEntChestType},
 };
+use tracing::info;
 
 fn main() -> ExitCode {
     log_init_trace();
@@ -50,6 +55,7 @@ fn main() -> ExitCode {
 }
 
 fn inner_main() -> AdmiralResult<()> {
+    let watch = BasicWatch::start();
     let mut client = AdmiralClient::new()?;
     client.auth()?;
 
@@ -64,7 +70,7 @@ fn inner_main() -> AdmiralResult<()> {
     };
 
     let command_output = output.clone();
-    match 10 {
+    match 26 {
         1 => make_basic(command_output)?,
         2 => make_assembler_thru(command_output),
         3 => make_belt_bettel(command_output)?,
@@ -89,6 +95,8 @@ fn inner_main() -> AdmiralResult<()> {
         22 => make_soda_plus(command_output),
         23 => make_base_source_rails(command_output),
         24 => make_render_text(command_output)?,
+        25 => make_belt_array(command_output),
+        26 => max_command_size_finder(command_output),
         _ => panic!("uihhh"),
     }
     output.flush();
@@ -100,6 +108,7 @@ fn inner_main() -> AdmiralResult<()> {
         println!("bp {res}");
     }
 
+    info!("admiral ran in {watch}");
     Ok(())
 }
 

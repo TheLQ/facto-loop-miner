@@ -12,8 +12,10 @@ pub mod client;
 // pub mod file;
 
 const BATCH_SIZE: usize = if DEBUG_POSITION_EXPECTED || DEBUG_PRE_COLLISION {
+    // max lua variables at all, 32k
+    30_000
     // max lua variables per function
-    200
+    // 200
 } else {
     // effectively infinite?
     200_000
