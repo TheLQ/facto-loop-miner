@@ -81,9 +81,7 @@ pub fn make_rail_station(output: Rc<FacItemOutput>) -> AdmiralResult<()> {
         })),
         output,
     };
-    let belts = station.generate(VPOINT_ZERO);
-    for mut belt in belts {
-        belt.add_straight_underground(5);
-    }
+    let mut belts = station.generate(VPOINT_ZERO).unwrap();
+    belts.add_straight_underground(5);
     Ok(())
 }
