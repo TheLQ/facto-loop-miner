@@ -17,7 +17,8 @@ use std::fmt::{Debug, Display, Formatter};
 use std::fs::remove_file;
 use std::io::ErrorKind;
 use std::path::Path;
-use std::simd::Simd;
+use std::simd::prelude::{SimdInt, SimdPartialOrd};
+use std::simd::{Mask, Simd};
 use tracing::debug;
 
 /// Collection of entities and xy positions they cover
@@ -164,6 +165,8 @@ impl<E> VEntityMap<E>
 
             let radius = Simd::splat(self.radius as i32);
             let diameter = Simd::splat(self.diameter() as i32);
+            let xy_lookup_len = Simd::splat(xy_lookup.len());
+            const EMPTY_INDEXES: Simd<usize, POINTS_SIZE> = Simd::splat(EMPTY_XY_INDEX);
 
             let (chunks, remainder) = points.as_chunks::<POINTS_SIZE>();
             assert_eq!(remainder.len(), 0); // todo: holy magic wtf
@@ -177,11 +180,19 @@ impl<E> VEntityMap<E>
                 }
 
                 let indexes = diameter * (as_y + radius) + (as_x + radius);
-                if indexes
-                    .to_array()
-                    .into_iter()
-                    .any(|i| xy_lookup[i as usize] != EMPTY_XY_INDEX)
-                {
+                let indexes_usize: Simd<usize, POINTS_SIZE> = indexes.cast();
+
+                assert!(indexes_usize.simd_lt(xy_lookup_len).all());
+                // dummy empty indexes
+                let resu = unsafe {
+                    Simd::gather_select_unchecked(
+                        xy_lookup,
+                        Mask::splat(true),
+                        indexes.cast(),
+                        EMPTY_INDEXES,
+                    )
+                };
+                if resu != EMPTY_INDEXES {
                     return false;
                 }
             }
