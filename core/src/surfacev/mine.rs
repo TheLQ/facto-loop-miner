@@ -1,6 +1,6 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::{VSurfacePixel, VSurfacePixelMut, VSurfacePixelPatches};
+use crate::surfacev::vsurface::{VSurfacePatch, VSurfacePixel, VSurfacePixelMut};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{
@@ -62,10 +62,7 @@ impl MinePath {
 }
 
 impl MineLocation {
-    pub fn from_patch_indexes(
-        surface: VSurfacePixelPatches,
-        patch_indexes: Vec<usize>,
-    ) -> Option<Self> {
+    pub fn from_patch_indexes(surface: VSurfacePatch, patch_indexes: Vec<usize>) -> Option<Self> {
         let patch_corners = surface
             .patches()
             .iter()

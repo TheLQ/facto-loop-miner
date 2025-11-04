@@ -4,7 +4,7 @@ use crate::navigator::planners::PathingTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::VSurfacePixelPatches;
+use crate::surfacev::vsurface::VSurfacePatch;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
@@ -58,7 +58,7 @@ pub const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 ///  - Split groups if needed because too huge creates too many possibilities later
 pub fn select_mines_and_sources(
     tunables: &PathingTunables,
-    surface: VSurfacePixelPatches,
+    surface: VSurfacePatch,
     maximum_mine_count_per_batch: usize,
 ) -> MineSelectBatchResult {
     let base_source = BaseSource::from_central_base(tunables).into_refcells();
@@ -66,7 +66,7 @@ pub fn select_mines_and_sources(
     let patch_groups = group_nearby_patches(surface);
     let total_patches: usize = patch_groups
         .iter()
-        .map(|v| VSurfacePixelPatches::mine_patches_len(v))
+        .map(|v| VSurfacePatch::mine_patches_len(v))
         .sum();
     info!("selected {total_patches} patches");
 
@@ -116,7 +116,7 @@ pub fn select_mines_and_sources(
 }
 
 /// Second grouping pass (after opencv), now by grouping different resource patches
-pub fn group_nearby_patches(surface: VSurfacePixelPatches) -> Vec<MineLocation> {
+pub fn group_nearby_patches(surface: VSurfacePatch) -> Vec<MineLocation> {
     // ignores UraniumOre because it's only for
     // electric production (solar instead) and military (unused)
     let resources = [

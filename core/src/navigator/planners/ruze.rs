@@ -8,8 +8,8 @@ use crate::state::tuneables::{MoriTunables, Tunables};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::{
-    AsVsPixel, AsVsPixelMut, VSurface, VSurfacePixelMut, VSurfacePixelPatches,
-    VSurfacePixelPatchesMut, VSurfaceRailsMut,
+    AsVsPixel, AsVsPixelMut, VSurface, VSurfacePatch, VSurfacePatchMut, VSurfacePixelMut,
+    VSurfaceRailsMut,
 };
 use std::path::Path;
 use tracing::{error, info, trace, warn};
@@ -21,7 +21,7 @@ const RUZE_MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
 /// Super parallel batch based planner
 pub fn start_ruze_planner(
     tunables: &PathingTunables,
-    surface: &mut VSurfacePixelPatchesMut,
+    surface: &mut VSurfacePatchMut,
     params: &StepParams,
 ) {
     let select_batches = select_mines_and_sources(
