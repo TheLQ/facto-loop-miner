@@ -15,7 +15,7 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{HopeSodaLink, sod
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use pathfinding::prelude::{AStarErr, astar_mori};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tracing::{info, trace, warn};
 
@@ -45,8 +45,15 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
         //
         // panic!("waste of time")
 
+        let mut founds = HashSet::new();
+        for pos in end_link.area_vec() {
+            founds.insert(surface.get_pixel(pos));
+        }
+        // let founds_txt = founds.iter().map(|v| v.as_ref()).join(",");
+        let founds_txt = "";
+
         // we need this when 100% blocked
-        warn!("waste of time {endpoints}");
+        warn!("waste of time {endpoints} {founds_txt}");
         return MoriResult::FailingDebug {
             err: FailingMeta::default().astar_err,
         };
@@ -136,7 +143,8 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
             );
             MoriResult::Route {
                 // path: duals_into_single_vec(path),
-                path: sodas_to_links(path).collect(),
+                path: sodas_to_links(&path).collect(),
+                sodas: path,
                 cost,
             }
         }
@@ -197,8 +205,14 @@ struct WatchData {
 }
 
 pub enum MoriResult {
-    Route { path: Vec<HopeLink>, cost: u32 },
-    FailingDebug { err: AStarErr<HopeSodaLink, u32> },
+    Route {
+        path: Vec<HopeLink>,
+        sodas: Vec<HopeSodaLink>,
+        cost: u32,
+    },
+    FailingDebug {
+        err: AStarErr<HopeSodaLink, u32>,
+    },
 }
 
 impl MoriResult {

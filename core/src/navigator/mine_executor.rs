@@ -330,11 +330,12 @@ fn execute_route_combination(
             &route.finding_limiter,
         );
         match route_result {
-            MoriResult::Route { path, cost } => {
+            MoriResult::Route { path, sodas, cost } => {
                 // path.extend(extended_entry_rails);
 
                 let path = MinePath {
                     links: path,
+                    sodas,
                     cost,
                     mine_base: route.location.clone(),
                     segment: route.segment.clone(),
