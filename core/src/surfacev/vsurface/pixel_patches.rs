@@ -1,24 +1,35 @@
+use crate::surfacev::mine::MineLocation;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::core::VSurface;
+use crate::surfacev::vsurface::pixel::{AsVsPixel, AsVsPixelMut};
+use crate::surfacev::vsurface::{VSurfacePixel, VSurfacePixelMut};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use tracing::{debug, info};
 
 impl VSurface {
-    pub fn pixels_patches(&mut self) -> VSurfacePixelPatchesMut {
-        VSurfacePixelPatchesMut {
+    pub fn pixels_patches(&mut self) -> PlugMut {
+        PlugMut {
             pixels: &mut self.pixels,
             patches: &mut self.patches,
         }
     }
 }
 
-pub struct VSurfacePixelPatchesMut<'s> {
+pub struct PlugMut<'s> {
     pub(super) pixels: &'s mut VEntityMap<VPixel>,
     pub(super) patches: &'s mut Vec<VPatch>,
 }
 
-impl<'s> VSurfacePixelPatchesMut<'s> {
+impl<'s> PlugMut<'s> {
+    pub fn pixel_patches(&self) -> Plug {
+        Plug::new(&self.pixels, &self.patches)
+    }
+
+    pub fn new(pixels: &'s mut VEntityMap<VPixel>, patches: &'s mut Vec<VPatch>) -> Self {
+        Self { pixels, patches }
+    }
+
     pub fn remove_patches_within_radius(&mut self, radius: u32) {
         let mut removed_points: Vec<VPoint> = Vec::new();
         let mut patches_to_remove = Vec::new();
@@ -75,14 +86,28 @@ impl<'s> VSurfacePixelPatchesMut<'s> {
 }
 
 #[derive(Clone, Copy)]
-pub struct VSurfacePixelPatches<'s> {
+pub struct Plug<'s> {
     pub(super) pixels: &'s VEntityMap<VPixel>,
     pub(super) patches: &'s Vec<VPatch>,
 }
 
-impl VSurfacePixelPatches<'_> {
+impl<'s> Plug<'s> {
+    pub fn new(pixels: &'s VEntityMap<VPixel>, patches: &'s Vec<VPatch>) -> Self {
+        Self { pixels, patches }
+    }
+
     pub fn patches(&self) -> &[VPatch] {
         &self.patches
+    }
+
+    pub fn mine_patches(&self, mine: &MineLocation) -> impl Iterator<Item = &VPatch> {
+        mine.patch_indexes()
+            .iter()
+            .map(|patch_index| &self.patches[*patch_index])
+    }
+
+    pub fn mine_patches_len(mine: &MineLocation) -> usize {
+        mine.patch_indexes().len()
     }
 
     /// Anti-entropy
@@ -118,4 +143,43 @@ impl VSurfacePixelPatches<'_> {
             .position(|surface_patch| patch == surface_patch)
             .unwrap()
     }
+}
+
+//
+
+impl<'s> AsVsPixelMut for PlugMut<'s> {
+    fn pixels_mut(&mut self) -> VSurfacePixelMut {
+        VSurfacePixelMut::new(&mut self.pixels)
+    }
+}
+
+impl<'s> AsVsPixel for PlugMut<'s> {
+    fn pixels(&self) -> VSurfacePixel {
+        VSurfacePixel::new(&self.pixels)
+    }
+}
+
+impl<'s> AsVsPixel for Plug<'s> {
+    fn pixels(&self) -> VSurfacePixel {
+        VSurfacePixel::new(&self.pixels)
+    }
+}
+
+pub trait AsVsPixelPatchesMut {
+    fn pixel_patches_mut(&mut self) -> PlugMut;
+}
+
+pub trait AsVsPixelPatches {
+    fn pixel_patches(&self) -> Plug;
+}
+
+impl<'s> AsVsPixelPatches for PlugMut<'s> {
+    fn pixel_patches(&self) -> Plug {
+        let Self { pixels, patches } = self;
+        Plug { pixels, patches }
+    }
+
+    // fn from_mut(PlugMut { pixels, patches }: &'s PlugMut) -> Self {
+    //     Self { pixels, patches }
+    // }
 }

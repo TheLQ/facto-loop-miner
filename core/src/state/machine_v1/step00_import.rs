@@ -2,7 +2,7 @@ use crate::gamedata::lua::{LuaEntity, LuaThing, read_lua_tiles};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::vsurface::{VSurface, VSurfacePixelMut};
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
@@ -84,8 +84,11 @@ fn find_radius_max<T: LuaThing>(
     }
 }
 
-fn translate_entities_to_image<E>(entities: &[E], surface: &mut VSurface, params: &StepParams)
-where
+fn translate_entities_to_image<E>(
+    entities: &[E],
+    surface: &mut VSurfacePixelMut,
+    params: &StepParams,
+) where
     E: LuaThing,
 {
     let mut mega_init_entities: HashMap<Pixel, Vec<VPoint>> = HashMap::new();

@@ -2,12 +2,12 @@ use crate::always_true_test;
 use crate::navigator::mine_executor::{ExecutorResult, FailingMeta, execute_route_batch};
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
-use crate::navigator::planners::common::{debug_failing, draw_prep};
+use crate::navigator::planners::common::{PathingTunables, debug_failing, draw_prep};
 use crate::state::machine::StepParams;
 use crate::state::tuneables::Tunables;
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vsurface::{VSurface, VSurfacePixelPatches};
+use crate::surfacev::vsurface::{VSurface, VSurfacePixelPatches, VSurfacePixelPatchesMut};
 use std::path::Path;
 use tracing::{error, info, trace, warn};
 
@@ -16,7 +16,11 @@ const RUZE_MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
 /// Planner v1 "Crimzon Ruze 💢"
 ///
 /// Super parallel batch based planner
-pub fn start_ruze_planner(tunables: &Tunables, surface: VSurfacePixelPatches, params: &StepParams) {
+pub fn start_ruze_planner(
+    tunables: &PathingTunables,
+    surface: &mut VSurfacePixelPatchesMut,
+    params: &StepParams,
+) {
     let select_batches =
         select_mines_and_sources(tunables, surface, RUZE_MAXIMUM_MINE_COUNT_PER_BATCH)
             .into_success()

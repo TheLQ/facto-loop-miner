@@ -324,7 +324,7 @@ impl MineLocation {
 
     fn is_surface_points_free_excluding_self_area(
         &self,
-        surface: &VSurfacePixel,
+        surface: VSurfacePixel,
         points: impl IntoIterator<Item = impl Borrow<VPoint>>,
         debug_prefix: &Arguments,
     ) -> bool {
@@ -471,6 +471,10 @@ impl MineLocation {
         self.endpoints
             .iter()
             .map(|v| VPointDirectionQ(*v, FacDirectionQuarter::East))
+    }
+
+    pub(super) fn patch_indexes(&self) -> &[usize] {
+        self.patch_indexes.as_slice()
     }
 }
 

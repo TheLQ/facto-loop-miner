@@ -21,7 +21,7 @@ impl Step for Step03 {
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let mut surface = VSurface::load_from_last_step(&params)?;
 
-        surface.crop(CROP_RADIUS);
+        surface.pixels_mut().crop(CROP_RADIUS);
 
         surface.save(&params.step_out_dir)?;
 

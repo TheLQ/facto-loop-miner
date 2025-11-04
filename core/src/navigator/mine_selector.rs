@@ -1,10 +1,10 @@
 use crate::TILES_PER_CHUNK;
 use crate::navigator::base_source::{BaseSource, BaseSourceEighth, BaseSourceRefs};
-use crate::state::tuneables::{BaseTunables, Tunables};
+use crate::navigator::planners::PathingTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::{VSurfacePixel, VSurfacePixelPatches};
+use crate::surfacev::vsurface::VSurfacePixelPatches;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
@@ -57,14 +57,17 @@ pub const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 ///  - Assign base sources
 ///  - Split groups if needed because too huge creates too many possibilities later
 pub fn select_mines_and_sources(
-    tunables: &Tunables,
+    tunables: &PathingTunables,
     surface: VSurfacePixelPatches,
     maximum_mine_count_per_batch: usize,
 ) -> MineSelectBatchResult {
     let base_source = BaseSource::from_central_base(tunables).into_refcells();
 
     let patch_groups = group_nearby_patches(surface);
-    let total_patches: usize = patch_groups.iter().map(|v| v.surface_patches().len()).sum();
+    let total_patches: usize = patch_groups
+        .iter()
+        .map(|v| VSurfacePixelPatches::mine_patches_len(v))
+        .sum();
     info!("selected {total_patches} patches");
 
     // let ordered_patches = match 2 {
@@ -77,7 +80,7 @@ pub fn select_mines_and_sources(
     // };
     // ordered_patches
 
-    let mine_batches = patches_by_cross_sign_expanding(patch_groups, &base_source, &tunables.base);
+    let mine_batches = patches_by_cross_sign_expanding(patch_groups, &base_source, tunables);
     if mine_batches.is_empty() {
         return MineSelectBatchResult::EmptyBatch;
     }
@@ -208,7 +211,7 @@ fn recursive_near_patches<'a>(
 fn patches_by_cross_sign_expanding(
     mut mines: Vec<MineLocation>,
     base_source: &BaseSourceRefs,
-    base_tunables: &BaseTunables,
+    base_tunables: &PathingTunables,
 ) -> Vec<MineSelectBatch> {
     let bounding_area =
         VArea::from_arbitrary_points(mines.iter().flat_map(|v| v.area_min().get_corner_points()));
@@ -220,7 +223,7 @@ fn patches_by_cross_sign_expanding(
         // )
         VPointDirectionQ(
             // todo: this assumes dream of both east and west building
-            VPoint::new(base_tunables.base_chunks.as_tiles_i32(), 0),
+            VPoint::new(base_tunables.base_chunks().as_tiles_i32(), 0),
             FacDirectionQuarter::East,
         ),
     ];

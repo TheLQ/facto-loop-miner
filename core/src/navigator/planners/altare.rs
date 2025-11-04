@@ -8,6 +8,7 @@ use crate::navigator::mine_selector::{
     MineSelectBatch, PERPENDICULAR_SCAN_WIDTH, group_nearby_patches,
 };
 use crate::navigator::mori::{MoriResult, count_link_origins, mori2_start};
+use crate::navigator::planners::PathingTunables;
 use crate::navigator::planners::common::{
     debug_draw_failing_mines, debug_draw_mine_index_labels, debug_draw_mine_links, debug_failing,
     draw_prep_mines,
@@ -16,7 +17,9 @@ use crate::state::machine::StepParams;
 use crate::state::tuneables::Tunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
-use crate::surfacev::vsurface::{VSurface, VSurfacePixelPatches};
+use crate::surfacev::vsurface::{
+    AsVsPixel, AsVsPixelMut, VSurface, VSurfacePixel, VSurfacePixelPatches, VSurfacePixelPatchesMut,
+};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
@@ -35,15 +38,19 @@ const BATCH_SIZE_MAX: usize = 3;
 /// Pathfinding with medium-difficulty backtracking.
 /// because v0 Mori and v1 Ruze Planner can mask valid routes
 pub fn start_altare_planner(
-    tunables: &Tunables,
-    surface: VSurfacePixelPatches,
+    tunables: &PathingTunables,
+    surface_mut: &mut VSurfacePixelPatchesMut,
     params: &StepParams,
 ) {
     let base_source = BaseSource::from_central_base(tunables).into_refcells();
     let base_source_positive = base_source.positive_rc();
 
-    let mut all_mine_locations = group_nearby_patches(surface);
-    draw_prep_mines(surface, &all_mine_locations, &base_source_positive);
+    let mut all_mine_locations = group_nearby_patches(surface_mut.pixel_patches());
+    draw_prep_mines(
+        &mut surface_mut.pixels_mut(),
+        &all_mine_locations,
+        &base_source_positive,
+    );
 
     /////
 
@@ -76,7 +83,7 @@ pub fn start_altare_planner(
     /////
 
     all_mine_locations.retain_mut(|mine| {
-        mine.revalidate_endpoints_after_no_touch(surface);
+        mine.revalidate_endpoints_after_no_touch(surface_mut.pixels());
         // !mine.endpoints().is_empty()
         if mine.destinations().next().is_none() {
             trace!("removing empty mine {mine:?}");
@@ -116,7 +123,7 @@ pub fn start_altare_planner(
     let mut limiter_counter = 0;
     let mut is_prev_retry = false;
     loop {
-        match quester.scan_patches(surface) {
+        match quester.scan_patches(surface_mut.pixels()) {
             QuesterScanResult::YAxisEnding => {
                 info!("end of processing");
 
@@ -131,13 +138,14 @@ pub fn start_altare_planner(
                     // best = 16
                     // better = 28, 30, 32
                     info!("limiter {limiter_counter}");
-                    break;
+                    // break;
                     let base_source = base_source_positive.borrow_mut().next().unwrap();
                     let start = base_source.origin;
                     let end = VPointDirectionQ(
                         VPoint::new(SECTION_POINTS_I32 * 100, SECTION_POINTS_I32 * 100),
                         FacDirectionQuarter::East,
                     );
+                    let surface = surface_mut.pixels();
 
                     let fixed_radius = surface.get_radius_i32();
                     let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
@@ -147,8 +155,12 @@ pub fn start_altare_planner(
                         VPoint::new(fixed_radius, fixed_radius),
                     );
 
-                    let result =
-                        mori2_start(surface, VSegment { start, end }, &fixed_finding_limiter);
+                    let result = mori2_start(
+                        tunables.mori(),
+                        surface,
+                        VSegment { start, end },
+                        &fixed_finding_limiter,
+                    );
                     let MoriResult::FailingDebug { err } = result else {
                         panic!("it worked? {end}")
                     };
@@ -162,11 +174,11 @@ pub fn start_altare_planner(
                 let mut mines: Vec<MineLocation> = Vec::new();
 
                 for _ in 0..BATCH_SIZE_MAX.saturating_sub(1) {
-                    if let Some((mine, removed_points)) = surface.remove_mine_path_pop() {
+                    if let Some((mine, removed_points)) = surface_mut.remove_mine_path_pop() {
                         trace!("batch pop from mine {BATCH_SIZE_MAX}");
                         MineLocation::restore_area_buffered(
                             &quester.all_mine_locations,
-                            surface,
+                            surface_mut.pixels(),
                             removed_points,
                         );
                         mines.push(mine.mine_base);
@@ -430,7 +442,7 @@ struct Quester {
 }
 
 impl Quester {
-    fn scan_patches(&self, surface: &VSurface) -> QuesterScanResult<'_> {
+    fn scan_patches(&self, surface: VSurfacePixel) -> QuesterScanResult<'_> {
         let scan_sign = if self.origin_sign_pos { 1 } else { -1 };
         let scan_start = self.origin_base.point().move_direction_sideways_int(
             self.origin_base.direction(),

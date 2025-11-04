@@ -3,8 +3,8 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{CoreConvertPathResult, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::ventity_map::{VEntityMap, VMapChange, VPixel};
-use crate::surfacev::vsurface::rails::VSurfaceRailsMut;
-use crate::surfacev::vsurface::{VSurface, VSurfacePixelPatches, VSurfacePixelPatchesMut};
+use crate::surfacev::vsurface::core::path_pixel_xy_indexes_clone;
+use crate::surfacev::vsurface::{VSurface, VSurfacePixel, VSurfacePixelMut};
 use colorgrad::Gradient;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
@@ -22,13 +22,17 @@ use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::Path;
 use tracing::{debug, info, trace};
 
-pub struct VSurfacePixelMut<'s> {
+pub struct PlugMut<'s> {
     pub(super) pixels: &'s mut VEntityMap<VPixel>,
 }
 
-impl<'s> VSurfacePixelMut<'s> {
-    fn new(pixels: &'s mut VEntityMap<VPixel>) -> Self {
+impl<'s> PlugMut<'s> {
+    pub(super) fn new(pixels: &'s mut VEntityMap<VPixel>) -> Self {
         Self { pixels }
+    }
+
+    pub fn load_clone_prep(&mut self) -> VResult<()> {
+        self.pixels.load_clone_prep(&path_pixel_xy_indexes_clone())
     }
 
     pub fn crop(&mut self, new_radius: u32) {
@@ -104,7 +108,7 @@ impl<'s> VSurfacePixelMut<'s> {
         // imwrite("out.png", &mat, &Vector::new()).unwrap();
         let new_points = mat_into_points(mat, color, pos)
             .into_iter()
-            .filter(|v| !self.is_point_out_of_bounds(v))
+            .filter(|v| !self.pixels().is_point_out_of_bounds(v))
             .collect();
         trace!("Text \"{text}\" at {pos} generated in {watch}");
 
@@ -122,11 +126,11 @@ impl<'s> VSurfacePixelMut<'s> {
 }
 
 #[derive(Clone, Copy)]
-pub struct VSurfacePixel<'s> {
+pub struct Plug<'s> {
     pixels: &'s VEntityMap<VPixel>,
 }
 
-impl<'s> VSurfacePixel<'s> {
+impl<'s> Plug<'s> {
     pub fn new(pixels: &'s VEntityMap<VPixel>) -> Self {
         Self { pixels }
     }
@@ -350,41 +354,61 @@ impl<'s> VSurfacePixel<'s> {
 
 //
 
+pub trait AsVsPixelMut: AsVsPixel {
+    fn pixels_mut(&mut self) -> PlugMut;
+}
+
+pub trait AsVsPixel {
+    fn pixels(&self) -> Plug;
+}
+
+impl<'s> AsVsPixel for PlugMut<'s> {
+    fn pixels(&self) -> Plug {
+        Plug::new(&self.pixels)
+    }
+}
+
+//
+
+pub struct PlugCopy {
+    pixels: VEntityMap<VPixel>,
+}
+
+impl PlugCopy {
+    pub fn pixels_mut(&mut self) -> PlugMut {
+        PlugMut::new(&mut self.pixels)
+    }
+}
+
+impl Plug<'_> {
+    pub fn surface_copy(&self) -> PlugCopy {
+        PlugCopy {
+            pixels: self.pixels.clone(),
+        }
+    }
+}
+
+impl AsVsPixelMut for PlugCopy {
+    fn pixels_mut(&mut self) -> PlugMut {
+        PlugMut::new(&mut self.pixels)
+    }
+}
+
+impl AsVsPixel for PlugCopy {
+    fn pixels(&self) -> Plug {
+        Plug::new(&self.pixels)
+    }
+}
+
+//
+
 impl VSurface {
     pub fn pixels(&self) -> VSurfacePixel {
-        VSurfacePixel::new(&self.pixels)
+        Plug::new(&self.pixels)
     }
 
     pub fn pixels_mut(&mut self) -> VSurfacePixelMut {
-        VSurfacePixelMut::new(&self.pixels)
-    }
-}
-
-impl<'s> VSurfacePixelMut<'s> {
-    pub fn pixels(&self) -> VSurfacePixel {
-        VSurfacePixel::new(&self.0)
-    }
-}
-
-impl<'s> VSurfacePixelPatchesMut<'s> {
-    pub fn pixels_mut(&mut self) -> VSurfacePixelMut {
-        VSurfacePixelMut::new(&mut self.pixels)
-    }
-}
-
-impl<'s> VSurfacePixelPatches<'s> {
-    pub fn pixels(&self) -> VSurfacePixel {
-        VSurfacePixel::new(&self.pixels)
-    }
-}
-
-impl<'s> VSurfaceRailsMut<'s> {
-    pub fn pixels_mut(&mut self) -> VSurfacePixelMut {
-        VSurfacePixelMut::new(&mut self.pixels)
-    }
-
-    pub fn pixels(&self) -> VSurfacePixel {
-        VSurfacePixel::new(&self.pixels)
+        PlugMut::new(&mut self.pixels)
     }
 }
 

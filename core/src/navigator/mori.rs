@@ -1,9 +1,9 @@
 use crate::navigator::mine_executor::FailingMeta;
 use crate::navigator::mori_cost::calculate_cost_for_link;
 use crate::navigator::planners::debug_draw_segment;
-use crate::state::tuneables::{MoriTunables, Tunables};
+use crate::state::tuneables::MoriTunables;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vsurface::{VSurface, VSurfacePixel, VSurfacePixelMut};
+use crate::surfacev::vsurface::{AsVsPixel, VSurface, VSurfacePixel, VSurfacePixelMut};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::{BasicWatch, BasicWatchResult};
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -26,7 +26,7 @@ use tracing::{info, trace, warn};
 /// Makes a dual rail + spacing, +6 straight or 90 degree turning, path of rail from start to end.
 /// Without collisions into any point on the Surface.
 pub fn mori2_start(
-    tunables: Tunables,
+    tunables: &MoriTunables,
     surface: VSurfacePixel,
     endpoints: VSegment,
     finding_limiter: &VArea,
@@ -64,7 +64,6 @@ pub fn mori2_start(
         };
     }
 
-    let tunables = &tunables.mori;
     let mut watch_data = WatchData::default();
 
     let total_watch = BasicWatch::start();
@@ -180,7 +179,7 @@ fn crude_dump_on_failure(
             } else {
                 let mut points = area
                     .into_iter()
-                    .map(|v| new_surface.get_pixel(v))
+                    .map(|v| new_surface.pixels().get_pixel(v))
                     .collect_vec();
                 points.sort();
                 points.dedup();
@@ -196,7 +195,7 @@ fn crude_dump_on_failure(
     new_surface
         .change_pixels(links.into_iter().flat_map(|v| v.area_vec()).collect())
         .stomp(Pixel::Highlighter);
-    debug_draw_segment(new_surface, endpoints);
+    // debug_draw_segment(new_surface, endpoints);
 }
 
 #[derive(Default)]

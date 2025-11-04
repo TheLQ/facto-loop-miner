@@ -1,6 +1,7 @@
 use crate::navigator::mori::{MoriResult, mori2_start};
+use crate::state::tuneables::MoriTunables;
 use crate::surfacev::mine::{MineLocation, MinePath};
-use crate::surfacev::vsurface::{VSurface, VSurfacePixel};
+use crate::surfacev::vsurface::{AsVsPixel, VSurfacePixel, VSurfacePixelMut};
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::{EXECUTOR_TAG, LOCALE};
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -18,7 +19,8 @@ use strum::AsRefStr;
 use tracing::{Level, debug, info, span, trace};
 
 pub fn execute_route_batch_clone_prep(
-    surface: &mut VSurface,
+    tunables: &MoriTunables,
+    surface: &mut VSurfacePixelMut,
     sequences: Vec<ExecutionSequence>,
     flags: &[ExecuteFlags],
 ) -> ExecutorResult {
@@ -31,12 +33,13 @@ pub fn execute_route_batch_clone_prep(
     // Caller will write our output result to the surface, then we repeat this safe/load
     surface.load_clone_prep().unwrap();
 
-    execute_route_batch(surface, sequences, flags)
+    execute_route_batch(tunables, surface.pixels(), sequences, flags)
 }
 
 /// Given thousands of possible route combinations, execute in parallel and find the best
 pub fn execute_route_batch(
-    execution_surface: &VSurface,
+    tunables: &MoriTunables,
+    execution_surface: VSurfacePixel,
     sequences: Vec<ExecutionSequence>,
     flags: &[ExecuteFlags],
 ) -> ExecutorResult {
@@ -109,7 +112,13 @@ pub fn execute_route_batch(
             sequences
                 .into_par_iter()
                 .map(|ExecutionSequence { routes }| {
-                    execute_route_combination(execution_surface, routes, total_sequences, flags)
+                    execute_route_combination(
+                        tunables,
+                        execution_surface,
+                        routes,
+                        total_sequences,
+                        flags,
+                    )
                 })
                 .collect()
         })
@@ -118,7 +127,13 @@ pub fn execute_route_batch(
             .into_iter()
             // .take(40)
             .map(|ExecutionSequence { routes }| {
-                execute_route_combination(execution_surface, routes, total_sequences, flags)
+                execute_route_combination(
+                    tunables,
+                    execution_surface,
+                    routes,
+                    total_sequences,
+                    flags,
+                )
             })
             .collect()
     };
@@ -276,6 +291,7 @@ static SUCCESS_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static FAIL_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 fn execute_route_combination(
+    tuneables: &MoriTunables,
     surface: VSurfacePixel,
     route_combination: Vec<ExecutionRoute>,
     total_sequences: usize,
@@ -299,7 +315,8 @@ fn execute_route_combination(
     }
 
     // let watch = BasicWatch::start();
-    let mut working_surface = (*surface).clone();
+    let mut working_surface_copy = surface.surface_copy();
+    let working_surface = &mut working_surface_copy.pixels_mut();
     // info!("Cloned surface in {}", watch);
 
     let mut found_paths = Vec::new();
@@ -307,11 +324,11 @@ fn execute_route_combination(
         if flags.contains(&ExecuteFlags::ShrinkBases) {
             route
                 .location
-                .draw_area_buffered_to_no_touch(&mut working_surface);
+                .draw_area_buffered_to_no_touch(working_surface);
             if i != 0 {
                 route_combination[i - 1]
                     .location
-                    .draw_area_buffered(&mut working_surface)
+                    .draw_area_buffered(working_surface)
             }
         }
 
@@ -325,7 +342,8 @@ fn execute_route_combination(
                 .join(",")
         );
         let route_result = mori2_start(
-            &working_surface,
+            tuneables,
+            working_surface.pixels(),
             route.segment.clone(),
             &route.finding_limiter,
         );
@@ -340,8 +358,7 @@ fn execute_route_combination(
                     mine_base: route.location.clone(),
                     segment: route.segment.clone(),
                 };
-                found_paths.push(path.clone());
-                working_surface.add_mine_path(path);
+                found_paths.push(path);
             }
             MoriResult::FailingDebug { err } => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);

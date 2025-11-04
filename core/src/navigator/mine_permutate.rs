@@ -2,7 +2,7 @@ use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::mine_executor::{ExecutionRoute, ExecutionSequence};
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surfacev::mine::MineLocation;
-use crate::surfacev::vsurface::{VSurface, VSurfacePixel};
+use crate::surfacev::vsurface::VSurfacePixel;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;

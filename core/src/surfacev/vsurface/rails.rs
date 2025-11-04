@@ -1,15 +1,26 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MinePath;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
+use crate::surfacev::vsurface::{
+    VSurface, VSurfacePixel, VSurfacePixelMut, VSurfaceRails, VSurfaceRailsMut,
+};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use tracing::trace;
 
-pub struct VSurfaceRailsMut<'s> {
+pub struct PlugMut<'s> {
     pub(super) rails: &'s mut Vec<MinePath>,
     pub(super) pixels: &'s mut VEntityMap<VPixel>,
 }
 
-impl<'s> VSurfaceRailsMut<'s> {
+impl<'s> PlugMut<'s> {
+    pub fn pixels_mut(&mut self) -> VSurfacePixelMut {
+        VSurfacePixelMut::new(&mut self.pixels)
+    }
+
+    pub fn pixels(&self) -> VSurfacePixel {
+        VSurfacePixel::new(&self.pixels)
+    }
+
     pub fn new(rails: &'s mut Vec<MinePath>, pixels: &'s mut VEntityMap<VPixel>) -> Self {
         Self { rails, pixels }
     }
@@ -72,16 +83,29 @@ impl<'s> VSurfaceRailsMut<'s> {
     }
 }
 
-pub struct VSurfaceRails<'s> {
+pub struct Plug<'s> {
     rails: &'s [MinePath],
 }
 
-impl<'s> VSurfaceRails<'s> {
+impl<'s> Plug<'s> {
     pub fn new(rails: &'s [MinePath]) -> Self {
         Self { rails }
     }
 
     pub fn get_mine_paths(&self) -> &[MinePath] {
         &self.rails
+    }
+}
+
+//
+
+impl VSurface {
+    pub fn rails(&self) -> VSurfaceRails {
+        VSurfaceRails::new(&self.rail_paths)
+    }
+
+    pub fn rails_mut(&mut self) -> VSurfaceRailsMut {
+        let Self { rails, pixels, .. } = self;
+        PlugMut { rails, pixels }
     }
 }

@@ -1,30 +1,23 @@
-use crate::opencv::{GeneratedMat, draw_text_cv, draw_text_size, mat_into_points};
+use crate::opencv::{draw_text_size, mat_into_points};
 use crate::state::machine::StepParams;
 use crate::state::tuneables::Tunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{CoreConvertPathResult, VResult};
-use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::mine::MinePath;
-use crate::surfacev::ventity_map::{VEntityMap, VMapChange, VPixel};
+use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vpatch::VPatch;
-use colorgrad::Gradient;
-use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
-use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ONE, VPoint};
-use facto_loop_miner_fac_engine::opencv_re::core::{CV_8U, Mat, MatTrait, Point, Scalar};
+use facto_loop_miner_fac_engine::opencv_re::core::{MatTrait, Point, Scalar};
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
-use image::codecs::png::{CompressionType, FilterType, PngEncoder};
-use image::{ExtendedColorType, ImageEncoder};
+use image::ImageEncoder;
+use image::codecs::png::{FilterType, PngEncoder};
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
-use simd_json::prelude::ArrayTrait;
-use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Write};
-use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
+use std::io::BufReader;
+use std::net::ToSocketAddrs;
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::thread::JoinHandle;
@@ -40,7 +33,7 @@ pub struct VSurface {
     // entities: VEntityMap<VEntity>,
     pub(crate) patches: Vec<VPatch>,
     #[serde(default)]
-    rail_paths: Vec<MinePath>,
+    pub(crate) rails: Vec<MinePath>,
     #[serde(skip, default = "Tunables::new")]
     tunables: Tunables,
 }
@@ -53,7 +46,7 @@ impl VSurface {
             pixels: VEntityMap::new(radius),
             // entities: VEntityMap::new(radius),
             patches: Vec::new(),
-            rail_paths: Vec::new(),
+            rails: Vec::new(),
             tunables: Tunables::new(),
         }
     }
@@ -80,7 +73,7 @@ impl VSurface {
         // new_surface.pixels.assert_no_empty_pixels();
 
         info!("Loaded {}", new_surface);
-        new_surface.log_pixel_stats("vsurface load");
+        new_surface.pixels().log_pixel_stats("vsurface load");
         info!("+++ Loaded in {} from {}", load_time, out_dir.display());
         Ok(new_surface)
     }
@@ -173,10 +166,6 @@ impl VSurface {
 
     pub fn path_pixel_buffer_from_last_step(params: &StepParams) -> PathBuf {
         path_pixel_xy_indexes(params.previous_step_dir())
-    }
-
-    pub fn load_clone_prep(&mut self) -> VResult<()> {
-        self.pixels.load_clone_prep(&path_pixel_xy_indexes_clone())
     }
 
     //</editor-fold>
@@ -273,7 +262,7 @@ fn path_pixel_xy_indexes(out_dir: &Path) -> PathBuf {
     out_dir.join("pixel-xy-indexes.dat")
 }
 
-fn path_pixel_xy_indexes_clone() -> PathBuf {
+pub(super) fn path_pixel_xy_indexes_clone() -> PathBuf {
     Path::new("/tmp/pixel-xy-indexes-clone.dat").into()
 }
 

@@ -1,9 +1,11 @@
 use crate::navigator::planners::altare::start_altare_planner;
 // use crate::navigator::planners::altare::start_altare_planner;
+use crate::navigator::planners::PathingTunables;
 use crate::navigator::planners::debugplan::start_debug_planner;
 use crate::navigator::planners::ruze::start_ruze_planner;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
+use crate::state::tuneables::Tunables;
 use crate::surfacev::vsurface::VSurface;
 
 pub(crate) struct Step20;
@@ -21,11 +23,12 @@ impl Step for Step20 {
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let mut surface = VSurface::load_from_last_step(&params)?;
+        let tunables = PathingTunables::from_tunables(surface.tunables());
         // surface.validate();
 
         match 2 {
-            1 => start_ruze_planner(&mut surface, &params),
-            2 => start_altare_planner(&mut surface, &params),
+            1 => start_ruze_planner(&tunables, &mut surface, &params),
+            2 => start_altare_planner(&tunables, &mut surface, &params),
             9 => start_debug_planner(&mut surface),
             _ => unimplemented!(),
         }

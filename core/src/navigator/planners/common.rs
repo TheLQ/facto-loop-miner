@@ -2,6 +2,7 @@ use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::mine_executor::{ExecutionRoute, FailingMeta};
 use crate::navigator::mine_permutate::CompletePlan;
 use crate::navigator::mine_selector::MineSelectBatch;
+use crate::state::tuneables::{ChunkValue, MoriTunables, Tunables};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::{VSurface, VSurfacePixelMut, VSurfaceRailsMut};
@@ -15,6 +16,29 @@ use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::rc::Rc;
 use tracing::{error, warn};
+
+pub struct PathingTunables {
+    base_chunks: ChunkValue,
+    mori: MoriTunables,
+}
+
+impl PathingTunables {
+    fn from_tunables(tunables: &Tunables) -> Self {
+        Self {
+            base_chunks: tunables.base.base_chunks,
+            mori: tunables.mori.clone(),
+        }
+    }
+
+    pub fn base_chunks(&self) -> &ChunkValue {
+        &self.base_chunks
+    }
+
+    pub fn mori(&self) -> &MoriTunables {
+        &self.mori
+    }
+}
+
 /*
 pub(super) fn debug_draw_base_sources(
     surface: &mut VSurface,
