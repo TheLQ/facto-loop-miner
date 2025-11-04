@@ -4,7 +4,7 @@ use crate::navigator::mine_permutate::CompletePlan;
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::vsurface::{VSurface, VSurfacePixelMut, VSurfaceRailsMut};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_THREE, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
@@ -97,7 +97,7 @@ pub(super) fn debug_draw_failing_mines<'a>(
 }
 
 pub fn debug_failing(
-    surface: &mut VSurface,
+    surface: &mut VSurfaceRailsMut,
     FailingMeta {
         found_paths,
         mut all_routes,
@@ -155,7 +155,7 @@ pub fn debug_failing(
     }
 }
 
-pub(super) fn draw_prep(surface: &mut VSurface, batches: &[MineSelectBatch]) {
+pub(super) fn draw_prep(surface: &mut VSurfacePixelMut, batches: &[MineSelectBatch]) {
     draw_prep_mines(
         surface,
         batches.into_iter().flat_map(|v| &v.mines),
@@ -164,7 +164,7 @@ pub(super) fn draw_prep(surface: &mut VSurface, batches: &[MineSelectBatch]) {
 }
 
 pub(super) fn draw_prep_mines(
-    surface: &mut VSurface,
+    surface: &mut VSurfacePixelMut,
     mines: impl IntoIterator<Item = impl Borrow<MineLocation>>,
     base_sources: &Rc<RefCell<BaseSourceEighth>>,
 ) {
@@ -174,7 +174,7 @@ pub(super) fn draw_prep_mines(
     }
 
     // stop routes going backwards right behind the start
-    let radius = surface.get_radius_i32();
+    let radius = surface.pixels().get_radius_i32();
 
     let base_sources = base_sources.as_ref().borrow();
     let anti_backside_x = base_sources.peek_single().origin.point().x() - 1;
@@ -187,7 +187,7 @@ pub(super) fn draw_prep_mines(
 }
 
 pub fn debug_draw_mine_index_labels(
-    surface: &mut VSurface,
+    surface: &mut VSurfacePixelMut,
     mines: impl IntoIterator<Item = impl Borrow<MineLocation>>,
 ) {
     for (i, mine) in mines.into_iter().enumerate() {
@@ -197,7 +197,7 @@ pub fn debug_draw_mine_index_labels(
 }
 
 pub fn debug_draw_mine_links(
-    surface: &mut VSurface,
+    surface: &mut VSurfacePixelMut,
     mines: impl IntoIterator<Item = impl Borrow<MineLocation>>,
 ) {
     for (i, mine) in mines.into_iter().enumerate() {
@@ -208,7 +208,7 @@ pub fn debug_draw_mine_links(
                 .change_pixels(
                     link.area_vec()
                         .into_iter()
-                        .filter(|p| !surface.is_point_out_of_bounds(p))
+                        .filter(|p| !surface.pixels().is_point_out_of_bounds(p))
                         .collect(),
                 )
                 .stomp(Pixel::Rail);

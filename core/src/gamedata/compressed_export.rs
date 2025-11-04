@@ -1,7 +1,7 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::VResult;
 use serde::Deserialize;
-use simd_json::{to_borrowed_value, to_owned_value, BorrowedValue, OwnedValue, StaticNode};
+use simd_json::{BorrowedValue, OwnedValue, StaticNode, to_borrowed_value, to_owned_value};
 use std::io;
 use std::io::ErrorKind;
 
@@ -25,7 +25,7 @@ fn parse_exported_lua_data_simd_borrowed<V, C>(input: &mut [u8], to_object: C) -
 where
     C: Fn(&str, f32, f32) -> V,
 {
-    let mut result = Vec::new();
+    // let mut result = Vec::new();
 
     let main_array = if let Ok(BorrowedValue::Array(raw)) = to_borrowed_value(input) {
         raw
@@ -33,26 +33,25 @@ where
         panic!("no wrapper array?")
     };
 
-    for [name_value, x_value, y_value] in main_array.array_chunks() {
-        let name = if let BorrowedValue::String(raw) = name_value {
-            raw
-        } else {
-            panic!("not a name");
-        };
-        let x = if let BorrowedValue::Static(StaticNode::F64(raw)) = x_value {
-            *raw as f32
-        } else {
-            panic!("not x");
-        };
-        let y = if let BorrowedValue::Static(StaticNode::F64(raw)) = y_value {
-            *raw as f32
-        } else {
-            panic!("not y");
-        };
-        result.push(to_object(name, x, y));
-    }
-
-    Ok(result)
+    // for [name_value, x_value, y_value] in // main_array.array_chunks() {
+    //     let name = if let BorrowedValue::String(raw) = name_value {
+    //         raw
+    //     } else {
+    //         panic!("not a name");
+    //     };
+    //     let x = if let BorrowedValue::Static(StaticNode::F64(raw)) = x_value {
+    //         *raw as f32
+    //     } else {
+    //         panic!("not x");
+    //     };
+    //     let y = if let BorrowedValue::Static(StaticNode::F64(raw)) = y_value {
+    //         *raw as f32
+    //     } else {
+    //         panic!("not y");
+    //     };
+    //     result.push(to_object(name, x, y));
+    // }
+    todo!()
 }
 
 fn parse_exported_lua_data_simd_owned<V, C>(input: &mut [u8], to_object: C) -> VResult<Vec<V>>

@@ -2,7 +2,7 @@ use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::mine_executor::{ExecutionRoute, ExecutionSequence};
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surfacev::mine::MineLocation;
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::vsurface::{VSurface, VSurfacePixel};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
@@ -18,7 +18,7 @@ use tracing::{trace, warn};
 ///  - Therefore batch has 4^n possible combinations
 ///  - Combinations each can be permutated generating n! combinations
 pub fn get_possible_routes_for_batch(
-    surface: &VSurface,
+    surface: VSurfacePixel,
     MineSelectBatch {
         mines,
         base_sources,

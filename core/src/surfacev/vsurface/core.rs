@@ -5,7 +5,7 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{CoreConvertPathResult, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::mine::MinePath;
-use crate::surfacev::ventity_map::{VEntityMap, VMapChange};
+use crate::surfacev::ventity_map::{VEntityMap, VMapChange, VPixel};
 use crate::surfacev::vpatch::VPatch;
 use colorgrad::Gradient;
 use facto_loop_miner_common::LOCALE;
@@ -185,7 +185,7 @@ impl VSurface {
 
     pub fn save(&self, out_dir: &Path) -> VResult<()> {
         info!("+++ Saving to {} {}", out_dir.display(), self);
-        self.log_pixel_stats("vsurface save");
+        self.pixels().log_pixel_stats("vsurface save");
         let total_save_watch = BasicWatch::start();
         self.save_state(out_dir)?;
 
@@ -236,34 +236,6 @@ impl VSurface {
 
         Ok(())
     }
-
-    //
-    // pub fn get_rail_TODO(&self) -> impl Iterator<Item = &Rail> {
-    //     self.rail_paths.iter().flat_map(|v| &v.rail)
-    // }
-    //
-    //
-    // pub fn get_mines_mut(&mut self) -> &mut [MinePath] {
-    //     &mut self.rail_paths
-    // }
-
-    // pub fn draw_debug_square(&mut self, point: &VPoint) {
-    //     let center_entity = VPixel {
-    //         pixel: Pixel::EdgeWall,
-    //         starts: vec![*point],
-    //     };
-    //     let mut background_entitiy = VPixel {
-    //         pixel: Pixel::EdgeWall,
-    //         starts: Vec::new(),
-    //     };
-    //     let (background_index, background_points) =
-    //         self.pixels
-    //             .draw_debug_square(point, center_entity, background_entitiy);
-    //     self.pixels
-    //         .get_entity_by_index_mut(background_index)
-    //         .starts
-    //         .extend(background_points.into_iter())
-    // }
 
     pub fn tunables(&self) -> &Tunables {
         &self.tunables

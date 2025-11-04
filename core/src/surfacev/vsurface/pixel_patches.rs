@@ -5,20 +5,20 @@ use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use tracing::{debug, info};
 
 impl VSurface {
-    pub fn pixels_patches(&mut self) -> SurfacePixelsPatchesMut {
-        SurfacePixelsPatchesMut {
+    pub fn pixels_patches(&mut self) -> VSurfacePixelPatchesMut {
+        VSurfacePixelPatchesMut {
             pixels: &mut self.pixels,
             patches: &mut self.patches,
         }
     }
 }
 
-pub struct SurfacePixelsPatchesMut<'s> {
+pub struct VSurfacePixelPatchesMut<'s> {
     pub(super) pixels: &'s mut VEntityMap<VPixel>,
     pub(super) patches: &'s mut Vec<VPatch>,
 }
 
-impl<'s> SurfacePixelsPatchesMut<'s> {
+impl<'s> VSurfacePixelPatchesMut<'s> {
     pub fn remove_patches_within_radius(&mut self, radius: u32) {
         let mut removed_points: Vec<VPoint> = Vec::new();
         let mut patches_to_remove = Vec::new();
@@ -75,13 +75,13 @@ impl<'s> SurfacePixelsPatchesMut<'s> {
 }
 
 #[derive(Clone, Copy)]
-pub struct SurfacePixelsPatches<'s> {
+pub struct VSurfacePixelPatches<'s> {
     pub(super) pixels: &'s VEntityMap<VPixel>,
     pub(super) patches: &'s Vec<VPatch>,
 }
 
-impl SurfacePixelsPatches<'_> {
-    pub fn get_patches_slice(&self) -> &[VPatch] {
+impl VSurfacePixelPatches<'_> {
+    pub fn patches(&self) -> &[VPatch] {
         &self.patches
     }
 
@@ -110,5 +110,12 @@ impl SurfacePixelsPatches<'_> {
             }
         }
         debug!("validate {checks} checks");
+    }
+
+    pub fn get_patch_index(&self, patch: &VPatch) -> usize {
+        self.patches
+            .iter()
+            .position(|surface_patch| patch == surface_patch)
+            .unwrap()
     }
 }

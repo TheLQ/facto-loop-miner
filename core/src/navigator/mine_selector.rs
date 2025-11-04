@@ -1,10 +1,10 @@
 use crate::TILES_PER_CHUNK;
 use crate::navigator::base_source::{BaseSource, BaseSourceEighth, BaseSourceRefs};
-use crate::state::tuneables::BaseTunables;
+use crate::state::tuneables::{BaseTunables, Tunables};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::vsurface::{VSurfacePixel, VSurfacePixelPatches};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
@@ -57,13 +57,14 @@ pub const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 ///  - Assign base sources
 ///  - Split groups if needed because too huge creates too many possibilities later
 pub fn select_mines_and_sources(
-    surface: &VSurface,
+    tunables: &Tunables,
+    surface: VSurfacePixelPatches,
     maximum_mine_count_per_batch: usize,
 ) -> MineSelectBatchResult {
-    let base_source = BaseSource::from_central_base(surface).into_refcells();
+    let base_source = BaseSource::from_central_base(tunables).into_refcells();
 
     let patch_groups = group_nearby_patches(surface);
-    let total_patches: usize = patch_groups.iter().map(|v| v.surface_patches_len()).sum();
+    let total_patches: usize = patch_groups.iter().map(|v| v.surface_patches().len()).sum();
     info!("selected {total_patches} patches");
 
     // let ordered_patches = match 2 {
@@ -76,8 +77,7 @@ pub fn select_mines_and_sources(
     // };
     // ordered_patches
 
-    let mine_batches =
-        patches_by_cross_sign_expanding(patch_groups, &base_source, &surface.tunables().base);
+    let mine_batches = patches_by_cross_sign_expanding(patch_groups, &base_source, &tunables.base);
     if mine_batches.is_empty() {
         return MineSelectBatchResult::EmptyBatch;
     }
@@ -113,7 +113,7 @@ pub fn select_mines_and_sources(
 }
 
 /// Second grouping pass (after opencv), now by grouping different resource patches
-pub fn group_nearby_patches(surface: &VSurface) -> Vec<MineLocation> {
+pub fn group_nearby_patches(surface: VSurfacePixelPatches) -> Vec<MineLocation> {
     // ignores UraniumOre because it's only for
     // electric production (solar instead) and military (unused)
     let resources = [
@@ -125,7 +125,7 @@ pub fn group_nearby_patches(surface: &VSurface) -> Vec<MineLocation> {
     ];
 
     let patches: Vec<&VPatch> = surface
-        .get_patches_slice()
+        .patches()
         .iter()
         .filter(|patch| resources.contains(&patch.resource))
         .collect();
@@ -169,12 +169,12 @@ pub fn group_nearby_patches(surface: &VSurface) -> Vec<MineLocation> {
             // Externally we use the index in the VSurface Patches slice
             patch_group_indexes = patch_group
                 .iter()
-                .map(|patch| patch.get_surface_patch_index(surface))
+                .map(|patch| surface.get_patch_index(patch))
                 .collect();
         } else {
             let patch = patch_group[0];
             // trace!("Single patch group {:?}", patch);
-            patch_group_indexes = vec![patch.get_surface_patch_index(surface)];
+            patch_group_indexes = vec![surface.get_patch_index(patch)];
         }
 
         if let Some(mine) = MineLocation::from_patch_indexes(surface, patch_group_indexes) {

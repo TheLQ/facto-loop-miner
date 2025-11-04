@@ -1,5 +1,4 @@
 #![feature(iter_array_chunks)]
-#![feature(array_chunks)]
 #![feature(portable_simd)]
 #![feature(error_generic_member_access)]
 #![feature(new_range_api)]
@@ -8,7 +7,7 @@
 //
 // lints
 //
-// #![allow(dead_code)]
+#![allow(dead_code)]
 // todo: This is for something() { Ok(()) } , only testing
 #![allow(clippy::unnecessary_wraps)]
 //

@@ -1,4 +1,4 @@
-use crate::surfacev::vsurface::VSurface;
+use crate::state::tuneables::Tunables;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
@@ -13,8 +13,8 @@ pub struct BaseSource {
 }
 
 impl BaseSource {
-    pub fn from_central_base(surface: &VSurface) -> Self {
-        let mut offset_x_from_base = surface.tunables().base.base_chunks.as_tiles_i32();
+    pub fn from_central_base(tunables: &Tunables) -> Self {
+        let mut offset_x_from_base = tunables.base.base_chunks.as_tiles_i32();
         offset_x_from_base -= offset_x_from_base % SECTION_POINTS_I32;
         BaseSource::new(VPointDirectionQ(
             VPoint::new(offset_x_from_base, 0),

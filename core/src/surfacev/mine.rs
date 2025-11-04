@@ -1,6 +1,6 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::vsurface::{VSurfacePixel, VSurfacePixelMut, VSurfacePixelPatches};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{
@@ -24,6 +24,7 @@ use tracing::{trace, warn};
 pub struct MinePath {
     pub mine_base: MineLocation,
     pub links: Vec<HopeLink>,
+    pub sodas: Vec<HopeSodaLink>,
     pub segment: VSegment,
     pub cost: u32,
 }
@@ -61,9 +62,12 @@ impl MinePath {
 }
 
 impl MineLocation {
-    pub fn from_patch_indexes(surface: &VSurface, patch_indexes: Vec<usize>) -> Option<Self> {
+    pub fn from_patch_indexes(
+        surface: VSurfacePixelPatches,
+        patch_indexes: Vec<usize>,
+    ) -> Option<Self> {
         let patch_corners = surface
-            .get_patches_slice()
+            .patches()
             .iter()
             .enumerate()
             .filter_map(|(i, p)| {
@@ -78,11 +82,14 @@ impl MineLocation {
 
         let area_no_touch = area_min
             .normalize_step_rail(0)
-            .normalize_within_radius(surface.get_radius_i32() - 1);
+            .normalize_within_radius(surface.pixels().get_radius_i32() - 1);
         // -- sanity --
         {
-            if !surface.is_point_out_of_bounds(&(area_no_touch.point_top_left() - VPOINT_SECTION))
+            if !surface
+                .pixels()
+                .is_point_out_of_bounds(&(area_no_touch.point_top_left() - VPOINT_SECTION))
                 && !surface
+                    .pixels()
                     .is_point_out_of_bounds(&(area_no_touch.point_bottom_right() + VPOINT_SECTION))
             {
                 let size = area_no_touch.as_size();
@@ -96,12 +103,12 @@ impl MineLocation {
             area_no_touch.point_top_left() - VPOINT_SECTION_Y_ONLY,
             area_no_touch.point_bottom_right() + VPOINT_SECTION_Y_ONLY,
         )
-        .normalize_within_radius(surface.get_radius_i32() - 1);
+        .normalize_within_radius(surface.pixels().get_radius_i32() - 1);
 
         assert!(area_no_touch.get_points().len() < area_buffered.get_points().len());
 
         let Some((endpoints, endpoints_adjust_direction)) =
-            Self::new_endpoints(surface, &area_no_touch)
+            Self::new_endpoints(surface.pixels(), &area_no_touch)
         else {
             warn!("Excluding mine at {}", area_no_touch);
             return None;
@@ -118,7 +125,7 @@ impl MineLocation {
     }
 
     fn new_endpoints(
-        surface: &VSurface,
+        surface: VSurfacePixel,
         area_min: &VArea,
     ) -> Option<(Vec<VPoint>, Vec<FacDirectionQuarter>)> {
         let centered_rounded = area_min.point_center().move_round_rail_down();
@@ -158,7 +165,7 @@ impl MineLocation {
         }
     }
 
-    pub fn revalidate_endpoints_after_no_touch(&mut self, surface: &VSurface) {
+    pub fn revalidate_endpoints_after_no_touch(&mut self, surface: VSurfacePixel) {
         assert_eq!(self.endpoints.len(), self.endpoints_adjust_direction.len());
         trace!("start {}", self.area_min().point_center());
 
@@ -239,7 +246,7 @@ impl MineLocation {
 
     fn is_adjust_endpoint(
         &self,
-        scratch_surface: &VSurface,
+        scratch_surface: VSurfacePixel,
         new_origin: VPoint,
         debug_prefix: Arguments,
     ) -> Adjustment {
@@ -317,7 +324,7 @@ impl MineLocation {
 
     fn is_surface_points_free_excluding_self_area(
         &self,
-        surface: &VSurface,
+        surface: &VSurfacePixel,
         points: impl IntoIterator<Item = impl Borrow<VPoint>>,
         debug_prefix: &Arguments,
     ) -> bool {
@@ -378,17 +385,17 @@ impl MineLocation {
         &self.area_buffered
     }
 
-    pub fn draw_area_buffered(&self, surface: &mut VSurface) {
+    pub fn draw_area_buffered(&self, surface: &mut VSurfacePixelMut) {
         self.draw_area_buffered_with(surface, Pixel::MineNoTouch)
     }
 
-    pub fn draw_area_buffered_with(&self, surface: &mut VSurface, pixel: Pixel) {
+    pub fn draw_area_buffered_with(&self, surface: &mut VSurfacePixelMut, pixel: Pixel) {
         surface
             .change_pixels(self.area_buffered.get_points())
             .find_empty_into(pixel)
     }
 
-    pub fn draw_area_buffered_to_no_touch(&self, surface: &mut VSurface) {
+    pub fn draw_area_buffered_to_no_touch(&self, surface: &mut VSurfacePixelMut) {
         // let needle = self.area_buffered.point_top_left();
         // let existing_pixel = surface.get_pixel(needle);
         // assert_eq!(existing_pixel, Pixel::MineNoTouch, "at {needle}");
@@ -401,7 +408,7 @@ impl MineLocation {
             .filter(|v| !self.area_no_touch.contains_point(v))
         {
             // assert_eq!(surface.get_pixel(point), Pixel::MineNoTouch);
-            let pixel = surface.get_pixel(point);
+            let pixel = surface.pixels().get_pixel(point);
             if !matches!(pixel, Pixel::MineNoTouch | Pixel::Empty | Pixel::UraniumOre) {
                 surface
                     .change_square(&VArea::from_arbitrary_points_pair(
@@ -409,7 +416,10 @@ impl MineLocation {
                         point + VPOINT_TEN,
                     ))
                     .stomp(Pixel::Highlighter);
-                surface.paint_pixel_colored_zoomed().save_to_oculante();
+                surface
+                    .pixels()
+                    .paint_pixel_colored_zoomed()
+                    .save_to_oculante();
                 panic!("for {point} is {pixel:?}")
             }
         }
@@ -424,7 +434,7 @@ impl MineLocation {
             .remove();
     }
 
-    pub fn draw_area_buffered_highlight_pixel(&self, surface: &mut VSurface, pixel: Pixel) {
+    pub fn draw_area_buffered_highlight_pixel(&self, surface: &mut VSurfacePixelMut, pixel: Pixel) {
         surface
             .change_pixels(self.area_buffered.get_points())
             .find_into(Pixel::MineNoTouch, pixel)
@@ -432,7 +442,7 @@ impl MineLocation {
 
     pub fn restore_area_buffered(
         mines: &[Self],
-        surface: &mut VSurface,
+        surface: &mut VSurfacePixelMut,
         removed_rail: Vec<VPoint>,
     ) {
         let mut intersected_mines = HashSet::new();
@@ -462,27 +472,6 @@ impl MineLocation {
             .iter()
             .map(|v| VPointDirectionQ(*v, FacDirectionQuarter::East))
     }
-
-    pub fn surface_patches_len(&self) -> usize {
-        self.patch_indexes.len()
-    }
-
-    pub fn surface_patches<'s>(&self, surface: &'s VSurface) -> impl Iterator<Item = &'s VPatch> {
-        let patches = surface.get_patches_slice();
-        self.patch_indexes.iter().map(|v| &patches[*v])
-    }
-
-    // pub fn surface_patches_iter<'s>(
-    //     mines: impl IntoIterator<Item = &'s Self>,
-    //     surface: &'s VSurface,
-    // ) -> impl Iterator<Item = &'s VPatch> {
-    //     let patch = surface.get_patches_slice();
-    //     mines
-    //         .into_iter()
-    //         // .map(|v| v.borrow())
-    //         .flat_map(|v| v.patch_indexes.as_slice())
-    //         .map(|v| &patch[*v])
-    // }
 }
 
 enum Adjustment {

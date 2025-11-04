@@ -1,6 +1,6 @@
 use crate::navigator::mori::{MoriResult, mori2_start};
 use crate::surfacev::mine::{MineLocation, MinePath};
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::vsurface::{VSurface, VSurfacePixel};
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::{EXECUTOR_TAG, LOCALE};
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -276,7 +276,7 @@ static SUCCESS_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static FAIL_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 fn execute_route_combination(
-    surface: &VSurface,
+    surface: VSurfacePixel,
     route_combination: Vec<ExecutionRoute>,
     total_sequences: usize,
     flags: &[ExecuteFlags],

@@ -11,7 +11,7 @@ impl Step03 {
     }
 }
 
-pub const CROP_RADIUS: u32 = 1000;
+pub const CROP_RADIUS: u32 = 3000;
 
 impl Step for Step03 {
     fn name(&self) -> &'static str {

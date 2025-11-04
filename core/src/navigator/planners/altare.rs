@@ -13,9 +13,10 @@ use crate::navigator::planners::common::{
     draw_prep_mines,
 };
 use crate::state::machine::StepParams;
+use crate::state::tuneables::Tunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::vsurface::{VSurface, VSurfacePixelPatches};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
@@ -27,14 +28,18 @@ use simd_json::prelude::ArrayTrait;
 use std::collections::HashSet;
 use tracing::{error, info, trace, warn};
 
-const BATCH_SIZE_MAX: usize = 4;
+const BATCH_SIZE_MAX: usize = 3;
 
 /// Planner v2 "Regis Altare 🎇"
 ///
 /// Pathfinding with medium-difficulty backtracking.
 /// because v0 Mori and v1 Ruze Planner can mask valid routes
-pub fn start_altare_planner(surface: &mut VSurface, params: &StepParams) {
-    let base_source = BaseSource::from_central_base(surface).into_refcells();
+pub fn start_altare_planner(
+    tunables: &Tunables,
+    surface: VSurfacePixelPatches,
+    params: &StepParams,
+) {
+    let base_source = BaseSource::from_central_base(tunables).into_refcells();
     let base_source_positive = base_source.positive_rc();
 
     let mut all_mine_locations = group_nearby_patches(surface);

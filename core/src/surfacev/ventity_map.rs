@@ -2,7 +2,6 @@ use crate::opencv::GeneratedMat;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{CoreConvertPathResult, VError, VResult, XYOutOfBoundsError};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
-use crate::surfacev::vsurface::VPixel;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
@@ -486,6 +485,17 @@ impl<E> Display for VEntityMap<E> {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct VPixel {
+    pub(super) pixel: Pixel,
+}
+
+impl VPixel {
+    pub fn pixel(&self) -> &Pixel {
+        &self.pixel
+    }
+}
+
 impl VEntityMap<VPixel> {
     pub fn iter_xy_pixels(&self) -> impl Iterator<Item = &Pixel> {
         self.xy_to_entity.as_slice().iter().map(|index| {
@@ -626,8 +636,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::surfacev::ventity_map::VEntityMap;
-    use crate::surfacev::vsurface::VPixel;
+    use crate::surfacev::ventity_map::{VEntityMap, VPixel};
     use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 
     #[test]

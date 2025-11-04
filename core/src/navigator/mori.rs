@@ -1,9 +1,9 @@
 use crate::navigator::mine_executor::FailingMeta;
 use crate::navigator::mori_cost::calculate_cost_for_link;
 use crate::navigator::planners::debug_draw_segment;
-use crate::state::tuneables::MoriTunables;
+use crate::state::tuneables::{MoriTunables, Tunables};
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::vsurface::{VSurface, VSurfacePixel, VSurfacePixelMut};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::{BasicWatch, BasicWatchResult};
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -25,7 +25,12 @@ use tracing::{info, trace, warn};
 ///
 /// Makes a dual rail + spacing, +6 straight or 90 degree turning, path of rail from start to end.
 /// Without collisions into any point on the Surface.
-pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VArea) -> MoriResult {
+pub fn mori2_start(
+    tunables: Tunables,
+    surface: VSurfacePixel,
+    endpoints: VSegment,
+    finding_limiter: &VArea,
+) -> MoriResult {
     let is_possible = endpoints.end.point() - endpoints.start.point();
     is_possible.assert_step_rail();
 
@@ -59,7 +64,7 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
         };
     }
 
-    let tunables = &surface.tunables().mori;
+    let tunables = &tunables.mori;
     let mut watch_data = WatchData::default();
 
     let total_watch = BasicWatch::start();
@@ -153,11 +158,12 @@ pub fn mori2_start(surface: &VSurface, endpoints: VSegment, finding_limiter: &VA
 }
 
 fn crude_dump_on_failure(
-    surface: &VSurface,
+    surface: &mut VSurfacePixelMut,
     end_link: HopeSodaLink,
     endpoints: VSegment,
 ) -> VSurface {
-    let mut new_surface = surface.clone();
+    todo!("clone doesn't work here");
+    let mut new_surface = surface;
 
     let links = sodas_to_links([
         end_link.add_turn90(true),
@@ -169,7 +175,7 @@ fn crude_dump_on_failure(
         .iter()
         .map(|v| {
             let area = v.area_vec();
-            if new_surface.is_points_free_truncating(&area) {
+            if new_surface.pixels().is_points_free_truncating(&area) {
                 "free".into()
             } else {
                 let mut points = area
@@ -190,9 +196,7 @@ fn crude_dump_on_failure(
     new_surface
         .change_pixels(links.into_iter().flat_map(|v| v.area_vec()).collect())
         .stomp(Pixel::Highlighter);
-    debug_draw_segment(&mut new_surface, endpoints);
-
-    new_surface
+    debug_draw_segment(new_surface, endpoints);
 }
 
 #[derive(Default)]
@@ -229,7 +233,7 @@ fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeSodaLink {
 }
 
 fn successors(
-    surface: &VSurface,
+    surface: VSurfacePixel,
     segment_points: &VSegment,
     head: &HopeSodaLink,
     finding_limiter: &VArea,
@@ -265,7 +269,7 @@ fn successors(
 }
 
 fn into_buildable_link(
-    surface: &VSurface,
+    surface: VSurfacePixel,
     finding_limiter: &VArea,
     new_link: HopeSodaLink,
     watch_data: &mut WatchData,

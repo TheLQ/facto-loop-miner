@@ -5,4 +5,5 @@ mod rails;
 
 pub use core::VSurface;
 pub use pixel::{SurfacePainting, VSurfacePixel, VSurfacePixelMut};
-pub use pixel_patches::{SurfacePixelsPatches, SurfacePixelsPatchesMut};
+pub use pixel_patches::{VSurfacePixelPatches, VSurfacePixelPatchesMut};
+pub use rails::{VSurfaceRails, VSurfaceRailsMut};

@@ -4,12 +4,12 @@ use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use tracing::trace;
 
-pub struct VSurfaceMinesMut<'s> {
+pub struct VSurfaceRailsMut<'s> {
     pub(super) rails: &'s mut Vec<MinePath>,
     pub(super) pixels: &'s mut VEntityMap<VPixel>,
 }
 
-impl<'s> VSurfaceMinesMut<'s> {
+impl<'s> VSurfaceRailsMut<'s> {
     pub fn new(rails: &'s mut Vec<MinePath>, pixels: &'s mut VEntityMap<VPixel>) -> Self {
         Self { rails, pixels }
     }
@@ -72,11 +72,11 @@ impl<'s> VSurfaceMinesMut<'s> {
     }
 }
 
-pub struct VSurfaceMines<'s> {
+pub struct VSurfaceRails<'s> {
     rails: &'s [MinePath],
 }
 
-impl<'s> VSurfaceMines<'s> {
+impl<'s> VSurfaceRails<'s> {
     pub fn new(rails: &'s [MinePath]) -> Self {
         Self { rails }
     }

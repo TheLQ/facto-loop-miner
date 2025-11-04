@@ -1,11 +1,10 @@
 use crate::opencv::{GeneratedMat, draw_text_cv, draw_text_size, mat_into_points};
 use crate::surface::pixel::Pixel;
-use crate::surfacev::core::VPixel;
 use crate::surfacev::err::{CoreConvertPathResult, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::ventity_map::{VEntityMap, VMapChange, VPixel};
-use crate::surfacev::vsurface::rails::VSurfaceMinesMut;
-use crate::surfacev::vsurface::{SurfacePixelsPatches, SurfacePixelsPatchesMut, VSurface};
+use crate::surfacev::vsurface::rails::VSurfaceRailsMut;
+use crate::surfacev::vsurface::{VSurface, VSurfacePixelPatches, VSurfacePixelPatchesMut};
 use colorgrad::Gradient;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
@@ -361,21 +360,31 @@ impl VSurface {
     }
 }
 
-impl<'s> SurfacePixelsPatchesMut<'s> {
+impl<'s> VSurfacePixelMut<'s> {
+    pub fn pixels(&self) -> VSurfacePixel {
+        VSurfacePixel::new(&self.0)
+    }
+}
+
+impl<'s> VSurfacePixelPatchesMut<'s> {
     pub fn pixels_mut(&mut self) -> VSurfacePixelMut {
         VSurfacePixelMut::new(&mut self.pixels)
     }
 }
 
-impl<'s> SurfacePixelsPatches<'s> {
+impl<'s> VSurfacePixelPatches<'s> {
     pub fn pixels(&self) -> VSurfacePixel {
         VSurfacePixel::new(&self.pixels)
     }
 }
 
-impl<'s> VSurfaceMinesMut<'s> {
+impl<'s> VSurfaceRailsMut<'s> {
     pub fn pixels_mut(&mut self) -> VSurfacePixelMut {
         VSurfacePixelMut::new(&mut self.pixels)
+    }
+
+    pub fn pixels(&self) -> VSurfacePixel {
+        VSurfacePixel::new(&self.pixels)
     }
 }
 
