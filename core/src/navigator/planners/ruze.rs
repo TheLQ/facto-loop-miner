@@ -4,10 +4,13 @@ use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
 use crate::navigator::planners::common::{PathingTunables, debug_failing, draw_prep};
 use crate::state::machine::StepParams;
-use crate::state::tuneables::Tunables;
+use crate::state::tuneables::{MoriTunables, Tunables};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vsurface::{VSurface, VSurfacePixelPatches, VSurfacePixelPatchesMut};
+use crate::surfacev::vsurface::{
+    AsVsPixel, AsVsPixelMut, VSurface, VSurfacePixelMut, VSurfacePixelPatches,
+    VSurfacePixelPatchesMut, VSurfaceRailsMut,
+};
 use std::path::Path;
 use tracing::{error, info, trace, warn};
 
@@ -21,10 +24,13 @@ pub fn start_ruze_planner(
     surface: &mut VSurfacePixelPatchesMut,
     params: &StepParams,
 ) {
-    let select_batches =
-        select_mines_and_sources(tunables, surface, RUZE_MAXIMUM_MINE_COUNT_PER_BATCH)
-            .into_success()
-            .unwrap();
+    let select_batches = select_mines_and_sources(
+        tunables,
+        surface.pixel_patches(),
+        RUZE_MAXIMUM_MINE_COUNT_PER_BATCH,
+    )
+    .into_success()
+    .unwrap();
 
     let mut num_mines_metrics = Metrics::new("mine_batch_size");
     for batch in &select_batches {
@@ -33,11 +39,17 @@ pub fn start_ruze_planner(
     }
     num_mines_metrics.log_final();
 
-    draw_prep(surface, &select_batches);
+    draw_prep(&mut surface.pixels_mut(), &select_batches);
 
     for (batch_index, batch) in select_batches.into_iter().enumerate() {
         // for (batch_index, batch) in [select_batches.into_iter().enumerate().last().unwrap()] {
-        let found = process_batch(surface, batch, batch_index, &params.step_out_dir);
+        let found = process_batch(
+            tunables.mori(),
+            &mut surface.pixels_mut(),
+            batch,
+            batch_index,
+            &params.step_out_dir,
+        );
         if !found {
             error!("KILLING EARLY index {batch_index}");
             break;
@@ -51,7 +63,8 @@ pub fn start_ruze_planner(
 }
 
 fn process_batch(
-    surface: &mut VSurface,
+    tunables: &MoriTunables,
+    surface: &mut VSurfaceRailsMut,
     batch: MineSelectBatch,
     batch_index: usize,
     step_out_dir: &Path,
@@ -60,9 +73,9 @@ fn process_batch(
     let num_mines = batch.mines.len();
 
     for mine in &batch.mines {
-        mine.draw_area_buffered_to_no_touch(surface);
+        mine.draw_area_buffered_to_no_touch(&mut surface.pixels_mut());
     }
-    let complete_plan = get_possible_routes_for_batch(surface, batch);
+    let complete_plan = get_possible_routes_for_batch(surface.pixels(), batch);
 
     let num_per_batch_routes_min = complete_plan
         .sequences
@@ -84,13 +97,13 @@ fn process_batch(
                 each in range {num_per_batch_routes_min} {num_per_batch_routes_max}"
     );
     // let planned_combinations = vec![planned_combinations.remove(0)];
-    let res = execute_route_batch(surface, complete_plan.sequences, &[]); // todo: Shrink flag??
+    let res = execute_route_batch(tunables, surface.pixels(), complete_plan.sequences, &[]); // todo: Shrink flag??
     match res {
         ExecutorResult::Success { paths, routes } => {
             info!("pushing {} new mine paths", paths.len());
             assert!(!paths.is_empty(), "Success but no paths!!!!");
             for route in routes {
-                route.location.draw_area_buffered(surface);
+                route.location.draw_area_buffered(surface.pixels());
             }
             complete_plan
                 .base_sources

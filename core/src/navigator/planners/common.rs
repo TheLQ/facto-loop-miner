@@ -5,7 +5,7 @@ use crate::navigator::mine_selector::MineSelectBatch;
 use crate::state::tuneables::{ChunkValue, MoriTunables, Tunables};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
-use crate::surfacev::vsurface::{VSurface, VSurfacePixelMut, VSurfaceRailsMut};
+use crate::surfacev::vsurface::{AsVsPixel, VSurface, VSurfacePixelMut, VSurfaceRailsMut};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_THREE, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
@@ -61,7 +61,7 @@ pub(super) fn debug_draw_base_sources(
 */
 
 pub(super) fn debug_draw_complete_plan(
-    surface: &mut VSurface,
+    surface: &mut VSurfacePixelMut,
     CompletePlan {
         sequences,
         base_sources,
@@ -86,7 +86,7 @@ pub(super) fn debug_draw_complete_plan(
     surface.change_pixels(pixels).stomp(Pixel::Highlighter)
 }
 
-pub fn debug_draw_segment(surface: &mut VSurface, segment: VSegment) {
+pub fn debug_draw_segment(surface: &mut VSurfacePixelMut, segment: VSegment) {
     let VSegment { start, end } = segment;
     let mut positions = Vec::new();
     positions.extend(start.point().get_entity_area_3x3());
@@ -98,7 +98,7 @@ pub fn debug_draw_segment(surface: &mut VSurface, segment: VSegment) {
 }
 
 pub(super) fn debug_draw_failing_mines<'a>(
-    surface: &mut VSurface,
+    surface: &mut VSurfacePixelMut,
     mines: impl IntoIterator<Item = &'a MineLocation>,
 ) {
     let mut seen_mines: Vec<&VArea> = Vec::new();
@@ -130,6 +130,7 @@ pub fn debug_failing(
 ) {
     // draw all endpoints
     surface
+        .pixels_mut()
         .change_pixels(
             all_routes
                 .iter()
@@ -168,14 +169,14 @@ pub fn debug_failing(
     for route in routes_found {
         route
             .location
-            .draw_area_buffered_highlight_pixel(surface, Pixel::Stone);
+            .draw_area_buffered_highlight_pixel(&mut surface.pixels_mut(), Pixel::Stone);
     }
     // draw not found
     for route in routes_notfound {
         warn!("failing at {:?}", route.location.area_buffered());
         route
             .location
-            .draw_area_buffered_highlight_pixel(surface, Pixel::SteelChest);
+            .draw_area_buffered_highlight_pixel(&mut surface.pixels_mut(), Pixel::SteelChest);
     }
 }
 

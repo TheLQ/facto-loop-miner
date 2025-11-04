@@ -72,8 +72,9 @@ impl<'s> PlugMut<'s> {
 
     fn remove_mine_path_cleanup(&mut self, mine_path: &MinePath) -> Vec<VPoint> {
         let removed_points = mine_path.total_area();
+        let surface = self.pixels();
         for point in &removed_points {
-            let existing = self.get_pixel(point);
+            let existing = surface.get_pixel(point);
             if existing != Pixel::Rail {
                 panic!("existing {existing:?} is not Rail")
             }
@@ -101,7 +102,7 @@ impl<'s> Plug<'s> {
 
 impl VSurface {
     pub fn rails(&self) -> VSurfaceRails {
-        VSurfaceRails::new(&self.rail_paths)
+        VSurfaceRails::new(&self.rails)
     }
 
     pub fn rails_mut(&mut self) -> VSurfaceRailsMut {
