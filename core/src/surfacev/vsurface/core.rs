@@ -36,9 +36,9 @@ use tracing::{debug, info, trace};
 /// Converted from Factorio style of f32 relative to center (3x3 entity has start=1.5,1.5).
 #[derive(Serialize, Deserialize, Clone)]
 pub struct VSurface {
-    pixels: VEntityMap<VPixel>,
+    pub(crate) pixels: VEntityMap<VPixel>,
     // entities: VEntityMap<VEntity>,
-    patches: Vec<VPatch>,
+    pub(crate) patches: Vec<VPatch>,
     #[serde(default)]
     rail_paths: Vec<MinePath>,
     #[serde(skip, default = "Tunables::new")]
@@ -189,7 +189,9 @@ impl VSurface {
         let total_save_watch = BasicWatch::start();
         self.save_state(out_dir)?;
 
-        self.paint_pixel_colored_entire().save_to_file(out_dir)?;
+        self.pixels()
+            .paint_pixel_colored_entire()
+            .save_to_file(out_dir)?;
         self.save_entity_buffers(out_dir)?;
         self.save_tuning_parameters(out_dir)?;
         info!("+++ Saved in {} to {}", total_save_watch, out_dir.display());
@@ -235,83 +237,15 @@ impl VSurface {
         Ok(())
     }
 
-    pub fn add_mine_path(&mut self, mine_path: MinePath) {
-        self.add_mine_path_with_pixel(mine_path, Pixel::Rail)
-    }
-
-    pub fn add_mine_path_with_pixel(&mut self, mine_path: MinePath, pixel: Pixel) {
-        trace!(
-            "{} {}",
-            nu_ansi_term::Color::Red.paint("mine add"),
-            mine_path.segment
-        );
-        let new_points = mine_path.total_area();
-        self.change_pixels(new_points).stomp(pixel);
-
-        // todo
-        // // add markers for start points
-        // let start_points: Vec<VPoint> = mine_path.links.iter().map(|v| v.start).collect_vec();
-        // self.set_pixels(Pixel::EdgeWall, start_points)?;
-
-        self.rail_paths.push(mine_path);
-    }
-
-    pub fn remove_mine_path_at(&mut self, index: usize) -> Option<(MinePath, Vec<VPoint>)> {
-        let mine_path = self.rail_paths.remove(index);
-        trace!(
-            "{} at {index} total {} - {}",
-            nu_ansi_term::Color::Red.paint("mine remove"),
-            self.rail_paths.len(),
-            mine_path.segment,
-        );
-
-        let removed_points = self.remove_mine_path_cleanup(&mine_path);
-        Some((mine_path, removed_points))
-    }
-
-    pub fn remove_mine_path_pop(&mut self) -> Option<(MinePath, Vec<VPoint>)> {
-        trace!(
-            "{} pop total {}",
-            nu_ansi_term::Color::Red.paint("mine remove"),
-            self.rail_paths.len()
-        );
-        let mine_path = self.rail_paths.pop()?;
-        let removed_points = self.remove_mine_path_cleanup(&mine_path);
-        Some((mine_path, removed_points))
-    }
-
-    fn remove_mine_path_cleanup(&mut self, mine_path: &MinePath) -> Vec<VPoint> {
-        let removed_points = mine_path.total_area();
-        for point in &removed_points {
-            let existing = self.get_pixel(point);
-            if existing != Pixel::Rail {
-                panic!("existing {existing:?} is not Rail")
-            }
-        }
-        self.pixels.change(removed_points.clone()).remove();
-        removed_points
-    }
-
     //
     // pub fn get_rail_TODO(&self) -> impl Iterator<Item = &Rail> {
     //     self.rail_paths.iter().flat_map(|v| &v.rail)
     // }
     //
-    pub fn get_mine_paths(&self) -> &[MinePath] {
-        &self.rail_paths
-    }
     //
     // pub fn get_mines_mut(&mut self) -> &mut [MinePath] {
     //     &mut self.rail_paths
     // }
-
-    pub fn dummy_area_entire_surface(&self) -> VArea {
-        let radius = self.get_radius_i32();
-        VArea::from_arbitrary_points_pair(
-            VPoint::new(-radius, -radius),
-            VPoint::new(radius, radius),
-        )
-    }
 
     // pub fn draw_debug_square(&mut self, point: &VPoint) {
     //     let center_entity = VPixel {
@@ -334,33 +268,6 @@ impl VSurface {
     pub fn tunables(&self) -> &Tunables {
         &self.tunables
     }
-
-    /// Anti-entropy
-    pub fn validate(&self) {
-        self.pixels.validate();
-        self.validate_patches();
-    }
-
-    fn validate_patches(&self) {
-        if self.patches.is_empty() {
-            panic!("no patches to validate")
-        }
-        let mut checks = 0;
-        let mut points_history: Vec<&VPoint> = Vec::new();
-        for patch in &self.patches {
-            for point in &patch.pixel_indexes {
-                if points_history.contains(&point) {
-                    panic!("dupe {patch:?}");
-                }
-                points_history.push(point);
-
-                let pixel = self.pixels.get_entity_by_point(point).unwrap();
-                assert_eq!(pixel.pixel, patch.resource);
-                checks += 1;
-            }
-        }
-        debug!("validate {checks} checks");
-    }
 }
 
 impl Display for VSurface {
@@ -372,40 +279,6 @@ impl Display for VSurface {
             display_patches(&self.patches)
         )
     }
-}
-
-impl VSurface {
-    fn context_pathing_mut(&mut self) -> PathingContextMut<'_> {
-        PathingContextMut(&self.tunables, &self.patches, &mut self.pixels)
-    }
-
-    fn context_pathing(&self) -> PathingContext<'_> {
-        PathingContext(&self.tunables, &self.patches, &self.pixels)
-    }
-}
-
-pub struct PathingContextMut<'s>(&'s Tunables, &'s [VPatch], &'s mut VEntityMap<VPixel>);
-impl<'s> PathingContextMut<'s> {}
-
-pub struct PathingContext<'s> {
-    tunables: &'s Tunables,
-    patches: &'s [VPatch],
-    pixels: &'s VEntityMap<VPixel>,
-}
-impl<'s> PathingContext<'s> {
-    pub fn tunables(&self) -> &Tunables {
-        &self.tunables
-    }
-
-    pub fn patches(&self) -> &[VPatch] {
-        &self.patches
-    }
-
-    pub fn get_radius_i32(&self) -> i32 {
-        self.pixels.radius() as i32
-    }
-
-    pub fn is_point_out_of_bounds(&self, point: &VPoint) -> bool {}
 }
 
 fn display_patches(patches: &Vec<VPatch>) -> String {
@@ -442,21 +315,10 @@ fn path_state(out_dir: &Path) -> PathBuf {
 
 //</editor-fold>
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct VPixel {
-    pub(super) pixel: Pixel,
-}
-
-impl VPixel {
-    pub fn pixel(&self) -> &Pixel {
-        &self.pixel
-    }
-}
-
 #[cfg(test)]
 mod test {
     use crate::surface::pixel::Pixel;
-    use crate::surfacev::core::VSurface;
+    use crate::surfacev::vsurface::core::VSurface;
     use facto_loop_miner_common::log_init_trace;
     use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
     use facto_loop_miner_fac_engine::common::varea::VArea;

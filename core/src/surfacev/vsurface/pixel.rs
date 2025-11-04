@@ -3,7 +3,9 @@ use crate::surface::pixel::Pixel;
 use crate::surfacev::core::VPixel;
 use crate::surfacev::err::{CoreConvertPathResult, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
-use crate::surfacev::ventity_map::{VEntityMap, VMapChange};
+use crate::surfacev::ventity_map::{VEntityMap, VMapChange, VPixel};
+use crate::surfacev::vsurface::rails::VSurfaceMinesMut;
+use crate::surfacev::vsurface::{SurfacePixelsPatches, SurfacePixelsPatchesMut, VSurface};
 use colorgrad::Gradient;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
@@ -21,23 +23,17 @@ use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::Path;
 use tracing::{debug, info, trace};
 
-impl VEntityMap<VPixel> {
-    fn as_surface_pixel(&self) -> VSurfacePixel {
-        VSurfacePixel { pixels: self }
-    }
-}
-
-struct VSurfacePixelMut<'s> {
-    pixels: &'s mut VEntityMap<VPixel>,
+pub struct VSurfacePixelMut<'s> {
+    pub(super) pixels: &'s mut VEntityMap<VPixel>,
 }
 
 impl<'s> VSurfacePixelMut<'s> {
-    fn get(&self) -> VSurfacePixel<'s> {
-        VSurfacePixel::new(&self.pixels)
+    fn new(pixels: &'s mut VEntityMap<VPixel>) -> Self {
+        Self { pixels }
     }
 
     pub fn crop(&mut self, new_radius: u32) {
-        let old_radius = self.get_radius();
+        let old_radius = self.pixels.radius();
         info!("Crop from {} to {}", old_radius, new_radius);
         assert!(old_radius > new_radius);
         // self.entities.crop(new_radius);
@@ -126,7 +122,8 @@ impl<'s> VSurfacePixelMut<'s> {
     }
 }
 
-struct VSurfacePixel<'s> {
+#[derive(Clone, Copy)]
+pub struct VSurfacePixel<'s> {
     pixels: &'s VEntityMap<VPixel>,
 }
 
@@ -335,12 +332,50 @@ impl<'s> VSurfacePixel<'s> {
         self.pixels.get_entity_id_at(point)
     }
 
+    pub fn dummy_area_entire_surface(&self) -> VArea {
+        let radius = self.get_radius_i32();
+        VArea::from_arbitrary_points_pair(
+            VPoint::new(-radius, -radius),
+            VPoint::new(radius, radius),
+        )
+    }
+
     pub fn log_pixel_stats(&self, debug_message: &str) {
         let mut metrics = FastMetrics::new(format!("log_pixel_counts Entities {}", debug_message));
         for entity in self.pixels.iter_xy_pixels() {
             metrics.increment(FastMetric::VSurface_Pixel(*entity));
         }
         metrics.log_final();
+    }
+}
+
+//
+
+impl VSurface {
+    pub fn pixels(&self) -> VSurfacePixel {
+        VSurfacePixel::new(&self.pixels)
+    }
+
+    pub fn pixels_mut(&mut self) -> VSurfacePixelMut {
+        VSurfacePixelMut::new(&self.pixels)
+    }
+}
+
+impl<'s> SurfacePixelsPatchesMut<'s> {
+    pub fn pixels_mut(&mut self) -> VSurfacePixelMut {
+        VSurfacePixelMut::new(&mut self.pixels)
+    }
+}
+
+impl<'s> SurfacePixelsPatches<'s> {
+    pub fn pixels(&self) -> VSurfacePixel {
+        VSurfacePixel::new(&self.pixels)
+    }
+}
+
+impl<'s> VSurfaceMinesMut<'s> {
+    pub fn pixels_mut(&mut self) -> VSurfacePixelMut {
+        VSurfacePixelMut::new(&mut self.pixels)
     }
 }
 

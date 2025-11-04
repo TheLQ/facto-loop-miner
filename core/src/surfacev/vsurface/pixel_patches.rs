@@ -1,12 +1,21 @@
-use crate::surfacev::core::VPixel;
-use crate::surfacev::ventity_map::VEntityMap;
+use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vpatch::VPatch;
+use crate::surfacev::vsurface::core::VSurface;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use tracing::info;
+use tracing::{debug, info};
+
+impl VSurface {
+    pub fn pixels_patches(&mut self) -> SurfacePixelsPatchesMut {
+        SurfacePixelsPatchesMut {
+            pixels: &mut self.pixels,
+            patches: &mut self.patches,
+        }
+    }
+}
 
 pub struct SurfacePixelsPatchesMut<'s> {
-    pixels: &'s mut VEntityMap<VPixel>,
-    patches: &'s mut Vec<VPatch>,
+    pub(super) pixels: &'s mut VEntityMap<VPixel>,
+    pub(super) patches: &'s mut Vec<VPatch>,
 }
 
 impl<'s> SurfacePixelsPatchesMut<'s> {
@@ -65,13 +74,41 @@ impl<'s> SurfacePixelsPatchesMut<'s> {
     }
 }
 
-struct SurfacePixelsPatches<'s> {
-    pixels: &'s mut VEntityMap<VPixel>,
-    patches: &'s mut Vec<VPatch>,
+#[derive(Clone, Copy)]
+pub struct SurfacePixelsPatches<'s> {
+    pub(super) pixels: &'s VEntityMap<VPixel>,
+    pub(super) patches: &'s Vec<VPatch>,
 }
 
 impl SurfacePixelsPatches<'_> {
     pub fn get_patches_slice(&self) -> &[VPatch] {
         &self.patches
+    }
+
+    /// Anti-entropy
+    pub fn validate(&self) {
+        self.pixels.validate();
+        self.validate_patches();
+    }
+
+    fn validate_patches(&self) {
+        if self.patches.is_empty() {
+            panic!("no patches to validate")
+        }
+        let mut checks = 0;
+        let mut points_history: Vec<&VPoint> = Vec::new();
+        for patch in self.patches.as_slice() {
+            for point in &patch.pixel_indexes {
+                if points_history.contains(&point) {
+                    panic!("dupe {patch:?}");
+                }
+                points_history.push(point);
+
+                let pixel = self.pixels.get_entity_by_point(point).unwrap();
+                assert_eq!(pixel.pixel, patch.resource);
+                checks += 1;
+            }
+        }
+        debug!("validate {checks} checks");
     }
 }
