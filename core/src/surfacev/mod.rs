@@ -7,5 +7,3 @@ mod tape;
 mod ventity_map;
 pub mod vpatch;
 pub mod vsurface;
-pub mod vsurface_pixel;
-pub mod vsurface_pixel_patches;

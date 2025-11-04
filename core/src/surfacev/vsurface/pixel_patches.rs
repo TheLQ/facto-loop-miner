@@ -1,6 +1,6 @@
+use crate::surfacev::core::VPixel;
 use crate::surfacev::ventity_map::VEntityMap;
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::VPixel;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use tracing::info;
 

@@ -456,7 +456,7 @@ impl VPixel {
 #[cfg(test)]
 mod test {
     use crate::surface::pixel::Pixel;
-    use crate::surfacev::vsurface::VSurface;
+    use crate::surfacev::core::VSurface;
     use facto_loop_miner_common::log_init_trace;
     use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
     use facto_loop_miner_fac_engine::common::varea::VArea;

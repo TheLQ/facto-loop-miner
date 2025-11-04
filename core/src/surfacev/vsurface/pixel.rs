@@ -1,9 +1,9 @@
 use crate::opencv::{GeneratedMat, draw_text_cv, draw_text_size, mat_into_points};
 use crate::surface::pixel::Pixel;
+use crate::surfacev::core::VPixel;
 use crate::surfacev::err::{CoreConvertPathResult, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::ventity_map::{VEntityMap, VMapChange};
-use crate::surfacev::vsurface::VPixel;
 use colorgrad::Gradient;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
