@@ -19,11 +19,21 @@ use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::Path;
 use tracing::{debug, info};
 
+impl VEntityMap<VPixel> {
+    fn as_surface_pixel(&self) -> VSurfacePixel {
+        VSurfacePixel { pixels: self }
+    }
+}
+
 struct VSurfacePixelMut<'s> {
     pixels: &'s mut VEntityMap<VPixel>,
 }
 
 impl<'s> VSurfacePixelMut<'s> {
+    fn get(&self) -> VSurfacePixel<'s> {
+        VSurfacePixel::new(&self.pixels)
+    }
+
     pub fn crop(&mut self, new_radius: u32) {
         let old_radius = self.get_radius();
         info!("Crop from {} to {}", old_radius, new_radius);
@@ -33,19 +43,15 @@ impl<'s> VSurfacePixelMut<'s> {
     }
 }
 
-impl<'s> AsRef<VSurfacePixel<'s>> for VSurfacePixelMut<'s> {
-    fn as_ref(&self) -> &VSurfacePixel<'s> {
-        &VSurfacePixel {
-            pixels: self.pixels,
-        }
-    }
-}
-
 struct VSurfacePixel<'s> {
     pixels: &'s VEntityMap<VPixel>,
 }
 
 impl<'s> VSurfacePixel<'s> {
+    pub fn new(pixels: &'s VEntityMap<VPixel>) -> Self {
+        Self { pixels }
+    }
+
     #[must_use]
     pub fn paint_pixel_graduated(&self, compressed: HashMap<VPoint, u32>) -> SurfacePainting {
         assert!(!compressed.is_empty());
