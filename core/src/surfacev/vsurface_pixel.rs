@@ -1,13 +1,15 @@
-use crate::opencv::GeneratedMat;
+use crate::opencv::{GeneratedMat, draw_text_cv, draw_text_size, mat_into_points};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{CoreConvertPathResult, VResult};
-use crate::surfacev::ventity_map::VEntityMap;
+use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
+use crate::surfacev::ventity_map::{VEntityMap, VMapChange};
 use crate::surfacev::vsurface::VPixel;
 use colorgrad::Gradient;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ONE, VPoint};
+use facto_loop_miner_fac_engine::opencv_re::core::{CV_8U, Mat, MatTrait, Point, Scalar};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
 use num_format::ToFormattedString;
@@ -17,7 +19,7 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::Path;
-use tracing::{debug, info};
+use tracing::{debug, info, trace};
 
 impl VEntityMap<VPixel> {
     fn as_surface_pixel(&self) -> VSurfacePixel {
@@ -40,6 +42,87 @@ impl<'s> VSurfacePixelMut<'s> {
         assert!(old_radius > new_radius);
         // self.entities.crop(new_radius);
         self.pixels.crop(new_radius);
+    }
+
+    pub fn set_entity_replace(&mut self, pos: VPoint, expected: Pixel, new: Pixel) {
+        let entity = self
+            .pixels
+            .get_entity_by_point_mut(&pos)
+            .unwrap_or_else(|| panic!("must exist {pos}"));
+        if entity.pixel == expected {
+            entity.pixel = new;
+        } else {
+            panic!(
+                "at {pos} expected {} found {}",
+                expected.as_ref(),
+                entity.pixel.as_ref()
+            )
+        }
+    }
+
+    #[must_use]
+    pub fn change_square(&mut self, area: &VArea) -> VMapChange<'_, VPixel, Vec<VPoint>> {
+        assert!(
+            !self.pixels.is_point_out_of_bounds(&area.point_top_left()),
+            "Area is out of bounds {area}",
+        );
+        assert!(
+            !self
+                .pixels
+                .is_point_out_of_bounds(&area.point_bottom_right()),
+            "Area is out of bounds {area}",
+        );
+        self.pixels.change(area.get_points())
+    }
+
+    #[must_use]
+    pub fn change_pixels<I>(&mut self, positions: I) -> VMapChange<'_, VPixel, I>
+    where
+        I: IntoIterator<Item = VPoint>,
+    {
+        self.pixels.change(positions)
+    }
+
+    pub fn draw_text_at(&mut self, pos: VPoint, text: &str) {
+        let watch = BasicWatch::start();
+
+        let text_height = 25;
+        let text_thickness = 3;
+        let text_size = draw_text_size(text, text_height, text_thickness);
+        // TIL: new_size/new_rows_cols will reuse allocations!
+        let mut mat = unsafe { Mat::new_size(text_size.to_cv_size(), CV_8U).unwrap() };
+        mat.set_scalar(Scalar::all(0.0)).unwrap();
+
+        let color = u8::MAX;
+        draw_text_cv(
+            &mut mat,
+            text,
+            Point {
+                x: 0,
+                // draw_text_size adds thickness we must remove
+                y: text_size.y() - text_thickness,
+            },
+            Scalar::all(color.into()),
+            text_height,
+            text_thickness,
+        );
+        // imwrite("out.png", &mat, &Vector::new()).unwrap();
+        let new_points = mat_into_points(mat, color, pos)
+            .into_iter()
+            .filter(|v| !self.is_point_out_of_bounds(v))
+            .collect();
+        trace!("Text \"{text}\" at {pos} generated in {watch}");
+
+        // self.change_square(&VArea::from_arbitrary_points_pair(pos, pos + text_size))
+        //     .stomp(Pixel::EdgeWall);
+
+        // let gen_area = VArea::from_arbitrary_points(&new_points);
+        // trace!("from area {gen_area}");
+
+        // let watch = BasicWatch::start();
+        // let new_points_len = new_points.len();
+        self.change_pixels(new_points).stomp(Pixel::Highlighter);
+        // trace!("set {new_points_len} points in {watch}");
     }
 }
 
@@ -184,6 +267,10 @@ impl<'s> VSurfacePixel<'s> {
         }
     }
 
+    pub fn dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {
+        self.pixels.iter_xy_pixels()
+    }
+
     //</editor-fold>
 
     pub fn to_pixel_cv_image(&self, filter: Option<Pixel>) -> GeneratedMat {
@@ -242,6 +329,18 @@ impl<'s> VSurfacePixel<'s> {
 
     pub fn is_points_free_unchecked(&self, points: &[VPoint]) -> bool {
         self.pixels.is_points_free_unchecked_iter(points)
+    }
+
+    pub fn get_pixel_entity_id_at(&self, point: &VPoint) -> usize {
+        self.pixels.get_entity_id_at(point)
+    }
+
+    pub fn log_pixel_stats(&self, debug_message: &str) {
+        let mut metrics = FastMetrics::new(format!("log_pixel_counts Entities {}", debug_message));
+        for entity in self.pixels.iter_xy_pixels() {
+            metrics.increment(FastMetric::VSurface_Pixel(*entity));
+        }
+        metrics.log_final();
     }
 }
 

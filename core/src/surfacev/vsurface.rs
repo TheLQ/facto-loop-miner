@@ -235,116 +235,6 @@ impl VSurface {
         Ok(())
     }
 
-    #[must_use]
-    pub fn change_pixels<I>(&mut self, positions: I) -> VMapChange<'_, VPixel, I>
-    where
-        I: IntoIterator<Item = VPoint>,
-    {
-        self.pixels.change(positions)
-    }
-
-    pub fn add_patches(&mut self, patches: impl IntoIterator<Item = VPatch>) {
-        self.patches.extend(patches)
-    }
-
-    pub fn get_patches_slice(&self) -> &[VPatch] {
-        &self.patches
-    }
-
-
-    pub fn remove_patches_within_radius(&mut self, radius: u32) {
-        let mut removed_points: Vec<VPoint> = Vec::new();
-        let mut patches_to_remove = Vec::new();
-        for (patch_index, patch) in self.patches.iter().enumerate() {
-            if !patch.area.point_center().is_within_center_radius(radius) {
-                // trace!("asdf {:?}\tfor {:?}", patch.area.start, patch.resource);
-                continue;
-            }
-            // trace!("hello {:?}", patch);
-            removed_points.extend_from_slice(&patch.pixel_indexes);
-            patches_to_remove.push(patch_index);
-        }
-        info!(
-            "removing {} patches with {} entities within {} radius",
-            patches_to_remove.len(),
-            removed_points.len(),
-            radius
-        );
-        self.pixels.change(removed_points).remove();
-
-        patches_to_remove.reverse();
-        for patch_index in patches_to_remove {
-            self.patches.remove(patch_index);
-        }
-    }
-
-    pub fn remove_patches_in_column(&mut self, radius: u32) {
-        let mut removed_points: Vec<VPoint> = Vec::new();
-        let mut patches_to_remove = Vec::new();
-        let radius = radius as i32;
-        for (patch_index, patch) in self.patches.iter().enumerate() {
-            if (-radius..radius).contains(&patch.area.point_center().x()) {
-                removed_points.extend_from_slice(&patch.pixel_indexes);
-                patches_to_remove.push(patch_index);
-            }
-        }
-        info!(
-            "removing {} patches with {} entities within {} radius",
-            patches_to_remove.len(),
-            removed_points.len(),
-            radius
-        );
-        self.pixels.change(removed_points).remove();
-
-        patches_to_remove.reverse();
-        for patch_index in patches_to_remove {
-            self.patches.remove(patch_index);
-        }
-    }
-
-    pub fn get_pixel_entity_id_at(&self, point: &VPoint) -> usize {
-        self.pixels.get_entity_id_at(point)
-    }
-
-    pub fn set_entity_replace(&mut self, pos: VPoint, expected: Pixel, new: Pixel) {
-        let entity = self
-            .pixels
-            .get_entity_by_point_mut(&pos)
-            .unwrap_or_else(|| panic!("must exist {pos}"));
-        if entity.pixel == expected {
-            entity.pixel = new;
-        } else {
-            panic!(
-                "at {pos} expected {} found {}",
-                expected.as_ref(),
-                entity.pixel.as_ref()
-            )
-        }
-    }
-
-    pub fn log_pixel_stats(&self, debug_message: &str) {
-        let mut metrics = FastMetrics::new(format!("log_pixel_counts Entities {}", debug_message));
-        for entity in self.pixels.iter_xy_pixels() {
-            metrics.increment(FastMetric::VSurface_Pixel(*entity));
-        }
-        metrics.log_final();
-    }
-
-    #[must_use]
-    pub fn change_square(&mut self, area: &VArea) -> VMapChange<'_, VPixel, Vec<VPoint>> {
-        assert!(
-            !self.pixels.is_point_out_of_bounds(&area.point_top_left()),
-            "Area is out of bounds {area}",
-        );
-        assert!(
-            !self
-                .pixels
-                .is_point_out_of_bounds(&area.point_bottom_right()),
-            "Area is out of bounds {area}",
-        );
-        self.pixels.change(area.get_points())
-    }
-
     pub fn add_mine_path(&mut self, mine_path: MinePath) {
         self.add_mine_path_with_pixel(mine_path, Pixel::Rail)
     }
@@ -415,58 +305,12 @@ impl VSurface {
     //     &mut self.rail_paths
     // }
 
-    pub fn dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {
-        self.pixels.iter_xy_pixels()
-    }
-
     pub fn dummy_area_entire_surface(&self) -> VArea {
         let radius = self.get_radius_i32();
         VArea::from_arbitrary_points_pair(
             VPoint::new(-radius, -radius),
             VPoint::new(radius, radius),
         )
-    }
-
-    pub fn draw_text_at(&mut self, pos: VPoint, text: &str) {
-        let watch = BasicWatch::start();
-
-        let text_height = 25;
-        let text_thickness = 3;
-        let text_size = draw_text_size(text, text_height, text_thickness);
-        // TIL: new_size/new_rows_cols will reuse allocations!
-        let mut mat = unsafe { Mat::new_size(text_size.to_cv_size(), CV_8U).unwrap() };
-        mat.set_scalar(Scalar::all(0.0)).unwrap();
-
-        let color = u8::MAX;
-        draw_text_cv(
-            &mut mat,
-            text,
-            Point {
-                x: 0,
-                // draw_text_size adds thickness we must remove
-                y: text_size.y() - text_thickness,
-            },
-            Scalar::all(color.into()),
-            text_height,
-            text_thickness,
-        );
-        // imwrite("out.png", &mat, &Vector::new()).unwrap();
-        let new_points = mat_into_points(mat, color, pos)
-            .into_iter()
-            .filter(|v| !self.is_point_out_of_bounds(v))
-            .collect();
-        trace!("Text \"{text}\" at {pos} generated in {watch}");
-
-        // self.change_square(&VArea::from_arbitrary_points_pair(pos, pos + text_size))
-        //     .stomp(Pixel::EdgeWall);
-
-        // let gen_area = VArea::from_arbitrary_points(&new_points);
-        // trace!("from area {gen_area}");
-
-        // let watch = BasicWatch::start();
-        // let new_points_len = new_points.len();
-        self.change_pixels(new_points).stomp(Pixel::Highlighter);
-        // trace!("set {new_points_len} points in {watch}");
     }
 
     // pub fn draw_debug_square(&mut self, point: &VPoint) {
@@ -530,12 +374,38 @@ impl Display for VSurface {
     }
 }
 
-
-
-
-
-
+impl VSurface {
+    fn context_pathing_mut(&mut self) -> PathingContextMut<'_> {
+        PathingContextMut(&self.tunables, &self.patches, &mut self.pixels)
     }
+
+    fn context_pathing(&self) -> PathingContext<'_> {
+        PathingContext(&self.tunables, &self.patches, &self.pixels)
+    }
+}
+
+pub struct PathingContextMut<'s>(&'s Tunables, &'s [VPatch], &'s mut VEntityMap<VPixel>);
+impl<'s> PathingContextMut<'s> {}
+
+pub struct PathingContext<'s> {
+    tunables: &'s Tunables,
+    patches: &'s [VPatch],
+    pixels: &'s VEntityMap<VPixel>,
+}
+impl<'s> PathingContext<'s> {
+    pub fn tunables(&self) -> &Tunables {
+        &self.tunables
+    }
+
+    pub fn patches(&self) -> &[VPatch] {
+        &self.patches
+    }
+
+    pub fn get_radius_i32(&self) -> i32 {
+        self.pixels.radius() as i32
+    }
+
+    pub fn is_point_out_of_bounds(&self, point: &VPoint) -> bool {}
 }
 
 fn display_patches(patches: &Vec<VPatch>) -> String {
