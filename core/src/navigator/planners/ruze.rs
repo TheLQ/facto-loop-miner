@@ -4,11 +4,12 @@ use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
 use crate::navigator::planners::common::{PathingTunables, debug_failing, draw_prep};
 use crate::state::machine::StepParams;
-use crate::state::tuneables::{MoriTunables, Tunables};
+use crate::state::tuneables::MoriTunables;
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::{
-    AsVsPixel, AsVsPixelMut, VSurface, VSurfacePatch, VSurfacePatchMut, VSurfacePixelMut,
+    VSurfaceNavMut, VSurfacePatch, VSurfacePatchAsVs, VSurfacePatchMut, VSurfacePixelAsVs,
+    VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRailsAsVs, VSurfaceRailsAsVsMut,
     VSurfaceRailsMut,
 };
 use std::path::Path;
@@ -21,12 +22,12 @@ const RUZE_MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
 /// Super parallel batch based planner
 pub fn start_ruze_planner(
     tunables: &PathingTunables,
-    surface: &mut VSurfacePatchMut,
+    surface: &mut VSurfaceNavMut,
     params: &StepParams,
 ) {
     let select_batches = select_mines_and_sources(
         tunables,
-        surface.pixel_patches(),
+        surface.patches(),
         RUZE_MAXIMUM_MINE_COUNT_PER_BATCH,
     )
     .into_success()
@@ -45,7 +46,7 @@ pub fn start_ruze_planner(
         // for (batch_index, batch) in [select_batches.into_iter().enumerate().last().unwrap()] {
         let found = process_batch(
             tunables.mori(),
-            &mut surface.pixels_mut(),
+            surface,
             batch,
             batch_index,
             &params.step_out_dir,
@@ -64,7 +65,7 @@ pub fn start_ruze_planner(
 
 fn process_batch(
     tunables: &MoriTunables,
-    surface: &mut VSurfaceRailsMut,
+    surface: &mut VSurfaceNavMut,
     batch: MineSelectBatch,
     batch_index: usize,
     step_out_dir: &Path,
@@ -103,7 +104,7 @@ fn process_batch(
             info!("pushing {} new mine paths", paths.len());
             assert!(!paths.is_empty(), "Success but no paths!!!!");
             for route in routes {
-                route.location.draw_area_buffered(surface.pixels());
+                route.location.draw_area_buffered(&mut surface.pixels_mut());
             }
             complete_plan
                 .base_sources
@@ -111,13 +112,13 @@ fn process_batch(
                 .advance_by(paths.len())
                 .unwrap();
             for path in paths {
-                surface.add_mine_path(path);
+                surface.rails_mut().add_mine_path(path);
             }
             true
         }
         ExecutorResult::Failure { meta, .. } => {
             if always_true_test() {
-                debug_failing(surface, meta);
+                debug_failing(&mut surface.rails_mut(), meta);
                 return false;
             }
 
@@ -129,7 +130,9 @@ fn process_batch(
 
             error!("failed to pathfind");
             for path in found_paths {
-                surface.add_mine_path_with_pixel(path, Pixel::Highlighter);
+                surface
+                    .rails_mut()
+                    .add_mine_path_with_pixel(path, Pixel::Highlighter);
             }
 
             let (trigger_mine, rest) = failing_routes.split_first().unwrap();
@@ -140,12 +143,12 @@ fn process_batch(
             );
             trigger_mine
                 .location
-                .draw_area_buffered_with(surface, Pixel::Highlighter);
+                .draw_area_buffered_with(&mut surface.pixels_mut(), Pixel::Highlighter);
             for entry in rest {
                 warn!("failing at {:?}", entry.location.area_buffered());
                 trigger_mine
                     .location
-                    .draw_area_buffered_with(surface, Pixel::EdgeWall);
+                    .draw_area_buffered_with(&mut surface.pixels_mut(), Pixel::EdgeWall);
             }
 
             // // very busy dump

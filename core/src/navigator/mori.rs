@@ -3,7 +3,7 @@ use crate::navigator::mori_cost::calculate_cost_for_link;
 use crate::navigator::planners::debug_draw_segment;
 use crate::state::tuneables::MoriTunables;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vsurface::{AsVsPixel, VSurface, VSurfacePixel, VSurfacePixelMut};
+use crate::surfacev::vsurface::{VSurface, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelMut};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::{BasicWatch, BasicWatchResult};
 use facto_loop_miner_fac_engine::common::varea::VArea;

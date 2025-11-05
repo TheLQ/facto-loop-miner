@@ -5,7 +5,9 @@ use crate::navigator::mine_selector::MineSelectBatch;
 use crate::state::tuneables::{ChunkValue, MoriTunables, Tunables};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
-use crate::surfacev::vsurface::{AsVsPixel, VSurface, VSurfacePixelMut, VSurfaceRailsMut};
+use crate::surfacev::vsurface::{
+    VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRailsMut,
+};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_THREE, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
@@ -23,7 +25,7 @@ pub struct PathingTunables {
 }
 
 impl PathingTunables {
-    fn from_tunables(tunables: &Tunables) -> Self {
+    pub fn from_tunables(tunables: &Tunables) -> Self {
         Self {
             base_chunks: tunables.base.base_chunks,
             mori: tunables.mori.clone(),

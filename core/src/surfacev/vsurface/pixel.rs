@@ -4,7 +4,6 @@ use crate::surfacev::err::{CoreConvertPathResult, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use crate::surfacev::ventity_map::{VEntityMap, VMapChange, VPixel};
 use crate::surfacev::vsurface::core::path_pixel_xy_indexes_clone;
-use crate::surfacev::vsurface::{VSurface, VSurfacePixel, VSurfacePixelMut};
 use colorgrad::Gradient;
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
@@ -27,10 +26,6 @@ pub struct PlugMut<'s> {
 }
 
 impl<'s> PlugMut<'s> {
-    pub(super) fn new(pixels: &'s mut VEntityMap<VPixel>) -> Self {
-        Self { pixels }
-    }
-
     pub fn load_clone_prep(&mut self) -> VResult<()> {
         self.pixels.load_clone_prep(&path_pixel_xy_indexes_clone())
     }
@@ -127,14 +122,10 @@ impl<'s> PlugMut<'s> {
 
 #[derive(Clone, Copy)]
 pub struct Plug<'s> {
-    pixels: &'s VEntityMap<VPixel>,
+    pub(super) pixels: &'s VEntityMap<VPixel>,
 }
 
 impl<'s> Plug<'s> {
-    pub fn new(pixels: &'s VEntityMap<VPixel>) -> Self {
-        Self { pixels }
-    }
-
     #[must_use]
     pub fn paint_pixel_graduated(&self, compressed: HashMap<VPoint, u32>) -> SurfacePainting {
         assert!(!compressed.is_empty());
@@ -354,30 +345,18 @@ impl<'s> Plug<'s> {
 
 //
 
-pub trait AsVsPixelMut: AsVsPixel {
+pub trait AsVsMut: AsVs {
     fn pixels_mut(&mut self) -> PlugMut;
 }
 
-pub trait AsVsPixel {
+pub trait AsVs {
     fn pixels(&self) -> Plug;
-}
-
-impl<'s> AsVsPixel for PlugMut<'s> {
-    fn pixels(&self) -> Plug {
-        Plug::new(&self.pixels)
-    }
 }
 
 //
 
 pub struct PlugCopy {
     pixels: VEntityMap<VPixel>,
-}
-
-impl PlugCopy {
-    pub fn pixels_mut(&mut self) -> PlugMut {
-        PlugMut::new(&mut self.pixels)
-    }
 }
 
 impl Plug<'_> {
@@ -388,29 +367,23 @@ impl Plug<'_> {
     }
 }
 
-impl AsVsPixelMut for PlugCopy {
+impl AsVsMut for PlugCopy {
     fn pixels_mut(&mut self) -> PlugMut {
-        PlugMut::new(&mut self.pixels)
+        PlugMut {
+            pixels: &mut self.pixels,
+        }
     }
 }
 
-impl AsVsPixel for PlugCopy {
+impl AsVs for PlugCopy {
     fn pixels(&self) -> Plug {
-        Plug::new(&self.pixels)
+        Plug {
+            pixels: &self.pixels,
+        }
     }
 }
 
 //
-
-impl VSurface {
-    pub fn pixels(&self) -> VSurfacePixel {
-        Plug::new(&self.pixels)
-    }
-
-    pub fn pixels_mut(&mut self) -> VSurfacePixelMut {
-        PlugMut::new(&mut self.pixels)
-    }
-}
 
 /// Generated image with various save outputs
 pub struct SurfacePainting {

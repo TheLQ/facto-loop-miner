@@ -1,6 +1,6 @@
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::vsurface::{VSurface, VSurfacePixelAsVsMut};
 
 pub struct Step03 {}
 

@@ -2,7 +2,9 @@ use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::state::tuneables::BaseTunables;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vsurface::{VSurface, VSurfacePixelMut};
+use crate::surfacev::vsurface::{
+    VSurface, VSurfacePatchAsVs, VSurfacePatchAsVsMut, VSurfacePixelAsVsMut, VSurfacePixelMut,
+};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
 use itertools::Itertools;
@@ -26,7 +28,7 @@ impl Step for Step10 {
 
         // surface.remove_patches_within_radius(tunables.resource_clear_chunks.as_tiles_u32());
         surface
-            .pixels_patches()
+            .patches_mut()
             .remove_patches_in_column(tunables.resource_clear_chunks.as_tiles_u32());
         draw_mega_box(&mut surface.pixels_mut(), tunables);
 

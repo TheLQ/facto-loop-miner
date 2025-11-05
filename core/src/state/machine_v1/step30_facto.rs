@@ -2,7 +2,10 @@ use crate::navigator::planners::{debug_draw_mine_index_labels, debug_draw_mine_l
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::mine::{MineLocation, MinePath};
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::vsurface::{
+    VSurface, VSurfacePatch, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs, VSurfaceRails,
+    VSurfaceRailsAsVs,
+};
 use facto_loop_miner_common::err_bt::PrettyUnwrapMyBacktrace;
 use facto_loop_miner_fac_engine::admiral::err::AdmiralResult;
 use facto_loop_miner_fac_engine::admiral::executor::client::AdmiralClient;
@@ -45,12 +48,12 @@ impl Step for Step30 {
     }
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
-        let mut surface = VSurface::load_from_last_step(&params)?;
+        let mut surface_raw = VSurface::load_from_last_step(&params)?;
 
         let output = connect_admiral().pretty_unwrap();
 
-        let needle_path = surface.get_mine_paths()[13].clone();
-        plotter(&mut surface, output.clone(), &needle_path).unwrap();
+        let needle_path = surface_raw.rails().get_mine_paths()[13].clone();
+        plotter(surface_raw.patches(), output.clone(), &needle_path).unwrap();
 
         output.flush();
 
@@ -64,29 +67,17 @@ fn connect_admiral() -> AdmiralResult<Rc<FacItemOutput>> {
     Ok(FacItemOutput::new_admiral_dedupe(client).into_rc())
 }
 
-fn plotter_initial(surface: &mut VSurface) {
-    let mines = surface
-        .get_mine_paths()
-        .iter()
-        .map(|v| v.mine_base.clone())
-        .collect_vec();
-    debug_draw_mine_index_labels(surface, mines);
-
-    surface.paint_pixel_colored_zoomed().save_to_oculante();
-}
-
 fn plotter(
-    surface: &VSurface,
+    surface: VSurfacePatch,
     output: Rc<FacItemOutput>,
     needle_path: &MinePath,
 ) -> AdmiralResult<()> {
     // destroy_mine_area(&needle_path.mine_base, 20, &output)?;
-    destroy_everything(surface, &output)?;
+    destroy_everything(surface.pixels(), &output)?;
 
     let actual_area = VArea::from_arbitrary_points(
-        needle_path
-            .mine_base
-            .surface_patches(surface)
+        surface
+            .mine_patches(&needle_path.mine_base)
             .flat_map(|v| &v.pixel_indexes),
     );
     info!(
@@ -102,11 +93,7 @@ fn plotter(
     //     FacEntChest::new(FacEntChestType::Wood),
     //     needle_path.mine_base.area_min().point_center(),
     // );
-    let patch = needle_path
-        .mine_base
-        .surface_patches(surface)
-        .next()
-        .unwrap();
+    let patch = surface.mine_patches(&needle_path.mine_base).next().unwrap();
     output.writei(
         FacEntInfinityPower::new(),
         patch.area.point_top_left() + VPoint::new(0, 20),
@@ -140,9 +127,8 @@ fn plotter(
         drill_modules: [None, None, None],
         belt: FacEntBeltType::Basic,
         inserter: FacEntInserterType::Basic,
-        mines: needle_path
-            .mine_base
-            .surface_patches(surface)
+        mines: surface
+            .mine_patches(&needle_path.mine_base)
             .map(|v| v.pixel_indexes.clone())
             .collect(),
         output: output.clone(),
@@ -153,7 +139,7 @@ fn plotter(
 }
 
 fn destroy_everything(
-    surface: &VSurface,
+    surface: VSurfacePixel,
     output: &FacItemOutput,
 ) -> AdmiralResult<ExecuteResponse> {
     destroy_area(

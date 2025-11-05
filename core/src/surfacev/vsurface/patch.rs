@@ -2,19 +2,8 @@ use crate::surfacev::mine::MineLocation;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::core::VSurface;
-use crate::surfacev::vsurface::pixel::{AsVsPixel, AsVsPixelMut};
-use crate::surfacev::vsurface::{VSurfacePixel, VSurfacePixelMut};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use tracing::{debug, info};
-
-impl VSurface {
-    pub fn pixels_patches(&mut self) -> PlugMut {
-        PlugMut {
-            pixels: &mut self.pixels,
-            patches: &mut self.patches,
-        }
-    }
-}
 
 pub struct PlugMut<'s> {
     pub(super) pixels: &'s mut VEntityMap<VPixel>,
@@ -22,7 +11,7 @@ pub struct PlugMut<'s> {
 }
 
 impl<'s> PlugMut<'s> {
-    pub fn pixel_patches(&self) -> Plug {
+    pub fn patches(&self) -> Plug {
         Plug::new(&self.pixels, &self.patches)
     }
 
@@ -96,7 +85,7 @@ impl<'s> Plug<'s> {
         Self { pixels, patches }
     }
 
-    pub fn patches(&self) -> &[VPatch] {
+    pub fn patches_slice(&self) -> &[VPatch] {
         &self.patches
     }
 
@@ -147,39 +136,10 @@ impl<'s> Plug<'s> {
 
 //
 
-impl<'s> AsVsPixelMut for PlugMut<'s> {
-    fn pixels_mut(&mut self) -> VSurfacePixelMut {
-        VSurfacePixelMut::new(&mut self.pixels)
-    }
+pub trait AsVsMut {
+    fn patches_mut(&mut self) -> PlugMut;
 }
 
-impl<'s> AsVsPixel for PlugMut<'s> {
-    fn pixels(&self) -> VSurfacePixel {
-        VSurfacePixel::new(&self.pixels)
-    }
-}
-
-impl<'s> AsVsPixel for Plug<'s> {
-    fn pixels(&self) -> VSurfacePixel {
-        VSurfacePixel::new(&self.pixels)
-    }
-}
-
-pub trait AsVsPixelPatchesMut {
-    fn pixel_patches_mut(&mut self) -> PlugMut;
-}
-
-pub trait AsVsPixelPatches {
-    fn pixel_patches(&self) -> Plug;
-}
-
-impl<'s> AsVsPixelPatches for PlugMut<'s> {
-    fn pixel_patches(&self) -> Plug {
-        let Self { pixels, patches } = self;
-        Plug { pixels, patches }
-    }
-
-    // fn from_mut(PlugMut { pixels, patches }: &'s PlugMut) -> Self {
-    //     Self { pixels, patches }
-    // }
+pub trait AsVs {
+    fn patches(&self) -> Plug;
 }

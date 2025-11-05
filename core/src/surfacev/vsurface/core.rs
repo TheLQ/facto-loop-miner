@@ -6,6 +6,7 @@ use crate::surfacev::err::{CoreConvertPathResult, VResult};
 use crate::surfacev::mine::MinePath;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vpatch::VPatch;
+use crate::surfacev::vsurface::pixel::AsVs;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
 use num_format::ToFormattedString;

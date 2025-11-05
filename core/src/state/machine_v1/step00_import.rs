@@ -2,7 +2,7 @@ use crate::gamedata::lua::{LuaEntity, LuaThing, read_lua_tiles};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vsurface::{VSurface, VSurfacePixelMut};
+use crate::surfacev::vsurface::{VSurface, VSurfacePixelAsVsMut, VSurfacePixelMut};
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::blueprint::bpfac::position::FacBpPosition;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
@@ -31,7 +31,7 @@ impl Step for Step00 {
         let convert_watch = BasicWatch::start();
         let radius = find_radius(&lua_tiles) as u32;
         let mut surface = VSurface::new(radius);
-        translate_entities_to_image(&lua_tiles, &mut surface, &params);
+        translate_entities_to_image(&lua_tiles, &mut surface.pixels_mut(), &params);
         info!("Converted in {}", convert_watch);
 
         // let center = surface.get_pixel(VPoint::new(0, 0));

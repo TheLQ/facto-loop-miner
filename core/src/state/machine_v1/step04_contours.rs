@@ -5,7 +5,9 @@ use crate::state::machine::{Step, StepParams};
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::VSurface;
+use crate::surfacev::vsurface::{
+    VSurface, VSurfacePatchAsVs, VSurfacePatchAsVsMut, VSurfacePixel, VSurfacePixelAsVs,
+};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ONE, VPoint};
 use facto_loop_miner_fac_engine::opencv_re::core::{
@@ -44,8 +46,8 @@ impl Step for Step04 {
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
         let mut surface = VSurface::load_from_last_step(&params)?;
 
-        let disk_patches = detector(&surface, &params.step_out_dir);
-        surface.add_patches(disk_patches);
+        let disk_patches = detector(&surface.pixels(), &params.step_out_dir);
+        surface.patches_mut().add_patches(disk_patches);
 
         // if WRITE_DEBUG_IMAGE {
         //     write_surface_with_all_patches_wrapped(&mut surface);
@@ -55,7 +57,7 @@ impl Step for Step04 {
             let mut max_width = 0;
             let mut max_height = 0;
             let mut total = 0;
-            for patch in surface.get_patches_slice() {
+            for patch in surface.patches().patches_slice() {
                 if patch.resource != pixel {
                     continue;
                 }
@@ -145,7 +147,7 @@ fn write_png(path: &Path, img: &impl ToInputArray) {
     imwrite(path.to_str().unwrap(), img, &Vector::new()).unwrap();
 }
 
-fn detector(surface_meta: &VSurface, out_dir: &Path) -> Vec<VPatch> {
+fn detector(surface_meta: &VSurfacePixel, out_dir: &Path) -> Vec<VPatch> {
     let mut patches: Vec<VPatch> = Vec::new();
     for pixel in Pixel::iter_resource() {
         let detected_patches = detect_pixel(surface_meta, out_dir, pixel);
@@ -154,7 +156,7 @@ fn detector(surface_meta: &VSurface, out_dir: &Path) -> Vec<VPatch> {
     patches
 }
 
-fn detect_pixel(surface_meta: &VSurface, out_dir: &Path, pixel: Pixel) -> Vec<VPatch> {
+fn detect_pixel(surface_meta: &VSurfacePixel, out_dir: &Path, pixel: Pixel) -> Vec<VPatch> {
     surface_meta.log_pixel_stats("detect_pixel");
     let mut img_gen = surface_meta.to_pixel_cv_image(Some(pixel));
     let mut img = img_gen.as_mat();

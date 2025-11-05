@@ -3,15 +3,14 @@ use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources}
 use crate::navigator::planners::PathingTunables;
 use crate::navigator::planners::common::{debug_draw_complete_plan, draw_prep};
 use crate::surfacev::vsurface::{
-    AsVsPixel, AsVsPixelMut, VSurface, VSurfacePatch, VSurfacePatchMut, VSurfacePixel,
-    VSurfacePixelMut,
+    VSurfacePatch, VSurfacePatchMut, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut,
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use simd_json::prelude::ArrayTrait;
 use tracing::{info, trace};
 
 pub fn start_debug_planner(tunables: &PathingTunables, surface_mut: &mut VSurfacePatchMut) {
-    let select_batches = get_batches(tunables, surface_mut.pixel_patches());
+    let select_batches = get_batches(tunables, surface_mut.patches());
     paint_result(&mut surface_mut.pixels_mut(), select_batches);
     // if let Err(()) = debug_conflict_no_touching(surface, &select_batches) {
     //     error!("no touching");
@@ -42,7 +41,7 @@ fn get_batches(tunables: &PathingTunables, surface: VSurfacePatch) -> Vec<MineSe
             .flat_map(|v| v.area_min().get_corner_points()),
     );
     let mut total_in_area = 0;
-    for patch in surface.patches() {
+    for patch in surface.patches_slice() {
         if max_area.contains_point(&patch.area.point_center()) {
             total_in_area += 1;
         }

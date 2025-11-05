@@ -1,7 +1,9 @@
 use crate::navigator::mori::{MoriResult, mori2_start};
 use crate::state::tuneables::MoriTunables;
 use crate::surfacev::mine::{MineLocation, MinePath};
-use crate::surfacev::vsurface::{AsVsPixel, VSurfacePixel, VSurfacePixelMut};
+use crate::surfacev::vsurface::{
+    VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut,
+};
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::{EXECUTOR_TAG, LOCALE};
 use facto_loop_miner_fac_engine::common::varea::VArea;
