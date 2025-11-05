@@ -22,7 +22,7 @@ use tracing::{debug, info, trace};
 ///
 /// Entity Position is i32 relative to top left (3x3 entity has start=0,0) for simpler math.
 /// Converted from Factorio style of f32 relative to center (3x3 entity has start=1.5,1.5).
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct VSurface {
     pub(crate) pixels: VEntityMap<VPixel>,
     // entities: VEntityMap<VEntity>,

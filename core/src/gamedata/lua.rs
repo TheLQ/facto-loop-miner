@@ -23,7 +23,7 @@ pub fn read_lua_tiles(input_dir: &Path) -> Vec<LuaEntity> {
     // let data_inner: ExportCompressedVec = open_data_file(&input_path);
     // let data_inner: ExportCompressedv2 = open_data_file(&input_path, raw_input);
     let entities = parse_exported_lua_data(&mut raw_input, |name, x, y| LuaEntity {
-        name: Pixel::from_string(&name).unwrap(),
+        name,
         position: FacBpPosition { x, y },
     })
     .unwrap();

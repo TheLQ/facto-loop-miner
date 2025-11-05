@@ -1,5 +1,6 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::VResult;
+use facto_loop_miner_common::err_bt::PrettyUnwrapMyBacktrace;
 use serde::Deserialize;
 use simd_json::{BorrowedValue, OwnedValue, StaticNode, to_borrowed_value, to_owned_value};
 use std::io;
@@ -11,11 +12,10 @@ use std::io::ErrorKind;
 /// Serde simd_json with conversion takes 30 seconds.
 pub fn parse_exported_lua_data<V, C>(input: &mut [u8], to_object: C) -> VResult<Vec<V>>
 where
-    C: Fn(String, f32, f32) -> V,
+    C: Fn(Pixel, f32, f32) -> V,
 {
     match 2 {
         // 0 => parse_exported_lua_data_simd_borrowed(input, to_object),
-        1 => parse_exported_lua_data_serde_simd(input, to_object),
         2 => parse_exported_lua_data_simd_owned(input, to_object),
         _ => panic!("unknown"),
     }
@@ -23,40 +23,39 @@ where
 
 fn parse_exported_lua_data_simd_borrowed<V, C>(input: &mut [u8], to_object: C) -> VResult<Vec<V>>
 where
-    C: Fn(&str, f32, f32) -> V,
+    C: Fn(Pixel, f32, f32) -> V,
 {
-    // let mut result = Vec::new();
-
     let main_array = if let Ok(BorrowedValue::Array(raw)) = to_borrowed_value(input) {
         raw
     } else {
         panic!("no wrapper array?")
     };
 
-    // for [name_value, x_value, y_value] in // main_array.array_chunks() {
-    //     let name = if let BorrowedValue::String(raw) = name_value {
-    //         raw
-    //     } else {
-    //         panic!("not a name");
-    //     };
-    //     let x = if let BorrowedValue::Static(StaticNode::F64(raw)) = x_value {
-    //         *raw as f32
-    //     } else {
-    //         panic!("not x");
-    //     };
-    //     let y = if let BorrowedValue::Static(StaticNode::F64(raw)) = y_value {
-    //         *raw as f32
-    //     } else {
-    //         panic!("not y");
-    //     };
-    //     result.push(to_object(name, x, y));
-    // }
-    todo!()
+    let mut result = Vec::new();
+    for [name_value, x_value, y_value] in main_array.into_iter().array_chunks() {
+        let name = if let BorrowedValue::String(raw) = name_value {
+            raw
+        } else {
+            panic!("not a name");
+        };
+        let x = if let BorrowedValue::Static(StaticNode::F64(raw)) = x_value {
+            raw as f32
+        } else {
+            panic!("not x");
+        };
+        let y = if let BorrowedValue::Static(StaticNode::F64(raw)) = y_value {
+            raw as f32
+        } else {
+            panic!("not y");
+        };
+        result.push(to_object(Pixel::from_string(&name).pretty_unwrap(), x, y));
+    }
+    Ok(result)
 }
 
 fn parse_exported_lua_data_simd_owned<V, C>(input: &mut [u8], to_object: C) -> VResult<Vec<V>>
 where
-    C: Fn(String, f32, f32) -> V,
+    C: Fn(Pixel, f32, f32) -> V,
 {
     let mut result = Vec::new();
 
@@ -82,19 +81,10 @@ where
         } else {
             panic!("not y");
         };
-        result.push(to_object(name, x, y));
+        result.push(to_object(Pixel::from_string(&name).pretty_unwrap(), x, y));
     }
 
     Ok(result)
-}
-
-fn parse_exported_lua_data_serde_simd<V, C>(input: &mut [u8], mut to_object: C) -> VResult<Vec<V>>
-where
-    C: Fn(String, f32, f32) -> V,
-{
-    let data: ExportCompressedVec = simd_json::serde::from_slice(input).unwrap();
-    let entities: Vec<V> = data.item_chunks(&mut to_object).collect();
-    Ok(entities)
 }
 
 #[derive(Deserialize, Debug)]
@@ -104,7 +94,6 @@ enum ExportCompressedItem {
     Position(f32),
 }
 
-#[allow(clippy::match_wildcard_for_single_variants)]
 impl ExportCompressedItem {
     fn into_pixel(self) -> Pixel {
         match self {

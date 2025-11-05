@@ -72,6 +72,10 @@ pub struct Plug<'s> {
 }
 
 impl<'s> Plug<'s> {
+    pub fn patches_slice(&self) -> &[VPatch] {
+        self.patches
+    }
+
     pub fn mine_patches(&self, mine: &MineLocation) -> impl Iterator<Item = &VPatch> {
         mine.patch_indexes()
             .iter()
