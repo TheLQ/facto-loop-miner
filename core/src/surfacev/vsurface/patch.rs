@@ -72,7 +72,7 @@ pub struct Plug<'s> {
 }
 
 impl<'s> Plug<'s> {
-    pub fn patches_slice(&self) -> &[VPatch] {
+    pub fn get_patches(&self) -> &[VPatch] {
         self.patches
     }
 

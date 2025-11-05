@@ -57,7 +57,7 @@ impl Step for Step04 {
             let mut max_width = 0;
             let mut max_height = 0;
             let mut total = 0;
-            for patch in surface.patches().patches_slice() {
+            for patch in surface.patches().get_patches() {
                 if patch.resource != pixel {
                     continue;
                 }

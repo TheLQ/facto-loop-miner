@@ -42,7 +42,7 @@ fn get_batches(tunables: &PathingTunables, surface: VSurfacePatch) -> Vec<MineSe
             .flat_map(|v| v.area_min().get_corner_points()),
     );
     let mut total_in_area = 0;
-    for patch in surface.patches_slice() {
+    for patch in surface.get_patches() {
         if max_area.contains_point(&patch.area.point_center()) {
             total_in_area += 1;
         }

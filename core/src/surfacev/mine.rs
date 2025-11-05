@@ -65,7 +65,7 @@ impl MinePath {
 impl MineLocation {
     pub fn from_patch_indexes(surface: VSurfacePatch, patch_indexes: Vec<usize>) -> Option<Self> {
         let patch_corners = surface
-            .patches_slice()
+            .get_patches()
             .iter()
             .enumerate()
             .filter_map(|(i, p)| {

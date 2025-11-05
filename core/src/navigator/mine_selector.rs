@@ -128,7 +128,7 @@ pub fn group_nearby_patches(surface: VSurfacePatch) -> Vec<MineLocation> {
     ];
 
     let patches: Vec<&VPatch> = surface
-        .patches_slice()
+        .get_patches()
         .iter()
         .filter(|patch| resources.contains(&patch.resource))
         .collect();
