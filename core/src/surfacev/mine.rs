@@ -1,5 +1,4 @@
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::{
     VSurfacePatch, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelMut,
 };

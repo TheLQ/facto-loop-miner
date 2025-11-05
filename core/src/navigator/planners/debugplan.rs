@@ -3,7 +3,8 @@ use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources}
 use crate::navigator::planners::PathingTunables;
 use crate::navigator::planners::common::{debug_draw_complete_plan, draw_prep};
 use crate::surfacev::vsurface::{
-    VSurfacePatch, VSurfacePatchMut, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut,
+    VSurfacePatch, VSurfacePatchAsVs, VSurfacePatchMut, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
+    VSurfacePixelMut,
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use simd_json::prelude::ArrayTrait;

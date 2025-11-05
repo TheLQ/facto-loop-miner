@@ -185,7 +185,7 @@ pub fn debug_failing(
 pub(super) fn draw_prep(surface: &mut VSurfacePixelMut, batches: &[MineSelectBatch]) {
     draw_prep_mines(
         surface,
-        batches.into_iter().flat_map(|v| &v.mines),
+        batches.iter().flat_map(|v| &v.mines),
         &batches[0].base_sources,
     )
 }

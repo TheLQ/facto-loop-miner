@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;
-use tracing::{Level, debug, info, span, trace};
+use tracing::{Level, info, span, trace};
 
 pub fn execute_route_batch_clone_prep(
     tunables: &MoriTunables,

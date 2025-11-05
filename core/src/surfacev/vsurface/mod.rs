@@ -7,7 +7,10 @@ mod rails;
 
 pub use core::VSurface;
 pub use nav::{
-    AsVs as VSurfaceNavAsVs, AsVsMut as VSurfaceNavAsVsMut, Plug as VSurfaceNav,
+    //
+    AsVs as VSurfaceNavAsVs,
+    AsVsMut as VSurfaceNavAsVsMut,
+    Plug as VSurfaceNav,
     PlugMut as VSurfaceNavMut,
 };
 pub use patch::{

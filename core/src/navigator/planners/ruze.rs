@@ -3,16 +3,13 @@ use crate::navigator::mine_executor::{ExecutorResult, FailingMeta, execute_route
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
 use crate::navigator::planners::common::{PathingTunables, debug_failing, draw_prep};
-use crate::state::machine::StepParams;
 use crate::state::tuneables::MoriTunables;
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::{
-    VSurfaceNavMut, VSurfacePatch, VSurfacePatchAsVs, VSurfacePatchMut, VSurfacePixelAsVs,
-    VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRailsAsVs, VSurfaceRailsAsVsMut,
-    VSurfaceRailsMut,
+    VSurfaceNavMut, VSurfacePatchAsVs, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
+    VSurfaceRailsAsVsMut,
 };
-use std::path::Path;
 use tracing::{error, info, trace, warn};
 
 const RUZE_MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
@@ -20,11 +17,7 @@ const RUZE_MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
 /// Planner v1 "Crimzon Ruze 💢"
 ///
 /// Super parallel batch based planner
-pub fn start_ruze_planner(
-    tunables: &PathingTunables,
-    surface: &mut VSurfaceNavMut,
-    params: &StepParams,
-) {
+pub fn start_ruze_planner(tunables: &PathingTunables, surface: &mut VSurfaceNavMut) {
     let select_batches = select_mines_and_sources(
         tunables,
         surface.patches(),
@@ -44,13 +37,7 @@ pub fn start_ruze_planner(
 
     for (batch_index, batch) in select_batches.into_iter().enumerate() {
         // for (batch_index, batch) in [select_batches.into_iter().enumerate().last().unwrap()] {
-        let found = process_batch(
-            tunables.mori(),
-            surface,
-            batch,
-            batch_index,
-            &params.step_out_dir,
-        );
+        let found = process_batch(tunables.mori(), surface, batch, batch_index);
         if !found {
             error!("KILLING EARLY index {batch_index}");
             break;
@@ -68,7 +55,6 @@ fn process_batch(
     surface: &mut VSurfaceNavMut,
     batch: MineSelectBatch,
     batch_index: usize,
-    step_out_dir: &Path,
 ) -> bool {
     trace!("---");
     let num_mines = batch.mines.len();

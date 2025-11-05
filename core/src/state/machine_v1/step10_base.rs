@@ -3,7 +3,7 @@ use crate::state::machine::{Step, StepParams};
 use crate::state::tuneables::BaseTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::{
-    VSurface, VSurfacePatchAsVs, VSurfacePatchAsVsMut, VSurfacePixelAsVsMut, VSurfacePixelMut,
+    VSurface, VSurfacePatchAsVsMut, VSurfacePixelAsVsMut, VSurfacePixelMut,
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};

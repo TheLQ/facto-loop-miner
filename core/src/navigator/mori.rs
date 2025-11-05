@@ -1,6 +1,5 @@
 use crate::navigator::mine_executor::FailingMeta;
 use crate::navigator::mori_cost::calculate_cost_for_link;
-use crate::navigator::planners::debug_draw_segment;
 use crate::state::tuneables::MoriTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::{VSurface, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelMut};

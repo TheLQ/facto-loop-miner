@@ -1,37 +1,26 @@
-use crate::navigator::planners::{debug_draw_mine_index_labels, debug_draw_mine_links};
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::{
-    VSurface, VSurfacePatch, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs, VSurfaceRails,
-    VSurfaceRailsAsVs,
+    VSurface, VSurfacePatch, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs, VSurfaceRailsAsVs,
 };
 use facto_loop_miner_common::err_bt::PrettyUnwrapMyBacktrace;
 use facto_loop_miner_fac_engine::admiral::err::AdmiralResult;
+use facto_loop_miner_fac_engine::admiral::executor::ExecuteResponse;
 use facto_loop_miner_fac_engine::admiral::executor::client::AdmiralClient;
-use facto_loop_miner_fac_engine::admiral::executor::{ExecuteResponse, LuaCompiler};
 use facto_loop_miner_fac_engine::admiral::lua_command::LuaCommand;
 use facto_loop_miner_fac_engine::admiral::lua_command::fac_destroy::FacDestroy;
 use facto_loop_miner_fac_engine::admiral::lua_command::fac_render_destroy::FacRenderDestroy;
 use facto_loop_miner_fac_engine::blueprint::output::FacItemOutput;
-use facto_loop_miner_fac_engine::common::entity::FacEntity;
-use facto_loop_miner_fac_engine::common::names::{FacEntityName, FacEntityNameBuilder};
+use facto_loop_miner_fac_engine::common::names::FacEntityNameBuilder;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
-use facto_loop_miner_fac_engine::game_blocks::block::{FacBlock2, FacBlockFancy};
+use facto_loop_miner_fac_engine::game_blocks::block::FacBlockFancy;
 use facto_loop_miner_fac_engine::game_blocks::mine_island::FacBlkMineIsland;
-use facto_loop_miner_fac_engine::game_blocks::mine_ore::FacBlkMineOre;
 use facto_loop_miner_fac_engine::game_entities::belt::FacEntBeltType;
-use facto_loop_miner_fac_engine::game_entities::chest::{FacEntChest, FacEntChestType};
-use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
-use facto_loop_miner_fac_engine::game_entities::electric_large::FacEntElectricLargeType;
-use facto_loop_miner_fac_engine::game_entities::electric_mini::FacEntElectricMiniType;
 use facto_loop_miner_fac_engine::game_entities::infinity_power::FacEntInfinityPower;
 use facto_loop_miner_fac_engine::game_entities::inserter::FacEntInserterType;
-use facto_loop_miner_fac_engine::game_entities::rail_signal::FacEntRailSignalType;
-use itertools::Itertools;
 use std::rc::Rc;
-use strum::VariantArray;
 use tracing::info;
 
 pub(crate) struct Step30;
@@ -48,7 +37,7 @@ impl Step for Step30 {
     }
 
     fn transformer(&self, params: StepParams) -> XMachineResult<()> {
-        let mut surface_raw = VSurface::load_from_last_step(&params)?;
+        let surface_raw = VSurface::load_from_last_step(&params)?;
 
         let output = connect_admiral().pretty_unwrap();
 

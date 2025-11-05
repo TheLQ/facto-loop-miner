@@ -4,7 +4,6 @@ use crate::navigator::planners::debugplan::start_debug_planner;
 use crate::navigator::planners::ruze::start_ruze_planner;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
-use crate::state::tuneables::Tunables;
 use crate::surfacev::vsurface::VSurface;
 use crate::surfacev::vsurface::{VSurfaceNavAsVsMut, VSurfacePatchAsVsMut};
 
@@ -27,7 +26,7 @@ impl Step for Step20 {
         // surface.validate();
 
         match 2 {
-            1 => start_ruze_planner(&tunables, &mut surface.nav_mut(), &params),
+            1 => start_ruze_planner(&tunables, &mut surface.nav_mut()),
             // 2 => start_altare_planner(&tunables, &mut surface, &params),
             9 => start_debug_planner(&tunables, &mut surface.patches_mut()),
             _ => unimplemented!(),

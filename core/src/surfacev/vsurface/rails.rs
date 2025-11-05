@@ -1,9 +1,6 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MinePath;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
-use crate::surfacev::vsurface::{
-    VSurface, VSurfacePixel, VSurfacePixelMut, VSurfaceRails, VSurfaceRailsMut,
-};
 use crate::surfacev::vsurface::{VSurfacePixelAsVs, VSurfacePixelAsVsMut};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use tracing::trace;
@@ -80,18 +77,18 @@ pub struct Plug<'s> {
 
 impl<'s> Plug<'s> {
     pub fn get_mine_paths(&self) -> &[MinePath] {
-        &self.rails
+        self.rails
     }
 }
 
 //
 
 pub trait AsVsMut: AsVs {
-    fn rails_mut(&mut self) -> PlugMut;
+    fn rails_mut(&mut self) -> PlugMut<'_>;
 }
 
 pub trait AsVs {
-    fn rails(&self) -> Plug;
+    fn rails(&self) -> Plug<'_>;
 }
 
 //

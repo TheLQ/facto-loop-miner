@@ -1,6 +1,3 @@
-use crate::surfacev::vsurface::pixel::{Plug, PlugMut};
-use crate::surfacev::vsurface::{VSurfacePixel, VSurfacePixelMut};
-
 macro_rules! as_vs_convert {
     (pixel $target_mod:ident) => {
         as_vs_convert!(@plug_impl
@@ -32,21 +29,21 @@ macro_rules! as_vs_convert {
         $( $field:ident, )+
     ) => {
         impl<'s> super::$trait_mod::AsVsMut for super::$target_mod::PlugMut<'s> {
-            fn $fn_mut(&mut self) -> super::$trait_mod::PlugMut {
+            fn $fn_mut(&mut self) -> super::$trait_mod::PlugMut<'_> {
                 let Self { $( $field, )+ .. } = self;
                 super::$trait_mod::PlugMut { $( $field, )+ }
             }
         }
 
         impl<'s> super::$trait_mod::AsVs for super::$target_mod::PlugMut<'s> {
-            fn $fn_ref(&self) -> super::$trait_mod::Plug {
+            fn $fn_ref(&self) -> super::$trait_mod::Plug<'_> {
                 let Self { $( $field, )+ .. } = self;
                 super::$trait_mod::Plug { $( $field, )+ }
             }
         }
 
         impl<'s> super::$trait_mod::AsVs for super::$target_mod::Plug<'s> {
-            fn $fn_ref(&self) -> super::$trait_mod::Plug {
+            fn $fn_ref(&self) -> super::$trait_mod::Plug<'_>{
                 let Self { $( $field, )+ .. } = self;
                 super::$trait_mod::Plug { $( $field, )+ }
             }
@@ -66,7 +63,7 @@ macro_rules! as_vs_builder {
         $( $field:ident, )+
     ) => {
         impl<'s> super::$trait_mod::AsVs for super::$trait_mod::PlugMut<'s> {
-            fn $fn_ref(&self) -> super::$trait_mod::Plug {
+            fn $fn_ref(&self) -> super::$trait_mod::Plug<'_> {
                 let Self { $( $field, )+ .. } = self;
                 super::$trait_mod::Plug { $( $field, )+ }
             }
@@ -83,14 +80,14 @@ macro_rules! as_vs_main {
         $( $field:ident, )+
     ) => {
         impl<'s> super::$trait_mod::AsVsMut for super::core::VSurface {
-            fn $fn_mut(&mut self) -> super::$trait_mod::PlugMut {
+            fn $fn_mut(&mut self) -> super::$trait_mod::PlugMut<'_> {
                 let Self { $( $field, )+ .. } = self;
                 super::$trait_mod::PlugMut { $( $field, )+ }
             }
         }
 
         impl<'s> super::$trait_mod::AsVs for super::core::VSurface {
-            fn $fn_ref(&self) -> super::$trait_mod::Plug {
+            fn $fn_ref(&self) -> super::$trait_mod::Plug<'_> {
                 let Self { $( $field, )+ .. } = self;
                 super::$trait_mod::Plug { $( $field, )+ }
             }

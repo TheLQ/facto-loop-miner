@@ -346,11 +346,11 @@ impl<'s> Plug<'s> {
 //
 
 pub trait AsVsMut: AsVs {
-    fn pixels_mut(&mut self) -> PlugMut;
+    fn pixels_mut(&mut self) -> PlugMut<'_>;
 }
 
 pub trait AsVs {
-    fn pixels(&self) -> Plug;
+    fn pixels(&self) -> Plug<'_>;
 }
 
 //
@@ -368,7 +368,7 @@ impl Plug<'_> {
 }
 
 impl AsVsMut for PlugCopy {
-    fn pixels_mut(&mut self) -> PlugMut {
+    fn pixels_mut(&mut self) -> PlugMut<'_> {
         PlugMut {
             pixels: &mut self.pixels,
         }
@@ -376,7 +376,7 @@ impl AsVsMut for PlugCopy {
 }
 
 impl AsVs for PlugCopy {
-    fn pixels(&self) -> Plug {
+    fn pixels(&self) -> Plug<'_> {
         Plug {
             pixels: &self.pixels,
         }

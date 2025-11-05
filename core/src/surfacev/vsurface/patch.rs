@@ -1,7 +1,6 @@
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::core::VSurface;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use tracing::{debug, info};
 
@@ -11,14 +10,6 @@ pub struct PlugMut<'s> {
 }
 
 impl<'s> PlugMut<'s> {
-    pub fn patches(&self) -> Plug {
-        Plug::new(&self.pixels, &self.patches)
-    }
-
-    pub fn new(pixels: &'s mut VEntityMap<VPixel>, patches: &'s mut Vec<VPatch>) -> Self {
-        Self { pixels, patches }
-    }
-
     pub fn remove_patches_within_radius(&mut self, radius: u32) {
         let mut removed_points: Vec<VPoint> = Vec::new();
         let mut patches_to_remove = Vec::new();
@@ -81,14 +72,6 @@ pub struct Plug<'s> {
 }
 
 impl<'s> Plug<'s> {
-    pub fn new(pixels: &'s VEntityMap<VPixel>, patches: &'s Vec<VPatch>) -> Self {
-        Self { pixels, patches }
-    }
-
-    pub fn patches_slice(&self) -> &[VPatch] {
-        &self.patches
-    }
-
     pub fn mine_patches(&self, mine: &MineLocation) -> impl Iterator<Item = &VPatch> {
         mine.patch_indexes()
             .iter()
@@ -137,9 +120,9 @@ impl<'s> Plug<'s> {
 //
 
 pub trait AsVsMut {
-    fn patches_mut(&mut self) -> PlugMut;
+    fn patches_mut(&mut self) -> PlugMut<'_>;
 }
 
 pub trait AsVs {
-    fn patches(&self) -> Plug;
+    fn patches(&self) -> Plug<'_>;
 }

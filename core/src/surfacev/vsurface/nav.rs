@@ -18,9 +18,9 @@ pub struct Plug<'s> {
 //
 
 pub trait AsVsMut: AsVs {
-    fn nav_mut(&mut self) -> PlugMut;
+    fn nav_mut(&mut self) -> PlugMut<'_>;
 }
 
 pub trait AsVs {
-    fn nav(&self) -> Plug;
+    fn nav(&self) -> Plug<'_>;
 }

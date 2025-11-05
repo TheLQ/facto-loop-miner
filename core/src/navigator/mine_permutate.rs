@@ -13,6 +13,7 @@ use tracing::{trace, warn};
 
 /// Input
 ///  - Single batch of mines to be routed together
+///
 /// Output
 ///  - Each mine has 4 destinations
 ///  - Therefore batch has 4^n possible combinations

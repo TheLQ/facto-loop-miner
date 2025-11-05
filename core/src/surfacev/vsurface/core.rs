@@ -1,4 +1,3 @@
-use crate::opencv::{draw_text_size, mat_into_points};
 use crate::state::machine::StepParams;
 use crate::state::tuneables::Tunables;
 use crate::surface::pixel::Pixel;
@@ -9,7 +8,6 @@ use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::pixel::AsVs;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_io::{read_entire_file, write_entire_file};
-use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
