@@ -17,7 +17,7 @@ macro_rules! as_vs_convert {
 
     (rails $target_mod:ident) => {
         as_vs_convert!(@plug_impl
-            rails => $target_mod,
+            rail => $target_mod,
             rails_mut => rails,
             rails, pixels,
         );
@@ -51,7 +51,7 @@ macro_rules! as_vs_convert {
     };
 }
 as_vs_convert!(pixel patch);
-as_vs_convert!(pixel rails);
+as_vs_convert!(pixel rail);
 as_vs_convert!(pixel nav);
 as_vs_convert!(patch nav);
 as_vs_convert!(rails nav);
@@ -72,6 +72,7 @@ macro_rules! as_vs_builder {
 }
 as_vs_builder!(pixel, pixels, pixels,);
 as_vs_builder!(patch, patches, patches, pixels,);
+as_vs_builder!(rail, rails, rails, pixels,);
 
 macro_rules! as_vs_main {
     (
@@ -105,7 +106,7 @@ as_vs_main!(
     patches, pixels,
 );
 as_vs_main!(
-    rails,
+    rail,
     rails_mut => rails,
     rails, pixels,
 );

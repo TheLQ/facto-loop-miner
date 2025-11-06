@@ -6,7 +6,7 @@ use crate::state::tuneables::{ChunkValue, MoriTunables, Tunables};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::{
-    VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRailsMut,
+    VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRailMut,
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_THREE, VPoint};
@@ -123,7 +123,7 @@ pub(super) fn debug_draw_failing_mines<'a>(
 }
 
 pub fn debug_failing(
-    surface: &mut VSurfaceRailsMut,
+    surface: &mut VSurfaceRailMut,
     FailingMeta {
         found_paths,
         mut all_routes,

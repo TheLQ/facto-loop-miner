@@ -3,7 +3,7 @@ mod core;
 mod nav;
 mod patch;
 mod pixel;
-mod rails;
+mod rail;
 
 pub use core::VSurface;
 pub use nav::{
@@ -27,10 +27,10 @@ pub use pixel::{
     Plug as VSurfacePixel,
     PlugMut as VSurfacePixelMut,
 };
-pub use rails::{
+pub use rail::{
     //
-    AsVs as VSurfaceRailsAsVs,
-    AsVsMut as VSurfaceRailsAsVsMut,
-    Plug as VSurfaceRails,
-    PlugMut as VSurfaceRailsMut,
+    AsVs as VSurfaceRailAsVs,
+    AsVsMut as VSurfaceRailAsVsMut,
+    Plug as VSurfaceRail,
+    PlugMut as VSurfaceRailMut,
 };

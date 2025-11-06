@@ -7,8 +7,7 @@ use crate::state::tuneables::MoriTunables;
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::{
-    VSurfaceNavMut, VSurfacePatchAsVs, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
-    VSurfaceRailsAsVsMut,
+    VSurfaceNavMut, VSurfacePatchAsVs, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfaceRailAsVsMut,
 };
 use tracing::{error, info, trace, warn};
 

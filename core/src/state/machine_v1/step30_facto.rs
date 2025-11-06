@@ -2,7 +2,7 @@ use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::{
-    VSurface, VSurfacePatch, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs, VSurfaceRailsAsVs,
+    VSurface, VSurfacePatch, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs, VSurfaceRailAsVs,
 };
 use facto_loop_miner_common::err_bt::PrettyUnwrapMyBacktrace;
 use facto_loop_miner_fac_engine::admiral::err::AdmiralResult;
