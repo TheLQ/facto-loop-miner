@@ -76,19 +76,19 @@ pub struct Plug<'s> {
 }
 
 impl<'s> Plug<'s> {
-    pub fn get_mine_paths(&self) -> &[MinePath] {
+    pub fn get_mine_paths(&self) -> &'s [MinePath] {
         self.rails
     }
 }
 
 //
 
-pub trait AsVsMut<'s>: AsVs<'s> {
-    fn rails_mut(&mut self) -> PlugMut<'s>;
+pub trait AsVsMut: AsVs {
+    fn rails_mut(&mut self) -> PlugMut<'_>;
 }
 
-pub trait AsVs<'s> {
-    fn rails(&'s self) -> Plug<'s>;
+pub trait AsVs {
+    fn rails(&self) -> Plug<'_>;
 }
 
 //
