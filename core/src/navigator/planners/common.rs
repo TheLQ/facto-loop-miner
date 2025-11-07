@@ -147,7 +147,7 @@ pub fn debug_failing(
         .extract_if(.., |v| {
             found_paths
                 .iter()
-                .any(|found_path| found_path.mine_base == v.location)
+                .any(|found_path| found_path.location == v.location)
         })
         .collect();
     let routes_notfound = all_routes;

@@ -439,13 +439,14 @@ impl MineLocation {
     }
 
     pub fn restore_area_buffered(
-        mines: &[&Self],
+        mines: &[impl Borrow<Self>],
         surface: &mut VSurfacePixelMut,
         removed_rail: Vec<VPoint>,
     ) {
         let mut intersected_mines = HashSet::new();
         for point in removed_rail {
             for mine in mines {
+                let mine = mine.borrow();
                 if mine.area_buffered().contains_point(&point) {
                     intersected_mines.insert(mine);
                     break;

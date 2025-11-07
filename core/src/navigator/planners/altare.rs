@@ -67,7 +67,7 @@ fn remove_bad_mines(surface: VSurfacePixel, all_mine_locations: &mut Vec<MineLoc
 
 struct Quester<'t, 'sr, 's> {
     surface: &'sr mut VSurfaceNavMut<'s>,
-    all_mine_locations_main: Vec<MineLocation>,
+    mines_remain: Vec<MineLocation>,
     base_source_positive: Rc<RefCell<BaseSourceEighth>>,
     origin_base: VPointDirectionQ,
     origin_index: i32,
@@ -81,16 +81,16 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
         let base_source = BaseSource::from_central_base(tunables).into_refcells();
         let base_source_positive = base_source.positive_rc();
 
-        let all_mine_locations_main = group_nearby_patches(surface.patches());
+        let mines_remain = group_nearby_patches(surface.patches());
         draw_prep_mines(
             &mut surface.pixels_mut(),
-            &all_mine_locations_main,
+            &mines_remain,
             &base_source_positive,
         );
 
         Quester {
             surface,
-            all_mine_locations_main,
+            mines_remain,
             base_source_positive,
             origin_base: VPointDirectionQ(VPoint::new(0, 0), FacDirectionQuarter::East),
             origin_index: 0,
@@ -121,13 +121,15 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                     self.origin_index += 1;
                     continue;
                 }
-                QuesterScanResult::NewPatchesInScanArea(patches) => {
+                QuesterScanResult::NewPatchesInScanArea { selected_mines } => {
                     if limiter_counter >= 99999 {
                         self.debug_iteration(surface, limiter_counter);
                         break;
                     }
                     limiter_counter += 1;
-                    self.new_patches_in_scan_area(patches)
+                    if let ControlFlow::Break(()) = self.new_patches_in_scan_area(selected_mines) {
+                        break;
+                    }
                 }
             }
         }
@@ -142,7 +144,6 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
     }
 
     fn scan_patches(&mut self) -> QuesterScanResult {
-        let surface = self.surface.rails();
         let scan_sign = if self.origin_sign_pos { 1 } else { -1 };
         let scan_start = self.origin_base.point().move_direction_sideways_int(
             self.origin_base.direction(),
@@ -153,12 +154,12 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                 self.origin_base.direction(),
                 PERPENDICULAR_SCAN_WIDTH,
             );
-            if !pos.is_within_center_radius(surface.pixels().get_radius()) {
+            if !pos.is_within_center_radius(self.surface.pixels().get_radius()) {
                 return QuesterScanResult::YAxisEnding;
             }
             loop {
                 let next = pos.move_direction_int(self.origin_base.direction(), 1);
-                if pos.is_within_center_radius(surface.pixels().get_radius()) {
+                if pos.is_within_center_radius(self.surface.pixels().get_radius()) {
                     pos = next;
                 } else {
                     break;
@@ -168,15 +169,19 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
         };
         let scan_area = VArea::from_arbitrary_points_pair(&scan_start, &scan_end);
 
-        let already_pathed_mines: Vec<&MineLocation> = surface
+        let already_pathed_mines: Vec<&MineLocation> = self
+            .surface
+            .rails()
             .get_mine_paths()
             .into_iter()
             .map(|v| &v.location)
             .collect();
-        let mut new_patches_in_scan_area: Vec<&MineLocation> = self
-            .all_mine_locations_main
+
+        let mut new_patches_in_scan_area: Vec<(usize, &MineLocation)> = self
+            .mines_remain
             .iter()
-            .filter(|v| {
+            .enumerate()
+            .filter(|(i, v)| {
                 !already_pathed_mines.contains(&v)
                     && scan_area.contains_point(&v.area_min().point_center())
             })
@@ -186,18 +191,22 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             return QuesterScanResult::NoPatchesInScan;
         }
         new_patches_in_scan_area.sort_by(|a, b| {
-            VPoint::sort_by_y_then_x_row(a.area_min().point_center(), b.area_min().point_center())
+            VPoint::sort_by_y_then_x_row(
+                a.1.area_min().point_center(),
+                b.1.area_min().point_center(),
+            )
         });
-
         info!(
             "discovered {} patches in {scan_area}",
             new_patches_in_scan_area.len()
         );
 
-        self.new_patches_in_scan_area(new_patches_in_scan_area)
-            .is_break();
-        // QuesterScanResult::NewPatchesInScanArea(new_patches_in_scan_area)
-        todo!()
+        QuesterScanResult::NewPatchesInScanArea {
+            selected_mines: new_patches_in_scan_area
+                .into_iter()
+                .map(|(i, _)| i)
+                .collect_vec(),
+        }
     }
 
     fn debug_iteration(&self, surface: &mut VSurfaceNavMut, limiter_counter: u32) {
@@ -234,22 +243,13 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             .paint_pixel_graduated(count_link_origins(&err.seen))
             .save_to_oculante();
     }
-    // }
-    //
-    // struct QuesterProcessor<'t, 'sr, 's, 'q> {
-    //     quester: &'q Quester<'t, 'sr, 's>,
-    //     mines_all: &'q mut Vec<MineLocation>,
-    //     mines_remain: Vec<&'q MineLocation>,
-    //     base_source_positive: Rc<RefCell<BaseSourceEighth>>,
-    // }
-    //
-    // impl<'t, 'sr, 's, 'q> QuesterProcessor<'t, 'sr, 's, 'q> {
-    fn new_patches_in_scan_area(&mut self, new_patches: Vec<&MineLocation>) -> ControlFlow<()> {
+
+    fn new_patches_in_scan_area(&mut self, selected_mines: Vec<usize>) -> ControlFlow<()> {
         // let buffer_areas: Vec<RemovedEntity> = mines
         //     .iter()
         //     .map(|p| p.draw_area_buffered_to_no_touch(surface))
         //     .collect();
-        let mines = self.fill_queue(new_patches);
+        let mines = self.fill_queue(selected_mines);
         let possible_routes = get_possible_routes_for_batch(
             self.surface.pixels(),
             MineSelectBatch {
@@ -262,7 +262,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
         self.execute_plan(possible_routes)
     }
 
-    fn fill_queue(&mut self, mut new_patches: Vec<&MineLocation>) -> Vec<MineLocation> {
+    fn fill_queue(&mut self, mut selected_mines: Vec<usize>) -> Vec<MineLocation> {
         let mut mines: Vec<MineLocation> = Vec::new();
         for _ in 0..BATCH_SIZE_MAX.saturating_sub(1) {
             if let Some((mine, removed_points)) = self.surface.rails_mut().remove_mine_path_pop() {
@@ -276,19 +276,20 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                 self.base_source_positive.borrow_mut().undo_one();
             }
         }
+        selected_mines.sort();
         while mines.len() != BATCH_SIZE_MAX {
             trace!("batch pop from patches");
-            mines.push(new_patches.pop().unwrap().clone());
+            let mine = self.mines_remain.remove(selected_mines.pop().unwrap());
+            mines.push(mine);
         }
         assert_eq!(mines.len(), BATCH_SIZE_MAX);
         mines
     }
 
     fn execute_plan(&mut self, possible_routes: CompletePlan) -> ControlFlow<()> {
-        let surface = self.surface;
         match execute_route_batch_clone_prep(
             self.tunables.mori(),
-            &mut surface.pixels_mut(),
+            &mut self.surface.pixels_mut(),
             possible_routes.sequences,
             &[ExecuteFlags::ShrinkBases],
         ) {
@@ -300,9 +301,9 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                     .unwrap();
                 // routes.last().unwrap().location.draw_area_buffered(surface);
                 for path in paths {
-                    surface.rails_mut().add_mine_path(path);
+                    self.surface.rails_mut().add_mine_path(path);
                 }
-                surface
+                self.surface
                     .pixels()
                     .paint_pixel_colored_zoomed()
                     .save_to_oculante();
@@ -310,22 +311,22 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             }
             ExecutorResult::Failure { meta, seen_mines } => {
                 // || is_prev_retry todo
-                if surface.rails().get_mine_paths().is_empty() {
+                if self.surface.rails().get_mine_paths().is_empty() {
                     error!("failed to pathfind! but no rollback after another rollback");
-                    debug_failing(&mut surface.rails_mut(), meta);
+                    debug_failing(&mut self.surface.rails_mut(), meta);
                     ControlFlow::Break(())
                 } else {
                     self.is_prev_retry = true;
                     info!("attempting retry");
                     assert!(
-                        !surface.rails().get_mine_paths().is_empty(),
+                        !self.surface.rails().get_mine_paths().is_empty(),
                         "too early to retry"
                     );
 
                     if meta.all_routes.len() == seen_mines.len() {
-                        debug_draw_failing_mines(&mut surface.pixels_mut(), &seen_mines);
+                        debug_draw_failing_mines(&mut self.surface.pixels_mut(), &seen_mines);
 
-                        surface
+                        self.surface
                             .pixels()
                             .paint_pixel_colored_zoomed()
                             .save_to_oculante();
@@ -358,17 +359,18 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                     //     Pixel::Highlighter,
                     // );
 
-                    let nearest_rail = detect_nearby_rails_as_index(surface.rails(), &never_mined);
+                    let nearest_rail =
+                        detect_nearby_rails_as_index(self.surface.rails(), &never_mined);
                     rollback_and_reapply(
-                        &mut surface.rails_mut(),
+                        &mut self.surface.rails_mut(),
                         self.tunables,
                         nearest_rail,
                         never_mined,
                         &mut self.base_source_positive.borrow_mut(),
-                        &self.all_mine_locations_main,
+                        &self.mines_remain,
                     );
 
-                    surface
+                    self.surface
                         .pixels()
                         .paint_pixel_colored_zoomed()
                         .save_to_oculante();
@@ -534,8 +536,8 @@ fn rollback_and_reapply(
     surface.add_mine_path(new_path);
 }
 
-enum QuesterScanResult<'s> {
+enum QuesterScanResult {
     YAxisEnding,
     NoPatchesInScan,
-    NewPatchesInScanArea(Vec<&'s MineLocation>),
+    NewPatchesInScanArea { selected_mines: Vec<usize> },
 }

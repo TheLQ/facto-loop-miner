@@ -66,23 +66,23 @@ fn plotter(
 
     let actual_area = VArea::from_arbitrary_points(
         surface
-            .mine_patches(&needle_path.mine_base)
+            .mine_patches(&needle_path.location)
             .flat_map(|v| &v.pixel_indexes),
     );
     info!(
         "DIFF start {}",
-        actual_area.point_top_left() - needle_path.mine_base.area_min().point_top_left()
+        actual_area.point_top_left() - needle_path.location.area_min().point_top_left()
     );
     info!(
         "DIFF end   {}",
-        actual_area.point_bottom_right() - needle_path.mine_base.area_min().point_bottom_right()
+        actual_area.point_bottom_right() - needle_path.location.area_min().point_bottom_right()
     );
 
     // output.writei(
     //     FacEntChest::new(FacEntChestType::Wood),
     //     needle_path.mine_base.area_min().point_center(),
     // );
-    let patch = surface.mine_patches(&needle_path.mine_base).next().unwrap();
+    let patch = surface.mine_patches(&needle_path.location).next().unwrap();
     output.writei(
         FacEntInfinityPower::new(),
         patch.area.point_top_left() + VPoint::new(0, 20),
@@ -117,7 +117,7 @@ fn plotter(
         belt: FacEntBeltType::Basic,
         inserter: FacEntInserterType::Basic,
         mines: surface
-            .mine_patches(&needle_path.mine_base)
+            .mine_patches(&needle_path.location)
             .map(|v| v.pixel_indexes.clone())
             .collect(),
         output: output.clone(),
