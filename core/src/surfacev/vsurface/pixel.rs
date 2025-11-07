@@ -264,7 +264,7 @@ impl<'s> Plug<'s> {
 
     //</editor-fold>
 
-    pub fn to_pixel_cv_image(&self, filter: Option<Pixel>) -> GeneratedMat {
+    pub fn get_pixel_cv_image(&self, filter: Option<Pixel>) -> GeneratedMat {
         self.pixels.map_pixel_xy_to_cv(filter)
     }
 

@@ -1,7 +1,7 @@
 use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
 use crate::navigator::circleify::draw_circle_around;
 use crate::navigator::mine_executor::{
-    ExecuteFlags, ExecutorResult, execute_route_batch, execute_route_batch_clone_prep,
+    ExecuteFlags, ExecutorResult, execute_route_batch_clone_prep,
 };
 use crate::navigator::mine_permutate::{CompletePlan, get_possible_routes_for_batch};
 use crate::navigator::mine_selector::{
@@ -10,17 +10,15 @@ use crate::navigator::mine_selector::{
 use crate::navigator::mori::{MoriResult, count_link_origins, mori2_start};
 use crate::navigator::planners::PathingTunables;
 use crate::navigator::planners::common::{
-    debug_draw_failing_mines, debug_draw_mine_index_labels, debug_draw_mine_links, debug_failing,
-    draw_prep_mines,
+    debug_draw_failing_mines, debug_failing, draw_prep_mines,
 };
-use crate::state::machine::StepParams;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
 use std::cell::RefCell;
 
 use crate::surfacev::vsurface::{
     VSurfaceNavMut, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
-    VSurfacePixelMut, VSurfaceRail, VSurfaceRailAsVs, VSurfaceRailAsVsMut, VSurfaceRailMut,
+    VSurfaceRail, VSurfaceRailAsVs, VSurfaceRailAsVsMut, VSurfaceRailMut,
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
@@ -41,11 +39,7 @@ const BATCH_SIZE_MAX: usize = 3;
 ///
 /// Pathfinding with medium-difficulty backtracking.
 /// because v0 Mori and v1 Ruze Planner can mask valid routes
-pub fn start_altare_planner(
-    tunables: &PathingTunables,
-    surface: &mut VSurfaceNavMut,
-    params: &StepParams,
-) {
+pub fn start_altare_planner(tunables: &PathingTunables, surface: &mut VSurfaceNavMut) {
     Quester::init(tunables, surface).start()
 }
 
@@ -179,7 +173,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             .mines_remain
             .iter()
             .enumerate()
-            .filter(|(i, v)| {
+            .filter(|(_, v)| {
                 !already_pathed_mines.contains(v)
                     && scan_area.contains_point(&v.area_min().point_center())
             })
