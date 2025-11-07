@@ -1,8 +1,7 @@
 use crate::navigator::mine_executor::FailingMeta;
 use crate::navigator::mori_cost::calculate_cost_for_link;
 use crate::state::tuneables::MoriTunables;
-use crate::surface::pixel::Pixel;
-use crate::surfacev::vsurface::{VSurface, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelMut};
+use crate::surfacev::vsurface::{VSurfacePixel, VSurfacePixelMut};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::{BasicWatch, BasicWatchResult};
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -11,12 +10,11 @@ use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VS
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{HopeSodaLink, sodas_to_links};
-use itertools::Itertools;
 use num_format::ToFormattedString;
 use pathfinding::prelude::{AStarErr, astar_mori};
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
-use tracing::{info, trace, warn};
+use tracing::{info, warn};
 
 /// Pathfinder v1.2, Mori Calliope💀
 ///
@@ -155,47 +153,47 @@ pub fn mori2_start(
     }
 }
 
-fn crude_dump_on_failure(
-    surface: &mut VSurfacePixelMut,
-    end_link: HopeSodaLink,
-    endpoints: VSegment,
-) -> VSurface {
-    todo!("clone doesn't work here");
-    let mut new_surface = surface;
-
-    let links = sodas_to_links([
-        end_link.add_turn90(true),
-        HopeSodaLink::new_soda_straight_flipped(&end_link).add_turn90(true),
-    ])
-    .collect_vec();
-
-    let debug_free = links
-        .iter()
-        .map(|v| {
-            let area = v.area_vec();
-            if new_surface.pixels().is_points_free_truncating(&area) {
-                "free".into()
-            } else {
-                let mut points = area
-                    .into_iter()
-                    .map(|v| new_surface.pixels().get_pixel(v))
-                    .collect_vec();
-                points.sort();
-                points.dedup();
-                format!(
-                    "({})",
-                    points.into_iter().map(|v| v.as_ref().to_string()).join(",")
-                )
-            }
-        })
-        .join(",");
-    trace!("debug free {debug_free}");
-
-    new_surface
-        .change_pixels(links.into_iter().flat_map(|v| v.area_vec()).collect())
-        .stomp(Pixel::Highlighter);
-    // debug_draw_segment(new_surface, endpoints);
-}
+// fn crude_dump_on_failure(
+//     surface: &mut VSurfacePixelMut,
+//     end_link: HopeSodaLink,
+//     endpoints: VSegment,
+// ) -> VSurface {
+//     todo!("clone doesn't work here");
+//     let mut new_surface = surface;
+//
+//     let links = sodas_to_links([
+//         end_link.add_turn90(true),
+//         HopeSodaLink::new_soda_straight_flipped(&end_link).add_turn90(true),
+//     ])
+//     .collect_vec();
+//
+//     let debug_free = links
+//         .iter()
+//         .map(|v| {
+//             let area = v.area_vec();
+//             if new_surface.pixels().is_points_free_truncating(&area) {
+//                 "free".into()
+//             } else {
+//                 let mut points = area
+//                     .into_iter()
+//                     .map(|v| new_surface.pixels().get_pixel(v))
+//                     .collect_vec();
+//                 points.sort();
+//                 points.dedup();
+//                 format!(
+//                     "({})",
+//                     points.into_iter().map(|v| v.as_ref().to_string()).join(",")
+//                 )
+//             }
+//         })
+//         .join(",");
+//     trace!("debug free {debug_free}");
+//
+//     new_surface
+//         .change_pixels(links.into_iter().flat_map(|v| v.area_vec()).collect())
+//         .stomp(Pixel::Highlighter);
+//     // debug_draw_segment(new_surface, endpoints);
+// }
 
 #[derive(Default)]
 struct WatchData {

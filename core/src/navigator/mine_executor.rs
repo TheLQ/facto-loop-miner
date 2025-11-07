@@ -302,7 +302,7 @@ fn execute_route_combination(
     let executor_mark = span!(Level::INFO, EXECUTOR_TAG);
     let _mark = executor_mark.enter();
     let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
-    if my_counter % 100 == 0 {
+    if my_counter.is_multiple_of(100) {
         info!(
             "Processed {} of {} sequences, success {} fail {}",
             my_counter.to_formatted_string(&LOCALE),

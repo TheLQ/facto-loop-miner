@@ -227,7 +227,7 @@ pub fn debug_draw_mine_links(
     surface: &mut VSurfacePixelMut,
     mines: impl IntoIterator<Item = impl Borrow<MineLocation>>,
 ) {
-    for (i, mine) in mines.into_iter().enumerate() {
+    for mine in mines {
         let mine = mine.borrow();
         for destination in mine.destinations() {
             let link = HopeSodaLink::new_soda_straight(destination.0, destination.1);

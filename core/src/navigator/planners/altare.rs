@@ -14,15 +14,13 @@ use crate::navigator::planners::common::{
     draw_prep_mines,
 };
 use crate::state::machine::StepParams;
-use crate::state::tuneables::{MoriTunables, Tunables};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
 use std::cell::RefCell;
 
 use crate::surfacev::vsurface::{
-    VSurface, VSurfaceNavMut, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs,
-    VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRail, VSurfaceRailAsVs, VSurfaceRailAsVsMut,
-    VSurfaceRailMut,
+    VSurfaceNavMut, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
+    VSurfacePixelMut, VSurfaceRail, VSurfaceRailAsVs, VSurfaceRailAsVsMut, VSurfaceRailMut,
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
@@ -45,10 +43,10 @@ const BATCH_SIZE_MAX: usize = 3;
 /// because v0 Mori and v1 Ruze Planner can mask valid routes
 pub fn start_altare_planner(
     tunables: &PathingTunables,
-    surface_mut: VSurfaceNavMut,
+    surface: &mut VSurfaceNavMut,
     params: &StepParams,
 ) {
-    /////
+    Quester::init(tunables, surface).start()
 }
 
 fn remove_bad_mines(surface: VSurfacePixel, all_mine_locations: &mut Vec<MineLocation>) {
@@ -109,7 +107,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
     //     if let ControlFlow::Break(()) = self.new_patches_in_scan_area(patches) {}
     // }
 
-    fn start(&mut self, surface: &mut VSurfaceNavMut) {
+    fn start(&mut self) {
         let mut limiter_counter = 0;
         loop {
             match self.scan_patches() {
@@ -123,7 +121,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                 }
                 QuesterScanResult::NewPatchesInScanArea { selected_mines } => {
                     if limiter_counter >= 99999 {
-                        self.debug_iteration(surface, limiter_counter);
+                        self.debug_iteration(limiter_counter);
                         break;
                     }
                     limiter_counter += 1;
@@ -136,7 +134,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
 
         info!("post save to gif buffering");
         for _ in 0..4 {
-            surface
+            self.surface
                 .pixels()
                 .paint_pixel_colored_zoomed()
                 .save_to_oculante();
@@ -173,7 +171,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             .surface
             .rails()
             .get_mine_paths()
-            .into_iter()
+            .iter()
             .map(|v| &v.location)
             .collect();
 
@@ -182,7 +180,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             .iter()
             .enumerate()
             .filter(|(i, v)| {
-                !already_pathed_mines.contains(&v)
+                !already_pathed_mines.contains(v)
                     && scan_area.contains_point(&v.area_min().point_center())
             })
             .collect();
@@ -209,7 +207,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
         }
     }
 
-    fn debug_iteration(&self, surface: &mut VSurfaceNavMut, limiter_counter: u32) {
+    fn debug_iteration(&self, limiter_counter: u32) {
         // best = 16
         // better = 28, 30, 32
         info!("limiter {limiter_counter}");
@@ -220,7 +218,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             VPoint::new(SECTION_POINTS_I32 * 100, SECTION_POINTS_I32 * 100),
             FacDirectionQuarter::East,
         );
-        let surface = surface.pixels();
+        let surface = self.surface.pixels();
 
         let fixed_radius = surface.get_radius_i32();
         let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
@@ -456,7 +454,7 @@ fn detect_nearby_rails_as_index(surface: VSurfaceRail, mine_location: &MineLocat
 
     surface
         .get_mine_paths()
-        .into_iter()
+        .iter()
         .position(|p| {
             p.links
                 .iter()

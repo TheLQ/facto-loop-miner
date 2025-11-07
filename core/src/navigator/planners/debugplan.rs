@@ -28,7 +28,7 @@ fn get_batches(tunables: &PathingTunables, surface: VSurfacePatch) -> Vec<MineSe
     let mines: usize = select_batches
         .iter()
         .flat_map(|v| &v.mines)
-        .map(|v| VSurfacePatch::mine_patches_len(v))
+        .map(VSurfacePatch::mine_patches_len)
         .sum();
     info!(
         "selected {mines} total patches in {} batches",

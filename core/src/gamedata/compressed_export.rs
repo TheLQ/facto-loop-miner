@@ -136,7 +136,7 @@ impl ExportCompressedVec {
     where
         C: Fn(String, f32, f32) -> V,
     {
-        if self.inner.len() % 3 != 0 {
+        if !self.inner.len().is_multiple_of(3) {
             panic!("Unexpected data");
         }
         self.inner

@@ -10,7 +10,6 @@ use std::fmt::{Debug, Display, Formatter};
 use std::io;
 use std::path::Path;
 use thiserror::Error;
-use tracing::error;
 
 pub type VResult<R> = Result<R, VError>;
 

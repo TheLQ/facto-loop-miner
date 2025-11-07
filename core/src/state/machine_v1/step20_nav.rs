@@ -1,3 +1,4 @@
+use crate::navigator::planners::altare::start_altare_planner;
 // use crate::navigator::planners::altare::start_altare_planner;
 use crate::navigator::planners::PathingTunables;
 use crate::navigator::planners::debugplan::start_debug_planner;
@@ -27,7 +28,7 @@ impl Step for Step20 {
 
         match 2 {
             1 => start_ruze_planner(&tunables, &mut surface.nav_mut()),
-            // 2 => start_altare_planner(&tunables, &mut surface, &params),
+            2 => start_altare_planner(&tunables, &mut surface.nav_mut(), &params),
             9 => start_debug_planner(&tunables, &mut surface.patches_mut()),
             _ => unimplemented!(),
         }

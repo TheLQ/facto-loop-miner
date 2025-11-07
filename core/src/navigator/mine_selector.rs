@@ -29,7 +29,7 @@ impl MineSelectBatchResult {
     pub fn into_success(self) -> Option<Vec<MineSelectBatch>> {
         match self {
             MineSelectBatchResult::Success { batches } => Some(batches),
-            MineSelectBatchResult::EmptyBatch { .. } => None,
+            MineSelectBatchResult::EmptyBatch => None,
         }
     }
 }
@@ -51,6 +51,7 @@ pub const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 
 /// Input:
 ///  - Raw patch list
+///
 /// Output:
 ///  - Group nearby patches
 ///  - Order patch groups starting from center
@@ -66,7 +67,7 @@ pub fn select_mines_and_sources(
     let patch_groups = group_nearby_patches(surface);
     let total_patches: usize = patch_groups
         .iter()
-        .map(|v| VSurfacePatch::mine_patches_len(v))
+        .map(VSurfacePatch::mine_patches_len)
         .sum();
     info!("selected {total_patches} patches");
 
@@ -165,20 +166,19 @@ pub fn group_nearby_patches(surface: VSurfacePatch) -> Vec<MineLocation> {
     // Merge groups
     let mut result = Vec::new();
     for patch_group in groups {
-        let patch_group_indexes;
-        if patch_group.len() != 1 {
+        let patch_group_indexes = if patch_group.len() != 1 {
             // trace!("Merging patch group of {:?}", patch_group);
 
             // Externally we use the index in the VSurface Patches slice
-            patch_group_indexes = patch_group
+            patch_group
                 .iter()
                 .map(|patch| surface.get_patch_index(patch))
-                .collect();
+                .collect()
         } else {
             let patch = patch_group[0];
             // trace!("Single patch group {:?}", patch);
-            patch_group_indexes = vec![surface.get_patch_index(patch)];
-        }
+            vec![surface.get_patch_index(patch)]
+        };
 
         if let Some(mine) = MineLocation::from_patch_indexes(surface, patch_group_indexes) {
             result.push(mine);
