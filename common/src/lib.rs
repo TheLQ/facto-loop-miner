@@ -10,4 +10,4 @@ pub use logger::log_init_debug;
 pub use logger::log_init_trace;
 
 pub const LOCALE: Locale = Locale::en;
-pub use logger::EXECUTOR_TAG;
+pub use xana_commons_rs::EXECUTOR_TAG;
