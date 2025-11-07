@@ -83,12 +83,12 @@ impl<'s> Plug<'s> {
 
 //
 
-pub trait AsVsMut: AsVs {
-    fn rails_mut(&mut self) -> PlugMut<'_>;
+pub trait AsVsMut<'s>: AsVs<'s> {
+    fn rails_mut(&mut self) -> PlugMut<'s>;
 }
 
-pub trait AsVs {
-    fn rails(&self) -> Plug<'_>;
+pub trait AsVs<'s> {
+    fn rails(&'s self) -> Plug<'s>;
 }
 
 //

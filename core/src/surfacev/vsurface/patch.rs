@@ -123,10 +123,10 @@ impl<'s> Plug<'s> {
 
 //
 
-pub trait AsVsMut {
-    fn patches_mut(&mut self) -> PlugMut<'_>;
+pub trait AsVsMut<'s> {
+    fn patches_mut(&mut self) -> PlugMut<'s>;
 }
 
-pub trait AsVs {
-    fn patches(&self) -> Plug<'_>;
+pub trait AsVs<'s> {
+    fn patches(&'s self) -> Plug<'s>;
 }

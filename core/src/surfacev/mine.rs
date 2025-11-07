@@ -23,7 +23,7 @@ use tracing::{trace, warn};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 pub struct MinePath {
-    pub mine_base: MineLocation,
+    pub location: MineLocation,
     pub links: Vec<HopeLink>,
     pub sodas: Vec<HopeSodaLink>,
     pub segment: VSegment,
@@ -439,7 +439,7 @@ impl MineLocation {
     }
 
     pub fn restore_area_buffered(
-        mines: &[Self],
+        mines: &[&Self],
         surface: &mut VSurfacePixelMut,
         removed_rail: Vec<VPoint>,
     ) {

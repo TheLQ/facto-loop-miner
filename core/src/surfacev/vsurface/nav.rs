@@ -17,10 +17,10 @@ pub struct Plug<'s> {
 
 //
 
-pub trait AsVsMut: AsVs {
-    fn nav_mut(&mut self) -> PlugMut<'_>;
+pub trait AsVsMut<'s>: AsVs<'s> {
+    fn nav_mut(&mut self) -> PlugMut<'s>;
 }
 
-pub trait AsVs {
-    fn nav(&self) -> Plug<'_>;
+pub trait AsVs<'s> {
+    fn nav(&'s self) -> Plug<'s>;
 }

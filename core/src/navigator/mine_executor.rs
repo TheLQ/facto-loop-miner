@@ -224,8 +224,8 @@ pub fn execute_route_batch(
                     ExecutorResult::Failure { meta: cur_meta, .. },
                 ) => {
                     for path in &cur_meta.found_paths {
-                        if !failure_seen_mines.contains(&path.mine_base) {
-                            failure_seen_mines.push(path.mine_base.clone());
+                        if !failure_seen_mines.contains(&path.location) {
+                            failure_seen_mines.push(path.location.clone());
                         }
                     }
 
@@ -357,7 +357,7 @@ fn execute_route_combination(
                     links: path,
                     sodas,
                     cost,
-                    mine_base: route.location.clone(),
+                    location: route.location.clone(),
                     segment: route.segment.clone(),
                 };
                 found_paths.push(path);
