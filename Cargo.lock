@@ -708,6 +708,7 @@ dependencies = [
  "serde",
  "serde_json",
  "simd-json",
+ "static_assertions",
  "strum 0.26.3",
  "tcmalloc-better",
  "thiserror 2.0.12",
@@ -725,6 +726,7 @@ dependencies = [
  "tracing",
  "tracing-log",
  "tracing-subscriber",
+ "xana-commons-rs",
 ]
 
 [[package]]
@@ -2073,6 +2075,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d372029cb5195f9ab4e4b9aef550787dce78b124fcaee8d82519925defcd6f0d"
 
 [[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
 name = "strum"
 version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2880,6 +2888,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05f360fc0b24296329c78fda852a1e9ae82de9cf7b27dae4b7f62f118f77b9ed"
 dependencies = [
  "tap",
+]
+
+[[package]]
+name = "xana-commons-rs"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "nu-ansi-term 0.50.1",
+ "num-format",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
 ]
 
 [[package]]

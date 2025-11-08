@@ -6,9 +6,7 @@ use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_io::varray::{EMPTY_XY_INDEX, VArray};
-use facto_loop_miner_io::{
-    get_mebibytes_of_slice_usize, read_entire_file_varray_mmap_lib, write_entire_file,
-};
+use facto_loop_miner_io::{get_mebibytes_of_slice_usize, write_entire_file};
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -327,7 +325,7 @@ impl<E> VEntityMap<E>
 
     fn _load_xy_file_mmap(&mut self, path: &Path) -> VResult<()> {
         let total_watch = BasicWatch::start();
-        self.xy_to_entity = read_entire_file_varray_mmap_lib(path).convert(path)?;
+        self.xy_to_entity = VArray::from_path(path).convert(path)?;
         debug!(
             "Loading Entity XY (mmap) total {} / {} in {} path {}",
             self.xy_to_entity.len().to_formatted_string(&LOCALE),

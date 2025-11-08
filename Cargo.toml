@@ -10,9 +10,10 @@ edition = "2024"
 
 [profile.release]
 #lto = "fat"
-#debug = true
+debug = true
 
 [workspace.dependencies]
+xana-commons-rs = { path = "../xana-commons-rs" }
 #
 tracing = "0.1.41"
 thiserror = "2.0.7"
