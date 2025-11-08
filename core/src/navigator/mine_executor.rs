@@ -317,20 +317,18 @@ fn execute_route_combination(
     }
 
     // let watch = BasicWatch::start();
-    let mut working_surface_copy = surface.surface_copy();
-    let working_surface = &mut working_surface_copy.pixels_mut();
+    let mut surface = surface.surface_copy();
+    let surface = &mut surface.pixels_mut();
     // info!("Cloned surface in {}", watch);
 
     let mut found_paths = Vec::new();
     for (i, route) in route_combination.iter().enumerate() {
         if flags.contains(&ExecuteFlags::ShrinkBases) {
-            route
-                .location
-                .draw_area_buffered_to_no_touch(working_surface);
+            route.location.draw_area_buffered_to_no_touch(surface);
             if i != 0 {
                 route_combination[i - 1]
                     .location
-                    .draw_area_buffered(working_surface)
+                    .draw_area_buffered(surface)
             }
         }
 
@@ -345,7 +343,7 @@ fn execute_route_combination(
         );
         let route_result = mori2_start(
             tuneables,
-            working_surface.pixels(),
+            surface.pixels(),
             route.segment.clone(),
             &route.finding_limiter,
         );

@@ -36,3 +36,4 @@ colorgrad = "0.7.0"
 
 nu-ansi-term = { workspace = true }
 tcmalloc-better = "0.1.19"
+static_assertions = "1.1"

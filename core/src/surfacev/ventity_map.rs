@@ -156,19 +156,21 @@ impl<E> VEntityMap<E>
                 .iter()
                 .all(|v| xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX)
         } else {
-            // todo: sanity wtf? Why is every
-            if !matches!(points.len(), 104) {
+            // todo: holy magic wtf
+            const MAGIC_TOTAL: usize = 104;
+            if points.len() != 104 {
                 panic!("processing {}", points.len());
             }
             const POINTS_SIZE: usize = 8;
+            static_assertions::const_assert!(MAGIC_TOTAL.is_multiple_of(POINTS_SIZE));
 
             let radius = Simd::splat(self.radius as i32);
             let diameter = Simd::splat(self.diameter() as i32);
             let xy_lookup_len = Simd::splat(xy_lookup.len());
             const EMPTY_INDEXES: Simd<usize, POINTS_SIZE> = Simd::splat(EMPTY_XY_INDEX);
 
-            let (chunks, remainder) = points.as_chunks::<POINTS_SIZE>();
-            assert_eq!(remainder.len(), 0); // todo: holy magic wtf
+            // magic lets us use pure SIMD ignoring remainder
+            let (chunks, _remainder) = points.as_chunks::<POINTS_SIZE>();
 
             for chunk in chunks {
                 let mut as_x: Simd<i32, POINTS_SIZE> = Simd::splat(0);
@@ -195,11 +197,7 @@ impl<E> VEntityMap<E>
                     return false;
                 }
             }
-            // todo: spooky magic, remainder is already zero
             true
-            // remainder
-            //     .into_iter()
-            //     .all(|v| xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX)
         }
     }
     //</editor-fold>
