@@ -244,10 +244,22 @@ fn successors(
             surface,
             finding_limiter,
             head.add_straight_section(),
-            watch_data,
+            // watch_data,
         ),
-        into_buildable_link(surface, finding_limiter, head.add_turn90(false), watch_data),
-        into_buildable_link(surface, finding_limiter, head.add_turn90(true), watch_data),
+        into_buildable_link(
+            //
+            surface,
+            finding_limiter,
+            head.add_turn90(false),
+            // watch_data,
+        ),
+        into_buildable_link(
+            //
+            surface,
+            finding_limiter,
+            head.add_turn90(true),
+            // watch_data,
+        ),
     ];
     watch_data.nexts += watch.duration();
 
@@ -268,7 +280,7 @@ fn into_buildable_link(
     surface: VSurfacePixel,
     finding_limiter: &VArea,
     new_link: HopeSodaLink,
-    watch_data: &mut WatchData,
+    // watch_data: &mut WatchData,
 ) -> Option<HopeSodaLink> {
     // todo: fix the limiter and just check center
     if !new_link

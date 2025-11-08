@@ -107,37 +107,3 @@ impl<T> CoreConvertPathResult<T, VError> for Result<T, ImageError> {
         })
     }
 }
-
-pub type XYOutOfBoundsResult<V> = Result<V, XYOutOfBoundsError>;
-
-pub struct XYOutOfBoundsError {
-    pos: Vec<VPoint>,
-    backtrace: Backtrace,
-}
-
-impl XYOutOfBoundsError {
-    pub fn new(pos: Vec<VPoint>) -> Self {
-        XYOutOfBoundsError {
-            pos,
-            backtrace: Backtrace::capture(),
-        }
-    }
-}
-
-impl From<XYOutOfBoundsError> for VError {
-    fn from(XYOutOfBoundsError { pos, backtrace }: XYOutOfBoundsError) -> Self {
-        Self::MiniXYOutOfBounds { pos, backtrace }
-    }
-}
-
-impl Debug for XYOutOfBoundsError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "XYOutOfBoundsError {}", self.pos.iter().join(","))
-    }
-}
-
-impl Display for XYOutOfBoundsError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Debug::fmt(self, f)
-    }
-}

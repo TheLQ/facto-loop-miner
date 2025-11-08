@@ -83,8 +83,8 @@ impl<'s> PlugMut<'s> {
         let text_height = 25;
         let text_thickness = 3;
         let text_size = draw_text_size(text, text_height, text_thickness);
-        // TIL: new_size/new_rows_cols will reuse allocations!
         let mut mat = unsafe { Mat::new_size(text_size.to_cv_size(), CV_8U).unwrap() };
+        // TIL: new_size/new_rows_cols will reuse allocations!
         mat.set_scalar(Scalar::all(0.0)).unwrap();
 
         let color = u8::MAX;
@@ -258,10 +258,6 @@ impl<'s> Plug<'s> {
         }
     }
 
-    pub fn dump_pixels_xy(&self) -> impl Iterator<Item = &Pixel> {
-        self.pixels.iter_xy_pixels()
-    }
-
     //</editor-fold>
 
     pub fn get_pixel_cv_image(&self, filter: Option<Pixel>) -> GeneratedMat {
@@ -314,24 +310,8 @@ impl<'s> Plug<'s> {
         self.pixels.is_point_out_of_bounds(point)
     }
 
-    pub fn is_points_free_truncating(&self, points: &[VPoint]) -> bool {
-        self.pixels.is_points_free_safe(points)
-    }
-
     pub fn is_points_free_unchecked(&self, points: &[VPoint]) -> bool {
         self.pixels.is_points_free_unchecked_iter(points)
-    }
-
-    pub fn get_pixel_entity_id_at(&self, point: &VPoint) -> usize {
-        self.pixels.get_entity_id_at(point)
-    }
-
-    pub fn dummy_area_entire_surface(&self) -> VArea {
-        let radius = self.get_radius_i32();
-        VArea::from_arbitrary_points_pair(
-            VPoint::new(-radius, -radius),
-            VPoint::new(radius, radius),
-        )
     }
 
     pub fn log_pixel_stats(&self, debug_message: &str) {

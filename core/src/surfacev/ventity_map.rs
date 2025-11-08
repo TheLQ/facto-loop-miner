@@ -1,6 +1,6 @@
 use crate::opencv::GeneratedMat;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::err::{CoreConvertPathResult, VError, VResult, XYOutOfBoundsError};
+use crate::surfacev::err::{CoreConvertPathResult, VError, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
@@ -67,7 +67,7 @@ impl<E> VEntityMap<E>
             panic!(
                 "Cannot make index radius {} {}",
                 self.radius,
-                XYOutOfBoundsError::new(vec![VPoint::new(x, y)])
+                VPoint::new(x, y)
             )
         }
         self.xy_to_index_unchecked(x, y)

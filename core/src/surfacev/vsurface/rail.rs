@@ -4,7 +4,7 @@ use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vsurface::{VSurfacePixelAsVs, VSurfacePixelAsVsMut};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use std::collections::HashMap;
-use tracing::{error, trace, warn};
+use tracing::{error, trace};
 
 pub struct PlugMut<'s> {
     pub(super) rails: &'s mut Vec<MinePath>,
@@ -78,7 +78,7 @@ impl<'s> PlugMut<'s> {
             }
 
             for (pixel, count) in bad_counts {
-                warn!("existing {pixel} @ {count} is not Rail");
+                error!("existing {pixel} @ {count} is not Rail");
             }
             // panic!("existing is not Rail")
         }
