@@ -2,7 +2,8 @@ use crate::navigator::mori::{MoriResult, mori2_start};
 use crate::state::tuneables::MoriTunables;
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::{
-    VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut,
+    VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRail,
+    VSurfaceRailAsVsMut,
 };
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::{EXECUTOR_TAG, LOCALE};
@@ -317,18 +318,19 @@ fn execute_route_combination(
     }
 
     // let watch = BasicWatch::start();
-    let mut surface = surface.surface_copy();
-    let surface = &mut surface.pixels_mut();
+    let mut surface_copy = VSurfaceRail::surface_copy(surface);
+    let surface = &mut surface_copy.rails_mut();
     // info!("Cloned surface in {}", watch);
 
-    let mut found_paths = Vec::new();
     for (i, route) in route_combination.iter().enumerate() {
         if flags.contains(&ExecuteFlags::ShrinkBases) {
-            route.location.draw_area_buffered_to_no_touch(surface);
+            route
+                .location
+                .draw_area_buffered_to_no_touch(&mut surface.pixels_mut());
             if i != 0 {
                 route_combination[i - 1]
                     .location
-                    .draw_area_buffered(surface)
+                    .draw_area_buffered(&mut surface.pixels_mut())
             }
         }
 
@@ -358,7 +360,7 @@ fn execute_route_combination(
                     location: route.location.clone(),
                     segment: route.segment.clone(),
                 };
-                found_paths.push(path);
+                surface.add_mine_path(path);
             }
             MoriResult::FailingDebug { err } => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -366,7 +368,7 @@ fn execute_route_combination(
                     meta: FailingMeta {
                         all_routes: route_combination,
                         astar_err: err,
-                        found_paths,
+                        found_paths: surface_copy.into_rails(),
                     },
                     seen_mines: Vec::new(),
                 };
@@ -376,7 +378,7 @@ fn execute_route_combination(
 
     SUCCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
     ExecutorResult::Success {
-        paths: found_paths,
+        paths: surface_copy.into_rails(),
         routes: route_combination,
     }
 }

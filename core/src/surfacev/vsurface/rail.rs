@@ -1,7 +1,7 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MinePath;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
-use crate::surfacev::vsurface::{VSurfacePixelAsVs, VSurfacePixelAsVsMut};
+use crate::surfacev::vsurface::{VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use std::collections::HashMap;
 use tracing::{error, trace};
@@ -94,6 +94,24 @@ pub struct Plug<'s> {
 
 impl<'s> Plug<'s> {
     pub fn get_mine_paths(&self) -> &'s [MinePath] {
+        self.rails
+    }
+
+    pub fn surface_copy(surface: VSurfacePixel) -> PlugCopy {
+        PlugCopy {
+            pixels: surface.pixels.clone(),
+            rails: Vec::new(),
+        }
+    }
+}
+
+pub struct PlugCopy {
+    pub(super) pixels: VEntityMap<VPixel>,
+    pub(super) rails: Vec<MinePath>,
+}
+
+impl PlugCopy {
+    pub fn into_rails(self) -> Vec<MinePath> {
         self.rails
     }
 }

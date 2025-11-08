@@ -335,36 +335,6 @@ pub trait AsVs {
 
 //
 
-pub struct PlugCopy {
-    pixels: VEntityMap<VPixel>,
-}
-
-impl Plug<'_> {
-    pub fn surface_copy(&self) -> PlugCopy {
-        PlugCopy {
-            pixels: self.pixels.clone(),
-        }
-    }
-}
-
-impl AsVsMut for PlugCopy {
-    fn pixels_mut(&mut self) -> PlugMut<'_> {
-        PlugMut {
-            pixels: &mut self.pixels,
-        }
-    }
-}
-
-impl AsVs for PlugCopy {
-    fn pixels(&self) -> Plug<'_> {
-        Plug {
-            pixels: &self.pixels,
-        }
-    }
-}
-
-//
-
 /// Generated image with various save outputs
 pub struct SurfacePainting {
     output: Vec<u8>,
