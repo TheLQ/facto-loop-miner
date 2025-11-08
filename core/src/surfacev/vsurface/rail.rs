@@ -3,7 +3,8 @@ use crate::surfacev::mine::MinePath;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vsurface::{VSurfacePixelAsVs, VSurfacePixelAsVsMut};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use tracing::trace;
+use std::collections::HashMap;
+use tracing::{error, trace, warn};
 
 pub struct PlugMut<'s> {
     pub(super) rails: &'s mut Vec<MinePath>,
@@ -59,11 +60,27 @@ impl<'s> PlugMut<'s> {
     fn remove_mine_path_cleanup(&mut self, mine_path: &MinePath) -> Vec<VPoint> {
         let removed_points = mine_path.total_area();
         let surface = self.pixels();
+        let mut bad_existing = Vec::new();
         for point in &removed_points {
             let existing = surface.get_pixel(point);
             if existing != Pixel::Rail {
-                panic!("existing {existing:?} is not Rail")
+                bad_existing.push(existing);
             }
+        }
+        if !bad_existing.is_empty() {
+            bad_existing.sort();
+            let mut bad_counts = HashMap::new();
+            for existing in bad_existing {
+                bad_counts
+                    .entry(existing)
+                    .and_modify(|v| *v += 1)
+                    .or_insert(1);
+            }
+
+            for (pixel, count) in bad_counts {
+                warn!("existing {pixel} @ {count} is not Rail");
+            }
+            // panic!("existing is not Rail")
         }
         self.pixels.change(removed_points.clone()).remove();
         removed_points

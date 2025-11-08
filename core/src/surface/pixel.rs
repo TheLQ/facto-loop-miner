@@ -8,13 +8,13 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
 use strum::IntoEnumIterator;
-use strum::{AsRefStr, EnumIter};
 
 #[derive(
     Serialize,
     Deserialize,
-    AsRefStr,
-    EnumIter,
+    strum::Display,
+    strum::AsRefStr,
+    strum::EnumIter,
     Debug,
     PartialEq,
     Clone,
