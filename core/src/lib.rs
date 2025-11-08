@@ -39,7 +39,6 @@ pub use facto_loop_miner_common::util::always_true_test;
 mod gamedata;
 mod navigator;
 mod opencv;
-mod simd;
 // mod simd_diff;
 mod state;
 mod surface;
