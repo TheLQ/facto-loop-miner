@@ -495,7 +495,9 @@ mod test {
     use crate::surface::pixel::Pixel;
     use crate::surfacev::mine::{DebugMinePatch, MineLocation};
     use crate::surfacev::vpatch::VPatch;
-    use crate::surfacev::vsurface::VSurface;
+    use crate::surfacev::vsurface::{
+        VSurface, VSurfacePatchAsVs, VSurfacePatchAsVsMut, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
+    };
     use facto_loop_miner_common::duration::BasicWatch;
     use facto_loop_miner_common::log_init_trace;
     use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -511,13 +513,13 @@ mod test {
     #[test]
     fn test_destinations() {
         let mut surface = VSurface::new(300);
-        surface.add_patches([VPatch {
+        surface.patches_mut().add_patches([VPatch {
             area: VArea::from_arbitrary_points_pair(VPoint::new(-5, -5), VPoint::new(6, 6)),
             resource: Pixel::CrudeOil,
             pixel_indexes: Vec::new(),
         }]);
 
-        let mine = MineLocation::from_patch_indexes(&surface, vec![0]).unwrap();
+        let mine = MineLocation::from_patch_indexes(surface.patches(), vec![0]).unwrap();
         assert_eq!(mine.area_min.point_top_left(), VPoint::new(-5, -5));
         assert_eq!(mine.area_min.point_bottom_right(), VPoint::new(6, 6));
 
@@ -559,37 +561,40 @@ mod test {
             let area = VArea::from_arbitrary_points(&patch.points);
             println!("area {area}");
         }
-        surface.add_patches(patches.iter().map(|v| VPatch {
-            pixel_indexes: v.points.clone(),
-            resource: v.pixel,
-            area: VArea::from_arbitrary_points(&v.points),
-        }));
+        surface
+            .patches_mut()
+            .add_patches(patches.iter().map(|v| VPatch {
+                pixel_indexes: v.points.clone(),
+                resource: v.pixel,
+                area: VArea::from_arbitrary_points(&v.points),
+            }));
         // blank surface doesn't have pixels
         for patch in &patches {
             surface
+                .pixels_mut()
                 .change_pixels(patch.points.clone())
                 .stomp(patch.pixel);
         }
 
         let mut mine = MineLocation::from_patch_indexes(
-            surface,
-            (0..surface.get_patches_slice().len()).collect(),
+            surface.patches(),
+            (0..surface.patches().get_patches().len()).collect(),
         )
         .unwrap();
-        mine.draw_area_buffered(surface);
+        mine.draw_area_buffered(&mut surface.pixels_mut());
 
         // debug_draw_mine_links(surface, [&mine]);
 
         // <<<
-        mine.revalidate_endpoints_after_no_touch(surface);
+        mine.revalidate_endpoints_after_no_touch(surface.pixels());
         assert_ne!(mine.destinations().next(), None);
 
-        debug_draw_mine_links(surface, [&mine]);
+        debug_draw_mine_links(&mut surface.pixels_mut(), [&mine]);
 
         let watch = BasicWatch::start();
         let mut grid = Vec::new();
-        for x in 0..surface.get_radius_i32() {
-            for y in 0..surface.get_radius_i32() {
+        for x in 0..surface.pixels().get_radius_i32() {
+            for y in 0..surface.pixels().get_radius_i32() {
                 if x % SECTION_POINTS_I32 == 0 || y % SECTION_POINTS_I32 == 0 {
                     grid.push(VPoint::new(x, y));
                 }
@@ -597,10 +602,16 @@ mod test {
         }
         println!("gen in {watch} total {}", grid.len());
         let watch = BasicWatch::start();
-        surface.change_pixels(grid).stomp(Pixel::Highlighter);
+        surface
+            .pixels_mut()
+            .change_pixels(grid)
+            .stomp(Pixel::Highlighter);
         println!("stomp in {watch}");
 
-        surface.paint_pixel_colored_entire().save_to_oculante();
+        surface
+            .pixels()
+            .paint_pixel_colored_entire()
+            .save_to_oculante();
     }
 
     fn load_mine_patch() -> Vec<DebugMinePatch> {
