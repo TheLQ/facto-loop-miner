@@ -374,17 +374,19 @@ pub fn map_usize_to_u8_iter(
 }
 
 pub fn map_usize_to_u8_slice(input: &[usize], output: &mut [u8]) {
-    assert_eq!(input.len() * USIZE_BYTES, output.len(), "outsize too small",);
-    for (i, output_chunk) in output.array_chunks_mut::<USIZE_BYTES>().enumerate() {
-        output_chunk.clone_from_slice(&input[i].to_ne_bytes());
-    }
+    // assert_eq!(input.len() * USIZE_BYTES, output.len(), "outsize too small",);
+    // for (i, output_chunk) in output.as_array::<USIZE_BYTES>().unwrap().enumerate() {
+    //     output_chunk.clone_from_slice(&input[i].to_ne_bytes());
+    // }
+    todo!()
 }
 
 pub fn map_u8_to_usize_slice(input: &[u8], output: &mut [usize]) {
-    assert_eq!(input.len() / USIZE_BYTES, output.len(), "outsize too small");
-    for (i, input_chunk) in input.array_chunks().enumerate() {
-        output[i] = usize::from_ne_bytes(*input_chunk);
-    }
+    // assert_eq!(input.len() / USIZE_BYTES, output.len(), "outsize too small");
+    // for (i, input_chunk) in input.array_chunks().enumerate() {
+    //     output[i] = usize::from_ne_bytes(*input_chunk);
+    // }
+    todo!()
 }
 
 // pub fn map_u8_to_usize_slice_transmute_vec(input: &[u8]) -> Vec<usize> {

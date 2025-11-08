@@ -1,12 +1,17 @@
-*Mining 100 patches with dedicated rail each. 250x250 chunks.*
+*Mining 100 patches with dedicated rail. 250x250 chunks.*
 
-I've spent several months off and on writing a base generator mod.
+I've spent several months writing a base generator mod.
 It creates massive rail loop networks between every ore patch within hundreds of chunks,
-then eventually a full megabase.
+feeding a massive megabase. Then turned into a Factorio generator library in Rust.
 
 *Core concept:* A dedicated loop of rail, point 2 point without intersections, has the highest throughput
-and simplest engine pathing. No 8x8 rail intersections or fancy LTN buffering needed.
-However manual placing at this scale is very time intensive.
+yet simplest engine pathing. No 8x8 rail intersections or fancy LTN buffering needed.
+However manual placing is very time intensive at scale.
+
+This pathfinds rail loops from 100s of mines to the base.
+Builds the mine (1+ ore patches) drills, belts, inserters, electrics, wall, and defense.
+Builds base unload inserters and belts.
+Builds the
 
 Goal is to autogenerate one of the largest megabases with only default entities (no bobs mods).
 Including mining, rail loading, rail offloading, belts, and smelting.

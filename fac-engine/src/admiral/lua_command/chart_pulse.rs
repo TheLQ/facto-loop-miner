@@ -9,10 +9,6 @@ impl ChartPulse {
     pub fn new_radius(radius: u32) -> Self {
         Self { radius }
     }
-
-    // pub fn new(surface: &VSurface) -> Self {
-    //     Self::new_radius(surface.get_radius())
-    // }
 }
 
 impl LuaCommand for ChartPulse {

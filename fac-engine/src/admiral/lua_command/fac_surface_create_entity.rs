@@ -55,7 +55,8 @@ impl LuaCommand for FacSurfaceCreateEntity {
             )
         }
 
-        if !self.commands.is_empty() || DEBUG_POSITION_EXPECTED {
+        let is_lua_variable = !self.commands.is_empty() || DEBUG_POSITION_EXPECTED;
+        if is_lua_variable {
             lua.push("local admiral_create =".to_string());
         }
 
