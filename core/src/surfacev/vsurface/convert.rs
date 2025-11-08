@@ -1,6 +1,6 @@
-macro_rules! as_vs_convert {
+macro_rules! vs_impl_for {
     (pixel $target_mod:ident) => {
-        as_vs_convert!(@plug_impl
+        vs_impl_for!(@plug_impl
             pixel => $target_mod,
             pixels_mut => pixels,
             pixels,
@@ -8,7 +8,7 @@ macro_rules! as_vs_convert {
     };
 
     (patch $target_mod:ident) => {
-        as_vs_convert!(@plug_impl
+        vs_impl_for!(@plug_impl
             patch => $target_mod,
             patches_mut => patches,
             patches, pixels,
@@ -16,7 +16,7 @@ macro_rules! as_vs_convert {
     };
 
     (rails $target_mod:ident) => {
-        as_vs_convert!(@plug_impl
+        vs_impl_for!(@plug_impl
             rail => $target_mod,
             rails_mut => rails,
             rails, pixels,
@@ -50,13 +50,13 @@ macro_rules! as_vs_convert {
         }
     };
 }
-as_vs_convert!(pixel patch);
-as_vs_convert!(pixel rail);
-as_vs_convert!(pixel nav);
-as_vs_convert!(patch nav);
-as_vs_convert!(rails nav);
+vs_impl_for!(pixel patch);
+vs_impl_for!(pixel rail);
+vs_impl_for!(pixel nav);
+vs_impl_for!(patch nav);
+vs_impl_for!(rails nav);
 
-macro_rules! as_vs_builder {
+macro_rules! vs_impl_builder {
     (
         $trait_mod:ident,
         $fn_ref:ident,
@@ -70,11 +70,11 @@ macro_rules! as_vs_builder {
         }
     }
 }
-as_vs_builder!(pixel, pixels, pixels,);
-as_vs_builder!(patch, patches, patches, pixels,);
-as_vs_builder!(rail, rails, rails, pixels,);
+vs_impl_builder!(pixel, pixels, pixels,);
+vs_impl_builder!(patch, patches, patches, pixels,);
+vs_impl_builder!(rail, rails, rails, pixels,);
 
-macro_rules! as_vs_main {
+macro_rules! vs_main {
     (
         $trait_mod:ident,
         $fn_mut:ident => $fn_ref:ident,
@@ -95,22 +95,22 @@ macro_rules! as_vs_main {
         }
     }
 }
-as_vs_main!(
+vs_main!(
     pixel,
     pixels_mut => pixels,
     pixels,
 );
-as_vs_main!(
+vs_main!(
     patch,
     patches_mut => patches,
     patches, pixels,
 );
-as_vs_main!(
+vs_main!(
     rail,
     rails_mut => rails,
     rails, pixels,
 );
-as_vs_main!(
+vs_main!(
     nav,
     nav_mut => nav,
     rails, patches, pixels,
