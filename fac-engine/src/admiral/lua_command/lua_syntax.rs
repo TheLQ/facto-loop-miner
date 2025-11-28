@@ -2,13 +2,13 @@ use crate::blueprint::bpfac::position::FacBpPosition;
 use crate::common::vpoint::PSugar;
 
 pub struct LuaSyntax {
-    pub method: String,
-    pub args: Vec<SyntaxArg>,
+    method: String,
+    args: Vec<SyntaxArg>,
 }
 
-pub struct SyntaxArg {
-    pub key: String,
-    pub value: String,
+struct SyntaxArg {
+    key: String,
+    value: String,
 }
 
 impl LuaSyntax {
