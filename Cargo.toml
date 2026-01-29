@@ -13,7 +13,7 @@ edition = "2024"
 debug = true
 
 [workspace.dependencies]
-xana-commons-rs = { path = "../xana-commons-rs" }
+xana-commons-rs = { path = "../xana-commons-rs/xana-commons-rs" }
 #
 tracing = "0.1.41"
 thiserror = "2.0.7"

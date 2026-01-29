@@ -6,24 +6,22 @@ facto_loop_miner_fac_engine::admiral::lua_command::lua_batch=debug,\
 facto_loop_miner_fac_engine::game_blocks::rail_hope_single=debug";
 
 pub fn log_init_trace() {
-    xana_commons_rs::log_init_trace(log_config(Some(TRACE_NO_ADMIRAL_NETWORK)))
+    log_config(TRACE_NO_ADMIRAL_NETWORK).log_init_trace()
 }
 
 pub fn log_init_debug() {
-    xana_commons_rs::log_init_debug(log_config(None))
+    log_config("").log_init_debug()
 }
 
-fn log_config(extra_filter_env: Option<&'static str>) -> XanaCommonsLogConfig<FactoLogConfig> {
-    XanaCommonsLogConfig {
-        map_huge_crate_names: Some(FactoLogConfig),
-        filter_non_main_threads: true,
-        extra_filter_env: extra_filter_env.unwrap_or(""),
-    }
+fn log_config(extra_filter_env: &'static str) -> XanaCommonsLogConfig<FactoLogConfig> {
+    XanaCommonsLogConfig::new_map_huge()
+        .with_extra_filter_env(extra_filter_env)
+        .with_filter_non_main_threads(true)
 }
 
 struct FactoLogConfig;
 impl MapHugeCrateName for FactoLogConfig {
-    fn map_huge(&self, input: &str) -> Option<&'static str> {
+    fn map_huge(input: &str) -> Option<&'static str> {
         match input {
             "facto_loop_miner" => Some("core"),
             "facto_loop_miner_io" => Some("io"),
