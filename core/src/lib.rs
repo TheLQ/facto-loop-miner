@@ -7,7 +7,7 @@
 //
 // lints
 //
-#![allow(dead_code)]
+// #![allow(dead_code)]
 // todo: This is for something() { Ok(()) } , only testing
 #![allow(clippy::unnecessary_wraps)]
 //
@@ -34,12 +34,14 @@ use kiddo::float;
 use std::path::Path;
 use tracing::info;
 
+use crate::pixel_widget::pixel_widget_main;
 pub use facto_loop_miner_common::util::always_true_test;
 
 mod gamedata;
 mod navigator;
 mod opencv;
 // mod simd_diff;
+mod pixel_widget;
 mod state;
 mod surface;
 mod surfacev;
@@ -62,6 +64,7 @@ pub fn inner_main() {
     match 1 {
         1 => new_v1_machine().start(root_dir),
         3 => generate_lookup_image(),
+        5 => pixel_widget_main(),
         _ => panic!("wtf"),
     }
     info!("Total time {watch}")
