@@ -73,6 +73,7 @@ pub struct BaseSourceEighth {
 
 impl BaseSourceEighth {
     pub fn new(origin: VPointDirectionQ, sign: i32) -> Self {
+        origin.point().assert_step_rail();
         // Must start at 1 due to conflict at 0!
         Self {
             origin,
@@ -199,15 +200,65 @@ impl BaseSourceEntry {
 #[cfg(test)]
 mod test {
     use crate::navigator::base_source::{BaseSourceEighth, BaseSourceEntry, INTRA_OFFSET};
+    use crate::surface::pixel::Pixel;
+    use crate::surfacev::mine::{MineLocation, MinePath};
+    use crate::surfacev::vsurface::{
+        VSurface, VSurfacePixelAsVsMut, VSurfaceRailAsVs, VSurfaceRailAsVsMut,
+    };
+    use facto_loop_miner_common::log_init_trace;
     use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
     use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
     use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
+    use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
     use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
+    use std::path::Path;
+    use tracing::info;
+
+    #[test]
+    fn test_offset() {
+        log_init_trace();
+
+        let mut surface_raw = VSurface::new(100);
+        let surface = &mut surface_raw.rails_mut();
+
+        let mut source =
+            BaseSourceEighth::new(VPointDirectionQ(VPOINT_ZERO, FacDirectionQuarter::East), 1);
+        for _ in 0..8 {
+            let next = source.next().unwrap();
+            println!(
+                "next {} at {} - offset {}",
+                next.origin.point(),
+                next.origin.point() - &next.applied_intra_offset,
+                next.applied_intra_offset
+            );
+            surface.test_add_soda(&[HopeSodaLink::new_soda_straight_q(&next.origin)]);
+        }
+
+        surface
+            .pixels_mut()
+            .change_pixels([VPOINT_ZERO])
+            .find_empty_into(Pixel::Highlighter);
+
+        surface_raw.save(Path::new("work/test-output")).unwrap();
+
+        panic!("todo")
+    }
 
     #[test]
     fn test_nexts() {
+        log_init_trace();
+
         let mut source =
             BaseSourceEighth::new(VPointDirectionQ(VPOINT_ZERO, FacDirectionQuarter::East), 1);
+        for _ in 0..9 {
+            let next = source.next().unwrap();
+            println!(
+                "next {} at {} - offset {}",
+                next.origin.point(),
+                next.origin.point() - &next.applied_intra_offset,
+                next.applied_intra_offset
+            );
+        }
         let mut test_next = |step_count, intra_count| {
             assert_eq!(
                 source.next().unwrap(),
