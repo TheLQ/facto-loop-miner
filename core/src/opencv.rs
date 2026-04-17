@@ -125,7 +125,31 @@ pub fn draw_text_cv(
     .unwrap();
 }
 
-pub fn draw_text_size(text: &str, height: i32, thickness: i32) -> VPoint {
+#[derive(Clone, Copy)]
+pub struct TextSize {
+    pub height: i32,
+    pub thickness: i32,
+}
+
+impl Default for TextSize {
+    fn default() -> Self {
+        Self {
+            height: 25,
+            thickness: 3,
+        }
+    }
+}
+
+impl TextSize {
+    pub fn small() -> Self {
+        Self {
+            height: 10,
+            thickness: 1,
+        }
+    }
+}
+
+pub fn draw_text_size(text: &str, TextSize { height, thickness }: TextSize) -> VPoint {
     let mut out_y = 0; // ????
     let size_cv = get_text_size(
         text,

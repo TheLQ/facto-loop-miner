@@ -31,8 +31,8 @@ pub fn mori2_start(
     let is_possible = endpoints.end.point() - endpoints.start.point();
     is_possible.assert_step_rail();
 
-    let start_link = new_straight_link_from_vd(&endpoints.start);
-    let end_link = new_straight_link_from_vd(&endpoints.end);
+    let start_link = HopeSodaLink::new_soda_straight_q(&endpoints.start);
+    let end_link = HopeSodaLink::new_soda_straight_q(&endpoints.end);
 
     if !surface.is_points_free_unchecked(&end_link.area_vec()) {
         // // todo: lock?
@@ -222,10 +222,6 @@ impl MoriResult {
     //         MoriResult::FailingDebug { .. } => false,
     //     }
     // }
-}
-
-fn new_straight_link_from_vd(start: &VPointDirectionQ) -> HopeSodaLink {
-    HopeSodaLink::new_soda_straight(start.0, start.1)
 }
 
 fn successors(

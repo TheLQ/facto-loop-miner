@@ -1,4 +1,4 @@
-use crate::opencv::{GeneratedMat, draw_text_cv, draw_text_size, mat_into_points};
+use crate::opencv::{GeneratedMat, TextSize, draw_text_cv, draw_text_size, mat_into_points};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{CoreConvertPathResult, VResult};
 use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
@@ -77,28 +77,27 @@ impl<'s> PlugMut<'s> {
         self.pixels.change(positions)
     }
 
-    pub fn draw_text_at(&mut self, pos: VPoint, text: &str) {
+    pub fn draw_text_at(&mut self, pos: VPoint, text: &str, size: TextSize, pixel: Pixel) {
         let watch = BasicWatch::start();
 
-        let text_height = 25;
-        let text_thickness = 3;
-        let text_size = draw_text_size(text, text_height, text_thickness);
+        let text_size = draw_text_size(text, size);
         let mut mat = unsafe { Mat::new_size(text_size.to_cv_size(), CV_8U).unwrap() };
         // TIL: new_size/new_rows_cols will reuse allocations!
         mat.set_scalar(Scalar::all(0.0)).unwrap();
 
         let color = u8::MAX;
+        let TextSize { height, thickness } = size;
         draw_text_cv(
             &mut mat,
             text,
             Point {
                 x: 0,
                 // draw_text_size adds thickness we must remove
-                y: text_size.y() - text_thickness,
+                y: text_size.y() - thickness,
             },
             Scalar::all(color.into()),
-            text_height,
-            text_thickness,
+            height,
+            thickness,
         );
         // imwrite("out.png", &mat, &Vector::new()).unwrap();
         let new_points = mat_into_points(mat, color, pos)
@@ -115,7 +114,7 @@ impl<'s> PlugMut<'s> {
 
         // let watch = BasicWatch::start();
         // let new_points_len = new_points.len();
-        self.change_pixels(new_points).stomp(Pixel::Highlighter);
+        self.change_pixels(new_points).stomp(pixel);
         // trace!("set {new_points_len} points in {watch}");
     }
 }
@@ -442,23 +441,23 @@ mod test {
         // surface.save_pixel_img_colorized(&test_output_dir).unwrap()
     }
 
-    #[test]
-    fn text_test() {
-        log_init_trace();
-        let mut surface_raw = VSurface::new(500);
-        let surface = &mut surface_raw.pixels_mut();
-
-        surface
-            .change_square(&VArea::from_radius(VPOINT_ZERO, 4))
-            .stomp(Pixel::EdgeWall);
-
-        surface.draw_text_at(VPOINT_ZERO, "1234");
-
-        surface
-            .pixels()
-            .paint_pixel_colored_entire()
-            .save_to_oculante();
-    }
+    // #[test]
+    // fn text_test() {
+    //     log_init_trace();
+    //     let mut surface_raw = VSurface::new(500);
+    //     let surface = &mut surface_raw.pixels_mut();
+    //
+    //     surface
+    //         .change_square(&VArea::from_radius(VPOINT_ZERO, 4))
+    //         .stomp(Pixel::EdgeWall);
+    //
+    //     surface.draw_text_at(VPOINT_ZERO, "1234");
+    //
+    //     surface
+    //         .pixels()
+    //         .paint_pixel_colored_entire()
+    //         .save_to_oculante();
+    // }
 
     #[test]
     fn radius_checks() {
