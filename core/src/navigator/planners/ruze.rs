@@ -1,5 +1,7 @@
 use crate::always_true_test;
-use crate::navigator::mine_executor::{ExecutorResult, FailingMeta, execute_route_batch};
+use crate::navigator::mine_executor::{
+    ExecutorResult, FailingMeta, execute_route_batch, execute_route_batch_clone_prep,
+};
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
 use crate::navigator::planners::common::{PathingTunables, debug_failing, draw_prep};
@@ -11,7 +13,7 @@ use crate::surfacev::vsurface::{
 };
 use tracing::{error, info, trace, warn};
 
-const RUZE_MAXIMUM_MINE_COUNT_PER_BATCH: usize = 5;
+const RUZE_MAXIMUM_MINE_COUNT_PER_BATCH: usize = 3;
 
 /// Planner v1 "Crimzon Ruze 💢"
 ///
@@ -83,7 +85,12 @@ fn process_batch(
                 each in range {num_per_batch_routes_min} {num_per_batch_routes_max}"
     );
     // let planned_combinations = vec![planned_combinations.remove(0)];
-    let res = execute_route_batch(tunables, surface.pixels(), complete_plan.sequences, &[]); // todo: Shrink flag??
+    let res = execute_route_batch_clone_prep(
+        tunables,
+        &mut surface.pixels_mut(),
+        complete_plan.sequences,
+        &[],
+    ); // todo: Shrink flag??
     match res {
         ExecutorResult::Success { paths, routes } => {
             info!("pushing {} new mine paths", paths.len());
