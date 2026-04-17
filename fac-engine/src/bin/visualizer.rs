@@ -60,23 +60,23 @@ fn main() {
 }
 
 fn basic_build_gen(output: Rc<FacItemOutput>) {
-    let station = FacBlkRailStation {
-        name: "test".into(),
-        wagons: 3,
-        front_engines: 2,
-        delivery: FacExtDelivery::Chest(FacEntChestType::Passive),
-        inserter: FacEntInserterType::Basic,
-        fuel_inserter: None,
-        fuel_inserter_chest: None,
-        schedule: None,
-        is_east: true,
-        is_up: true,
-        is_input: true,
-        is_create_train: true,
-        is_electric_initial: true,
-        output,
-    };
-    station.generate(VPoint::new(5, 5));
+    // let station = FacBlkRailStation {
+    //     name: "test".into(),
+    //     wagons: 3,
+    //     front_engines: 2,
+    //     delivery: FacExtDelivery::Chest(FacEntChestType::Passive),
+    //     inserter: FacEntInserterType::Basic,
+    //     fuel_inserter: None,
+    //     fuel_inserter_chest: None,
+    //     schedule: None,
+    //     is_east: true,
+    //     is_up: true,
+    //     is_input: true,
+    //     is_create_train: true,
+    //     is_electric_initial: true,
+    //     output,
+    // };
+    // station.generate(VPoint::new(5, 5));
 }
 
 fn basic_build_terapower(output: Rc<FacItemOutput>) {

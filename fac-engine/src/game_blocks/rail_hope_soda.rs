@@ -8,7 +8,7 @@ use std::borrow::Borrow;
 
 /// Rail Dual v2 "Irys💎 Soda"
 ///
-/// Define as a grid of "Soda" (aka block, but term is overloaded).
+/// Define as a grid of "Soda"
 /// Limited struct size as astar_mori makes 100,000s of these.
 /// Radically simpler movement API.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Hash, Clone, Debug)]
@@ -29,6 +29,10 @@ const SODA_CENTER_OFFSET_I32: i32 = 13;
 pub(super) const SODA_SIZE: i32 = SODA_CENTER_OFFSET_I32 * 2;
 
 impl HopeSodaLink {
+    pub fn new_soda_straight_q(source: &VPointDirectionQ) -> Self {
+        Self::new_soda_straight(source.0, source.1)
+    }
+
     pub fn new_soda_straight(center: VPoint, source_direction: FacDirectionQuarter) -> Self {
         Self {
             stype: SodaType::Straight,
@@ -105,6 +109,52 @@ impl HopeSodaLink {
             }
         }
     }
+
+    // fn links_to_area_fast(&self) -> [VPoint; 104] {
+    //     let mut output: [VPoint; 104] = unsafe { mem::zeroed() };
+    //
+    //     let mut sources = self.links_source();
+    //     match self.stype {
+    //         SodaType::Straight => {
+    //             let (output_chunks, remainder) = output.as_chunks();
+    //             assert_eq!(output_chunks.len(), 2);
+    //             assert_eq!(remainder.len(), 0);
+    //
+    //             for (i, source) in sources.into_iter().enumerate() {
+    //                 let link = source.add_straight(SODA_RAILS_NUM);
+    //
+    //                 // v1
+    //                 let area = link.area_vec();
+    //                 assert_eq!(area.len(), 52);
+    //                 link.area()
+    //
+    //
+    //                 let offset = i * 52;
+    //                 output[offset..o]
+    //             }
+    //
+    //             let source_a = sources[0].rails
+    //
+    //             let output: [HopeLink; 2] = sources.map(|v| v.add_straight(SODA_RAILS_NUM));
+    //             output
+    //         }
+    //         SodaType::Turn90 { clockwise } => {
+    //             if let FacDirectionQuarter::East | FacDirectionQuarter::South =
+    //                 self.source_direction
+    //             {
+    //                 sources.swap(0, 1);
+    //             }
+    //
+    //             let mut output: [HopeLink; 4] = unsafe { mem::zeroed() };
+    //
+    //             let (initial, last) = output.split_array_mut();
+    //             *initial = create_turn_link_from(&sources[0], clockwise);
+    //             last[0] = sources[1].add_turn90(clockwise);
+    //             output.into_iter()
+    //         }
+    //     }
+    //     output
+    // }
 
     pub fn corners(&self) -> [VPoint; 4] {
         [

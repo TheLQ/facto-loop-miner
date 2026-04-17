@@ -102,6 +102,8 @@ impl FacItemOutput {
         let mut odata = self.odata.borrow_mut();
 
         let blueprint = item.to_blueprint();
+        let limits = 2000.0;
+        assert!((-limits..limits).contains(&blueprint.position.x()));
 
         let item_debug = format!("{:?}", item.entity());
         let message_pos = format!(

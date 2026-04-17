@@ -1,11 +1,13 @@
 use crate::blueprint::output::FacItemOutput;
 use crate::common::vpoint::VPoint;
 use crate::game_blocks::block::{FacBlock2, FacBlockFancy};
+use crate::game_blocks::mine_ore::FacBlkMineOre;
 use crate::game_blocks::rail_hope::RailHopeLink;
 use crate::game_blocks::rail_hope_single::HopeLink;
 use crate::game_blocks::rail_hope_soda::HopeSodaLink;
 use crate::game_blocks::rail_station::{FacBlkRailStation, FacExtDelivery};
 use crate::game_entities::belt::FacEntBeltType;
+use crate::game_entities::direction::FacDirectionQuarter;
 use crate::game_entities::inserter::FacEntInserterType;
 use crate::game_entities::module::FacModule;
 use std::rc::Rc;
@@ -60,16 +62,16 @@ impl FacBlockFancy<()> for FacBlkMineIsland {
         .unwrap();
         output_belts.add_turn90_clk();
 
-        // for mine in &self.mines {
-        //     let output_belts = FacBlkMineOre {
-        //         ore_points: mine.clone(),
-        //         exit_direction: todo!(),
-        //         exit_clockwise: todo!(),
-        //         belt: self.belt,
-        //         drill_modules: self.drill_modules,
-        //         output: self.output.clone(),
-        //     }
-        //     .generate();
-        // }
+        for mine in &self.mines {
+            let output_belts = FacBlkMineOre {
+                ore_points: mine.clone(),
+                exit_direction: FacDirectionQuarter::East,
+                exit_clockwise: true,
+                belt: self.belt,
+                drill_modules: self.drill_modules,
+                output: self.output.clone(),
+            }
+            .generate();
+        }
     }
 }

@@ -426,6 +426,49 @@ impl RailHopeLink for HopeLink {
 }
 
 impl HopeLink {
+    // pub fn area_spooky(&self, output: &mut [VPoint; 52]) {
+    //     let (output_chunks, remainder) = output.as_chunks_mut::<4>();
+    //     assert_eq!(remainder.len(), 0);
+    //     assert_eq!(output_chunks.len(), SODA_RAILS_NUM);
+    //
+    //     match &self.rtype {
+    //         HopeLinkType::Straight { length } => {
+    //             assert_eq!(*length, SODA_RAILS_NUM);
+    //             for i in 0..SODA_RAILS_NUM {
+    //                 let rail = self
+    //                     .start
+    //                     .move_direction_usz(self.next_direction, i * RAIL_STRAIGHT_DIAMETER);
+    //                 output_chunks[i] = rail.area_2x2();
+    //             }
+    //         }
+    //         HopeLinkType::Turn90 { clockwise } => {
+    //             // todo: ALSO hack just goes at an angle. Probably fine?
+    //             let unrotated = if *clockwise {
+    //                 self.next_direction.rotate_opposite()
+    //             } else {
+    //                 self.next_direction.rotate_once()
+    //             };
+    //
+    //             ACTUAL TODO: This isn't "straight-single..self-turn..straight-single" on the other side
+    //
+    //             const MIDDLE_SODA_PIECE_OFFSET: usize = 1;
+    //             const LEG_LENGTH: usize = 5;
+    //             let mut rail = self.start;
+    //             for i in 0..LEG_LENGTH {
+    //                 output_chunks[MIDDLE_SODA_PIECE_OFFSET + i] = rail.area_2x2();
+    //                 rail = rail.move_direction_usz(unrotated, RAIL_STRAIGHT_DIAMETER);
+    //             }
+    //             for i in 0..6 {
+    //                 output_chunks[MIDDLE_SODA_PIECE_OFFSET + LEG_LENGTH + i] = rail.area_2x2();
+    //                 rail = rail.move_direction_usz(self.next_direction, RAIL_STRAIGHT_DIAMETER);
+    //             }
+    //         }
+    //         HopeLinkType::Shift45 { .. } => {
+    //             todo!("shift 45 area")
+    //         }
+    //     }
+    // }
+
     pub(super) fn new_single(origin: VPoint, direction: FacDirectionQuarter) -> Self {
         let prev = Self {
             start: origin.move_direction_usz(direction.rotate_flip(), RAIL_STRAIGHT_DIAMETER),
