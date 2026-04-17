@@ -16,7 +16,7 @@ use std::io::ErrorKind;
 use std::path::Path;
 use std::simd::prelude::{SimdInt, SimdPartialOrd};
 use std::simd::{Mask, Simd};
-use tracing::debug;
+use tracing::{debug, warn};
 
 /// Collection of entities and xy positions they cover
 ///
@@ -156,9 +156,7 @@ impl<E> VEntityMap<E>
         } else {
             // todo: holy magic wtf
             const MAGIC_TOTAL: usize = 104;
-            if points.len() != 104 {
-                panic!("processing {}", points.len());
-            }
+            assert_eq!(points.len(), MAGIC_TOTAL);
             const POINTS_SIZE: usize = 8;
             static_assertions::const_assert!(MAGIC_TOTAL.is_multiple_of(POINTS_SIZE));
 
@@ -594,8 +592,6 @@ where
                 *existing_entity_index = entity_index;
             }
         }
-
-        assert_eq!(self.map.entities.len(), entity_index);
         self.map.entities.push(VPixel { pixel: replace });
     }
 
@@ -618,6 +614,27 @@ where
 
         assert_eq!(self.map.entities.len(), entity_index);
         self.map.entities.push(VPixel { pixel: replace });
+    }
+
+    pub fn require_empty_into(self, replace: Pixel) {
+        let entity_index = self.map.entities.len();
+        let mut failed_count = 0;
+        for position in self.positions {
+            // use safe since iterator can't pre-pass
+            let xy_index = self.map.point_to_index_safe(&position);
+            let existing_entity_index = &mut self.map.xy_to_entity.as_mut_slice()[xy_index];
+            if *existing_entity_index == EMPTY_XY_INDEX {
+                // remove existing
+                *existing_entity_index = entity_index;
+            } else {
+                warn!(
+                    "non empty {position} is {:?}",
+                    self.map.entities[*existing_entity_index]
+                );
+                failed_count += 1;
+            }
+        }
+        assert_eq!(failed_count, 0, "found pixels not empty")
     }
 
     pub fn remove(self) {

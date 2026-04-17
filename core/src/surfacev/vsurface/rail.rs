@@ -3,6 +3,8 @@ use crate::surfacev::mine::MinePath;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vsurface::{VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
 use std::collections::HashMap;
 use tracing::{error, trace};
 
@@ -31,6 +33,16 @@ impl<'s> PlugMut<'s> {
         // self.set_pixels(Pixel::EdgeWall, start_points)?;
 
         self.rails.push(mine_path);
+    }
+
+    pub fn test_add_soda(&mut self, links: &[HopeSodaLink]) {
+        let mut new_points: Vec<VPoint> = Vec::new();
+        for link in links {
+            link.area(&mut new_points);
+        }
+        self.pixels_mut()
+            .change_pixels(new_points)
+            .require_empty_into(Pixel::Rail);
     }
 
     pub fn remove_mine_path_at(&mut self, index: usize) -> Option<(MinePath, Vec<VPoint>)> {
