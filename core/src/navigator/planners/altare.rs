@@ -1,4 +1,4 @@
-use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
+use crate::navigator::base_source::{BaseSource, BaseSourceEighth, BaseSourceEntry};
 use crate::navigator::circleify::draw_circle_around;
 use crate::navigator::mine_executor::{
     ExecuteFlags, ExecutorResult, execute_route_batch_clone_prep,
@@ -38,7 +38,7 @@ const BATCH_SIZE_MAX: usize = 3;
 /// Planner v2 "Regis Altare 🎇"
 ///
 /// Pathfinding with medium-difficulty backtracking.
-/// because v0 Mori and v1 Ruze Planner can mask valid routes
+/// because v0 Mori and v1 Ruze Planner get deadlocked
 pub fn start_altare_planner(tunables: &PathingTunables, surface: &mut VSurfaceNavMut) {
     Quester::init(tunables, surface).start()
 }
@@ -126,13 +126,13 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             }
         }
 
-        info!("post save to gif buffering");
-        for _ in 0..4 {
-            self.surface
-                .pixels()
-                .paint_pixel_colored_zoomed()
-                .save_to_oculante();
-        }
+        // info!("post save to gif buffering");
+        // for _ in 0..4 {
+        //     self.surface
+        //         .pixels()
+        //         .paint_pixel_colored_zoomed()
+        //         .save_to_oculante();
+        // }
     }
 
     fn scan_patches(&mut self) -> QuesterScanResult {
@@ -287,10 +287,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
         ) {
             ExecutorResult::Success { paths, routes } => {
                 self.is_prev_retry = false;
-                self.base_source_positive
-                    .borrow_mut()
-                    .advance_by(paths.len())
-                    .unwrap();
+                let expected_base = self.base_source_positive.borrow_mut().next().unwrap();
                 // routes.last().unwrap().location.draw_area_buffered(surface);
                 for path in paths {
                     self.surface.rails_mut().add_mine_path(path);
@@ -316,13 +313,14 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                     );
 
                     if meta.all_routes.len() == seen_mines.len() {
-                        debug_draw_failing_mines(&mut self.surface.pixels_mut(), &seen_mines);
+                        // debug_draw_failing_mines(&mut self.surface.pixels_mut(), &seen_mines);
+                        debug_failing(&mut self.surface.rails_mut(), meta);
 
+                        error!("combination of {} mines cannot be found", seen_mines.len());
                         self.surface
                             .pixels()
                             .paint_pixel_colored_zoomed()
                             .save_to_oculante();
-                        error!("combination of {} mines cannot be found", seen_mines.len());
                         return ControlFlow::Break(());
                     }
                     assert_ne!(meta.all_routes.len(), seen_mines.len());
@@ -366,7 +364,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                         .pixels()
                         .paint_pixel_colored_zoomed()
                         .save_to_oculante();
-                    // we may took another attempt
+                    // we may try another attempt
 
                     let scan_sign = if self.origin_sign_pos { 1 } else { -1 };
                     self.origin_index -= match self.origin_index.unsigned_abs() {

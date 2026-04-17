@@ -2,6 +2,7 @@ use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::mine_executor::{ExecutionRoute, FailingMeta};
 use crate::navigator::mine_permutate::CompletePlan;
 use crate::navigator::mine_selector::MineSelectBatch;
+use crate::opencv::TextSize;
 use crate::state::tuneables::{ChunkValue, MoriTunables, Tunables};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
@@ -116,7 +117,9 @@ pub(super) fn debug_draw_failing_mines<'a>(
         seen_mines.push(mine_area);
 
         for destination in mine.destinations() {
-            destinations.push(destination.0)
+            tracing::trace!("destination {:?}", destination);
+            // destinations.push(destination.0)
+            destinations.extend(VArea::from_radius(destination.0, 3).get_points());
         }
     }
     surface.change_pixels(destinations).stomp(Pixel::EdgeWall);
@@ -131,15 +134,35 @@ pub fn debug_failing(
     }: FailingMeta,
 ) {
     // draw all endpoints
+    // surface
+    //     .pixels_mut()
+    //     .change_pixels(
+    //         all_routes
+    //             .iter()
+    //             .flat_map(|v| [v.segment.start, v.segment.end])
+    //             .map(|v| *v.point())
+    //             .collect(),
+    //     )
+    //     .stomp(Pixel::Highlighter);
     surface
         .pixels_mut()
-        .change_pixels(
-            all_routes
-                .iter()
-                .flat_map(|v| [v.segment.start, v.segment.end])
-                .map(|v| *v.point())
-                .collect(),
-        )
+        .change_pixels(all_routes.iter().map(|v| *v.segment.end.point()).collect())
+        .stomp(Pixel::Highlighter);
+    let start_points: Vec<VPoint> = all_routes
+        .iter()
+        .map(|v| *v.segment.start.point())
+        .collect();
+    for (i, point) in start_points.iter().enumerate() {
+        surface.pixels_mut().draw_text_at(
+            *point,
+            &i.to_string(),
+            TextSize::small(),
+            Pixel::SteelChest,
+        );
+    }
+    surface
+        .pixels_mut()
+        .change_pixels(start_points)
         .stomp(Pixel::Highlighter);
 
     // split all_routes
@@ -219,7 +242,12 @@ pub fn debug_draw_mine_index_labels(
 ) {
     for (i, mine) in mines.into_iter().enumerate() {
         let mine = mine.borrow();
-        surface.draw_text_at(mine.area_min().point_center(), &i.to_string());
+        surface.draw_text_at(
+            mine.area_min().point_center(),
+            &i.to_string(),
+            TextSize::default(),
+            Pixel::Highlighter,
+        );
     }
 }
 
