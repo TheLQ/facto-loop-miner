@@ -491,7 +491,7 @@ pub struct DebugMinePatch {
 
 #[cfg(test)]
 mod test {
-    use crate::navigator::planners::{debug_draw_mine_links, debug_draw_segment};
+    use crate::navigator::planners::debug_draw_mine_links;
     use crate::surface::pixel::Pixel;
     use crate::surfacev::mine::{DebugMinePatch, MineLocation};
     use crate::surfacev::vpatch::VPatch;

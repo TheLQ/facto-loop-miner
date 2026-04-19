@@ -9,9 +9,7 @@ use crate::navigator::mine_selector::{
 };
 use crate::navigator::mori::{MoriResult, count_link_origins, mori2_start};
 use crate::navigator::planners::PathingTunables;
-use crate::navigator::planners::common::{
-    debug_draw_failing_mines, debug_failing, draw_prep_mines,
-};
+use crate::navigator::planners::common::{Debugger, draw_prep_mines};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::{MineLocation, MinePath};
 use std::cell::RefCell;
@@ -111,7 +109,10 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                         self.window.increment_scanner();
                         continue;
                     }
-                    QuesterScannerResult::NewPatchesInScanArea { selected_mines } => selected_mines,
+                    QuesterScannerResult::NewPatchesInScanArea { selected_mines } => {
+                        assert!(!selected_mines.is_empty());
+                        selected_mines
+                    }
                 },
                 ScannerMode::Mandatory(selected_mines) => std::mem::take(selected_mines),
             };
@@ -122,8 +123,23 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             limiter_counter += 1;
 
             let mines = self.queue_redo_and_next(selected_mines);
+            assert!(!mines.is_empty());
+            let mines_bak = mines.clone();
             let possible_routes = self.new_plan(mines);
-            // info!("batch has {} sequences", possible_routes.sequences.len());
+            if possible_routes.sequences.is_empty() {
+                error!("[FATAL] no routes");
+                Debugger(self.surface)
+                    .starts_numbered(
+                        self.base_source_positive
+                            .clone()
+                            .take(mines_bak.len())
+                            .map(|v| *v.origin.point())
+                            .collect::<Vec<_>>(),
+                    )
+                    .mines(&mines_bak);
+                break;
+            }
+            info!("batch has {} sequences", possible_routes.sequences.len());
 
             match self.execute_plan(possible_routes) {
                 ControlFlow::Break(()) => break,
@@ -137,21 +153,20 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                     state = ScannerMode::Normal;
                 }
                 ControlFlow::Continue(PlanContinue::Fail_SeenMines(meta, seen_mines)) => {
-                    if seen_mines.counts().all_equal()
-                        && seen_mines.counts().next().unwrap().to_owned() == 0
+                    if seen_mines.counts().all_equal() && *seen_mines.counts().next().unwrap() == 0
                     {
                         error!(
                             "Potential deadlock, 0 mines found {} total",
                             seen_mines.len()
                         );
-                        debug_failing(&mut self.surface.rails_mut(), meta);
+                        Debugger(self.surface).routes_found_notfound(meta);
                         break;
                     } else {
                         match state {
                             ScannerMode::Normal => {}
                             ScannerMode::Mandatory(_) => {
                                 error!("{state} followed by {state}");
-                                debug_failing(&mut self.surface.rails_mut(), meta);
+                                Debugger(self.surface).routes_found_notfound(meta);
                                 break;
                             }
                         }
@@ -162,6 +177,11 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                 }
             }
         }
+        info!("last send to oculante");
+        self.surface
+            .pixels()
+            .paint_pixel_colored_entire()
+            .save_to_oculante();
         info!("Closing altare")
     }
 
@@ -200,8 +220,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
     }
 
     /// Redo last [BATCH_SIZE_NEXT]-1 and 1 new mine per iteration
-    fn queue_redo_and_next(&mut self, mut selected_mines: Vec<MineLocation>) -> Vec<MineLocation> {
-        let mut mines: Vec<MineLocation> = Vec::new();
+    fn queue_redo_and_next(&mut self, mut mines: Vec<MineLocation>) -> Vec<MineLocation> {
         for _ in 0..BATCH_SIZE_MAX.saturating_sub(1) {
             if let Some((mine, removed_points)) = self.surface.rails_mut().remove_mine_path_pop() {
                 trace!("batch pop from mine {BATCH_SIZE_MAX}");
@@ -259,7 +278,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             ExecutorResult::Failure { meta, seen_mines } => {
                 if self.surface.rails().get_mine_paths().is_empty() {
                     error!("failed on first iteration, stopping");
-                    debug_failing(&mut self.surface.rails_mut(), meta);
+                    Debugger(self.surface).routes_found_notfound(meta);
                     ControlFlow::Break(())
                 } else {
                     error!(">>>>>>>> Batch fail");
@@ -398,7 +417,7 @@ impl QuesterScanner {
             .mines()
             .iter()
             .filter(|v| scan_area.contains_point(&v.area_min().point_center()))
-            .map(|v| v.clone())
+            .cloned()
             .collect();
         if new_mines_in_scan_area.is_empty() {
             warn!("scan found no mines in {}", scan_area);

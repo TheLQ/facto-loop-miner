@@ -1,7 +1,7 @@
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
 use crate::navigator::planners::PathingTunables;
-use crate::navigator::planners::common::{debug_draw_complete_plan, draw_prep};
+use crate::navigator::planners::common::draw_prep;
 use crate::surfacev::vsurface::{
     VSurfacePatch, VSurfacePatchAsVs, VSurfacePatchMut, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
     VSurfacePixelMut,
@@ -12,7 +12,7 @@ use tracing::{info, trace};
 
 pub fn start_debug_planner(tunables: &PathingTunables, surface_mut: &mut VSurfacePatchMut) {
     let select_batches = get_batches(tunables, surface_mut.patches());
-    paint_result(&mut surface_mut.pixels_mut(), select_batches);
+    // paint_result(&mut surface_mut.pixels_mut(), select_batches);
     // if let Err(()) = debug_conflict_no_touching(surface, &select_batches) {
     //     error!("no touching");
     //     return;
@@ -51,15 +51,15 @@ fn get_batches(tunables: &PathingTunables, surface: VSurfacePatch) -> Vec<MineSe
     select_batches
 }
 
-fn paint_result(surface_mut: &mut VSurfacePixelMut, select_batches: Vec<MineSelectBatch>) {
-    draw_prep(surface_mut, &select_batches);
-    for (i, batch) in select_batches.into_iter().enumerate() {
-        trace!("batch {i}");
-        let plan = get_possible_routes_for_batch(surface_mut.pixels(), batch);
-        debug_draw_complete_plan(surface_mut, plan);
-    }
-    surface_mut
-        .pixels()
-        .paint_pixel_colored_zoomed()
-        .save_to_oculante();
-}
+// fn paint_result(surface_mut: &mut VSurfacePixelMut, select_batches: Vec<MineSelectBatch>) {
+//     draw_prep(surface_mut, &select_batches);
+//     for (i, batch) in select_batches.into_iter().enumerate() {
+//         trace!("batch {i}");
+//         let plan = get_possible_routes_for_batch(surface_mut.pixels(), batch);
+//         debug_draw_complete_plan(surface_mut, plan);
+//     }
+//     surface_mut
+//         .pixels()
+//         .paint_pixel_colored_zoomed()
+//         .save_to_oculante();
+// }

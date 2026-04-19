@@ -4,7 +4,7 @@ use crate::navigator::mine_executor::{
 };
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
-use crate::navigator::planners::common::{PathingTunables, debug_failing, draw_prep};
+use crate::navigator::planners::common::{Debugger, PathingTunables, draw_prep};
 use crate::state::tuneables::MoriTunables;
 use crate::surface::metric::Metrics;
 use crate::surface::pixel::Pixel;
@@ -110,7 +110,7 @@ fn process_batch(
         }
         ExecutorResult::Failure { meta, .. } => {
             if always_true_test() {
-                debug_failing(&mut surface.rails_mut(), meta);
+                Debugger(surface).routes_found_notfound(meta);
                 return false;
             }
 
