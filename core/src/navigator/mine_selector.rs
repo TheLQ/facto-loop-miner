@@ -17,7 +17,7 @@ use tracing::{debug, error, info, warn};
 #[derive(Clone)]
 pub struct MineSelectBatch {
     pub mines: Vec<MineLocation>,
-    pub base_sources: Rc<RefCell<BaseSourceEighth>>,
+    pub base_sources: BaseSourceEighth,
 }
 
 pub enum MineSelectBatchResult {
@@ -62,7 +62,7 @@ pub fn select_mines_and_sources(
     surface: VSurfacePatch,
     maximum_mine_count_per_batch: usize,
 ) -> MineSelectBatchResult {
-    let base_source = BaseSource::from_central_base(tunables).into_refcells();
+    let base_source = BaseSource::from_central_base(tunables).into_positive();
 
     let patch_groups = group_nearby_patches(surface);
     let total_patches: usize = patch_groups
@@ -81,7 +81,7 @@ pub fn select_mines_and_sources(
     // };
     // ordered_patches
 
-    let mine_batches = patches_by_cross_sign_expanding(patch_groups, &base_source, tunables);
+    let mine_batches = patches_by_cross_sign_expanding(patch_groups, base_source, tunables);
     if mine_batches.is_empty() {
         return MineSelectBatchResult::EmptyBatch;
     }
@@ -210,7 +210,7 @@ fn recursive_near_patches<'a>(
 
 fn patches_by_cross_sign_expanding(
     mut mines: Vec<MineLocation>,
-    base_source: &BaseSourceRefs,
+    base_sources: BaseSourceEighth,
     base_tunables: &PathingTunables,
 ) -> Vec<MineSelectBatch> {
     let bounding_area =
@@ -289,16 +289,9 @@ fn patches_by_cross_sign_expanding(
             //     trace!("batch for mine {:?}", mine);
             // }
 
-            // TODO: Support multiple sides
-            let base_source_eighth = if scan_index > 0 {
-                base_source.positive_rc()
-            } else {
-                base_source.negative_rc()
-            };
-
             batches.push(MineSelectBatch {
                 mines: found_mines,
-                base_sources: base_source_eighth,
+                base_sources: base_sources.clone(),
             });
         }
     }

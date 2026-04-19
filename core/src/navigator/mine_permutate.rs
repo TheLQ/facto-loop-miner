@@ -64,11 +64,8 @@ pub fn get_possible_routes_for_batch(
     // let dedupe_len = dedupe_test.len();
     // assert_eq!(total_combinations_permut, dedupe_len);
 
-    let sequences = build_routes_from_destinations(
-        mine_combinations,
-        fixed_finding_limiter,
-        &base_sources.borrow(),
-    );
+    let sequences =
+        build_routes_from_destinations(mine_combinations, fixed_finding_limiter, &base_sources);
     // assert!(
     //     !sequences.is_empty(),
     //     "no sequences found from {mines_len} input mines"
@@ -84,7 +81,7 @@ pub fn get_possible_routes_for_batch(
 
 pub struct CompletePlan {
     pub sequences: Vec<ExecutionSequence>,
-    pub base_sources: Rc<RefCell<BaseSourceEighth>>,
+    pub base_sources: BaseSourceEighth,
 }
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq)]

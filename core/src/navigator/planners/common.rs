@@ -84,8 +84,6 @@ pub(super) fn debug_draw_complete_plan(
             pixels.push(*end.point());
         }
     }
-    base_sources.borrow_mut().advance_by(route_len).unwrap();
-
     surface.change_pixels(pixels).stomp(Pixel::Highlighter)
 }
 
@@ -216,7 +214,7 @@ pub(super) fn draw_prep(surface: &mut VSurfacePixelMut, batches: &[MineSelectBat
 pub(super) fn draw_prep_mines(
     surface: &mut VSurfacePixelMut,
     mines: impl IntoIterator<Item = impl Borrow<MineLocation>>,
-    base_sources: &Rc<RefCell<BaseSourceEighth>>,
+    base_sources: &BaseSourceEighth,
 ) {
     for mine in mines {
         mine.borrow().draw_area_buffered(surface);
@@ -226,7 +224,6 @@ pub(super) fn draw_prep_mines(
     // stop routes going backwards right behind the start
     let radius = surface.pixels().get_radius_i32();
 
-    let base_sources = base_sources.as_ref().borrow();
     let anti_backside_x = base_sources.peek_single().origin.point().x() - 1;
     let anti_backside_points = (-(radius - 1)..radius)
         .map(|i| VPoint::new(anti_backside_x, i))

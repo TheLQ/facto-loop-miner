@@ -1,4 +1,5 @@
 use crate::navigator::planners::PathingTunables;
+use crate::surfacev::mine::MinePath;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
@@ -6,6 +7,7 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;
+use tracing::{error, warn};
 
 pub struct BaseSource {
     positive: BaseSourceEighth,
@@ -30,9 +32,10 @@ impl BaseSource {
         }
     }
 
-    // pub fn positive(&mut self) -> &mut BaseSourceEighth {
-    //     &mut self.positive
-    // }
+    pub fn into_positive(self) -> BaseSourceEighth {
+        self.positive
+    }
+
     //
     // pub fn negative(&mut self) -> &mut BaseSourceEighth {
     //     &mut self.negative
@@ -69,7 +72,7 @@ const TOTAL_INTRA_RAILS: i32 = 4;
 /// For less wasteful navigation
 /// Advance by 45 degrees with xy-square offset 6 = [SMALLEST_RAIL_SQUARE]
 /// Non-perfect pattern, so can only advance 4 times = [TOTAL_INTRA_RAILS] (4*6=24)
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct BaseSourceEighth {
     origin: VPointDirectionQ,
     sign: i32,
@@ -83,14 +86,6 @@ impl BaseSourceEighth {
         Self {
             origin,
             sign,
-            next: 1,
-        }
-    }
-
-    pub fn regenerate(&self) -> Self {
-        Self {
-            origin: self.origin,
-            sign: self.sign,
             next: 1,
         }
     }
@@ -140,22 +135,51 @@ impl BaseSourceEighth {
         res
     }
 
-    pub fn undo_one(&mut self) {
+    pub fn origin(&self) -> VPointDirectionQ {
+        self.origin
+    }
+
+    pub fn undo_one(&mut self) -> BaseSourceEntry {
+        let current = self.get_for_index(self.next);
         self.next -= 1;
-        assert!(self.next >= 1)
+        assert!(self.next >= 1);
+        current
     }
 
     pub fn into_rc_refcell(self) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(self))
+    }
+
+    pub fn advance_sorting(&mut self, mut input: Vec<MinePath>) -> Vec<MinePath> {
+        let mut sorted = Vec::with_capacity(input.len());
+        for i in 0..input.len() {
+            let next = self.next().unwrap();
+            match input.iter().position(|v| v.segment.start == next.origin) {
+                Some(actual_i) => sorted.push(input.remove(actual_i)),
+                None => {
+                    warn!("not found i {i} origin {}", next.origin);
+                    // ignore
+                }
+            }
+        }
+
+        if input.is_empty() {
+            sorted
+        } else {
+            for input in input {
+                error!("unsorted {input:?}")
+            }
+            panic!("base not found in path")
+        }
     }
 }
 
 impl Iterator for BaseSourceEighth {
     type Item = BaseSourceEntry;
     fn next(&mut self) -> Option<Self::Item> {
-        let result = self.get_for_index(self.next);
+        let current = self.get_for_index(self.next);
         self.next += 1;
-        Some(result)
+        Some(current)
     }
 }
 

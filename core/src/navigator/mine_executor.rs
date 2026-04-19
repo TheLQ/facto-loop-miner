@@ -172,13 +172,13 @@ pub fn execute_route_batch(
     let mut cost = CostMeta::new();
 
     let mut failure_attempts_per_len: HashMap<usize, u16> = HashMap::new();
-    let mut failure_seen_mines = Vec::new();
+    let mut failure_seen_mines = HashMap::new();
     let mut success_count = 0;
     let mut failure_count = 0;
     let res: ExecutorResult = route_results.into_iter().fold(
         ExecutorResult::Failure {
             meta: FailingMeta::default(),
-            seen_mines: Vec::new(),
+            seen_mines: HashMap::new(),
         },
         |best, cur_result| {
             let cur_paths = match &cur_result {
@@ -199,6 +199,13 @@ pub fn execute_route_batch(
                 }
             };
             let total_cost = cur_paths.iter().map(|v| v.cost).sum();
+
+            if let ExecutorResult::Failure { meta, .. } = &cur_result {
+                for path in &meta.found_paths {
+                    let next = failure_seen_mines.entry(path.location.clone()).or_default();
+                    *next += 1;
+                }
+            }
 
             match (&best, &cur_result) {
                 (ExecutorResult::Success { .. }, ExecutorResult::Success { .. }) => {
@@ -224,12 +231,6 @@ pub fn execute_route_batch(
                     },
                     ExecutorResult::Failure { meta: cur_meta, .. },
                 ) => {
-                    for path in &cur_meta.found_paths {
-                        if !failure_seen_mines.contains(&path.location) {
-                            failure_seen_mines.push(path.location.clone());
-                        }
-                    }
-
                     if cur_paths.len() > best_meta.all_routes.len() {
                         cost = CostMeta::new();
                         cost.apply_and_is_lowest(total_cost);
@@ -370,7 +371,7 @@ fn execute_route_combination(
                         astar_err: err,
                         found_paths: surface_copy.into_rails(),
                     },
-                    seen_mines: Vec::new(),
+                    seen_mines: HashMap::new(),
                 };
             }
         }
@@ -401,7 +402,7 @@ pub enum ExecutorResult {
     },
     Failure {
         meta: FailingMeta,
-        seen_mines: Vec<MineLocation>,
+        seen_mines: HashMap<MineLocation, usize>,
     },
 }
 

@@ -98,11 +98,11 @@ fn process_batch(
             for route in routes {
                 route.location.draw_area_buffered(&mut surface.pixels_mut());
             }
-            complete_plan
-                .base_sources
-                .borrow_mut()
-                .advance_by(paths.len())
-                .unwrap();
+            if 1 + 1 == 2 {
+                // complete_plan.base_sources.advance_by(paths.len()).unwrap();
+                panic!("idk what to do here, rewriting altare")
+            }
+
             for path in paths {
                 surface.rails_mut().add_mine_path(path);
             }
