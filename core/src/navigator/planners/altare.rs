@@ -36,6 +36,15 @@ const BATCH_SIZE_MAX: usize = 3;
 ///
 /// Pathfinding with medium-difficulty backtracking.
 /// because v0 Mori and v1 Ruze Planner get deadlocked
+///
+/// # Operation
+///
+/// Rolling re-optimizing window at frontier.
+///
+/// On failure to batch, for the least found mine (the lucky mine) find the closest rail.
+/// It can probably use it. Rollback all paths up to it.
+/// Go from that old position to the lucky mine
+/// Re-pathfind from there
 pub fn start_altare_planner(tunables: &PathingTunables, surface: &mut VSurfaceNavMut) {
     Quester::init(tunables, surface).start()
 }
@@ -95,7 +104,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
         let mut limiter_counter = 0;
         let mut state = ScannerMode::Normal;
         loop {
-            let selected_mines = match &mut state {
+            let mines = match &mut state {
                 ScannerMode::Normal => match self.window.scan_normal_square(self) {
                     QuesterScannerResult::AxisEnd(ScanAxis::Advance) => {
                         info!("base_source out of bounds, ending");
@@ -109,20 +118,24 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                         self.window.increment_scanner();
                         continue;
                     }
-                    QuesterScannerResult::NewPatchesInScanArea { selected_mines } => {
+                    QuesterScannerResult::NewPatchesInScanArea { mut selected_mines } => {
                         assert!(!selected_mines.is_empty());
+                        self.queue_redo(&mut selected_mines);
                         selected_mines
                     }
                 },
-                ScannerMode::Mandatory(selected_mines) => std::mem::take(selected_mines),
+                ScannerMode::Mandatory(selected_mines) => {
+                    self.queue_redo(selected_mines);
+                    std::mem::take(selected_mines)
+                }
             };
+
             if limiter_counter >= 99999 {
                 self.debug_iteration(limiter_counter);
                 break;
             }
             limiter_counter += 1;
 
-            let mines = self.queue_redo_and_next(selected_mines);
             assert!(!mines.is_empty());
             let mines_bak = mines.clone();
             let possible_routes = self.new_plan(mines);
@@ -219,8 +232,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             .save_to_oculante();
     }
 
-    /// Redo last [BATCH_SIZE_NEXT]-1 and 1 new mine per iteration
-    fn queue_redo_and_next(&mut self, mut mines: Vec<MineLocation>) -> Vec<MineLocation> {
+    fn queue_redo(&mut self, mines: &mut Vec<MineLocation>) {
         for _ in 0..BATCH_SIZE_MAX.saturating_sub(1) {
             if let Some((mine, removed_points)) = self.surface.rails_mut().remove_mine_path_pop() {
                 trace!("batch pop from mine {BATCH_SIZE_MAX}");
@@ -234,26 +246,6 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                 assert_eq!(last_entry.origin, mine.segment.start);
             }
         }
-
-        let existing_paths = self
-            .surface
-            .rails()
-            .get_mine_paths()
-            .iter()
-            .map(|v| &v.location)
-            .collect::<Vec<_>>();
-        for mine in self.window.mines() {
-            if mines.len() == BATCH_SIZE_MAX {
-                break;
-            }
-            if existing_paths.contains(&mine) {
-                continue;
-            }
-            trace!("batch pop from patches");
-            mines.push(mine.clone());
-        }
-        assert_eq!(mines.len(), BATCH_SIZE_MAX);
-        mines
     }
 
     fn execute_plan(&mut self, possible_routes: CompletePlan) -> ControlFlow<(), PlanContinue> {
