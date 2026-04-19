@@ -1,13 +1,12 @@
 use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::mine_executor::{ExecutionRoute, ExecutionSequence, FailingMeta};
-use crate::navigator::mine_permutate::CompletePlan;
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::opencv::TextSize;
 use crate::state::tuneables::{ChunkValue, MoriTunables, Tunables};
 use crate::surface::pixel::Pixel;
-use crate::surfacev::mine::{MineLocation, MinePath};
+use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::{
-    VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRailAsVsMut, VSurfaceRailMut,
+    VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRailAsVsMut,
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_THREE, VPoint};
@@ -16,8 +15,6 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
 use itertools::Itertools;
 use std::borrow::Borrow;
-use std::cell::RefCell;
-use std::rc::Rc;
 use tracing::{error, warn};
 
 pub struct PathingTunables {

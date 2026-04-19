@@ -1,4 +1,4 @@
-use crate::navigator::base_source::{BaseSource, BaseSourceEighth, BaseSourceEntry};
+use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
 use crate::navigator::circleify::draw_circle_around;
 use crate::navigator::mine_executor::{
     ExecuteFlags, ExecutorResult, FailingMeta, execute_route_batch_clone_prep,
@@ -11,12 +11,10 @@ use crate::navigator::mori::{MoriResult, count_link_origins, mori2_start};
 use crate::navigator::planners::PathingTunables;
 use crate::navigator::planners::common::{Debugger, draw_prep_mines};
 use crate::surface::pixel::Pixel;
-use crate::surfacev::mine::{MineLocation, MinePath};
-use std::cell::RefCell;
-
+use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::{
     VSurfaceNavMut, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
-    VSurfaceRail, VSurfaceRailAsVs, VSurfaceRailAsVsMut, VSurfaceRailMut,
+    VSurfaceRail, VSurfaceRailAsVs, VSurfaceRailAsVsMut,
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
@@ -68,7 +66,6 @@ struct Quester<'t, 'sr, 's> {
     base_source_positive: BaseSourceEighth,
     window: QuesterScanner,
     tunables: &'t PathingTunables,
-    state: ScannerMode,
 }
 
 impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
@@ -96,7 +93,6 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                 mines_remain,
             ),
             tunables,
-            state: ScannerMode::Normal,
         }
     }
 
@@ -475,7 +471,7 @@ impl SeenMines {
         self.0.iter().min_by_key(|(_, count)| *count).unwrap().0
     }
 
-    fn counts(&self) -> std::collections::hash_map::Values<MineLocation, usize> {
+    fn counts(&self) -> std::collections::hash_map::Values<'_, MineLocation, usize> {
         self.0.values()
     }
 
