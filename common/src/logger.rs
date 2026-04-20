@@ -7,17 +7,24 @@ const TRACE_NO_ADMIRAL_NETWORK: [&str; 3] = [
 ];
 
 pub fn log_init_trace() {
-    log_config(&[]).log_init_trace()
+    log_config(&[], false).log_init_trace()
+}
+
+pub fn log_init_trace_no_main_treads() {
+    log_config(&[], true).log_init_trace()
 }
 
 pub fn log_init_debug() {
-    log_config(&[]).log_init_debug()
+    log_config(&[], false).log_init_debug()
 }
 
-fn log_config(extra_filter_env: &'static [&'static str]) -> XanaCommonsLogConfig<FactoLogConfig> {
+fn log_config(
+    extra_filter_env: &'static [&'static str],
+    filter_non_main_threads: bool,
+) -> XanaCommonsLogConfig<FactoLogConfig> {
     XanaCommonsLogConfig::new_map_huge()
         .with_extra_filter_env(extra_filter_env)
-        .with_filter_non_main_threads(true)
+        .with_filter_non_main_threads(filter_non_main_threads)
 }
 
 struct FactoLogConfig;

@@ -97,6 +97,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
     fn start(&mut self) {
         let mut limiter_counter = 0;
         let mut state = ScannerMode::Normal;
+
         loop {
             let mut mines = match &mut state {
                 ScannerMode::Normal => match self.window.scan_normal_square(self) {
@@ -181,11 +182,14 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                         }
                     };
                     state = ScannerMode::Normal;
+
+                    self.common_send_to_oculante();
                 }
                 PlanContinue::Fail { stats } => {
                     error!("{stats}");
                     let seen_mines = SeenMines(stats.seen_mines);
 
+                    let is_break;
                     if !stats.wasted_per_len.is_empty() {
                         error!("why you wasting attempts?");
                         Debugger(self.surface, "wasting-iteration")
@@ -193,14 +197,14 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                             .mines(seen_mines.mines())
                             .starts_numbered(self.base_source_positive.clone(), seen_mines.len())
                             .wasteds(stats.wasteds);
-                        break;
+                        is_break = true;
                     } else if self.surface.rails().get_mine_paths().is_empty() {
                         error!("failed on first iteration, stopping");
                         Debugger(self.surface, "first-iteration")
                             .fail_mine_color_and_best_routes(stats.best_meta)
                             .mines(seen_mines.mines())
                             .starts_numbered(self.base_source_positive.clone(), seen_mines.len());
-                        break;
+                        is_break = true;
                     } else if seen_mines.counts().all_equal()
                         && *seen_mines.counts().next().unwrap() == 0
                     {
@@ -210,30 +214,41 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                         );
                         Debugger(self.surface, "potential-deadlock")
                             .fail_mine_color_and_best_routes(stats.best_meta);
-                        break;
+                        is_break = true;
                     } else {
                         match state {
-                            ScannerMode::Normal => {}
+                            ScannerMode::Normal => {
+                                let next_mine = self.rollback_closest_rail(seen_mines);
+                                state = ScannerMode::Mandatory(vec![next_mine]);
+                                is_break = false;
+                            }
                             ScannerMode::Mandatory(_) => {
                                 error!("{state} followed by {state}");
                                 Debugger(self.surface, "Mandatory-dupe")
                                     .fail_mine_color_and_best_routes(stats.best_meta);
-                                break;
+                                is_break = true;
                             }
                         }
+                    }
 
-                        let next_mine = self.rollback_closest_rail(seen_mines);
-                        state = ScannerMode::Mandatory(vec![next_mine])
+                    self.common_send_to_oculante();
+                    if is_break {
+                        trace!("breaking on fail");
+                        break;
                     }
                 }
             }
         }
         info!("last send to oculante");
+        self.common_send_to_oculante();
+        info!("Closing altare")
+    }
+
+    fn common_send_to_oculante(&self) {
         self.surface
             .pixels()
             .paint_pixel_colored_entire()
-            .save_to_oculante();
-        info!("Closing altare")
+            .save_to_oculante()
     }
 
     fn debug_iteration(&self, limiter_counter: u32) {
@@ -306,20 +321,10 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                 for path in sorted_paths {
                     self.surface.rails_mut().add_mine_path(path);
                 }
-
-                self.surface
-                    .pixels()
-                    .paint_pixel_colored_zoomed()
-                    .save_to_oculante();
                 PlanContinue::Success
             }
             ExecutorResult::Failure { stats } => {
                 error!(">>>>>>>> Batch fail");
-
-                self.surface
-                    .pixels()
-                    .paint_pixel_colored_zoomed()
-                    .save_to_oculante();
                 PlanContinue::Fail { stats }
             }
         }

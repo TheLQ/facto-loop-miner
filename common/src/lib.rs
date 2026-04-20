@@ -8,6 +8,7 @@ pub mod util;
 
 pub use logger::log_init_debug;
 pub use logger::log_init_trace;
+pub use logger::log_init_trace_no_main_treads;
 
 pub const LOCALE: Locale = Locale::en;
 pub use xana_commons_rs::EXECUTOR_TAG;

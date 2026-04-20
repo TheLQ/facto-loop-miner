@@ -254,7 +254,9 @@ impl IntraLevel {
 
 #[cfg(test)]
 mod test {
-    use crate::navigator::base_source::{BaseSourceEighth, BaseSourceEntry, SMALLEST_RAIL_SQUARE};
+    use crate::navigator::base_source::{
+        BaseSourceEighth, BaseSourceEntry, IntraLevel, SMALLEST_RAIL_SQUARE,
+    };
     use crate::surfacev::mine::MinePath;
     use crate::surfacev::vsurface::{VSurfacePixelAsVsMut, VSurfaceRailAsVs, VSurfaceRailAsVsMut};
     use facto_loop_miner_common::log_init_trace;
@@ -293,7 +295,11 @@ mod test {
                     VPoint::new(intra, intra + (SECTION_POINTS_I32 * sections)),
                     FacDirectionQuarter::East,
                 ),
-                applied_intra_offset: VPoint::new(intra, intra),
+                applied_intra: IntraLevel {
+                    direction: FacDirectionQuarter::East,
+                    pixels: intra,
+                    level: intras.try_into().unwrap(),
+                },
             };
 
             let test_result = next == expected_entry;
@@ -307,15 +313,17 @@ mod test {
             //     next.applied_intra_offset
             // );
             info!(
-                "={test_result}\n{:<8}: {}\n{:<8}: {}\n{:<8}: {}\n{:<8}: {}",
+                "={test_result}\n{:<8}: {}\n{:<8}: {}\n{:<8}: {}\n{:<8}: {:?}\n{:<8}: {:?}",
                 "expected",
                 expected_entry.origin.point(),
                 "next",
                 next.origin.point(),
                 "",
-                next.origin.point() - &next.applied_intra_offset,
-                "offset",
-                next.applied_intra_offset,
+                next.applied_intra.undo(*next.origin.point()),
+                "offset-actual",
+                next.applied_intra,
+                "offset-expect",
+                expected_entry.applied_intra,
             );
         }
         assert!(!is_failed);
