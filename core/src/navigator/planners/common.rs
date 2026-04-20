@@ -19,6 +19,7 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
 use itertools::Itertools;
 use std::borrow::Borrow;
+use std::collections::HashMap;
 use tracing::{error, warn};
 
 pub struct PathingTunables {
@@ -142,6 +143,23 @@ impl<S: VSurfacePixelAsVsMut> Debugger<'_, S> {
             .pixels_mut()
             .change_pixels(pixels)
             .stomp(Pixel::Highlighter);
+        self
+    }
+
+    pub fn wasteds(&mut self, wasteds: HashMap<Vec<VPoint>, usize>) -> &mut Self {
+        for (wasted, count) in wasteds {
+            let center = VArea::from_arbitrary_points(&wasted).point_center();
+            self.0
+                .pixels_mut()
+                .change_pixels(wasted)
+                .stomp(Pixel::Highlighter);
+            self.0.pixels_mut().draw_text_at(
+                center,
+                &count.to_string(),
+                TextSize::small(),
+                Pixel::EdgeWall,
+            );
+        }
         self
     }
 }

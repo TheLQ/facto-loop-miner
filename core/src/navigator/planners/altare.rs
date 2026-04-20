@@ -186,7 +186,15 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                     error!("{stats}");
                     let seen_mines = SeenMines(stats.seen_mines);
 
-                    if self.surface.rails().get_mine_paths().is_empty() {
+                    if !stats.wasted_per_len.is_empty() {
+                        error!("why you wasting attempts?");
+                        Debugger(self.surface, "wasting-iteration")
+                            .fail_mine_color_and_best_routes(stats.best_meta)
+                            .mines(seen_mines.mines())
+                            .starts_numbered(self.base_source_positive.clone(), seen_mines.len())
+                            .wasteds(stats.wasteds);
+                        break;
+                    } else if self.surface.rails().get_mine_paths().is_empty() {
                         error!("failed on first iteration, stopping");
                         Debugger(self.surface, "first-iteration")
                             .fail_mine_color_and_best_routes(stats.best_meta)

@@ -17,7 +17,8 @@ use pathfinding::prelude::AStarErr;
 use rayon::ThreadPool;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
+use std::hash::Hash;
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;
@@ -446,7 +447,7 @@ pub struct FailingMeta {
 
 pub enum FailingCause {
     AStar(AStarErr<HopeSodaLink, u32>),
-    Wasted,
+    Wasted(Vec<VPoint>),
 }
 
 // impl Default for FailingMeta {
@@ -468,7 +469,8 @@ pub struct FailingStats {
     pub seen_mines: HashMap<MineLocation, usize>,
     pub seen_destinations: HashMap<VPoint, usize>,
     pub wasted_per_len: HashMap<usize, usize>,
-    pub successes_per_len: HashMap<usize, usize>,
+    pub failures_per_len: HashMap<usize, usize>,
+    pub wasteds: HashMap<Vec<VPoint>, usize>,
 }
 
 impl FailingStats {
@@ -476,7 +478,7 @@ impl FailingStats {
         let mut new = Self {
             // best_meta: FailingMeta::default(), // todo: the only reason FailingMeta impls default
             best_meta: FailingMeta {
-                cause: FailingCause::Wasted,
+                cause: FailingCause::Wasted(Vec::new()),
                 found_paths: Vec::new(),
                 failing_sequence: FailingSequence(usize::MAX),
                 sequence: ExecutionSequence(Vec::new()),
@@ -484,7 +486,8 @@ impl FailingStats {
             seen_mines: HashMap::new(),
             seen_destinations: HashMap::new(),
             wasted_per_len: HashMap::new(),
-            successes_per_len: HashMap::new(),
+            failures_per_len: HashMap::new(),
+            wasteds: HashMap::new(),
         };
         new.absorb_meta(&best_meta);
         new.best_meta = best_meta;
@@ -492,19 +495,22 @@ impl FailingStats {
     }
 
     fn absorb_meta(&mut self, meta: &FailingMeta) {
-        let successes = self
-            .successes_per_len
+        let failures_at_len = self
+            .failures_per_len
             .entry(meta.found_paths.len())
             .or_default();
-        *successes += 1;
+        *failures_at_len += 1;
 
-        match meta.cause {
-            FailingCause::Wasted => {
-                let wasted = self
+        match &meta.cause {
+            FailingCause::Wasted(wasted) => {
+                let wasteds = self.wasteds.entry(wasted.clone()).or_default();
+                *wasteds += 1;
+
+                let counts_at_len = self
                     .wasted_per_len
                     .entry(meta.found_paths.len())
                     .or_default();
-                *wasted += 1;
+                *counts_at_len += 1;
             }
             FailingCause::AStar(_) => {}
         }
@@ -537,30 +543,39 @@ impl Display for FailingStats {
             seen_mines,
             seen_destinations,
             wasted_per_len,
-            successes_per_len,
+            failures_per_len,
+            wasteds,
         } = self;
+
+        fn print_map(
+            f: &mut Formatter<'_>,
+            map: &HashMap<impl Debug + Ord + Hash, usize>,
+        ) -> std::fmt::Result {
+            for key in map.keys().sorted() {
+                let count = map[key];
+                writeln!(f, "{count:>4}  {key:?}")?;
+            }
+            Ok(())
+        }
 
         writeln!(f, "\n=============\nFAILURE_STATS\n")?;
 
         writeln!(f, "- Seen Mines - ")?;
-        for (v, count) in seen_mines {
-            writeln!(f, "{count:>4}  {v:?}")?;
-        }
+        print_map(f, seen_mines)?;
 
         writeln!(f, "- Seen destinations - ")?;
-        for (v, count) in seen_destinations {
-            writeln!(f, "{count:>4}  {v:?}")?;
-        }
+        print_map(f, seen_destinations)?;
 
         writeln!(f, "- Wasted per len - ")?;
-        for (v, count) in wasted_per_len {
-            writeln!(f, "{count:>4}  {v:?}")?;
+        print_map(f, wasted_per_len)?;
+
+        writeln!(f, "- Wasted blocks - ")?;
+        for (_, count) in wasteds {
+            writeln!(f, "block used {count:>4}")?;
         }
 
-        writeln!(f, "- Success per len - ")?;
-        for (v, count) in successes_per_len {
-            writeln!(f, "{count:>4}  {v:?}")?;
-        }
+        writeln!(f, "- Failures per len - ")?;
+        print_map(f, failures_per_len)?;
 
         Ok(())
     }

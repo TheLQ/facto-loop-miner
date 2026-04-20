@@ -34,30 +34,12 @@ pub fn mori2_start(
     let start_link = HopeSodaLink::new_soda_straight_q(&endpoints.start);
     let end_link = HopeSodaLink::new_soda_straight_q(&endpoints.end);
 
-    if !surface.is_points_free_unchecked(&end_link.area_vec()) {
-        // // todo: lock?
-        // error!("endpoint {}", endpoints.end);
-        // let new_surface = crude_dump_on_failure(surface, end_link, endpoints);
-        // new_surface.paint_pixel_colored_entire().save_to_oculante();
-        // // new_surface
-        // //     .paint_pixel_colored_entire()
-        // //     .save_to_file(Path::new("work/out0"))
-        // //     .unwrap();
-        // new_surface.assert_no_empty();
-        //
-        // panic!("waste of time")
-
-        let mut founds = HashSet::new();
-        for pos in end_link.area_vec() {
-            founds.insert(surface.get_pixel(pos));
-        }
-        // let founds_txt = founds.iter().map(|v| v.as_ref()).join(",");
-        let founds_txt = "";
-
-        // we need this when 100% blocked
-        warn!("waste of time {endpoints} {founds_txt}");
+    let mut checked_link = end_link.area_vec();
+    if !surface.is_points_free_unchecked(&checked_link) {
+        checked_link.sort();
+        warn!("waste of time {endpoints}");
         return MoriResult::FailingDebug {
-            cause: FailingCause::Wasted,
+            cause: FailingCause::Wasted(checked_link),
         };
     }
 
