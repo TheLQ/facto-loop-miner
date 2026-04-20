@@ -99,15 +99,18 @@ impl BaseSourceEighth {
             .move_direction_sideways_int(self.origin.direction(), section_move);
         section_pos.assert_step_rail();
 
-        let intra_move = (index % TOTAL_INTRA_RAILS) * SMALLEST_RAIL_SQUARE;
-        let intra_pos = section_pos
-            .move_direction_int(self.origin.direction(), intra_move)
-            .move_direction_sideways_int(self.origin.direction(), intra_move);
+        let level = index % TOTAL_INTRA_RAILS;
+        let intra_move = level * SMALLEST_RAIL_SQUARE;
+        let applied_intra = IntraLevel {
+            pixels: intra_move,
+            level: level.try_into().unwrap(),
+            direction: *self.origin.direction(),
+        };
+        let intra_pos = applied_intra.apply(section_pos);
 
-        let applied_intra_offset = intra_pos - section_pos;
         BaseSourceEntry {
             origin: VPointDirectionQ(intra_pos, *self.origin.direction()),
-            applied_intra_offset,
+            applied_intra,
         }
     }
 
@@ -193,8 +196,7 @@ impl Iterator for BaseSourceEighth {
 #[derive(Debug, PartialEq)]
 pub struct BaseSourceEntry {
     pub origin: VPointDirectionQ,
-    /// undo intra offset
-    pub applied_intra_offset: VPoint,
+    pub applied_intra: IntraLevel,
 }
 
 impl BaseSourceEntry {
@@ -202,7 +204,7 @@ impl BaseSourceEntry {
         &self,
         VPointDirectionQ(pos, direction): &VPointDirectionQ,
     ) -> VSegment {
-        let test_origin = *self.origin.point() - self.applied_intra_offset;
+        let test_origin = self.applied_intra.undo(*self.origin.point());
         assert_eq!(
             test_origin.test_step_rail(),
             None,
@@ -218,13 +220,35 @@ impl BaseSourceEntry {
             pos,
         );
 
-        let new_pos = *pos + self.applied_intra_offset;
+        let new_pos = self.applied_intra.apply(*pos);
         // trace!("adjusted {pos} to {new_pos} diff {}", new_pos - *pos);
 
         VSegment {
             start: self.origin,
             end: VPointDirectionQ(new_pos, *direction),
         }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct IntraLevel {
+    level: u8,
+    pixels: i32,
+    direction: FacDirectionQuarter,
+}
+
+impl IntraLevel {
+    pub fn apply(&self, input: VPoint) -> VPoint {
+        input
+            .move_direction_int(self.direction, self.pixels)
+            .move_direction_sideways_int(self.direction, self.pixels)
+    }
+
+    pub fn undo(&self, input: VPoint) -> VPoint {
+        let backwards = self.direction.rotate_flip();
+        input
+            .move_direction_int(backwards, self.pixels)
+            .move_direction_sideways_int(backwards, self.pixels)
     }
 }
 
