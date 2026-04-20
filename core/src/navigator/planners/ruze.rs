@@ -68,16 +68,20 @@ fn process_batch(
     let num_per_batch_routes_min = complete_plan
         .sequences
         .iter()
-        .map(|v| v.routes.len())
+        .map(|v| v.routes().len())
         .min()
         .unwrap();
     let num_per_batch_routes_max = complete_plan
         .sequences
         .iter()
-        .map(|v| v.routes.len())
+        .map(|v| v.routes().len())
         .max()
         .unwrap();
-    let num_routes_total: usize = complete_plan.sequences.iter().map(|v| v.routes.len()).sum();
+    let num_routes_total: usize = complete_plan
+        .sequences
+        .iter()
+        .map(|v| v.routes().len())
+        .sum();
     let num_batches = complete_plan.sequences.len();
     info!(
         "batch #{batch_index} with {num_mines} mines created {num_batches} combinations \
@@ -92,10 +96,10 @@ fn process_batch(
         &[],
     ); // todo: Shrink flag??
     match res {
-        ExecutorResult::Success { paths, routes } => {
+        ExecutorResult::Success { paths, sequence } => {
             info!("pushing {} new mine paths", paths.len());
             assert!(!paths.is_empty(), "Success but no paths!!!!");
-            for route in routes {
+            for route in sequence.routes() {
                 route.location.draw_area_buffered(&mut surface.pixels_mut());
             }
             if 1 + 1 == 2 {
@@ -110,38 +114,43 @@ fn process_batch(
         }
         ExecutorResult::Failure { meta, .. } => {
             if always_true_test() {
-                Debugger(surface, "ruze-debug").routes_found_notfound(meta);
+                Debugger(surface, "ruze-debug").fail_mine_color_and_best_routes(meta);
                 return false;
             }
+            panic!("todo")
+            //
+            // let FailingMeta {
+            //     found_paths,
+            //     all_routes: failing_routes,
+            //     astar_err: _,
+            // } = meta;
+            //
+            // error!("failed to pathfind");
+            // for path in found_paths {
+            //     surface
+            //         .rails_mut()
+            //         .add_mine_path_with_pixel(path, Pixel::Highlighter);
+            // }
+            //
+            // let (trigger_mine, rest) = failing_routes.split_first().unwrap();
+            // warn!(
+            //     "trigger failing at {:?} with rest num {}",
+            //     trigger_mine.location.area_buffered(),
+            //     rest.len()
+            // );
+            // trigger_mine
+            //     .location
+            //     .draw_area_buffered_with(&mut surface.pixels_mut(), Pixel::Highlighter);
+            // for entry in rest {
+            //     warn!("failing at {:?}", entry.location.area_buffered());
+            //     trigger_mine
+            //         .location
+            //         .draw_area_buffered_with(&mut surface.pixels_mut(), Pixel::EdgeWall);
+            // }
+            // false
 
-            let FailingMeta {
-                found_paths,
-                all_routes: failing_routes,
-                astar_err: _,
-            } = meta;
-
-            error!("failed to pathfind");
-            for path in found_paths {
-                surface
-                    .rails_mut()
-                    .add_mine_path_with_pixel(path, Pixel::Highlighter);
-            }
-
-            let (trigger_mine, rest) = failing_routes.split_first().unwrap();
-            warn!(
-                "trigger failing at {:?} with rest num {}",
-                trigger_mine.location.area_buffered(),
-                rest.len()
-            );
-            trigger_mine
-                .location
-                .draw_area_buffered_with(&mut surface.pixels_mut(), Pixel::Highlighter);
-            for entry in rest {
-                warn!("failing at {:?}", entry.location.area_buffered());
-                trigger_mine
-                    .location
-                    .draw_area_buffered_with(&mut surface.pixels_mut(), Pixel::EdgeWall);
-            }
+            // commented out above only to todo panic
+            // -------
 
             // // very busy dump
             // let mut pixels = Vec::new();
@@ -171,8 +180,6 @@ fn process_batch(
             //         .save_pixel_img_colorized_grad_disk(step_out_dir, compressed)
             //         .unwrap();
             // }
-
-            false
         }
     }
 }

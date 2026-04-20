@@ -50,7 +50,7 @@ pub fn execute_route_batch(
     let unique_mines = {
         let mut seen: Vec<&MineLocation> = Vec::new();
         for sequence in &sequences {
-            for route in &sequence.routes {
+            for route in sequence.routes() {
                 if !seen.contains(&&route.location) {
                     seen.push(&route.location);
                 }
@@ -63,7 +63,7 @@ pub fn execute_route_batch(
     {
         let seq_segments: Vec<Vec<VSegment>> = sequences
             .iter()
-            .map(|v| v.routes.iter().map(|v| v.segment.clone()).collect())
+            .map(|v| v.routes().iter().map(|v| v.segment.clone()).collect())
             .collect();
         let mut seq_segments_clean = seq_segments.clone();
         seq_segments_clean.dedup();
@@ -114,11 +114,11 @@ pub fn execute_route_batch(
         WRAPPING_POOL.install(|| {
             sequences
                 .into_par_iter()
-                .map(|ExecutionSequence { routes }| {
+                .map(|sequence| {
                     execute_route_combination(
                         tunables,
                         execution_surface,
-                        routes,
+                        sequence,
                         total_sequences,
                         flags,
                     )
@@ -129,11 +129,11 @@ pub fn execute_route_batch(
         sequences
             .into_iter()
             // .take(40)
-            .map(|ExecutionSequence { routes }| {
+            .map(|sequence| {
                 execute_route_combination(
                     tunables,
                     execution_surface,
-                    routes,
+                    sequence,
                     total_sequences,
                     flags,
                 )
@@ -229,9 +229,9 @@ pub fn execute_route_batch(
                     ExecutorResult::Failure {
                         meta: best_meta, ..
                     },
-                    ExecutorResult::Failure { .. },
+                    ExecutorResult::Failure { meta: cur_meta, .. },
                 ) => {
-                    if cur_paths.len() > best_meta.all_routes.len() {
+                    if best_meta.failing_sequence < cur_meta.failing_sequence {
                         cost = CostMeta::new();
                         cost.apply_and_is_lowest(total_cost);
                         cur_result
@@ -297,7 +297,7 @@ static FAIL_COUNTER: AtomicUsize = AtomicUsize::new(0);
 fn execute_route_combination(
     tuneables: &MoriTunables,
     surface: VSurfacePixel,
-    route_combination: Vec<ExecutionRoute>,
+    sequence: ExecutionSequence,
     total_sequences: usize,
     flags: &[ExecuteFlags],
 ) -> ExecutorResult {
@@ -323,13 +323,13 @@ fn execute_route_combination(
     let surface = &mut surface_copy.rails_mut();
     // info!("Cloned surface in {}", watch);
 
-    for (i, route) in route_combination.iter().enumerate() {
+    for (i, route) in sequence.routes().iter().enumerate() {
         if flags.contains(&ExecuteFlags::ShrinkBases) {
             route
                 .location
                 .draw_area_buffered_to_no_touch(&mut surface.pixels_mut());
             if i != 0 {
-                route_combination[i - 1]
+                sequence.routes()[i - 1]
                     .location
                     .draw_area_buffered(&mut surface.pixels_mut())
             }
@@ -367,7 +367,8 @@ fn execute_route_combination(
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
                 return ExecutorResult::Failure {
                     meta: FailingMeta {
-                        all_routes: route_combination,
+                        sequence,
+                        failing_sequence: FailingSequence(i),
                         astar_err: err,
                         found_paths: surface_copy.into_rails(),
                     },
@@ -380,7 +381,7 @@ fn execute_route_combination(
     SUCCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
     ExecutorResult::Success {
         paths: surface_copy.into_rails(),
-        routes: route_combination,
+        sequence,
     }
 }
 
@@ -390,15 +391,34 @@ pub struct ExecutionRoute {
     pub finding_limiter: VArea,
 }
 
-pub struct ExecutionSequence {
-    pub routes: Vec<ExecutionRoute>,
+/// A single attempt of routes
+pub struct ExecutionSequence(Vec<ExecutionRoute>);
+
+impl ExecutionSequence {
+    pub fn new(routes: Vec<ExecutionRoute>) -> Self {
+        Self(routes)
+    }
+
+    pub fn routes(&self) -> &[ExecutionRoute] {
+        &self.0
+    }
+
+    pub fn split_routes_from(&self, failing_sequence: FailingSequence) -> ExecutionSequenceParts {
+        let (pass, fail) = self.0.split_at(failing_sequence.0);
+        ExecutionSequenceParts { pass, fail }
+    }
+}
+
+pub struct ExecutionSequenceParts<'r> {
+    pub pass: &'r [ExecutionRoute],
+    pub fail: &'r [ExecutionRoute],
 }
 
 #[derive(AsRefStr)]
 pub enum ExecutorResult {
     Success {
         paths: Vec<MinePath>,
-        routes: Vec<ExecutionRoute>,
+        sequence: ExecutionSequence,
     },
     Failure {
         meta: FailingMeta,
@@ -407,13 +427,13 @@ pub enum ExecutorResult {
 }
 
 impl ExecutorResult {
-    fn get_all_sequences(&self) -> &Vec<ExecutionRoute> {
+    fn get_sequence(&self) -> &ExecutionSequence {
         match self {
-            ExecutorResult::Success { routes, .. } => routes,
+            ExecutorResult::Success { sequence, .. } => sequence,
             ExecutorResult::Failure {
-                meta: FailingMeta { all_routes, .. },
+                meta: FailingMeta { sequence, .. },
                 ..
-            } => all_routes,
+            } => sequence,
         }
     }
 }
@@ -421,7 +441,8 @@ impl ExecutorResult {
 // #[derive(Default)]
 pub struct FailingMeta {
     pub found_paths: Vec<MinePath>,
-    pub all_routes: Vec<ExecutionRoute>,
+    pub sequence: ExecutionSequence,
+    pub failing_sequence: FailingSequence,
     pub astar_err: AStarErr<HopeSodaLink, u32>,
 }
 
@@ -433,10 +454,15 @@ impl Default for FailingMeta {
                 parents: Default::default(),
             },
             found_paths: Vec::new(),
-            all_routes: Vec::new(),
+            failing_sequence: FailingSequence(usize::MAX),
+            sequence: ExecutionSequence(Vec::new()),
         }
     }
 }
+
+#[repr(transparent)]
+#[derive(PartialEq, PartialOrd)]
+pub struct FailingSequence(usize);
 
 #[derive(PartialEq)]
 pub enum ExecuteFlags {

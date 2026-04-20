@@ -1,5 +1,7 @@
 use crate::navigator::base_source::BaseSourceEighth;
-use crate::navigator::mine_executor::{ExecutionRoute, ExecutionSequence, FailingMeta};
+use crate::navigator::mine_executor::{
+    ExecutionRoute, ExecutionSequence, ExecutionSequenceParts, FailingMeta,
+};
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::opencv::TextSize;
 use crate::state::tuneables::{
@@ -81,7 +83,7 @@ impl<S: VSurfacePixelAsVsMut> Debugger<'_, S> {
         // will dupe
         let mut pixels = Vec::new();
         for sequence in sequences {
-            for route in &sequence.routes {
+            for route in sequence.routes() {
                 let VSegment { start, end } = route.segment;
                 pixels.push(*start.point());
                 pixels.push(*end.point());
@@ -124,69 +126,58 @@ impl<S: VSurfacePixelAsVsMut> Debugger<'_, S> {
         self
     }
 
-    pub fn starts_numbered(&mut self, start_points: Vec<VPoint>) -> &mut Self {
-        for (i, point) in start_points.iter().enumerate() {
+    pub fn starts_numbered(&mut self, start_points: BaseSourceEighth, amount: usize) -> &mut Self {
+        let mut pixels = Vec::new();
+        for (i, base_source) in start_points.enumerate().take(amount) {
+            let point = *base_source.origin.point();
             self.0.pixels_mut().draw_text_at(
-                *point,
+                point,
                 &i.to_string(),
                 TextSize::small(),
                 Pixel::SteelChest,
             );
+            pixels.push(point);
         }
         self.0
             .pixels_mut()
-            .change_pixels(start_points)
+            .change_pixels(pixels)
             .stomp(Pixel::Highlighter);
         self
     }
 }
 
 impl<S: VSurfacePixelAsVsMut + VSurfaceRailAsVsMut> Debugger<'_, S> {
-    pub fn routes_found_notfound(
+    pub fn fail_mine_color_and_best_routes(
         &mut self,
         FailingMeta {
+            sequence,
+            failing_sequence,
             found_paths,
-            mut all_routes,
             astar_err: _,
         }: FailingMeta,
     ) -> &mut Self {
         warn!("debug routes_found_notfound for {}", self.1);
-        // split all_routes
-        let routes_found: Vec<ExecutionRoute> = all_routes
-            .extract_if(.., |v| {
-                found_paths
-                    .iter()
-                    .any(|found_path| found_path.location == v.location)
-            })
-            .collect();
-        let routes_notfound = all_routes;
 
-        // draw paths (now that we don't need it anymore)
         error!(
             "failed to pathfind but writing {} paths anyway",
             found_paths.len()
         );
-        for path in found_paths {
-            // path.
+        for found_path in found_paths {
             self.0
                 .rails_mut()
-                .add_mine_path_with_pixel(path, Pixel::Water);
+                .add_mine_path_with_pixel(found_path, Pixel::Water);
         }
 
-        warn!(
-            "Found {} notfound {}",
-            routes_found.len(),
-            routes_notfound.len()
-        );
-        // draw found
-        for route in routes_found {
+        let ExecutionSequenceParts { pass, fail } = sequence.split_routes_from(failing_sequence);
+        warn!("pass {} fail {}", pass.len(), fail.len());
+        for route in pass {
+            warn!("pass at {:?}", route.location.area_buffered());
             route
                 .location
                 .draw_area_buffered_highlight_pixel(&mut self.0.pixels_mut(), Pixel::Stone);
         }
-        // draw not found
-        for route in routes_notfound {
-            warn!("failing at {:?}", route.location.area_buffered());
+        for route in fail {
+            warn!("fail at {:?}", route.location.area_buffered());
             route
                 .location
                 .draw_area_buffered_highlight_pixel(&mut self.0.pixels_mut(), Pixel::SteelChest);

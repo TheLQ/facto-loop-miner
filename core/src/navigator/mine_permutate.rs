@@ -138,7 +138,7 @@ fn build_routes_from_destinations(
 ) -> Vec<ExecutionSequence> {
     let mut sequences: Vec<ExecutionSequence> = Vec::new();
     'combinations: for combination in input_combinations {
-        let mut routes: Vec<ExecutionRoute> = Vec::new();
+        let mut sequence: Vec<ExecutionRoute> = Vec::new();
 
         for (
             i,
@@ -153,13 +153,13 @@ fn build_routes_from_destinations(
                 trace!("segment out of bounds {}", segment);
                 continue 'combinations;
             }
-            routes.push(ExecutionRoute {
+            sequence.push(ExecutionRoute {
                 segment,
                 location,
                 finding_limiter: fixed_finding_limiter.clone(),
             })
         }
-        sequences.push(ExecutionSequence { routes });
+        sequences.push(ExecutionSequence::new(sequence));
     }
     sequences
 }

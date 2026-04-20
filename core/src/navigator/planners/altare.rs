@@ -98,7 +98,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
         let mut limiter_counter = 0;
         let mut state = ScannerMode::Normal;
         loop {
-            let mines = match &mut state {
+            let mut mines = match &mut state {
                 ScannerMode::Normal => match self.window.scan_normal_square(self) {
                     QuesterScannerResult::AxisEnd(ScanAxis::Advance) => {
                         info!("base_source out of bounds, ending");
@@ -137,6 +137,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
 
                         self.queue_redo(&mut mines);
                         trace!("scanner and redo made {} mines", mines.len());
+
                         mines
                     }
                 },
@@ -146,6 +147,12 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                     std::mem::take(selected_mines)
                 }
             };
+
+            let prev_len = mines.len();
+            mines.dedup();
+            if mines.len() != prev_len {
+                panic!("dedupe detected for mines");
+            }
 
             if limiter_counter >= 99999 {
                 self.debug_iteration(limiter_counter);
@@ -159,21 +166,14 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             if possible_routes.sequences.is_empty() {
                 error!("[FATAL] no routes");
                 Debugger(self.surface, "no routes")
-                    .starts_numbered(
-                        self.base_source_positive
-                            .clone()
-                            .take(mines_bak.len())
-                            .map(|v| *v.origin.point())
-                            .collect::<Vec<_>>(),
-                    )
+                    .starts_numbered(self.base_source_positive.clone(), mines_bak.len())
                     .mines(&mines_bak);
                 break;
             }
             info!("batch has {} sequences", possible_routes.sequences.len());
 
             match self.execute_plan(possible_routes) {
-                ControlFlow::Break(()) => break,
-                ControlFlow::Continue(PlanContinue::Success) => {
+                PlanContinue::Success => {
                     match state {
                         ScannerMode::Normal => {}
                         ScannerMode::Mandatory(_) => {
@@ -182,14 +182,23 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                     };
                     state = ScannerMode::Normal;
                 }
-                ControlFlow::Continue(PlanContinue::Fail_SeenMines(meta, seen_mines)) => {
-                    if seen_mines.counts().all_equal() && *seen_mines.counts().next().unwrap() == 0
+                PlanContinue::Fail_SeenMines(meta, seen_mines) => {
+                    if self.surface.rails().get_mine_paths().is_empty() {
+                        error!("failed on first iteration, stopping");
+                        Debugger(self.surface, "first-iteration")
+                            .fail_mine_color_and_best_routes(meta)
+                            .mines(seen_mines.mines())
+                            .starts_numbered(self.base_source_positive.clone(), seen_mines.len());
+                        break;
+                    } else if seen_mines.counts().all_equal()
+                        && *seen_mines.counts().next().unwrap() == 0
                     {
                         error!(
                             "Potential deadlock, 0 mines found {} total",
                             seen_mines.len()
                         );
-                        Debugger(self.surface, "potential-deadlock").routes_found_notfound(meta);
+                        Debugger(self.surface, "potential-deadlock")
+                            .fail_mine_color_and_best_routes(meta);
                         break;
                     } else {
                         match state {
@@ -197,7 +206,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                             ScannerMode::Mandatory(_) => {
                                 error!("{state} followed by {state}");
                                 Debugger(self.surface, "Mandatory-dupe")
-                                    .routes_found_notfound(meta);
+                                    .fail_mine_color_and_best_routes(meta);
                                 break;
                             }
                         }
@@ -269,14 +278,14 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
         }
     }
 
-    fn execute_plan(&mut self, possible_routes: CompletePlan) -> ControlFlow<(), PlanContinue> {
+    fn execute_plan(&mut self, possible_routes: CompletePlan) -> PlanContinue {
         match execute_route_batch_clone_prep(
             self.tunables.mori(),
             &mut self.surface.pixels_mut(),
             possible_routes.sequences,
             &[ExecuteFlags::ShrinkBases],
         ) {
-            ExecutorResult::Success { paths, routes } => {
+            ExecutorResult::Success { paths, sequence: _ } => {
                 let base_index_pre = self.base_source_positive.get_i();
                 let sorted_paths = self.base_source_positive.advance_sorting(paths);
                 trace!(
@@ -291,24 +300,16 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                     .pixels()
                     .paint_pixel_colored_zoomed()
                     .save_to_oculante();
-                ControlFlow::Continue(PlanContinue::Success)
+                PlanContinue::Success
             }
             ExecutorResult::Failure { meta, seen_mines } => {
-                if self.surface.rails().get_mine_paths().is_empty() {
-                    error!("failed on first iteration, stopping");
-                    Debugger(self.surface, "first-iteration")
-                        .routes_found_notfound(meta)
-                        .mines(seen_mines.keys());
-                    ControlFlow::Break(())
-                } else {
-                    error!(">>>>>>>> Batch fail");
+                error!(">>>>>>>> Batch fail");
 
-                    self.surface
-                        .pixels()
-                        .paint_pixel_colored_zoomed()
-                        .save_to_oculante();
-                    ControlFlow::Continue(PlanContinue::Fail_SeenMines(meta, SeenMines(seen_mines)))
-                }
+                self.surface
+                    .pixels()
+                    .paint_pixel_colored_zoomed()
+                    .save_to_oculante();
+                PlanContinue::Fail_SeenMines(meta, SeenMines(seen_mines))
             }
         }
     }
@@ -504,6 +505,10 @@ struct SeenMines(HashMap<MineLocation, usize>);
 impl SeenMines {
     fn least_known(&self) -> &MineLocation {
         self.0.iter().min_by_key(|(_, count)| *count).unwrap().0
+    }
+
+    fn mines(&self) -> impl Iterator<Item = &MineLocation> {
+        self.0.keys()
     }
 
     fn counts(&self) -> std::collections::hash_map::Values<'_, MineLocation, usize> {
