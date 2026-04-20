@@ -158,7 +158,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             let possible_routes = self.new_plan(mines);
             if possible_routes.sequences.is_empty() {
                 error!("[FATAL] no routes");
-                Debugger(self.surface)
+                Debugger(self.surface, "no routes")
                     .starts_numbered(
                         self.base_source_positive
                             .clone()
@@ -189,14 +189,15 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                             "Potential deadlock, 0 mines found {} total",
                             seen_mines.len()
                         );
-                        Debugger(self.surface).routes_found_notfound(meta);
+                        Debugger(self.surface, "potential-deadlock").routes_found_notfound(meta);
                         break;
                     } else {
                         match state {
                             ScannerMode::Normal => {}
                             ScannerMode::Mandatory(_) => {
                                 error!("{state} followed by {state}");
-                                Debugger(self.surface).routes_found_notfound(meta);
+                                Debugger(self.surface, "Mandatory-dupe")
+                                    .routes_found_notfound(meta);
                                 break;
                             }
                         }
@@ -295,7 +296,9 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             ExecutorResult::Failure { meta, seen_mines } => {
                 if self.surface.rails().get_mine_paths().is_empty() {
                     error!("failed on first iteration, stopping");
-                    Debugger(self.surface).routes_found_notfound(meta);
+                    Debugger(self.surface, "first-iteration")
+                        .routes_found_notfound(meta)
+                        .mines(seen_mines.keys());
                     ControlFlow::Break(())
                 } else {
                     error!(">>>>>>>> Batch fail");

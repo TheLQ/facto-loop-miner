@@ -74,7 +74,7 @@ pub(super) fn debug_draw_base_sources(
 }
 */
 
-pub struct Debugger<'s, S>(pub &'s mut S);
+pub struct Debugger<'s, S>(pub &'s mut S, pub &'static str);
 
 impl<S: VSurfacePixelAsVsMut> Debugger<'_, S> {
     pub fn sequences(&mut self, sequences: Vec<ExecutionSequence>) -> &mut Self {
@@ -94,21 +94,24 @@ impl<S: VSurfacePixelAsVsMut> Debugger<'_, S> {
         self
     }
 
-    pub fn mines<'m>(&mut self, mines: impl IntoIterator<Item = &'m MineLocation>) -> &mut Self {
-        let mut seen_mines: Vec<&VArea> = Vec::new();
+    pub fn mines(
+        &mut self,
+        mines: impl IntoIterator<Item = impl Borrow<MineLocation>>,
+    ) -> &mut Self {
+        let mut seen_mines: Vec<VArea> = Vec::new();
         let mut destinations = Vec::new();
         for mine in mines {
-            let mine_area = &mine.area_buffered();
-            if seen_mines.contains(mine_area) {
+            let mine_area = mine.borrow().area_buffered().clone();
+            if seen_mines.contains(&mine_area) {
                 continue;
             }
             self.0
                 .pixels_mut()
-                .change_square(mine_area)
+                .change_square(&mine_area)
                 .find_into(Pixel::MineNoTouch, Pixel::Highlighter);
             seen_mines.push(mine_area);
 
-            for destination in mine.destinations() {
+            for destination in mine.borrow().destinations() {
                 tracing::trace!("destination {:?}", destination);
                 // destinations.push(destination.0)
                 destinations.extend(VArea::from_radius(destination.0, 3).get_points());
@@ -147,7 +150,7 @@ impl<S: VSurfacePixelAsVsMut + VSurfaceRailAsVsMut> Debugger<'_, S> {
             astar_err: _,
         }: FailingMeta,
     ) -> &mut Self {
-        warn!("debug routes_found_notfound");
+        warn!("debug routes_found_notfound for {}", self.1);
         // split all_routes
         let routes_found: Vec<ExecutionRoute> = all_routes
             .extract_if(.., |v| {

@@ -91,7 +91,7 @@ impl BaseSourceEighth {
     }
 
     fn get_for_index(&self, index: i32) -> BaseSourceEntry {
-        tracing::trace!("get for index {index}");
+        // tracing::trace!("get for index {index}");
         let section_move = (index / TOTAL_INTRA_RAILS) * SECTION_POINTS_I32;
         let section_pos = self
             .origin

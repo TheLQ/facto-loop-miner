@@ -110,7 +110,7 @@ fn process_batch(
         }
         ExecutorResult::Failure { meta, .. } => {
             if always_true_test() {
-                Debugger(surface).routes_found_notfound(meta);
+                Debugger(surface, "ruze-debug").routes_found_notfound(meta);
                 return false;
             }
 
