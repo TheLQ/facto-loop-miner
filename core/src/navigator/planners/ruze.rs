@@ -1,6 +1,6 @@
 use crate::always_true_test;
 use crate::navigator::mine_executor::{
-    ExecutorResult, FailingMeta, execute_route_batch, execute_route_batch_clone_prep,
+    ExecutorResult, FailingMeta, execute_route_batch_clone_prep,
 };
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};

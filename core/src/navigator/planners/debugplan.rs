@@ -1,14 +1,9 @@
-use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
 use crate::navigator::planners::PathingTunables;
-use crate::navigator::planners::common::draw_prep;
-use crate::surfacev::vsurface::{
-    VSurfacePatch, VSurfacePatchAsVs, VSurfacePatchMut, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
-    VSurfacePixelMut,
-};
+use crate::surfacev::vsurface::{VSurfacePatch, VSurfacePatchAsVs, VSurfacePatchMut};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use simd_json::prelude::ArrayTrait;
-use tracing::{info, trace};
+use tracing::info;
 
 pub fn start_debug_planner(tunables: &PathingTunables, surface_mut: &mut VSurfacePatchMut) {
     let select_batches = get_batches(tunables, surface_mut.patches());

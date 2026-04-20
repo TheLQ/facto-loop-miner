@@ -6,7 +6,7 @@ use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::{BasicWatch, BasicWatchResult};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
+use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{HopeSodaLink, sodas_to_links};
