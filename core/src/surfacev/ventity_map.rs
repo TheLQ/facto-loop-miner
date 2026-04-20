@@ -634,7 +634,8 @@ where
                 failed_count += 1;
             }
         }
-        assert_eq!(failed_count, 0, "found pixels not empty")
+        assert_eq!(failed_count, 0, "found pixels not empty");
+        self.map.entities.push(VPixel { pixel: replace });
     }
 
     pub fn remove(self) {
