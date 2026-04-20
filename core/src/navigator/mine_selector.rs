@@ -1,5 +1,5 @@
 use crate::TILES_PER_CHUNK;
-use crate::navigator::base_source::{BaseSource, BaseSourceEighth, BaseSourceRefs};
+use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
 use crate::navigator::planners::PathingTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
@@ -10,8 +10,6 @@ use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
-use std::cell::RefCell;
-use std::rc::Rc;
 use tracing::{debug, error, info, warn};
 
 #[derive(Clone)]
@@ -40,14 +38,6 @@ impl MineSelectBatch {
         &self.mines[0]
     }
 }
-
-/// at 3000 crop
-/// - 20 generates mostly 1, 2, some 3
-/// - 40 generates slightly more 3
-/// - 80 generates way less 1, more 2, good 3,4
-/// - 160 generates mostly 3 - very good
-/// - 220 generates 10 batch, too big
-pub const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 
 /// Input:
 ///  - Raw patch list
@@ -235,7 +225,7 @@ fn patches_by_cross_sign_expanding(
                 // first corner
                 .move_direction_sideways_int(
                     cross_side.direction(),
-                    scan_index * PERPENDICULAR_SCAN_WIDTH,
+                    scan_index * base_tunables.path_common().scan_size,
                 );
             if !bounding_area.contains_point(&scan_start) {
                 // extended past edge of surface
@@ -246,7 +236,7 @@ fn patches_by_cross_sign_expanding(
                 let mut pos = scan_start;
                 // move up again to complete box height
                 // this is the only way to be generic. not a hot path though
-                for _ in 0..PERPENDICULAR_SCAN_WIDTH {
+                for _ in 0..base_tunables.path_common().scan_size {
                     let next = pos.move_direction_sideways_int(cross_side.direction(), 1);
                     if bounding_area.contains_point(&next) {
                         pos = next;

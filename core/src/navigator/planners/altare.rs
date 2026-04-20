@@ -4,9 +4,7 @@ use crate::navigator::mine_executor::{
     ExecuteFlags, ExecutorResult, FailingMeta, execute_route_batch_clone_prep,
 };
 use crate::navigator::mine_permutate::{CompletePlan, get_possible_routes_for_batch};
-use crate::navigator::mine_selector::{
-    MineSelectBatch, PERPENDICULAR_SCAN_WIDTH, group_nearby_patches,
-};
+use crate::navigator::mine_selector::{MineSelectBatch, group_nearby_patches};
 use crate::navigator::mori::{MoriResult, count_link_origins, mori2_start};
 use crate::navigator::planners::PathingTunables;
 use crate::navigator::planners::common::{Debugger, draw_prep_mines};
@@ -27,8 +25,6 @@ use simd_json::prelude::ArrayTrait;
 use std::collections::{HashMap, HashSet};
 use std::ops::ControlFlow;
 use tracing::{error, info, trace, warn};
-
-const BATCH_SIZE_MAX: usize = 3;
 
 /// Planner v3 "Regis Altare 🎇"
 ///
@@ -80,12 +76,14 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             &base_source_positive,
         );
 
+        assert!(surface.rails().get_mine_paths().is_empty());
+
         Quester {
             surface,
             base_source_positive,
             window: QuesterScanner::new(
                 QuesterScannerBase {
-                    step_size: PERPENDICULAR_SCAN_WIDTH as usize,
+                    step_size: tunables.altare().step_size,
                     origin: VPoint::new(0, 0),
                     direction_advancing: FacDirectionQuarter::North,
                     direction_scanning: FacDirectionQuarter::East,
@@ -114,13 +112,36 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                         self.window.increment_scanner();
                         continue;
                     }
-                    QuesterScannerResult::NewPatchesInScanArea { mut selected_mines } => {
+                    QuesterScannerResult::NewPatchesInScanArea { selected_mines } => {
+                        trace!("scanner {} selected", selected_mines.len());
                         assert!(!selected_mines.is_empty());
-                        self.queue_redo(&mut selected_mines);
-                        selected_mines
+
+                        let surface_mines: Vec<&MineLocation> = self
+                            .surface
+                            .rails()
+                            .get_mine_paths()
+                            .iter()
+                            .map(|v| &v.location)
+                            .collect::<Vec<_>>();
+
+                        let mut mines = selected_mines
+                            .into_iter()
+                            .filter(|v| !surface_mines.contains(&v))
+                            .take(self.tunables.altare().queue_scan)
+                            .collect::<Vec<_>>();
+                        if mines.is_empty() {
+                            trace!("all patches found in scan area");
+                            self.window.increment_scanner();
+                            continue;
+                        }
+
+                        self.queue_redo(&mut mines);
+                        trace!("scanner and redo made {} mines", mines.len());
+                        mines
                     }
                 },
                 ScannerMode::Mandatory(selected_mines) => {
+                    trace!("scanner {} mandatory", selected_mines.len());
                     self.queue_redo(selected_mines);
                     std::mem::take(selected_mines)
                 }
@@ -229,9 +250,10 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
     }
 
     fn queue_redo(&mut self, mines: &mut Vec<MineLocation>) {
-        for _ in 0..BATCH_SIZE_MAX.saturating_sub(1) {
+        let total = self.tunables.altare().queue_redo;
+        for i in 0..total {
+            trace!("🠋🠋🠋🠋🠋 queuing {i}/{} redo mine", total.saturating_sub(i));
             if let Some((mine, removed_points)) = self.surface.rails_mut().remove_mine_path_pop() {
-                trace!("batch pop from mine {BATCH_SIZE_MAX}");
                 MineLocation::restore_area_buffered(
                     &[&mine.location],
                     &mut self.surface.pixels_mut(),
@@ -240,6 +262,8 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                 mines.push(mine.location.clone());
                 let last_entry = self.base_source_positive.undo_one();
                 assert_eq!(last_entry.origin, mine.segment.start);
+            } else {
+                trace!("🠉🠉🠉🠉🠉🠉 queuing done");
             }
         }
     }
@@ -252,7 +276,12 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
             &[ExecuteFlags::ShrinkBases],
         ) {
             ExecutorResult::Success { paths, routes } => {
+                let base_index_pre = self.base_source_positive.get_i();
                 let sorted_paths = self.base_source_positive.advance_sorting(paths);
+                trace!(
+                    "[TMP] {base_index_pre} to {}",
+                    self.base_source_positive.get_i()
+                );
                 for path in sorted_paths {
                     self.surface.rails_mut().add_mine_path(path);
                 }
@@ -310,7 +339,10 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
         lucky_mine.clone()
     }
 
-    fn new_plan(&self, mines: Vec<MineLocation>) -> CompletePlan {
+    fn new_plan(&self, mut mines: Vec<MineLocation>) -> CompletePlan {
+        let pre_len = mines.len();
+        mines.dedup();
+        assert_eq!(mines.len(), pre_len, "dedupe detected");
         get_possible_routes_for_batch(
             self.surface.pixels(),
             MineSelectBatch {

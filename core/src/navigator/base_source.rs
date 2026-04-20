@@ -140,8 +140,10 @@ impl BaseSourceEighth {
     }
 
     pub fn undo_one(&mut self) -> BaseSourceEntry {
-        let current = self.get_for_index(self.next);
+        tracing::trace!("undoing {}", self.next);
         self.next -= 1;
+        // this value was last given, and will be repeated
+        let current = self.get_for_index(self.next);
         assert!(self.next >= 1);
         current
     }
@@ -172,11 +174,16 @@ impl BaseSourceEighth {
             panic!("base not found in path")
         }
     }
+
+    pub fn get_i(&self) -> i32 {
+        self.next
+    }
 }
 
 impl Iterator for BaseSourceEighth {
     type Item = BaseSourceEntry;
     fn next(&mut self) -> Option<Self::Item> {
+        tracing::trace!("nexting {}", self.next);
         let current = self.get_for_index(self.next);
         self.next += 1;
         Some(current)

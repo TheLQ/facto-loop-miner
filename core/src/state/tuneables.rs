@@ -1,12 +1,14 @@
-use crate::navigator::MoriCostMode;
 use crate::TILES_PER_CHUNK;
+use crate::navigator::MoriCostMode;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Tunables {
     pub crop: CropTunables,
     pub base: BaseTunables,
+    pub path_common: PathCommonTunables,
     pub mori: MoriTunables,
+    pub altare: AltareTunables,
 }
 
 impl Tunables {
@@ -14,7 +16,9 @@ impl Tunables {
         Self {
             crop: CropTunables::new(),
             base: BaseTunables::new(),
+            path_common: PathCommonTunables::new(),
             mori: MoriTunables::new(),
+            altare: AltareTunables::new(),
         }
     }
 }
@@ -74,6 +78,42 @@ impl MoriTunables {
         }
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PathCommonTunables {
+    pub scan_size: i32,
+}
+
+impl PathCommonTunables {
+    fn new() -> Self {
+        Self { scan_size: 120 }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AltareTunables {
+    pub step_size: usize,
+    pub queue_redo: usize,
+    pub queue_scan: usize,
+}
+
+impl AltareTunables {
+    fn new() -> Self {
+        Self {
+            step_size: 120 * 3,
+            queue_redo: 2,
+            queue_scan: 2,
+        }
+    }
+}
+
+/// at 3000 crop
+/// - 20 generates mostly 1, 2, some 3
+/// - 40 generates slightly more 3
+/// - 80 generates way less 1, more 2, good 3,4
+/// - 160 generates mostly 3 - very good
+/// - 220 generates 10 batch, too big
+// pub const PERPENDICULAR_SCAN_WIDTH: i32 = 120;
 
 /// A Factorio chunk
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]

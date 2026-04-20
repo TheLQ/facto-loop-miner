@@ -2,7 +2,9 @@ use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::mine_executor::{ExecutionRoute, ExecutionSequence, FailingMeta};
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::opencv::TextSize;
-use crate::state::tuneables::{ChunkValue, MoriTunables, Tunables};
+use crate::state::tuneables::{
+    AltareTunables, ChunkValue, MoriTunables, PathCommonTunables, Tunables,
+};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::{
@@ -20,6 +22,8 @@ use tracing::{error, warn};
 pub struct PathingTunables {
     base_chunks: ChunkValue,
     mori: MoriTunables,
+    altare: AltareTunables,
+    common: PathCommonTunables,
 }
 
 impl PathingTunables {
@@ -27,6 +31,8 @@ impl PathingTunables {
         Self {
             base_chunks: tunables.base.base_chunks,
             mori: tunables.mori.clone(),
+            altare: tunables.altare.clone(),
+            common: tunables.path_common.clone(),
         }
     }
 
@@ -36,6 +42,14 @@ impl PathingTunables {
 
     pub fn mori(&self) -> &MoriTunables {
         &self.mori
+    }
+
+    pub fn altare(&self) -> &AltareTunables {
+        &self.altare
+    }
+
+    pub fn path_common(&self) -> &PathCommonTunables {
+        &self.common
     }
 }
 
