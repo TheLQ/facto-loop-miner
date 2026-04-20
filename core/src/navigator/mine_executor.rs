@@ -229,7 +229,7 @@ pub fn execute_route_batch(
                     ExecutorResult::Failure {
                         meta: best_meta, ..
                     },
-                    ExecutorResult::Failure { meta: cur_meta, .. },
+                    ExecutorResult::Failure { .. },
                 ) => {
                     if cur_paths.len() > best_meta.all_routes.len() {
                         cost = CostMeta::new();

@@ -1,12 +1,13 @@
 use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
 use crate::navigator::planners::PathingTunables;
-use crate::surfacev::vsurface::{VSurfacePatch, VSurfacePatchAsVs, VSurfacePatchMut};
+use crate::surfacev::vsurface::{VSurfacePatch, VSurfacePatchMut};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use simd_json::prelude::ArrayTrait;
 use tracing::info;
 
-pub fn start_debug_planner(tunables: &PathingTunables, surface_mut: &mut VSurfacePatchMut) {
-    let select_batches = get_batches(tunables, surface_mut.patches());
+pub fn start_debug_planner(_tunables: &PathingTunables, _surface_mut: &mut VSurfacePatchMut) {
+    panic!("todo")
+    // let select_batches = get_batches(tunables, surface_mut.patches());
     // paint_result(&mut surface_mut.pixels_mut(), select_batches);
     // if let Err(()) = debug_conflict_no_touching(surface, &select_batches) {
     //     error!("no touching");

@@ -560,6 +560,13 @@ impl VPoint {
         (hypotenuse as f32).sqrt()
     }
 
+    pub fn axis_value(&self, direction: impl Borrow<FacDirectionQuarter>) -> i32 {
+        match direction.borrow() {
+            FacDirectionQuarter::North | FacDirectionQuarter::South => self.y,
+            FacDirectionQuarter::East | FacDirectionQuarter::West => self.x,
+        }
+    }
+
     pub const fn subtract_x(&self, other: &Self) -> i32 {
         self.x - other.x
     }

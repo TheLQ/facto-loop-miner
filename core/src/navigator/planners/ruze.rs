@@ -117,7 +117,7 @@ fn process_batch(
             let FailingMeta {
                 found_paths,
                 all_routes: failing_routes,
-                astar_err,
+                astar_err: _,
             } = meta;
 
             error!("failed to pathfind");
