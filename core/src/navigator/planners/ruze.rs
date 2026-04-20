@@ -112,11 +112,7 @@ fn process_batch(
             }
             true
         }
-        ExecutorResult::Failure { meta, .. } => {
-            if always_true_test() {
-                Debugger(surface, "ruze-debug").fail_mine_color_and_best_routes(meta);
-                return false;
-            }
+        ExecutorResult::Failure { .. } => {
             panic!("todo")
             //
             // let FailingMeta {

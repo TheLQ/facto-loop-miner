@@ -153,7 +153,7 @@ impl<S: VSurfacePixelAsVsMut + VSurfaceRailAsVsMut> Debugger<'_, S> {
             sequence,
             failing_sequence,
             found_paths,
-            astar_err: _,
+            cause: _,
         }: FailingMeta,
     ) -> &mut Self {
         warn!("debug routes_found_notfound for {}", self.1);

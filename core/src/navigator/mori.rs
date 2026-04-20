@@ -1,4 +1,4 @@
-use crate::navigator::mine_executor::FailingMeta;
+use crate::navigator::mine_executor::{FailingCause, FailingMeta};
 use crate::navigator::mori_cost::calculate_cost_for_link;
 use crate::state::tuneables::MoriTunables;
 use crate::surfacev::vsurface::VSurfacePixel;
@@ -57,7 +57,7 @@ pub fn mori2_start(
         // we need this when 100% blocked
         warn!("waste of time {endpoints} {founds_txt}");
         return MoriResult::FailingDebug {
-            err: FailingMeta::default().astar_err,
+            cause: FailingCause::Wasted,
         };
     }
 
@@ -149,7 +149,9 @@ pub fn mori2_start(
                 cost,
             }
         }
-        Err(err) => MoriResult::FailingDebug { err },
+        Err(err) => MoriResult::FailingDebug {
+            cause: FailingCause::AStar(err),
+        },
     }
 }
 
@@ -211,7 +213,7 @@ pub enum MoriResult {
         cost: u32,
     },
     FailingDebug {
-        err: AStarErr<HopeSodaLink, u32>,
+        cause: FailingCause,
     },
 }
 

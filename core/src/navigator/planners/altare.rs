@@ -1,7 +1,7 @@
 use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
 use crate::navigator::circleify::draw_circle_around;
 use crate::navigator::mine_executor::{
-    ExecuteFlags, ExecutorResult, FailingMeta, execute_route_batch_clone_prep,
+    ExecuteFlags, ExecutorResult, FailingMeta, FailingStats, execute_route_batch_clone_prep,
 };
 use crate::navigator::mine_permutate::{CompletePlan, get_possible_routes_for_batch};
 use crate::navigator::mine_selector::{MineSelectBatch, group_nearby_patches};
@@ -182,11 +182,14 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                     };
                     state = ScannerMode::Normal;
                 }
-                PlanContinue::Fail_SeenMines(meta, seen_mines) => {
+                PlanContinue::Fail { stats } => {
+                    error!("{stats}");
+                    let seen_mines = SeenMines(stats.seen_mines);
+
                     if self.surface.rails().get_mine_paths().is_empty() {
                         error!("failed on first iteration, stopping");
                         Debugger(self.surface, "first-iteration")
-                            .fail_mine_color_and_best_routes(meta)
+                            .fail_mine_color_and_best_routes(stats.best_meta)
                             .mines(seen_mines.mines())
                             .starts_numbered(self.base_source_positive.clone(), seen_mines.len());
                         break;
@@ -198,7 +201,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                             seen_mines.len()
                         );
                         Debugger(self.surface, "potential-deadlock")
-                            .fail_mine_color_and_best_routes(meta);
+                            .fail_mine_color_and_best_routes(stats.best_meta);
                         break;
                     } else {
                         match state {
@@ -206,7 +209,7 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                             ScannerMode::Mandatory(_) => {
                                 error!("{state} followed by {state}");
                                 Debugger(self.surface, "Mandatory-dupe")
-                                    .fail_mine_color_and_best_routes(meta);
+                                    .fail_mine_color_and_best_routes(stats.best_meta);
                                 break;
                             }
                         }
@@ -226,37 +229,37 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
     }
 
     fn debug_iteration(&self, limiter_counter: u32) {
-        // best = 16
-        // better = 28, 30, 32
-        info!("limiter {limiter_counter}");
-        // break;
-        let start = self.base_source_positive.origin();
-        let end = VPointDirectionQ(
-            VPoint::new(SECTION_POINTS_I32 * 100, SECTION_POINTS_I32 * 100),
-            FacDirectionQuarter::East,
-        );
-        let surface = self.surface.pixels();
-
-        let fixed_radius = surface.get_radius_i32();
-        let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
-            VPoint::new(0, -fixed_radius),
-            // Must give spacing from Edge, because hope_link.area() can extend past it.
-            // range checks are disabled for theoretical performance
-            VPoint::new(fixed_radius, fixed_radius),
-        );
-
-        let result = mori2_start(
-            self.tunables.mori(),
-            surface,
-            VSegment { start, end },
-            &fixed_finding_limiter,
-        );
-        let MoriResult::FailingDebug { err } = result else {
-            panic!("it worked? {end}")
-        };
-        surface
-            .paint_pixel_graduated(count_link_origins(&err.seen))
-            .save_to_oculante();
+        // // best = 16
+        // // better = 28, 30, 32
+        // info!("limiter {limiter_counter}");
+        // // break;
+        // let start = self.base_source_positive.origin();
+        // let end = VPointDirectionQ(
+        //     VPoint::new(SECTION_POINTS_I32 * 100, SECTION_POINTS_I32 * 100),
+        //     FacDirectionQuarter::East,
+        // );
+        // let surface = self.surface.pixels();
+        //
+        // let fixed_radius = surface.get_radius_i32();
+        // let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
+        //     VPoint::new(0, -fixed_radius),
+        //     // Must give spacing from Edge, because hope_link.area() can extend past it.
+        //     // range checks are disabled for theoretical performance
+        //     VPoint::new(fixed_radius, fixed_radius),
+        // );
+        //
+        // let result = mori2_start(
+        //     self.tunables.mori(),
+        //     surface,
+        //     VSegment { start, end },
+        //     &fixed_finding_limiter,
+        // );
+        // let MoriResult::FailingDebug { cause } = result else {
+        //     panic!("it worked? {end}")
+        // };
+        // surface
+        //     .paint_pixel_graduated(count_link_origins(&err.seen))
+        //     .save_to_oculante();
     }
 
     fn queue_redo(&mut self, mines: &mut Vec<MineLocation>) {
@@ -302,14 +305,14 @@ impl<'t, 'sr, 's> Quester<'t, 'sr, 's> {
                     .save_to_oculante();
                 PlanContinue::Success
             }
-            ExecutorResult::Failure { meta, seen_mines } => {
+            ExecutorResult::Failure { stats } => {
                 error!(">>>>>>>> Batch fail");
 
                 self.surface
                     .pixels()
                     .paint_pixel_colored_zoomed()
                     .save_to_oculante();
-                PlanContinue::Fail_SeenMines(meta, SeenMines(seen_mines))
+                PlanContinue::Fail { stats }
             }
         }
     }
@@ -495,7 +498,7 @@ enum ScannerMode {
 #[allow(non_camel_case_types)]
 enum PlanContinue {
     Success,
-    Fail_SeenMines(FailingMeta, SeenMines),
+    Fail { stats: FailingStats },
 }
 
 //

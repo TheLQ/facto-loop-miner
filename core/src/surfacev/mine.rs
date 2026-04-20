@@ -491,7 +491,6 @@ pub struct DebugMinePatch {
 
 #[cfg(test)]
 mod test {
-    use crate::navigator::planners::debug_draw_mine_links;
     use crate::surface::pixel::Pixel;
     use crate::surfacev::mine::{DebugMinePatch, MineLocation};
     use crate::surfacev::vpatch::VPatch;
@@ -589,7 +588,10 @@ mod test {
         mine.revalidate_endpoints_after_no_touch(surface.pixels());
         assert_ne!(mine.destinations().next(), None);
 
-        debug_draw_mine_links(&mut surface.pixels_mut(), [&mine]);
+        if 1 + 1 == 2 {
+            // debug_draw_mine_links(&mut surface.pixels_mut(), [&mine]);
+            panic!("uhh todo")
+        }
 
         let watch = BasicWatch::start();
         let mut grid = Vec::new();

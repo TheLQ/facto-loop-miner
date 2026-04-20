@@ -8,6 +8,7 @@ use crate::surfacev::vsurface::{
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::{EXECUTOR_TAG, LOCALE};
 use facto_loop_miner_fac_engine::common::varea::VArea;
+use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
 use itertools::Itertools;
@@ -16,6 +17,7 @@ use pathfinding::prelude::AStarErr;
 use rayon::ThreadPool;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;
@@ -110,12 +112,12 @@ pub fn execute_route_batch(
 
     const EXECUTE_THREADED: bool = true;
     let is_threaded = (sequences.len() > 1) && EXECUTE_THREADED;
-    let route_results: Vec<ExecutorResult> = if is_threaded {
+    let route_results: Vec<ExecutorThreadResult> = if is_threaded {
         WRAPPING_POOL.install(|| {
             sequences
                 .into_par_iter()
                 .map(|sequence| {
-                    execute_route_combination(
+                    execute_sequence(
                         tunables,
                         execution_surface,
                         sequence,
@@ -130,7 +132,7 @@ pub fn execute_route_batch(
             .into_iter()
             // .take(40)
             .map(|sequence| {
-                execute_route_combination(
+                execute_sequence(
                     tunables,
                     execution_surface,
                     sequence,
@@ -172,21 +174,22 @@ pub fn execute_route_batch(
     let mut cost = CostMeta::new();
 
     let mut failure_attempts_per_len: HashMap<usize, u16> = HashMap::new();
-    let mut failure_seen_mines = HashMap::new();
     let mut success_count = 0;
     let mut failure_count = 0;
-    let res: ExecutorResult = route_results.into_iter().fold(
-        ExecutorResult::Failure {
-            meta: FailingMeta::default(),
-            seen_mines: HashMap::new(),
-        },
-        |best, cur_result| {
+    let res: ExecutorResult = route_results
+        .into_iter()
+        .fold::<Option<ExecutorResult>, _>(None, |best, cur_result| {
+            let mut best = match best {
+                Some(v) => v,
+                None => return Some(cur_result.into_main_result()),
+            };
+
             let cur_paths = match &cur_result {
-                ExecutorResult::Success { paths, .. } => {
+                ExecutorThreadResult::Success { paths, .. } => {
                     success_count += 1;
                     paths
                 }
-                ExecutorResult::Failure {
+                ExecutorThreadResult::Failure {
                     meta: FailingMeta { found_paths, .. },
                     ..
                 } => {
@@ -200,61 +203,47 @@ pub fn execute_route_batch(
             };
             let total_cost = cur_paths.iter().map(|v| v.cost).sum();
 
-            if let ExecutorResult::Failure { meta, .. } = &cur_result {
-                for path in &meta.found_paths {
-                    let next = failure_seen_mines.entry(path.location.clone()).or_default();
-                    *next += 1;
-                }
-            }
-
-            match (&best, &cur_result) {
-                (ExecutorResult::Success { .. }, ExecutorResult::Success { .. }) => {
+            match (&mut best, cur_result) {
+                (
+                    ExecutorResult::Success { .. },
+                    cur_result @ ExecutorThreadResult::Success { .. },
+                ) => {
                     if cost.apply_and_is_lowest(total_cost) {
-                        cur_result
+                        Some(cur_result.into_main_result())
                     } else {
-                        best
+                        Some(best)
                     }
                 }
-                (ExecutorResult::Success { .. }, ExecutorResult::Failure { .. }) => {
+                (ExecutorResult::Success { .. }, ExecutorThreadResult::Failure { .. }) => {
                     // ignore failure after success
-                    best
+                    Some(best)
                 }
-                (ExecutorResult::Failure { .. }, ExecutorResult::Success { .. }) => {
+                (
+                    ExecutorResult::Failure { .. },
+                    cur_result @ ExecutorThreadResult::Success { .. },
+                ) => {
                     // replace failure with success
                     cost = CostMeta::new();
                     cost.apply_and_is_lowest(total_cost);
-                    cur_result
+                    Some(cur_result.into_main_result())
                 }
                 (
-                    ExecutorResult::Failure {
-                        meta: best_meta, ..
-                    },
-                    ExecutorResult::Failure { meta: cur_meta, .. },
+                    ExecutorResult::Failure { stats },
+                    ExecutorThreadResult::Failure { meta: cur_meta, .. },
                 ) => {
-                    if best_meta.failing_sequence < cur_meta.failing_sequence {
+                    stats.absorb_meta(&cur_meta);
+                    if stats.best_meta.failing_sequence < cur_meta.failing_sequence {
                         cost = CostMeta::new();
-                        cost.apply_and_is_lowest(total_cost);
-                        cur_result
-                    } else if cost.apply_and_is_lowest(total_cost) {
-                        cur_result
-                    } else {
-                        best
                     }
+                    if cost.apply_and_is_lowest(total_cost) {
+                        stats.set_best_meta(cur_meta)
+                    }
+                    // return with updated stats
+                    Some(best)
                 }
             }
-        },
-    );
-    // merge extra tracked state
-    let res = match res {
-        ExecutorResult::Failure { meta, seen_mines } => {
-            assert_eq!(seen_mines.len(), 0);
-            ExecutorResult::Failure {
-                meta,
-                seen_mines: failure_seen_mines,
-            }
-        }
-        r => r,
-    };
+        })
+        .unwrap();
 
     let failure_attempts_debug = failure_attempts_per_len
         .into_iter()
@@ -294,13 +283,13 @@ static TOTAL_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static SUCCESS_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static FAIL_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
-fn execute_route_combination(
+fn execute_sequence(
     tuneables: &MoriTunables,
     surface: VSurfacePixel,
     sequence: ExecutionSequence,
     total_sequences: usize,
     flags: &[ExecuteFlags],
-) -> ExecutorResult {
+) -> ExecutorThreadResult {
     let executor_mark = span!(Level::INFO, EXECUTOR_TAG);
     let _mark = executor_mark.enter();
     let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -363,23 +352,22 @@ fn execute_route_combination(
                 };
                 surface.add_mine_path(path);
             }
-            MoriResult::FailingDebug { err } => {
+            MoriResult::FailingDebug { cause } => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
-                return ExecutorResult::Failure {
+                return ExecutorThreadResult::Failure {
                     meta: FailingMeta {
                         sequence,
                         failing_sequence: FailingSequence(i),
-                        astar_err: err,
+                        cause,
                         found_paths: surface_copy.into_rails(),
                     },
-                    seen_mines: HashMap::new(),
                 };
             }
         }
     }
 
     SUCCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
-    ExecutorResult::Success {
+    ExecutorThreadResult::Success {
         paths: surface_copy.into_rails(),
         sequence,
     }
@@ -421,19 +409,29 @@ pub enum ExecutorResult {
         sequence: ExecutionSequence,
     },
     Failure {
-        meta: FailingMeta,
-        seen_mines: HashMap<MineLocation, usize>,
+        stats: FailingStats,
     },
 }
 
-impl ExecutorResult {
-    fn get_sequence(&self) -> &ExecutionSequence {
+pub enum ExecutorThreadResult {
+    Success {
+        paths: Vec<MinePath>,
+        sequence: ExecutionSequence,
+    },
+    Failure {
+        meta: FailingMeta,
+    },
+}
+
+impl ExecutorThreadResult {
+    fn into_main_result(self) -> ExecutorResult {
         match self {
-            ExecutorResult::Success { sequence, .. } => sequence,
-            ExecutorResult::Failure {
-                meta: FailingMeta { sequence, .. },
-                ..
-            } => sequence,
+            ExecutorThreadResult::Success { paths, sequence } => {
+                ExecutorResult::Success { paths, sequence }
+            }
+            ExecutorThreadResult::Failure { meta } => ExecutorResult::Failure {
+                stats: FailingStats::new(meta),
+            },
         }
     }
 }
@@ -443,20 +441,128 @@ pub struct FailingMeta {
     pub found_paths: Vec<MinePath>,
     pub sequence: ExecutionSequence,
     pub failing_sequence: FailingSequence,
-    pub astar_err: AStarErr<HopeSodaLink, u32>,
+    pub cause: FailingCause,
 }
 
-impl Default for FailingMeta {
-    fn default() -> Self {
-        Self {
-            astar_err: AStarErr {
-                seen: Vec::new(),
-                parents: Default::default(),
+pub enum FailingCause {
+    AStar(AStarErr<HopeSodaLink, u32>),
+    Wasted,
+}
+
+// impl Default for FailingMeta {
+//     fn default() -> Self {
+//         Self {
+//             astar_err: AStarErr {
+//                 seen: Vec::new(),
+//                 parents: Default::default(),
+//             },
+//             found_paths: Vec::new(),
+//             failing_sequence: FailingSequence(usize::MAX),
+//             sequence: ExecutionSequence(Vec::new()),
+//         }
+//     }
+// }
+
+pub struct FailingStats {
+    pub best_meta: FailingMeta,
+    pub seen_mines: HashMap<MineLocation, usize>,
+    pub seen_destinations: HashMap<VPoint, usize>,
+    pub wasted_per_len: HashMap<usize, usize>,
+    pub successes_per_len: HashMap<usize, usize>,
+}
+
+impl FailingStats {
+    fn new(best_meta: FailingMeta) -> Self {
+        let mut new = Self {
+            // best_meta: FailingMeta::default(), // todo: the only reason FailingMeta impls default
+            best_meta: FailingMeta {
+                cause: FailingCause::Wasted,
+                found_paths: Vec::new(),
+                failing_sequence: FailingSequence(usize::MAX),
+                sequence: ExecutionSequence(Vec::new()),
             },
-            found_paths: Vec::new(),
-            failing_sequence: FailingSequence(usize::MAX),
-            sequence: ExecutionSequence(Vec::new()),
+            seen_mines: HashMap::new(),
+            seen_destinations: HashMap::new(),
+            wasted_per_len: HashMap::new(),
+            successes_per_len: HashMap::new(),
+        };
+        new.absorb_meta(&best_meta);
+        new.best_meta = best_meta;
+        new
+    }
+
+    fn absorb_meta(&mut self, meta: &FailingMeta) {
+        let successes = self
+            .successes_per_len
+            .entry(meta.found_paths.len())
+            .or_default();
+        *successes += 1;
+
+        match meta.cause {
+            FailingCause::Wasted => {
+                let wasted = self
+                    .wasted_per_len
+                    .entry(meta.found_paths.len())
+                    .or_default();
+                *wasted += 1;
+            }
+            FailingCause::AStar(_) => {}
         }
+
+        for path in &meta.found_paths {
+            let seen_mine = self.seen_mines.entry(path.location.clone()).or_default();
+            *seen_mine += 1;
+
+            let seen_destinations = self
+                .seen_destinations
+                .entry(*path.segment.end.point())
+                .or_default();
+            *seen_destinations += 1;
+        }
+    }
+
+    fn set_best_meta(&mut self, meta: FailingMeta) {
+        self.best_meta = meta;
+    }
+
+    fn best_meta(&self) -> &FailingMeta {
+        &self.best_meta
+    }
+}
+
+impl Display for FailingStats {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            best_meta: _,
+            seen_mines,
+            seen_destinations,
+            wasted_per_len,
+            successes_per_len,
+        } = self;
+
+        writeln!(f, "\n=============\nFAILURE_STATS\n")?;
+
+        writeln!(f, "- Seen Mines - ")?;
+        for (v, count) in seen_mines {
+            writeln!(f, "{count:>4}  {v:?}")?;
+        }
+
+        writeln!(f, "- Seen destinations - ")?;
+        for (v, count) in seen_destinations {
+            writeln!(f, "{count:>4}  {v:?}")?;
+        }
+
+        writeln!(f, "- Wasted per len - ")?;
+        for (v, count) in wasted_per_len {
+            writeln!(f, "{count:>4}  {v:?}")?;
+        }
+
+        writeln!(f, "- Success per len - ")?;
+        for (v, count) in successes_per_len {
+            writeln!(f, "{count:>4}  {v:?}")?;
+        }
+
+        Ok(())
     }
 }
 
