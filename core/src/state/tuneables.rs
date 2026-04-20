@@ -1,5 +1,6 @@
 use crate::TILES_PER_CHUNK;
 use crate::navigator::MoriCostMode;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -79,14 +80,23 @@ impl MoriTunables {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct PathCommonTunables {
     pub scan_size: i32,
+    pub base_source_section_step: i32,
+    pub base_source_intra_step: i32,
+    /// number of rails per intra
+    pub base_source_intra_rails: i32,
 }
 
 impl PathCommonTunables {
     fn new() -> Self {
-        Self { scan_size: 120 }
+        Self {
+            scan_size: 120,
+            base_source_section_step: SECTION_POINTS_I32,
+            base_source_intra_step: 6,
+            base_source_intra_rails: 4,
+        }
     }
 }
 

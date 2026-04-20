@@ -1,4 +1,5 @@
 use crate::navigator::planners::PathingTunables;
+use crate::state::tuneables::{PathCommonTunables, Tunables};
 use crate::surfacev::mine::MinePath;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
@@ -18,17 +19,20 @@ impl BaseSource {
     pub fn from_central_base(tunables: &PathingTunables) -> Self {
         let mut offset_x_from_base = tunables.base_chunks().as_tiles_i32();
         offset_x_from_base -= offset_x_from_base % SECTION_POINTS_I32;
-        BaseSource::new(VPointDirectionQ(
-            VPoint::new(offset_x_from_base, 0),
-            FacDirectionQuarter::East,
-        ))
+        BaseSource::new(
+            VPointDirectionQ(
+                VPoint::new(offset_x_from_base, 0),
+                FacDirectionQuarter::East,
+            ),
+            tunables.path_common().clone(),
+        )
     }
 
-    fn new(origin: VPointDirectionQ) -> Self {
+    fn new(origin: VPointDirectionQ, tunables: PathCommonTunables) -> Self {
         origin.point().assert_even_position();
         Self {
-            positive: BaseSourceEighth::new(origin, 1),
-            negative: BaseSourceEighth::new(origin, -1),
+            positive: BaseSourceEighth::new(origin, 1, tunables.clone()),
+            negative: BaseSourceEighth::new(origin, -1, tunables),
         }
     }
 
@@ -64,8 +68,8 @@ impl BaseSourceRefs {
     }
 }
 
-const SMALLEST_RAIL_SQUARE: i32 = 6;
-const TOTAL_INTRA_RAILS: i32 = 4;
+// const SMALLEST_RAIL_SQUARE: i32 = 6;
+// const TOTAL_INTRA_RAILS: i32 = 4;
 
 /// Dual wide rail is 6x26 = [SMALLEST_RAIL_SQUARE] * [SECTION_POINTS_I32]
 /// Rail navigates on a 26x26 grid = [SECTION_POINTS_I32]
@@ -77,33 +81,34 @@ pub struct BaseSourceEighth {
     origin: VPointDirectionQ,
     sign: i32,
     next: i32,
+    tunables: PathCommonTunables,
 }
 
 impl BaseSourceEighth {
-    pub fn new(origin: VPointDirectionQ, sign: i32) -> Self {
+    pub fn new(origin: VPointDirectionQ, sign: i32, tunables: PathCommonTunables) -> Self {
         origin.point().assert_step_rail();
         // Must start at 1 due to conflict at 0!
         Self {
             origin,
             sign,
             next: 1,
+            tunables,
         }
     }
 
     fn get_for_index(&self, index: i32) -> BaseSourceEntry {
         // tracing::trace!("get for index {index}");
-        let section_move = (index / TOTAL_INTRA_RAILS) * SECTION_POINTS_I32;
+        let section_move = (index / self.tunables.base_source_intra_rails)
+            * self.tunables.base_source_section_step;
         let section_pos = self
             .origin
             .point()
             .move_direction_sideways_int(self.origin.direction(), section_move);
         section_pos.assert_step_rail();
 
-        let level = index % TOTAL_INTRA_RAILS;
-        let intra_move = level * SMALLEST_RAIL_SQUARE;
         let applied_intra = IntraLevel {
-            pixels: intra_move,
-            level: level.try_into().unwrap(),
+            step_size: self.tunables.base_source_intra_step,
+            level: u8::try_from(index % self.tunables.base_source_intra_rails).unwrap(),
             direction: *self.origin.direction(),
         };
         let intra_pos = applied_intra.apply(section_pos);
@@ -233,22 +238,26 @@ impl BaseSourceEntry {
 #[derive(Debug, PartialEq)]
 pub struct IntraLevel {
     level: u8,
-    pixels: i32,
+    step_size: i32,
     direction: FacDirectionQuarter,
 }
 
 impl IntraLevel {
     pub fn apply(&self, input: VPoint) -> VPoint {
         input
-            .move_direction_int(self.direction, self.pixels)
-            .move_direction_sideways_int(self.direction, self.pixels)
+            .move_direction_int(self.direction, self.pixels())
+            .move_direction_sideways_int(self.direction, self.pixels())
     }
 
     pub fn undo(&self, input: VPoint) -> VPoint {
         let backwards = self.direction.rotate_flip();
         input
-            .move_direction_int(backwards, self.pixels)
-            .move_direction_sideways_int(backwards, self.pixels)
+            .move_direction_int(backwards, self.pixels())
+            .move_direction_sideways_int(backwards, self.pixels())
+    }
+
+    fn pixels(&self) -> i32 {
+        self.level as i32 * self.step_size
     }
 }
 
