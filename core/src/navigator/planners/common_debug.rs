@@ -76,12 +76,17 @@ pub(super) fn debug_draw_base_sources(
 pub struct Debugger<'s, S>(pub &'s mut S, pub &'static str);
 
 impl<S: VSurfacePixelAsVsMut> Debugger<'_, S> {
-    pub fn sequences(&mut self, sequences: Vec<ExecutionSequence>) -> &mut Self {
+    pub fn sequences(
+        &mut self,
+        sequences: Vec<ExecutionSequence>,
+        base_source: &BaseSourceEighth,
+    ) -> &mut Self {
         // will dupe
         let mut pixels = Vec::new();
         for sequence in sequences {
-            for route in sequence.routes() {
-                let VSegment { start, end } = route.segment;
+            for (i, route) in sequence.routes().iter().enumerate() {
+                let source = base_source.peek_after(i);
+                let VSegment { start, end } = route.segment_for_source(&source);
                 pixels.push(start.point());
                 pixels.push(end.point());
             }
@@ -126,9 +131,9 @@ impl<S: VSurfacePixelAsVsMut> Debugger<'_, S> {
         self
     }
 
-    pub fn starts_numbered(&mut self, start_points: BaseSourceEighth, amount: usize) -> &mut Self {
+    pub fn starts_numbered(&mut self, start_points: &BaseSourceEighth, amount: usize) -> &mut Self {
         let mut pixels = Vec::new();
-        for (i, base_source) in start_points.enumerate().take(amount) {
+        for (i, base_source) in (0..amount).map(|v| start_points.peek_after(v)).enumerate() {
             let point = base_source.origin.point();
             self.0.pixels_mut().draw_text_at(
                 point,
@@ -214,11 +219,15 @@ fn debug_draw_segment(surface: &mut VSurfacePixelMut, segment: VSegment) {
     surface.change_pixels(positions).stomp(Pixel::Highlighter);
 }
 
-pub(super) fn draw_prep(surface: &mut VSurfacePixelMut, batches: &[MineSelectBatch]) {
+pub(super) fn draw_prep(
+    surface: &mut VSurfacePixelMut,
+    batches: &[MineSelectBatch],
+    base_sources: &BaseSourceEighth,
+) {
     draw_prep_mines(
         surface,
         batches.iter().flat_map(|v| &v.mines).map(|v| *v),
-        &batches[0].base_sources,
+        base_sources,
     )
 }
 

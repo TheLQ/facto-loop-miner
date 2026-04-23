@@ -30,7 +30,7 @@ pub fn start_ruze_planner(tunables: &PathingTunables, surface: &mut VSurfaceNavM
     }
     num_mines_metrics.log_final();
 
-    draw_prep(&mut surface.pixels_mut(), &select_batches);
+    draw_prep(&mut surface.pixels_mut(), &select_batches, todo!());
 
     for (batch_index, batch) in select_batches.into_iter().enumerate() {
         // for (batch_index, batch) in [select_batches.into_iter().enumerate().last().unwrap()] {
@@ -89,6 +89,7 @@ fn process_batch(
         tunables,
         &mut surface.pixels_mut(),
         complete_plan.sequences,
+        todo!(),
         &[],
     ); // todo: Shrink flag??
     match res {

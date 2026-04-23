@@ -10,7 +10,6 @@ use simd_json::prelude::ArrayTrait;
 
 pub struct MineSelectBatch<'plan_mine> {
     pub mines: Vec<&'plan_mine MineLocation>,
-    pub base_sources: BaseSourceEighth,
 }
 
 pub enum MineSelectBatchResult<'plan_mine> {

@@ -77,7 +77,7 @@ impl BaseSourceRefs {
 /// For less wasteful navigation
 /// Advance by 45 degrees with xy-square offset 6 = [SMALLEST_RAIL_SQUARE]
 /// Non-perfect pattern, so can only advance 4 times = [TOTAL_INTRA_RAILS] (4*6=24)
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct BaseSourceEighth {
     origin: VPointDirectionQ,
     sign: i32,
@@ -99,8 +99,9 @@ impl BaseSourceEighth {
 
     pub fn intra_level_at_index(&self, level: u8) -> IntraLevel {
         IntraLevel {
-            step_size: self.tunables.base_source_intra_step,
             level,
+            step_forward: self.tunables.base_source_intra_forward,
+            step_sideways: self.tunables.base_source_intra_sideways,
             direction: self.origin.direction(),
         }
     }
@@ -218,7 +219,7 @@ pub struct BaseSourceEntry {
 }
 
 impl BaseSourceEntry {
-    pub fn segment_for_mine(&self, destination: VPointDirectionQ) -> VSegment {
+    pub fn segment_for_mine(&self, destination: &MineDestination) -> VSegment {
         let orig_origin = self.applied_intra.undo(self.origin.point());
         assert_eq!(
             orig_origin.test_step_rail(),
@@ -228,17 +229,18 @@ impl BaseSourceEntry {
             orig_origin
         );
 
-        let orig_pos = self.applied_intra.undo(destination.point());
+        let end = destination.for_level(&self.applied_intra);
+        let orig_pos = self.applied_intra.undo(end.point());
         assert_eq!(
             orig_pos.test_step_rail(),
             None,
             "Destination not step rail - pos {} orig_pause {orig_pos}",
-            destination.point()
+            end.point()
         );
 
         VSegment {
             start: self.origin,
-            end: destination,
+            end,
         }
     }
 }
@@ -246,26 +248,23 @@ impl BaseSourceEntry {
 #[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct IntraLevel {
     level: u8,
-    step_size: i32,
+    step_forward: i32,
+    step_sideways: i32,
     direction: FacDirectionQuarter,
 }
 
 impl IntraLevel {
     pub fn apply(&self, input: VPoint) -> VPoint {
         input
-            .move_direction_int(self.direction, self.pixels())
-            .move_direction_sideways_int(self.direction, self.pixels())
+            .move_direction_int(self.direction, i32::from(self.level) * self.step_forward)
+            .move_direction_sideways_int(self.direction, i32::from(self.level) * self.step_sideways)
     }
 
     pub fn undo(&self, input: VPoint) -> VPoint {
         let backwards = self.direction.rotate_flip();
         input
-            .move_direction_int(backwards, self.pixels())
-            .move_direction_sideways_int(backwards, self.pixels())
-    }
-
-    fn pixels(&self) -> i32 {
-        self.level as i32 * self.step_size
+            .move_direction_int(backwards, i32::from(self.level) * self.step_forward)
+            .move_direction_sideways_int(backwards, i32::from(self.level) * self.step_sideways)
     }
 }
 

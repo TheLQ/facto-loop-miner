@@ -1,7 +1,7 @@
-use crate::navigator::IntraLevel;
 use crate::navigator::mori::{MoriResult, mori2_start};
+use crate::navigator::{BaseSourceEighth, IntraLevel};
 use crate::state::tuneables::MoriTunables;
-use crate::surfacev::mine::{MineLocation, MinePath};
+use crate::surfacev::mine::{MineDestination, MineLocation, MinePath};
 use crate::surfacev::vsurface::{
     VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRail,
     VSurfaceRailAsVsMut,
@@ -30,6 +30,7 @@ pub fn execute_route_batch_clone_prep<'plan_mine>(
     tunables: &MoriTunables,
     surface: &mut VSurfacePixelMut,
     sequences: Vec<ExecutionSequence<'plan_mine>>,
+    base_source: &BaseSourceEighth,
     flags: &[ExecuteFlags],
 ) -> ExecutorResult<'plan_mine> {
     // At this point
@@ -41,7 +42,7 @@ pub fn execute_route_batch_clone_prep<'plan_mine>(
     // Caller will write our output result to the surface, then we repeat this safe/load
     surface.load_clone_prep().unwrap();
 
-    execute_route_batch(tunables, surface.pixels(), sequences, flags)
+    execute_route_batch(tunables, surface.pixels(), sequences, base_source, flags)
 }
 
 /// Given thousands of possible route combinations, execute in parallel and find the best
@@ -49,6 +50,7 @@ pub fn execute_route_batch<'plan_mine>(
     tunables: &MoriTunables,
     execution_surface: VSurfacePixel,
     sequences: Vec<ExecutionSequence<'plan_mine>>,
+    base_source: &BaseSourceEighth,
     flags: &[ExecuteFlags],
 ) -> ExecutorResult<'plan_mine> {
     let total_sequences = sequences.len();
@@ -66,9 +68,14 @@ pub fn execute_route_batch<'plan_mine>(
 
     // dedupe is bad
     {
-        let seq_segments: Vec<Vec<VSegment>> = sequences
+        let seq_segments: Vec<Vec<(&MineDestination, &MineLocation)>> = sequences
             .iter()
-            .map(|v| v.routes().iter().map(|v| v.segment.clone()).collect())
+            .map(|v| {
+                v.routes()
+                    .iter()
+                    .map(|v| (v.destination, v.location))
+                    .collect()
+            })
             .collect();
         let mut seq_segments_clean = seq_segments.clone();
         seq_segments_clean.dedup();
@@ -79,7 +86,10 @@ pub fn execute_route_batch<'plan_mine>(
             "dedupe detected {}",
             seq_segments
                 .iter()
-                .map(|v| v.iter().map(|v| v.to_string()).join(","))
+                .map(|v| v
+                    .iter()
+                    .map(|(dest, loc)| format!("{dest:?} - {loc:?}"))
+                    .join(","))
                 .join("\n")
         );
         // trace!(
@@ -124,6 +134,7 @@ pub fn execute_route_batch<'plan_mine>(
                         tunables,
                         execution_surface,
                         sequence,
+                        base_source,
                         total_sequences,
                         flags,
                     )
@@ -139,6 +150,7 @@ pub fn execute_route_batch<'plan_mine>(
                     tunables,
                     execution_surface,
                     sequence,
+                    base_source,
                     total_sequences,
                     flags,
                 )
@@ -290,6 +302,7 @@ fn execute_sequence<'plan_mine>(
     tuneables: &MoriTunables,
     surface: VSurfacePixel,
     sequence: ExecutionSequence<'plan_mine>,
+    base_source: &BaseSourceEighth,
     total_sequences: usize,
     flags: &[ExecuteFlags],
 ) -> ExecutorThreadResult<'plan_mine> {
@@ -336,10 +349,12 @@ fn execute_sequence<'plan_mine>(
         //         .map(|v| v.to_string())
         //         .join(",")
         // );
+        let source = base_source.peek_after(i);
+        let segment = route.segment_for_source(&source);
         let route_result = mori2_start(
             tuneables,
             surface.pixels(),
-            route.segment.clone(),
+            segment.clone(),
             &route.finding_limiter,
         );
         match route_result {
@@ -351,7 +366,7 @@ fn execute_sequence<'plan_mine>(
                     sodas,
                     cost,
                     location: route.location.actually_clone(),
-                    segment: route.segment.clone(),
+                    segment,
                 };
                 surface.add_mine_path(path);
             }
@@ -378,9 +393,14 @@ fn execute_sequence<'plan_mine>(
 
 pub struct ExecutionRoute<'plan_mine> {
     pub location: &'plan_mine MineLocation,
-    pub segment: VSegment,
+    pub destination: &'plan_mine MineDestination,
     pub finding_limiter: VArea,
-    pub intra_level: IntraLevel,
+}
+
+impl ExecutionRoute<'_> {
+    pub fn segment_for_source(&self, source: &BaseSourceEntry) -> VSegment {
+        source.segment_for_mine(self.destination)
+    }
 }
 
 /// A single attempt of routes
@@ -616,6 +636,7 @@ mod _hidden_sequence {
         }
     }
 }
+use crate::navigator::base_source::BaseSourceEntry;
 pub use _hidden_sequence::FailingSequence;
 
 pub struct SeenMines<'plan_mine>(HashMap<&'plan_mine MineLocation, usize>);

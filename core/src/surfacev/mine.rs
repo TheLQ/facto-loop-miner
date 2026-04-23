@@ -231,7 +231,11 @@ impl MineLocation {
         {
             // assert_eq!(surface.get_pixel(point), Pixel::MineNoTouch);
             let pixel = surface.pixels().get_pixel(point);
-            if !matches!(pixel, Pixel::MineNoTouch | Pixel::Empty | Pixel::UraniumOre) {
+            if !matches!(pixel, Pixel::MineNoTouch | Pixel::Empty | Pixel::Rail) {
+                surface
+                    .change_pixels(self.area_buffered.get_points())
+                    .stomp(Pixel::Highlighter);
+
                 surface
                     .change_square(&VArea::from_arbitrary_points_pair(
                         point,
@@ -240,7 +244,7 @@ impl MineLocation {
                     .stomp(Pixel::Highlighter);
                 surface
                     .pixels()
-                    .paint_pixel_colored_zoomed()
+                    .paint_pixel_colored_entire()
                     .save_to_oculante();
                 panic!("for {point} is {pixel:?}")
             }
@@ -338,12 +342,13 @@ impl MineDestination {
 
             // is the link able to be reached?
             let link_backwards = HopeSodaLink::new_soda_straight_flipped(&end_link);
-            let mut all_free = true;
-            for link in [
-                end_link.clone(),
-                link_backwards.add_straight_section(),
-                link_backwards.add_turn90(true),
-                link_backwards.add_turn90(false),
+            let mut is_best = true;
+            let mut failed_turns = 0;
+            for (is_turn, link) in [
+                (false, end_link.clone()),
+                (false, link_backwards.add_straight_section()),
+                (true, link_backwards.add_turn90(true)),
+                (true, link_backwards.add_turn90(false)),
             ] {
                 let points = link.area_vec();
                 if points.iter().any(|v| surface.is_point_out_of_bounds(v)) {
@@ -353,10 +358,18 @@ impl MineDestination {
                     if !is_free {
                         conflict_links.push(link);
                     }
-                    all_free = all_free && is_free;
+                    is_best = is_best && is_free;
+
+                    if is_turn {
+                        let is_too_close = area_min.contains_points_any(points);
+                        if is_too_close {
+                            failed_turns += 1;
+                        }
+                    }
                 }
             }
-            Some((all_free, conflict_links))
+            is_best = is_best && failed_turns != 2;
+            Some((is_best, conflict_links))
         };
 
         let mut destination_levels = Vec::new();

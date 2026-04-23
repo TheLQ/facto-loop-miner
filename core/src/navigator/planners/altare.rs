@@ -206,7 +206,7 @@ impl<'t, 'sr, 's, 'plan_mine> Quester<'t, 'sr, 's, 'plan_mine> {
         if possible_routes.sequences.is_empty() {
             error!("[FATAL] no routes");
             Debugger(self.surface, "no routes")
-                .starts_numbered(self.base_source_positive.clone(), mines_bak.len())
+                .starts_numbered(&self.base_source_positive, mines_bak.len())
                 .mines(mines_bak.iter().map(|v| *v), &self.base_source_positive);
             return ControlFlow::Break(());
         }
@@ -231,16 +231,17 @@ impl<'t, 'sr, 's, 'plan_mine> Quester<'t, 'sr, 's, 'plan_mine> {
                     Debugger(surface, key)
                         .fail_mine_color_and_best_routes(stats.best_meta.unwrap())
                         .mines(stats.seen_mines.mines(), &self.base_source_positive)
-                        .starts_numbered(self.base_source_positive.clone(), stats.seen_mines.len())
+                        .starts_numbered(&self.base_source_positive, stats.seen_mines.len())
                         .wasteds(stats.wasteds);
                 };
 
                 let is_break;
-                if !stats.wasted_per_len.is_empty() {
-                    error!("why you wasting attempts?");
-                    apply_debug(self.surface, stats, "wasting-iteration");
-                    is_break = true;
-                } else if self.surface.rails().get_mine_paths().is_empty() {
+                // if !stats.wasted_per_len.is_empty() {
+                //     error!("why you wasting attempts?");
+                //     apply_debug(self.surface, stats, "wasting-iteration");
+                //     is_break = true;
+                // } else
+                if self.surface.rails().get_mine_paths().is_empty() {
                     error!("failed on first iteration, stopping");
                     apply_debug(self.surface, stats, "first-iteration");
                     is_break = true;
@@ -258,22 +259,20 @@ impl<'t, 'sr, 's, 'plan_mine> Quester<'t, 'sr, 's, 'plan_mine> {
                             let lucky_mine = stats.seen_mines.least_known();
 
                             let nearest_path_index =
-                                detect_nearby_rails_as_index(self.surface.rails(), &lucky_mine);
+                                detect_nearby_rails_as_index(self.surface.rails(), lucky_mine);
                             let total_paths = self.surface.rails().get_mine_paths().len();
 
                             let mut i = 0;
-                            while self
-                                .surface
-                                .rails_mut()
-                                .remove_mine_path_pop()
-                                .unwrap()
-                                .0
-                                .location
-                                != *lucky_mine
-                            {
+                            while self.surface.rails().get_mine_paths().len() > nearest_path_index {
+                                self.surface
+                                    .rails_mut()
+                                    .remove_mine_path_pop()
+                                    .expect("removed too many mines?");
+
                                 trace!("[rollback] pop {i}");
                                 i += 1;
                             }
+
                             assert_eq!(
                                 i,
                                 total_paths - nearest_path_index,
@@ -371,6 +370,7 @@ impl<'t, 'sr, 's, 'plan_mine> Quester<'t, 'sr, 's, 'plan_mine> {
             self.tunables.mori(),
             &mut self.surface.pixels_mut(),
             possible_routes.sequences,
+            &self.base_source_positive,
             &[ExecuteFlags::ShrinkBases],
         ) {
             ExecutorResult::Success { paths, sequence: _ } => {
@@ -396,13 +396,7 @@ impl<'t, 'sr, 's, 'plan_mine> Quester<'t, 'sr, 's, 'plan_mine> {
         let pre_len = mines.len();
         mines.dedup();
         assert_eq!(mines.len(), pre_len, "dedupe detected");
-        get_possible_routes_for_batch(
-            self.surface.pixels(),
-            MineSelectBatch {
-                base_sources: self.base_source_positive.clone(),
-                mines,
-            },
-        )
+        get_possible_routes_for_batch(self.surface.pixels(), MineSelectBatch { mines })
     }
 }
 

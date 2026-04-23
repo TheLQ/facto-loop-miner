@@ -1,6 +1,7 @@
 use crate::TILES_PER_CHUNK;
 use crate::navigator::MoriCostMode;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
+use facto_loop_miner_fac_engine::game_entities::rail_straight::RAIL_STRAIGHT_DIAMETER_I32;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -84,7 +85,8 @@ impl MoriTunables {
 pub struct PathCommonTunables {
     pub scan_size: i32,
     pub base_source_section_step: i32,
-    pub base_source_intra_step: i32,
+    pub base_source_intra_forward: i32,
+    pub base_source_intra_sideways: i32,
     /// number of rails per intra
     pub base_source_intra_rails: u8,
     pub mine_further_attempts: u8,
@@ -95,7 +97,12 @@ impl PathCommonTunables {
         Self {
             scan_size: 120,
             base_source_section_step: SECTION_POINTS_I32,
-            base_source_intra_step: 6,
+            base_source_intra_forward: (SECTION_POINTS_I32 / 2)
+                // make positive
+                + 1
+                // rails
+                + (RAIL_STRAIGHT_DIAMETER_I32 * 1),
+            base_source_intra_sideways: 6,
             base_source_intra_rails: 4,
             mine_further_attempts: 2,
         }
