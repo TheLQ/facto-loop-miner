@@ -34,3 +34,5 @@ pub use rail::{
     Plug as VSurfaceRail,
     PlugMut as VSurfaceRailMut,
 };
+
+pub use patch::PatchRef;

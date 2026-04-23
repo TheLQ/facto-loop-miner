@@ -156,13 +156,13 @@ impl FacBlkBeltTrainUnload {
             FacBlkBettelBelt::new(
                 self.belt_type,
                 origin,
-                *self.origin.direction(),
+                self.origin.direction(),
                 self.output.clone(),
             ),
             FacBlkBettelBelt::new(
                 self.belt_type,
                 origin.move_direction_sideways_int(self.origin.direction(), 1),
-                *self.origin.direction(),
+                self.origin.direction(),
                 self.output.clone(),
             ),
         ];

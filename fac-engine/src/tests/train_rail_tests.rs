@@ -317,7 +317,7 @@ pub fn make_base_source_rails(output: Rc<FacItemOutput>) {
 
     for _ in 0..6 {
         let new_source = source.next().unwrap();
-        let link = HopeSodaLink::new_soda_straight(*new_source.point(), FacDirectionQuarter::East);
+        let link = HopeSodaLink::new_soda_straight(new_source.point(), FacDirectionQuarter::East);
 
         for rail in sodas_to_rails([link]) {
             rail.write_output(&output);
@@ -353,7 +353,7 @@ impl BaseSourceEighth {
         );
         tracing::trace!("working with {} from {}", pos, self.origin);
         // pos.assert_step_rail();
-        VPointDirectionQ(pos, *self.origin.direction())
+        VPointDirectionQ(pos, self.origin.direction())
     }
 
     fn peek_single(&self) -> VPointDirectionQ {

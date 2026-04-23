@@ -135,7 +135,7 @@ impl RailHopeAppender for RailHopeSingle {
 impl RailHopeLink for HopeLink {
     fn add_straight(&self, length: usize) -> HopeLink {
         let new_origin = self.pos_next();
-        trace!("writing direction {}", self.next_direction);
+        // trace!("writing direction {}", self.next_direction);
 
         let mut rails = Vec::with_capacity(length);
         for i in 0..length {

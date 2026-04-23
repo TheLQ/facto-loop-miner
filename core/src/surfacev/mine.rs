@@ -1,6 +1,12 @@
+use crate::navigator::planners::common_util::move_further_by_section;
+use crate::navigator::{BaseSourceEighth, IntraLevel};
+use crate::opencv::TextSize;
+use crate::state::tuneables::PathCommonTunables;
 use crate::surface::pixel::Pixel;
+use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::{
-    VSurfacePatch, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelMut,
+    PatchRef, VSurfacePatch, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
+    VSurfacePixelMut,
 };
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -12,16 +18,14 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::{HopeLink, SECTION_POINTS_I32};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
-use itertools::Itertools;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
 use std::borrow::Borrow;
 use std::collections::HashSet;
-use std::fmt::Arguments;
-use tracing::{trace, warn};
+use tracing::{error, warn};
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct MinePath {
     pub location: MineLocation,
     pub links: Vec<HopeLink>,
@@ -30,14 +34,13 @@ pub struct MinePath {
     pub cost: u32,
 }
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct MineLocation {
-    patch_indexes: Vec<usize>,
+    patch_indexes: Vec<PatchRef>,
     area_min: VArea,
     area_no_touch: VArea,
     area_buffered: VArea,
-    endpoints: Vec<VPoint>,
-    endpoints_adjust_direction: Vec<FacDirectionQuarter>,
+    destinations: Vec<MineDestination>,
 }
 
 impl MinePath {
@@ -63,20 +66,17 @@ impl MinePath {
 }
 
 impl MineLocation {
-    pub fn from_patch_indexes(surface: VSurfacePatch, patch_indexes: Vec<usize>) -> Option<Self> {
-        let patch_corners = surface
-            .get_patches()
-            .iter()
-            .enumerate()
-            .filter_map(|(i, p)| {
-                if patch_indexes.contains(&i) {
-                    Some(p)
-                } else {
-                    None
-                }
-            })
-            .flat_map(|p| p.area.get_corner_points());
-        let area_min = VArea::from_arbitrary_points(patch_corners);
+    pub fn from_patch_indexes(
+        surface: VSurfacePatch,
+        patch_indexes: Vec<PatchRef>,
+        base_source: &BaseSourceEighth,
+        tunables: &PathCommonTunables,
+    ) -> Option<Self> {
+        let area_min = VArea::from_arbitrary_points(
+            patch_indexes
+                .iter()
+                .flat_map(|v| v.get_patch(&surface).area.get_corner_points()),
+        );
 
         let area_no_touch = area_min
             .normalize_step_rail(0)
@@ -105,9 +105,15 @@ impl MineLocation {
 
         assert!(area_no_touch.get_points().len() < area_buffered.get_points().len());
 
-        let Some((endpoints, endpoints_adjust_direction)) =
-            Self::new_endpoints(surface.pixels(), &area_no_touch)
-        else {
+        let destinations = MineDestination::find_all_destinations(
+            surface.pixels(),
+            &area_no_touch,
+            base_source,
+            tunables,
+            // todo: only finds links ending going east
+            FacDirectionQuarter::East,
+        );
+        if destinations.is_empty() {
             warn!("Excluding mine at {}", area_no_touch);
             return None;
         };
@@ -117,259 +123,77 @@ impl MineLocation {
             area_min,
             area_no_touch,
             area_buffered,
-            endpoints,
-            endpoints_adjust_direction,
+            destinations,
         })
     }
 
-    fn new_endpoints(
-        surface: VSurfacePixel,
-        area_min: &VArea,
-    ) -> Option<(Vec<VPoint>, Vec<FacDirectionQuarter>)> {
-        let centered_rounded = area_min.point_center().move_round_rail_down();
-
-        let destination_top_raw =
-            VPoint::new(centered_rounded.x(), area_min.point_top_left().y()).move_round_rail_down();
-        destination_top_raw.assert_step_rail();
-
-        let destination_bottom_raw =
-            VPoint::new(centered_rounded.x(), area_min.point_bottom_right().y())
-                .move_round_rail_up();
-        destination_bottom_raw.assert_step_rail();
-
-        let mut endpoints = Vec::with_capacity(2);
-        let mut endpoints_adjust_direction = Vec::with_capacity(2);
-        for (cur_endpoint, adjust_direction) in [
-            (destination_top_raw, FacDirectionQuarter::West),
-            (destination_bottom_raw, FacDirectionQuarter::East),
-        ] {
-            // adjust more to account for link
-
-            // basic pre-filter to not screw up later
-            if surface.is_point_out_of_bounds(&cur_endpoint) {
-                continue;
-            }
-
-            endpoints.push(cur_endpoint);
-            endpoints_adjust_direction.push(adjust_direction);
-        }
-        if endpoints.is_empty() {
-            warn!(
-                "excluding mine top {destination_top_raw} bottom {destination_bottom_raw} for {area_min}"
-            );
-            None
-        } else {
-            Some((endpoints, endpoints_adjust_direction))
+    pub fn actually_clone(&self) -> Self {
+        let Self {
+            patch_indexes,
+            area_min,
+            area_no_touch,
+            area_buffered,
+            destinations,
+        } = self;
+        Self {
+            patch_indexes: patch_indexes.clone(),
+            area_min: area_min.clone(),
+            area_no_touch: area_no_touch.clone(),
+            area_buffered: area_buffered.clone(),
+            destinations: destinations.to_vec(),
         }
     }
 
-    pub fn revalidate_endpoints_after_no_touch(&mut self, surface: VSurfacePixel) {
-        assert_eq!(self.endpoints.len(), self.endpoints_adjust_direction.len());
-        trace!("start {}", self.area_min().point_center());
-
-        'endpoints: for endpoint_index in (0..self.endpoints.len()).rev() {
-            let mut endpoint = self.endpoints[endpoint_index];
-            let adjust_direction = self.endpoints_adjust_direction[endpoint_index];
-            trace!("dir {adjust_direction}");
-
-            /// See [crate::navigator::base_source::BaseSourceEighth]
-            /// This is always applied vertically
-            const MAX_INTRA_OFFSET: VPoint = VPoint::new(0, 4 * 6);
-
-            /// Given endpoint is center of dual rail, which always is inside of area
-            const DUAL_RAIL_OFFSET: i32 = 4;
-            endpoint = endpoint.move_direction_sideways_int(adjust_direction, DUAL_RAIL_OFFSET);
-
-            for adjust_i in 0..3 {
-                let mut new_origin = endpoint
-                    .move_direction_sideways_int(adjust_direction, adjust_i * SECTION_POINTS_I32);
-
-                match self.is_adjust_endpoint(
-                    surface,
-                    new_origin,
-                    format_args!("mine endpoint {endpoint} at {adjust_i}-natty (cur {new_origin})"),
-                ) {
-                    Adjustment::Usable => {
-                        // more tests below
-                    }
-                    Adjustment::AdjustMore => {
-                        continue;
-                    }
-                    Adjustment::BadEndpoint => {
-                        self.remove_bad_endpoint_index(endpoint_index);
-                        continue 'endpoints;
-                    }
-                }
-                // best natty endpoint
-                self.endpoints[endpoint_index] =
-                    new_origin.move_direction_sideways_int(adjust_direction, -DUAL_RAIL_OFFSET);
-                trace!("uopdat! {endpoint_index}");
-
-                // now try with intra offset
-                new_origin += MAX_INTRA_OFFSET;
-                match self.is_adjust_endpoint(
-                    surface,
-                    new_origin,
-                    format_args!("mine endpoint {endpoint} at {adjust_i}-intra (cur {new_origin})"),
-                ) {
-                    Adjustment::Usable => {
-                        // success!
-                        trace!("final good!");
-                        continue 'endpoints;
-                    }
-                    Adjustment::AdjustMore => {
-                        // just skip ahead
-                        continue;
-                    }
-                    Adjustment::BadEndpoint => {
-                        // maybe the next adjustment is better?
-                        continue;
-                    }
-                }
-            }
-            trace!("out of adjustment");
-            self.remove_bad_endpoint_index(endpoint_index);
-        }
-    }
-
-    fn remove_bad_endpoint_index(&mut self, i: usize) {
-        // trace!("remove {i}");
-        self.endpoints.remove(i);
-        self.endpoints_adjust_direction.remove(i);
-        trace!(
-            "remove {i} remain {}",
-            self.endpoints.iter().map(|v| v.to_string()).join(",")
-        );
-    }
-
-    fn is_adjust_endpoint(
-        &self,
-        scratch_surface: VSurfacePixel,
-        new_origin: VPoint,
-        debug_prefix: Arguments,
-    ) -> Adjustment {
-        // todo: Multi-approach
-        const ONLY_CURRENT_ENDPOINT_DIRECTION: FacDirectionQuarter = FacDirectionQuarter::East;
-
-        let end_link = HopeSodaLink::new_soda_straight(new_origin, ONLY_CURRENT_ENDPOINT_DIRECTION);
-        let end_link_points = end_link.area_vec();
-
-        // does link fit inside the surface?
-        if end_link_points
-            .iter()
-            .any(|v| scratch_surface.is_point_out_of_bounds(v))
-        {
-            // cannot go further out of bounds
-            trace!(
-                "{debug_prefix} out of bounds, remain {}",
-                self.endpoints.len() - 1
-            );
-            return Adjustment::BadEndpoint;
-        }
-
-        // is link still inside the no-touch zone?
-        if self.area_no_touch.contains_points_any(&end_link_points) {
-            // try the next one
-            trace!("{debug_prefix} inside self no touch");
-            return Adjustment::AdjustMore;
-        }
-
-        // is link points valid?
-        if !self.is_surface_points_free_excluding_self_area(
-            scratch_surface,
-            end_link_points,
-            &debug_prefix,
-        ) {
-            return Adjustment::BadEndpoint;
-        }
-
-        // is the link able to be reached?
-        let link_backwards = HopeSodaLink::new_soda_straight_flipped(&end_link);
-        for link in [
-            link_backwards.add_straight_section(),
-            link_backwards.add_turn90(true),
-            link_backwards.add_turn90(false),
-        ] {
-            if link
-                .area_vec()
-                .iter()
-                .any(|v| scratch_surface.is_point_out_of_bounds(v))
-            {
-                trace!(
-                    "{debug_prefix} is out of bounds, remain {}",
-                    self.endpoints.len() - 1
-                );
-                return Adjustment::BadEndpoint;
-            }
-
-            if !self.is_surface_points_free_excluding_self_area(
-                scratch_surface,
-                link.area_vec(),
-                &debug_prefix,
-            ) {
-                trace!(
-                    "{debug_prefix} is unreachable, remain {}",
-                    self.endpoints.len() - 1
-                );
-                return Adjustment::BadEndpoint;
-            }
-        }
-
-        // it's valid!
-        trace!("{debug_prefix} is valid");
-        Adjustment::Usable
-    }
-
-    fn is_surface_points_free_excluding_self_area(
-        &self,
-        surface: VSurfacePixel,
-        points: impl IntoIterator<Item = impl Borrow<VPoint>>,
-        debug_prefix: &Arguments,
-    ) -> bool {
-        let mut pixels: Vec<Pixel> = points
-            .into_iter()
-            .filter_map(|p| {
-                let p = p.borrow();
-                if surface.is_point_out_of_bounds(p) {
-                    panic!("we already checked this?");
-                }
-                let pixel = surface.get_pixel(p);
-                if pixel == Pixel::MineNoTouch && self.area_buffered.contains_point(p) {
-                    // exclude self
-                    None
-                } else {
-                    Some(pixel)
-                }
-            })
-            .collect_vec();
-        pixels.sort();
-        pixels.dedup();
-        let pixels_debug = pixels.iter().map(|v| v.as_ref()).join(",");
-
-        if pixels.iter().all(|p| *p == Pixel::Empty) {
-            // good all empty!
-            true
-        } else if pixels
-            .iter()
-            .all(|p| matches!(*p, Pixel::Empty | Pixel::MineNoTouch))
-        {
-            trace!(
-                "{debug_prefix} is not in mine touch, maybe touching another?, remain {}",
-                self.endpoints.len() - 1
-            );
-            false
-        } else if pixels
-            .iter()
-            .all(|p| Pixel::is_resource(p) || matches!(*p, Pixel::Empty | Pixel::MineNoTouch))
-        {
-            // todo: do this ever happen?
-            trace!("{debug_prefix} hit another mine");
-            false
-        } else {
-            // panic!("{debug_prefix} is {pixels_debug}");
-            panic!("{debug_prefix} is {pixels_debug}");
-        }
-    }
+    // fn is_surface_points_free_excluding_self_area(
+    //     &self,
+    //     surface: VSurfacePixel,
+    //     points: impl IntoIterator<Item = impl Borrow<VPoint>>,
+    //     debug_prefix: &Arguments,
+    // ) -> bool {
+    //     let mut pixels: Vec<Pixel> = points
+    //         .into_iter()
+    //         .filter_map(|p| {
+    //             let p = p.borrow();
+    //             if surface.is_point_out_of_bounds(p) {
+    //                 panic!("we already checked this?");
+    //             }
+    //             let pixel = surface.get_pixel(p);
+    //             if pixel == Pixel::MineNoTouch && self.area_buffered.contains_point(p) {
+    //                 // exclude self
+    //                 None
+    //             } else {
+    //                 Some(pixel)
+    //             }
+    //         })
+    //         .collect_vec();
+    //     pixels.sort();
+    //     pixels.dedup();
+    //     let pixels_debug = pixels.iter().map(|v| v.as_ref()).join(",");
+    //
+    //     if pixels.iter().all(|p| *p == Pixel::Empty) {
+    //         // good all empty!
+    //         true
+    //     } else if pixels
+    //         .iter()
+    //         .all(|p| matches!(*p, Pixel::Empty | Pixel::MineNoTouch))
+    //     {
+    //         trace!(
+    //             "{debug_prefix} is not in mine touch, maybe touching another?, remain {}",
+    //             self.endpoints.len() - 1
+    //         );
+    //         false
+    //     } else if pixels
+    //         .iter()
+    //         .all(|p| Pixel::is_resource(p) || matches!(*p, Pixel::Empty | Pixel::MineNoTouch))
+    //     {
+    //         // todo: do this ever happen?
+    //         trace!("{debug_prefix} hit another mine");
+    //         false
+    //     } else {
+    //         // panic!("{debug_prefix} is {pixels_debug}");
+    //         panic!("{debug_prefix} is {pixels_debug}");
+    //     }
+    // }
 
     pub fn area_min(&self) -> &VArea {
         &self.area_min
@@ -465,23 +289,180 @@ impl MineLocation {
     //     &self.endpoints
     // }
 
-    pub fn destinations(&self) -> impl Iterator<Item = VPointDirectionQ> {
-        // todo
-        self.endpoints
+    pub fn destinations(&self) -> &[MineDestination] {
+        self.destinations.as_slice()
+    }
+
+    pub fn patches_for_mine<'s>(
+        &self,
+        surface: &'s VSurfacePatch,
+    ) -> impl Iterator<Item = &'s VPatch> {
+        self.patch_indexes.iter().map(move |i| surface.patch_at(i))
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone, Serialize, Deserialize)]
+pub struct MineDestination(Vec<MineDestinationLevel>);
+
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone, Serialize, Deserialize)]
+pub struct MineDestinationLevel {
+    level: IntraLevel,
+    target: VPointDirectionQ,
+}
+
+impl MineDestination {
+    fn find_all_destinations(
+        surface: VSurfacePixel,
+        area_min: &VArea,
+        base_source: &BaseSourceEighth,
+        tunables: &PathCommonTunables,
+        direction: FacDirectionQuarter,
+    ) -> Vec<Self> {
+        let centered_rounded = area_min.point_center().move_round_rail_down();
+
+        let destination_top_raw =
+            VPoint::new(centered_rounded.x(), area_min.point_top_left().y()).move_round_rail_down();
+        destination_top_raw.assert_step_rail();
+
+        let destination_bottom_raw =
+            VPoint::new(centered_rounded.x(), area_min.point_bottom_right().y())
+                .move_round_rail_up();
+        destination_bottom_raw.assert_step_rail();
+
+        let gen_link = |origin: VPoint| {
+            HopeSodaLink::new_soda_straight_q(&VPointDirectionQ(origin, direction))
+        };
+        let test = |cur: &VPoint| {
+            let end_link = gen_link(*cur);
+            let mut conflict_links = Vec::new();
+
+            // is the link able to be reached?
+            let link_backwards = HopeSodaLink::new_soda_straight_flipped(&end_link);
+            let mut all_free = true;
+            for link in [
+                end_link.clone(),
+                link_backwards.add_straight_section(),
+                link_backwards.add_turn90(true),
+                link_backwards.add_turn90(false),
+            ] {
+                let points = link.area_vec();
+                if points.iter().any(|v| surface.is_point_out_of_bounds(v)) {
+                    return None;
+                } else {
+                    let is_free = surface.is_points_free_unchecked(&points);
+                    if !is_free {
+                        conflict_links.push(link);
+                    }
+                    all_free = all_free && is_free;
+                }
+            }
+            Some((all_free, conflict_links))
+        };
+
+        let mut destination_levels = Vec::new();
+        'destinations: for origin in [destination_top_raw, destination_bottom_raw] {
+            let mut level_map = Vec::new();
+            'levels: for level_i in 0..tunables.base_source_intra_rails {
+                let level = base_source.intra_level_at_index(level_i);
+                let mut attempts = vec![level.apply(origin)];
+                for _ in 0..tunables.mine_further_attempts {
+                    let further_endpoint = move_further_by_section(
+                        area_min.point_center(),
+                        *attempts.last().unwrap(),
+                        true,
+                        tunables,
+                    );
+                    attempts.push(further_endpoint);
+                }
+
+                let mut conflict_links = Vec::new();
+                for attempt in &attempts {
+                    match test(attempt) {
+                        None => {
+                            // endpoint is out of bounds, abandon the entire destination
+                            continue 'destinations;
+                        }
+                        Some((false, new_conflict_links)) => {
+                            conflict_links.extend(new_conflict_links);
+                        }
+                        Some((true, new_conflict_links)) => {
+                            assert!(new_conflict_links.is_empty());
+                            level_map.push(MineDestinationLevel {
+                                level,
+                                target: VPointDirectionQ(*attempt, direction),
+                            });
+                            continue 'levels;
+                        }
+                    }
+                }
+
+                // we just gathered conflicts
+
+                let mut debug_surface = surface.surface_copy();
+                for bad in conflict_links {
+                    debug_surface
+                        .pixels_mut()
+                        .change_pixels(bad.area_vec())
+                        .find_empty_into(Pixel::Highlighter);
+                }
+
+                for (i, endpoint) in attempts.iter().enumerate() {
+                    debug_surface.pixels_mut().draw_text_at(
+                        *endpoint,
+                        &format!("d{i}"),
+                        TextSize::small(),
+                        Pixel::EdgeWall,
+                    );
+                }
+
+                // mega highlighter
+                debug_surface
+                    .pixels_mut()
+                    // .change_square(&VArea::from_radius(attempts[0], 200))
+                    .change_square(area_min)
+                    .find_empty_into(Pixel::SteelChest);
+
+                attempts.push(area_min.point_center());
+                debug_surface
+                    .pixels_mut()
+                    .change_pixels(attempts)
+                    .stomp(Pixel::Water);
+
+                debug_surface
+                    .pixels()
+                    .paint_pixel_colored_entire()
+                    .save_to_oculante();
+
+                panic!("the further away pos doesn't work either?")
+            }
+            assert!(!level_map.is_empty());
+
+            let destination_level = MineDestination(level_map);
+
+            destination_levels.push(destination_level);
+        }
+        destination_levels
+    }
+
+    pub fn for_level(&self, needle: &IntraLevel) -> VPointDirectionQ {
+        self.0
             .iter()
-            .map(|v| VPointDirectionQ(*v, FacDirectionQuarter::East))
-    }
-
-    pub(super) fn patch_indexes(&self) -> &[usize] {
-        self.patch_indexes.as_slice()
+            .find(|level| level.level == *needle)
+            .unwrap_or_else(|| {
+                for level in &self.0 {
+                    error!("level {:?}", level.level);
+                }
+                panic!("level not found {needle:?}")
+            })
+            .target
     }
 }
 
-enum Adjustment {
-    AdjustMore,
-    BadEndpoint,
-    Usable,
-}
+// enum Adjustment {
+//     AdjustMore,
+//     BadEndpoint,
+//     Usable,
+// }
 
 #[derive(Serialize, Deserialize)]
 pub struct DebugMinePatch {

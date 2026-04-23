@@ -1,4 +1,4 @@
-use crate::navigator::mine_executor::{FailingCause, FailingMeta};
+use crate::navigator::mine_executor::FailingCause;
 use crate::navigator::mori_cost::calculate_cost_for_link;
 use crate::state::tuneables::MoriTunables;
 use crate::surfacev::vsurface::VSurfacePixel;
@@ -11,8 +11,8 @@ use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{HopeSodaLink, sodas_to_links};
 use num_format::ToFormattedString;
-use pathfinding::prelude::{AStarErr, astar_mori};
-use std::collections::{HashMap, HashSet};
+use pathfinding::prelude::astar_mori;
+use std::collections::HashMap;
 use std::time::Duration;
 use tracing::{info, warn};
 

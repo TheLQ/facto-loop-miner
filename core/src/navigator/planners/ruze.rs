@@ -1,17 +1,13 @@
-use crate::always_true_test;
-use crate::navigator::mine_executor::{
-    ExecutorResult, FailingMeta, execute_route_batch_clone_prep,
-};
+use crate::navigator::mine_executor::{ExecutorResult, execute_route_batch_clone_prep};
 use crate::navigator::mine_permutate::get_possible_routes_for_batch;
 use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
-use crate::navigator::planners::common::{Debugger, PathingTunables, draw_prep};
+use crate::navigator::planners::common_debug::{PathingTunables, draw_prep};
 use crate::state::tuneables::MoriTunables;
 use crate::surface::metric::Metrics;
-use crate::surface::pixel::Pixel;
 use crate::surfacev::vsurface::{
     VSurfaceNavMut, VSurfacePatchAsVs, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfaceRailAsVsMut,
 };
-use tracing::{error, info, trace, warn};
+use tracing::{error, info, trace};
 
 const RUZE_MAXIMUM_MINE_COUNT_PER_BATCH: usize = 3;
 

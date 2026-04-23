@@ -1,30 +1,27 @@
 use crate::TILES_PER_CHUNK;
-use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
+use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::planners::PathingTunables;
 use crate::surface::pixel::Pixel;
+use crate::surfacev::iter_remain_util::RemainIter;
 use crate::surfacev::mine::MineLocation;
-use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::VSurfacePatch;
-use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
-use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
+use crate::surfacev::vsurface::{PatchRef, VSurfacePatch};
 use itertools::Itertools;
-use tracing::{debug, error, info, warn};
+use simd_json::prelude::ArrayTrait;
 
-#[derive(Clone)]
-pub struct MineSelectBatch {
-    pub mines: Vec<MineLocation>,
+pub struct MineSelectBatch<'plan_mine> {
+    pub mines: Vec<&'plan_mine MineLocation>,
     pub base_sources: BaseSourceEighth,
 }
 
-pub enum MineSelectBatchResult {
-    Success { batches: Vec<MineSelectBatch> },
+pub enum MineSelectBatchResult<'plan_mine> {
+    Success {
+        batches: Vec<MineSelectBatch<'plan_mine>>,
+    },
     EmptyBatch,
 }
 
-impl MineSelectBatchResult {
-    pub fn into_success(self) -> Option<Vec<MineSelectBatch>> {
+impl<'plan_mine> MineSelectBatchResult<'plan_mine> {
+    pub fn into_success(self) -> Option<Vec<MineSelectBatch<'plan_mine>>> {
         match self {
             MineSelectBatchResult::Success { batches } => Some(batches),
             MineSelectBatchResult::EmptyBatch => None,
@@ -32,8 +29,8 @@ impl MineSelectBatchResult {
     }
 }
 
-impl MineSelectBatch {
-    pub fn only_mine(&self) -> &MineLocation {
+impl<'plan_mine> MineSelectBatch<'plan_mine> {
+    pub fn only_mine(&self) -> &'plan_mine MineLocation {
         assert_eq!(self.mines.len(), 1);
         &self.mines[0]
     }
@@ -47,18 +44,17 @@ impl MineSelectBatch {
 ///  - Order patch groups starting from center
 ///  - Assign base sources
 ///  - Split groups if needed because too huge creates too many possibilities later
-pub fn select_mines_and_sources(
-    tunables: &PathingTunables,
-    surface: VSurfacePatch,
-    maximum_mine_count_per_batch: usize,
-) -> MineSelectBatchResult {
+pub fn select_mines_and_sources<'plan_mine>(
+    _tunables: &PathingTunables,
+    _surface: VSurfacePatch,
+    _maximum_mine_count_per_batch: usize,
+) -> MineSelectBatchResult<'plan_mine> {
+    todo!()
+    /*
     let base_source = BaseSource::from_central_base(tunables).into_positive();
 
     let patch_groups = group_nearby_patches(surface);
-    let total_patches: usize = patch_groups
-        .iter()
-        .map(VSurfacePatch::mine_patches_len)
-        .sum();
+    let total_patches: usize = patch_groups.iter().map(|v| v.len()).sum();
     info!("selected {total_patches} patches");
 
     // let ordered_patches = match 2 {
@@ -71,7 +67,8 @@ pub fn select_mines_and_sources(
     // };
     // ordered_patches
 
-    let mine_batches = patches_by_cross_sign_expanding(patch_groups, base_source, tunables);
+    let mine_batches =
+        patches_by_cross_sign_expanding(/*patch_groups*/ todo!(), base_source, tunables);
     if mine_batches.is_empty() {
         return MineSelectBatchResult::EmptyBatch;
     }
@@ -104,10 +101,12 @@ pub fn select_mines_and_sources(
         }
     }
     MineSelectBatchResult::Success { batches: result }
+     */
 }
 
-/// Second grouping pass (after opencv), now by grouping different resource patches
-pub fn group_nearby_patches(surface: VSurfacePatch) -> Vec<MineLocation> {
+/// * First, opencv groups raw pixels into per-resource patches
+/// * Second, group any patches nearby each-other
+pub fn group_nearby_patches(surface: VSurfacePatch) -> Vec<Vec<PatchRef>> {
     // ignores UraniumOre because it's only for
     // electric production (solar instead) and military (unused)
     let resources = [
@@ -118,86 +117,70 @@ pub fn group_nearby_patches(surface: VSurfacePatch) -> Vec<MineLocation> {
         Pixel::CrudeOil,
     ];
 
-    let patches: Vec<&VPatch> = surface
-        .get_patches()
-        .iter()
-        .filter(|patch| resources.contains(&patch.resource))
+    let all_patches: Vec<PatchRef> = surface
+        .patches_with_index()
+        .filter(|(_, patch)| resources.contains(&patch.resource))
+        .map(|(i, _)| i)
         .collect();
+    let mut processed_patches: Vec<PatchRef> = Vec::new();
 
-    // group patches by nearby
-    let mut groups: Vec<Vec<&VPatch>> = Vec::new();
-    for patch in &patches {
-        // todo: this was a performance boost. Needs to re-benchmark
-        let processed_patches = groups.iter().flatten().cloned().collect_vec();
-        if processed_patches.contains(patch) {
+    let mut groups: Vec<Vec<PatchRef>> = Vec::new();
+    for patch_i in &all_patches {
+        if processed_patches.contains(&patch_i) {
             // already in a group
             continue;
         }
-        let remaining_patches = patches
-            .iter()
-            .filter(|p| !processed_patches.contains(p))
-            .cloned()
-            .collect_vec();
 
         let mut new_group = Vec::new();
-        new_group.push(*patch);
-        recursive_near_patches(patch, &remaining_patches, &mut new_group);
+        new_group.push(patch_i.clone());
+        recursive_near_patches(patch_i, &all_patches, &mut new_group, &surface);
+        for patch_j in &new_group {
+            processed_patches.push(patch_j.clone());
+        }
+
         groups.push(new_group);
     }
 
-    // {
-    //     let mut dedupe_check = groups.iter().flatten().cloned().collect_vec();
-    //     let old = dedupe_check.len();
-    //     dedupe_check.sort();
-    //     dedupe_check.dedup();
-    //     assert_eq!(old, dedupe_check.len(), "dedupe found stuff!");
-    // }
-
-    // Merge groups
-    let mut result = Vec::new();
-    for patch_group in groups {
-        let patch_group_indexes = if patch_group.len() != 1 {
-            // trace!("Merging patch group of {:?}", patch_group);
-
-            // Externally we use the index in the VSurface Patches slice
-            patch_group
-                .iter()
-                .map(|patch| surface.get_patch_index(patch))
-                .collect()
-        } else {
-            let patch = patch_group[0];
-            // trace!("Single patch group {:?}", patch);
-            vec![surface.get_patch_index(patch)]
-        };
-
-        if let Some(mine) = MineLocation::from_patch_indexes(surface, patch_group_indexes) {
-            result.push(mine);
-        }
+    {
+        let mut dedupe_check = groups.iter().flatten().cloned().collect_vec();
+        let old = dedupe_check.len();
+        dedupe_check.sort();
+        dedupe_check.dedup();
+        assert_eq!(old, dedupe_check.len(), "dedupe found stuff!");
     }
-    result
+
+    groups
 }
 
 fn recursive_near_patches<'a>(
-    needle: &VPatch,
-    patches: &[&'a VPatch],
-    total: &mut Vec<&'a VPatch>,
+    needle: &PatchRef,
+    remaining_patches: &[PatchRef],
+    result: &mut Vec<PatchRef>,
+    surface: &VSurfacePatch,
 ) {
-    for other in patches {
-        if *other == needle || total.contains(other) {
+    for other in remaining_patches {
+        // assert_ne!(other, needle);
+        if other == needle || result.contains(other) {
             continue;
         }
-        if needle
+
+        let needle_patch = needle.get_patch(&surface);
+        let other_patch = other.get_patch(&surface);
+
+        if needle_patch
             .area
             .point_center()
-            .distance_bird(&other.area.point_center())
+            .distance_bird(&other_patch.area.point_center())
             < TILES_PER_CHUNK as f32 * 5.0
         {
-            total.push(*other);
-            recursive_near_patches(other, patches, total);
+            result.push((*other).clone());
+            // recursive_near_patches(other, &remaining_patches[1..], result, surface);
+            recursive_near_patches(other, remaining_patches, result, surface);
         }
     }
 }
 
+/*
 fn patches_by_cross_sign_expanding(
     mut mines: Vec<MineLocation>,
     base_sources: BaseSourceEighth,
@@ -287,6 +270,7 @@ fn patches_by_cross_sign_expanding(
     }
     batches
 }
+*/
 
 // fn patches_by_radial_base_corner(surface: &VSurface, resource: Pixel) -> Vec<&VPatch> {
 //     let patches: Vec<&VPatch> = surface

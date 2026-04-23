@@ -123,6 +123,13 @@ vs_main!(
 );
 
 vs_main!(
+    super::pixel::PlugCopy,
+    pixel,
+    pixels_mut => pixels,
+    pixels,
+);
+
+vs_main!(
     super::rail::PlugCopy,
     rail,
     rails_mut => rails,

@@ -1,9 +1,5 @@
-use crate::navigator::mine_selector::{MineSelectBatch, select_mines_and_sources};
 use crate::navigator::planners::PathingTunables;
-use crate::surfacev::vsurface::{VSurfacePatch, VSurfacePatchMut};
-use facto_loop_miner_fac_engine::common::varea::VArea;
-use simd_json::prelude::ArrayTrait;
-use tracing::info;
+use crate::surfacev::vsurface::VSurfacePatchMut;
 
 pub fn start_debug_planner(_tunables: &PathingTunables, _surface_mut: &mut VSurfacePatchMut) {
     panic!("todo")
@@ -17,35 +13,35 @@ pub fn start_debug_planner(_tunables: &PathingTunables, _surface_mut: &mut VSurf
     // }
 }
 
-fn get_batches(tunables: &PathingTunables, surface: VSurfacePatch) -> Vec<MineSelectBatch> {
-    let select_batches = select_mines_and_sources(tunables, surface, 5)
-        .into_success()
-        .unwrap();
-    let mines: usize = select_batches
-        .iter()
-        .flat_map(|v| &v.mines)
-        .map(VSurfacePatch::mine_patches_len)
-        .sum();
-    info!(
-        "selected {mines} total patches in {} batches",
-        select_batches.len()
-    );
-
-    let max_area = VArea::from_arbitrary_points(
-        select_batches
-            .iter()
-            .flat_map(|v| &v.mines)
-            .flat_map(|v| v.area_min().get_corner_points()),
-    );
-    let mut total_in_area = 0;
-    for patch in surface.get_patches() {
-        if max_area.contains_point(&patch.area.point_center()) {
-            total_in_area += 1;
-        }
-    }
-    info!("witihin area {max_area} is {total_in_area} patches");
-    select_batches
-}
+// fn get_batches(tunables: &PathingTunables, surface: VSurfacePatch) -> Vec<MineSelectBatch> {
+//     let select_batches = select_mines_and_sources(tunables, surface, 5)
+//         .into_success()
+//         .unwrap();
+//     let mines: usize = select_batches
+//         .iter()
+//         .flat_map(|v| &v.mines)
+//         .map(VSurfacePatch::mine_patches_len)
+//         .sum();
+//     info!(
+//         "selected {mines} total patches in {} batches",
+//         select_batches.len()
+//     );
+//
+//     let max_area = VArea::from_arbitrary_points(
+//         select_batches
+//             .iter()
+//             .flat_map(|v| &v.mines)
+//             .flat_map(|v| v.area_min().get_corner_points()),
+//     );
+//     let mut total_in_area = 0;
+//     for patch in surface.get_patches() {
+//         if max_area.contains_point(&patch.area.point_center()) {
+//             total_in_area += 1;
+//         }
+//     }
+//     info!("witihin area {max_area} is {total_in_area} patches");
+//     select_batches
+// }
 
 // fn paint_result(surface_mut: &mut VSurfacePixelMut, select_batches: Vec<MineSelectBatch>) {
 //     draw_prep(surface_mut, &select_batches);

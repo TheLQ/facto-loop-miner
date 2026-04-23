@@ -41,7 +41,7 @@ impl Step for Step30 {
 
         let output = connect_admiral().pretty_unwrap();
 
-        let needle_path = surface_raw.rails().get_mine_paths()[13].clone();
+        let needle_path = &surface_raw.rails().get_mine_paths()[13];
         plotter(surface_raw.patches(), output.clone(), &needle_path).unwrap();
 
         output.flush();
@@ -65,8 +65,9 @@ fn plotter(
     destroy_everything(surface.pixels(), &output)?;
 
     let actual_area = VArea::from_arbitrary_points(
-        surface
-            .mine_patches(&needle_path.location)
+        needle_path
+            .location
+            .patches_for_mine(&surface)
             .flat_map(|v| &v.pixel_indexes),
     );
     info!(
@@ -82,7 +83,11 @@ fn plotter(
     //     FacEntChest::new(FacEntChestType::Wood),
     //     needle_path.mine_base.area_min().point_center(),
     // );
-    let patch = surface.mine_patches(&needle_path.location).next().unwrap();
+    let patch = needle_path
+        .location
+        .patches_for_mine(&surface)
+        .next()
+        .unwrap();
     output.writei(
         FacEntInfinityPower::new(),
         patch.area.point_top_left() + VPoint::new(0, 20),
@@ -116,8 +121,9 @@ fn plotter(
         drill_modules: [None, None, None],
         belt: FacEntBeltType::Basic,
         inserter: FacEntInserterType::Basic,
-        mines: surface
-            .mine_patches(&needle_path.location)
+        mines: needle_path
+            .location
+            .patches_for_mine(&surface)
             .map(|v| v.pixel_indexes.clone())
             .collect(),
         output: output.clone(),

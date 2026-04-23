@@ -4,7 +4,7 @@ use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Derivative, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, PartialEq, Derivative, Eq, PartialOrd, Ord)]
 #[derivative(Debug)]
 pub struct VPatch {
     pub resource: Pixel,

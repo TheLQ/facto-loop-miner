@@ -1,7 +1,5 @@
 use crate::navigator::base_source::BaseSourceEighth;
-use crate::navigator::mine_executor::{
-    ExecutionRoute, ExecutionSequence, ExecutionSequenceParts, FailingMeta,
-};
+use crate::navigator::mine_executor::{ExecutionSequence, ExecutionSequenceParts, FailingMeta};
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::opencv::TextSize;
 use crate::state::tuneables::{
@@ -15,8 +13,6 @@ use crate::surfacev::vsurface::{
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_THREE, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
 use itertools::Itertools;
 use std::borrow::Borrow;
 use std::collections::HashMap;
@@ -86,8 +82,8 @@ impl<S: VSurfacePixelAsVsMut> Debugger<'_, S> {
         for sequence in sequences {
             for route in sequence.routes() {
                 let VSegment { start, end } = route.segment;
-                pixels.push(*start.point());
-                pixels.push(*end.point());
+                pixels.push(start.point());
+                pixels.push(end.point());
             }
         }
         self.0
@@ -97,14 +93,16 @@ impl<S: VSurfacePixelAsVsMut> Debugger<'_, S> {
         self
     }
 
-    pub fn mines(
+    pub fn mines<'plan_mine>(
         &mut self,
-        mines: impl IntoIterator<Item = impl Borrow<MineLocation>>,
+        mines: impl IntoIterator<Item = &'plan_mine MineLocation>,
+        base_source: &BaseSourceEighth,
     ) -> &mut Self {
         let mut seen_mines: Vec<VArea> = Vec::new();
         let mut destinations = Vec::new();
         for mine in mines {
-            let mine_area = mine.borrow().area_buffered().clone();
+            // let mine = mine.into();
+            let mine_area = mine.area_buffered().clone();
             if seen_mines.contains(&mine_area) {
                 continue;
             }
@@ -114,10 +112,11 @@ impl<S: VSurfacePixelAsVsMut> Debugger<'_, S> {
                 .find_into(Pixel::MineNoTouch, Pixel::Highlighter);
             seen_mines.push(mine_area);
 
-            for destination in mine.borrow().destinations() {
+            for destination in mine.destinations() {
                 tracing::trace!("destination {:?}", destination);
                 // destinations.push(destination.0)
-                destinations.extend(VArea::from_radius(destination.0, 3).get_points());
+                let endpoint = destination.for_level(&base_source.intra_level_at_index(0));
+                destinations.extend(VArea::from_radius(endpoint.point(), 3).get_points());
             }
         }
         self.0
@@ -130,7 +129,7 @@ impl<S: VSurfacePixelAsVsMut> Debugger<'_, S> {
     pub fn starts_numbered(&mut self, start_points: BaseSourceEighth, amount: usize) -> &mut Self {
         let mut pixels = Vec::new();
         for (i, base_source) in start_points.enumerate().take(amount) {
-            let point = *base_source.origin.point();
+            let point = base_source.origin.point();
             self.0.pixels_mut().draw_text_at(
                 point,
                 &i.to_string(),
@@ -208,9 +207,9 @@ fn debug_draw_segment(surface: &mut VSurfacePixelMut, segment: VSegment) {
     let VSegment { start, end } = segment;
     let mut positions = Vec::new();
     positions.extend(start.point().get_entity_area_3x3());
-    positions.extend((start.point() - &VPOINT_THREE).get_entity_area_3x3());
+    positions.extend((start.point() - VPOINT_THREE).get_entity_area_3x3());
     positions.extend(end.point().get_entity_area_3x3());
-    positions.extend((end.point() - &VPOINT_THREE).get_entity_area_3x3());
+    positions.extend((end.point() - VPOINT_THREE).get_entity_area_3x3());
     // let positions = vec![*start.point(), *end.point()];
     surface.change_pixels(positions).stomp(Pixel::Highlighter);
 }
@@ -218,18 +217,18 @@ fn debug_draw_segment(surface: &mut VSurfacePixelMut, segment: VSegment) {
 pub(super) fn draw_prep(surface: &mut VSurfacePixelMut, batches: &[MineSelectBatch]) {
     draw_prep_mines(
         surface,
-        batches.iter().flat_map(|v| &v.mines),
+        batches.iter().flat_map(|v| &v.mines).map(|v| *v),
         &batches[0].base_sources,
     )
 }
 
-pub(super) fn draw_prep_mines(
+pub(super) fn draw_prep_mines<'plan_mine>(
     surface: &mut VSurfacePixelMut,
-    mines: impl IntoIterator<Item = impl Borrow<MineLocation>>,
+    mines: impl IntoIterator<Item = &'plan_mine MineLocation>,
     base_sources: &BaseSourceEighth,
 ) {
     for mine in mines {
-        mine.borrow().draw_area_buffered(surface);
+        mine.draw_area_buffered(surface);
         // mine.borrow().draw_area_buffered_to_no_touch(surface);
     }
 
@@ -260,6 +259,7 @@ pub fn debug_draw_mine_index_labels(
     }
 }
 
+/*
 pub fn debug_draw_mine_links(
     surface: &mut VSurfacePixelMut,
     mines: impl IntoIterator<Item = impl Borrow<MineLocation>>,
@@ -279,6 +279,7 @@ pub fn debug_draw_mine_links(
         }
     }
 }
+*/
 
 /*
 pub fn debug_conflict_no_touching(

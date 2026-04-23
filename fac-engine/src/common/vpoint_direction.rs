@@ -9,11 +9,11 @@ use std::fmt::{Display, Formatter};
 pub struct VPointDirectionQ(pub VPoint, pub FacDirectionQuarter);
 
 impl VPointDirectionQ {
-    pub fn point(&self) -> &VPoint {
-        &self.0
+    pub fn point(&self) -> VPoint {
+        self.0
     }
-    pub fn direction(&self) -> &FacDirectionQuarter {
-        &self.1
+    pub fn direction(&self) -> FacDirectionQuarter {
+        self.1
     }
 }
 

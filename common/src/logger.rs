@@ -11,7 +11,7 @@ pub fn log_init_trace() {
 }
 
 pub fn log_init_trace_no_main_treads() {
-    log_config(&[], true).log_init_trace()
+    log_config(&TRACE_NO_ADMIRAL_NETWORK, true).log_init_trace()
 }
 
 pub fn log_init_debug() {

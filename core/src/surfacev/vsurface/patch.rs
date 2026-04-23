@@ -1,7 +1,9 @@
-use crate::surfacev::mine::MineLocation;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vpatch::VPatch;
+use crate::surfacev::vsurface::VSurfacePatch;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use serde::{Deserialize, Serialize};
+use std::borrow::Borrow;
 use tracing::{debug, info};
 
 pub struct PlugMut<'s> {
@@ -72,19 +74,31 @@ pub struct Plug<'s> {
 }
 
 impl<'s> Plug<'s> {
-    pub fn get_patches(&self) -> &[VPatch] {
+    /// todo: you probably don't want this
+    pub fn all_patches(&self) -> &[VPatch] {
         self.patches
     }
 
-    pub fn mine_patches(&self, mine: &MineLocation) -> impl Iterator<Item = &VPatch> {
-        mine.patch_indexes()
-            .iter()
-            .map(|patch_index| &self.patches[*patch_index])
+    pub fn patch_at(&self, patch_ref: impl Borrow<PatchRef>) -> &VPatch {
+        &self.patches[patch_ref.borrow().0]
     }
 
-    pub fn mine_patches_len(mine: &MineLocation) -> usize {
-        mine.patch_indexes().len()
+    pub fn patches_with_index(&self) -> impl Iterator<Item = (PatchRef, &VPatch)> {
+        self.patches
+            .iter()
+            .enumerate()
+            .map(|(i, patch)| (PatchRef(i), patch))
     }
+
+    // pub fn mine_patches(&self, mine: &MineLocation) -> impl Iterator<Item = &VPatch> {
+    //     mine.patch_indexes()
+    //         .iter()
+    //         .map(|patch_index| &self.patches[*patch_index])
+    // }
+
+    // pub fn mine_patches_len(mine: &MineLocation) -> usize {
+    //     mine.patch_indexes().len()
+    // }
 
     /// Anti-entropy
     pub fn validate(&self) {
@@ -113,11 +127,24 @@ impl<'s> Plug<'s> {
         debug!("validate {checks} checks");
     }
 
-    pub fn get_patch_index(&self, patch: &VPatch) -> usize {
-        self.patches
-            .iter()
-            .position(|surface_patch| patch == surface_patch)
-            .unwrap()
+    // pub fn get_patch_index(&self, patch: &VPatch) -> usize {
+    //     self.patches
+    //         .iter()
+    //         .position(|surface_patch| patch == surface_patch)
+    //         .unwrap()
+    // }
+}
+
+//
+
+#[derive(PartialEq, Debug, Eq, Hash, Clone, PartialOrd, Ord, Serialize, Deserialize)]
+#[repr(transparent)]
+#[serde(transparent)]
+pub struct PatchRef(usize);
+
+impl PatchRef {
+    pub fn get_patch<'s>(&self, surface: &'s VSurfacePatch) -> &'s VPatch {
+        &surface.patches[self.0]
     }
 }
 

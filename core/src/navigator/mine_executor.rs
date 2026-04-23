@@ -1,3 +1,4 @@
+use crate::navigator::IntraLevel;
 use crate::navigator::mori::{MoriResult, mori2_start};
 use crate::state::tuneables::MoriTunables;
 use crate::surfacev::mine::{MineLocation, MinePath};
@@ -16,6 +17,7 @@ use num_format::ToFormattedString;
 use pathfinding::prelude::AStarErr;
 use rayon::ThreadPool;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+use simd_json::prelude::ArrayTrait;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
@@ -24,12 +26,12 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use strum::AsRefStr;
 use tracing::{Level, info, span, trace};
 
-pub fn execute_route_batch_clone_prep(
+pub fn execute_route_batch_clone_prep<'plan_mine>(
     tunables: &MoriTunables,
     surface: &mut VSurfacePixelMut,
-    sequences: Vec<ExecutionSequence>,
+    sequences: Vec<ExecutionSequence<'plan_mine>>,
     flags: &[ExecuteFlags],
-) -> ExecutorResult {
+) -> ExecutorResult<'plan_mine> {
     // At this point
     //  - Surface is modified from disk with no-touching-zones + other changes
     //  - Each thread needs to copy and modify its own Surface to work through a combination
@@ -43,12 +45,12 @@ pub fn execute_route_batch_clone_prep(
 }
 
 /// Given thousands of possible route combinations, execute in parallel and find the best
-pub fn execute_route_batch(
+pub fn execute_route_batch<'plan_mine>(
     tunables: &MoriTunables,
     execution_surface: VSurfacePixel,
-    sequences: Vec<ExecutionSequence>,
+    sequences: Vec<ExecutionSequence<'plan_mine>>,
     flags: &[ExecuteFlags],
-) -> ExecutorResult {
+) -> ExecutorResult<'plan_mine> {
     let total_sequences = sequences.len();
     let unique_mines = {
         let mut seen: Vec<&MineLocation> = Vec::new();
@@ -232,12 +234,12 @@ pub fn execute_route_batch(
                     ExecutorResult::Failure { stats },
                     ExecutorThreadResult::Failure { meta: cur_meta, .. },
                 ) => {
-                    stats.absorb_meta(&cur_meta);
-                    if stats.best_meta.failing_sequence < cur_meta.failing_sequence {
+                    if stats.is_more_failing_sequence(&cur_meta) {
                         cost = CostMeta::new();
                     }
+                    stats.absorb_meta(cur_meta);
                     if cost.apply_and_is_lowest(total_cost) {
-                        stats.set_best_meta(cur_meta)
+                        stats.last_best_meta();
                     }
                     // return with updated stats
                     Some(best)
@@ -284,13 +286,13 @@ static TOTAL_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static SUCCESS_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static FAIL_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
-fn execute_sequence(
+fn execute_sequence<'plan_mine>(
     tuneables: &MoriTunables,
     surface: VSurfacePixel,
-    sequence: ExecutionSequence,
+    sequence: ExecutionSequence<'plan_mine>,
     total_sequences: usize,
     flags: &[ExecuteFlags],
-) -> ExecutorThreadResult {
+) -> ExecutorThreadResult<'plan_mine> {
     let executor_mark = span!(Level::INFO, EXECUTOR_TAG);
     let _mark = executor_mark.enter();
     let my_counter = TOTAL_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -325,15 +327,15 @@ fn execute_sequence(
             }
         }
 
-        trace!(
-            "for mine {} endpoints {}",
-            route.location.area_min().point_center(),
-            route
-                .location
-                .destinations()
-                .map(|v| v.to_string())
-                .join(",")
-        );
+        // trace!(
+        //     "for mine {} endpoints {}",
+        //     route.location.area_min().point_center(),
+        //     route
+        //         .location
+        //         .destinations_for_level(&route.intra_level)
+        //         .map(|v| v.to_string())
+        //         .join(",")
+        // );
         let route_result = mori2_start(
             tuneables,
             surface.pixels(),
@@ -348,7 +350,7 @@ fn execute_sequence(
                     links: path,
                     sodas,
                     cost,
-                    location: route.location.clone(),
+                    location: route.location.actually_clone(),
                     segment: route.segment.clone(),
                 };
                 surface.add_mine_path(path);
@@ -358,7 +360,7 @@ fn execute_sequence(
                 return ExecutorThreadResult::Failure {
                     meta: FailingMeta {
                         sequence,
-                        failing_sequence: FailingSequence(i),
+                        failing_sequence: FailingSequence::new(i),
                         cause,
                         found_paths: surface_copy.into_rails(),
                     },
@@ -374,58 +376,62 @@ fn execute_sequence(
     }
 }
 
-pub struct ExecutionRoute {
-    pub location: MineLocation,
+pub struct ExecutionRoute<'plan_mine> {
+    pub location: &'plan_mine MineLocation,
     pub segment: VSegment,
     pub finding_limiter: VArea,
+    pub intra_level: IntraLevel,
 }
 
 /// A single attempt of routes
-pub struct ExecutionSequence(Vec<ExecutionRoute>);
+pub struct ExecutionSequence<'plan_mine>(Vec<ExecutionRoute<'plan_mine>>);
 
-impl ExecutionSequence {
-    pub fn new(routes: Vec<ExecutionRoute>) -> Self {
+impl<'plan_mine> ExecutionSequence<'plan_mine> {
+    pub fn new(routes: Vec<ExecutionRoute<'plan_mine>>) -> Self {
         Self(routes)
     }
 
-    pub fn routes(&self) -> &[ExecutionRoute] {
+    pub fn routes(&self) -> &[ExecutionRoute<'plan_mine>] {
         &self.0
     }
 
-    pub fn split_routes_from(&self, failing_sequence: FailingSequence) -> ExecutionSequenceParts {
-        let (pass, fail) = self.0.split_at(failing_sequence.0);
+    pub fn split_routes_from(
+        &self,
+        failing_sequence: FailingSequence,
+    ) -> ExecutionSequenceParts<'_, 'plan_mine> {
+        let (pass, fail) = failing_sequence.split_at(self.0.as_slice());
         ExecutionSequenceParts { pass, fail }
     }
 }
 
-pub struct ExecutionSequenceParts<'r> {
-    pub pass: &'r [ExecutionRoute],
-    pub fail: &'r [ExecutionRoute],
+pub struct ExecutionSequenceParts<'r, 'plan_mine> {
+    pub pass: &'r [ExecutionRoute<'plan_mine>],
+    pub fail: &'r [ExecutionRoute<'plan_mine>],
 }
 
 #[derive(AsRefStr)]
-pub enum ExecutorResult {
+pub enum ExecutorResult<'plan_mine> {
     Success {
         paths: Vec<MinePath>,
-        sequence: ExecutionSequence,
+        sequence: ExecutionSequence<'plan_mine>,
     },
     Failure {
-        stats: FailingStats,
+        stats: FailingStats<'plan_mine>,
     },
 }
 
-pub enum ExecutorThreadResult {
+pub enum ExecutorThreadResult<'plan_mine> {
     Success {
         paths: Vec<MinePath>,
-        sequence: ExecutionSequence,
+        sequence: ExecutionSequence<'plan_mine>,
     },
     Failure {
-        meta: FailingMeta,
+        meta: FailingMeta<'plan_mine>,
     },
 }
 
-impl ExecutorThreadResult {
-    fn into_main_result(self) -> ExecutorResult {
+impl<'plan_mine> ExecutorThreadResult<'plan_mine> {
+    fn into_main_result(self) -> ExecutorResult<'plan_mine> {
         match self {
             ExecutorThreadResult::Success { paths, sequence } => {
                 ExecutorResult::Success { paths, sequence }
@@ -438,9 +444,9 @@ impl ExecutorThreadResult {
 }
 
 // #[derive(Default)]
-pub struct FailingMeta {
+pub struct FailingMeta<'plan_mine> {
     pub found_paths: Vec<MinePath>,
-    pub sequence: ExecutionSequence,
+    pub sequence: ExecutionSequence<'plan_mine>,
     pub failing_sequence: FailingSequence,
     pub cause: FailingCause,
 }
@@ -464,37 +470,35 @@ pub enum FailingCause {
 //     }
 // }
 
-pub struct FailingStats {
-    pub best_meta: FailingMeta,
-    pub seen_mines: HashMap<MineLocation, usize>,
+pub struct FailingStats<'plan_mine> {
+    pub last_meta: Option<FailingMeta<'plan_mine>>,
+    pub best_meta: Option<FailingMeta<'plan_mine>>,
+    /// MineLocation is owned by best_meta and last_meta chain. Can't make a ref
+    /// avoid further lifetype noise with MineLocation.to_string()
+    pub seen_mines: SeenMines<'plan_mine>,
     pub seen_destinations: HashMap<VPoint, usize>,
     pub wasted_per_len: HashMap<usize, usize>,
     pub failures_per_len: HashMap<usize, usize>,
     pub wasteds: HashMap<Vec<VPoint>, usize>,
 }
 
-impl FailingStats {
-    fn new(best_meta: FailingMeta) -> Self {
+impl<'plan_mine> FailingStats<'plan_mine> {
+    fn new(best_meta: FailingMeta<'plan_mine>) -> Self {
         let mut new = Self {
-            // best_meta: FailingMeta::default(), // todo: the only reason FailingMeta impls default
-            best_meta: FailingMeta {
-                cause: FailingCause::Wasted(Vec::new()),
-                found_paths: Vec::new(),
-                failing_sequence: FailingSequence(usize::MAX),
-                sequence: ExecutionSequence(Vec::new()),
-            },
-            seen_mines: HashMap::new(),
+            last_meta: None,
+            best_meta: None,
+            seen_mines: SeenMines(HashMap::new()),
             seen_destinations: HashMap::new(),
             wasted_per_len: HashMap::new(),
             failures_per_len: HashMap::new(),
             wasteds: HashMap::new(),
         };
-        new.absorb_meta(&best_meta);
-        new.best_meta = best_meta;
+        new.absorb_meta(best_meta);
+        new.last_best_meta();
         new
     }
 
-    fn absorb_meta(&mut self, meta: &FailingMeta) {
+    fn absorb_meta(&mut self, meta: FailingMeta<'plan_mine>) {
         let failures_at_len = self
             .failures_per_len
             .entry(meta.found_paths.len())
@@ -515,30 +519,37 @@ impl FailingStats {
             FailingCause::AStar(_) => {}
         }
 
-        for path in &meta.found_paths {
-            let seen_mine = self.seen_mines.entry(path.location.clone()).or_default();
+        for (path, route) in meta.found_paths.iter().zip(meta.sequence.routes()) {
+            let seen_mine = self.seen_mines.0.entry(route.location).or_default();
             *seen_mine += 1;
 
             let seen_destinations = self
                 .seen_destinations
-                .entry(*path.segment.end.point())
+                .entry(path.segment.end.point())
                 .or_default();
             *seen_destinations += 1;
         }
+        self.last_meta = Some(meta);
     }
 
-    fn set_best_meta(&mut self, meta: FailingMeta) {
-        self.best_meta = meta;
+    fn is_more_failing_sequence(&self, other: &FailingMeta) -> bool {
+        other.failing_sequence > self.best_meta.as_ref().unwrap().failing_sequence
     }
 
-    fn best_meta(&self) -> &FailingMeta {
-        &self.best_meta
+    fn last_best_meta(&mut self) {
+        assert!(self.last_meta.is_some());
+        self.best_meta = self.last_meta.take();
+    }
+
+    fn best_meta(&self) -> &FailingMeta<'plan_mine> {
+        self.best_meta.as_ref().unwrap()
     }
 }
 
-impl Display for FailingStats {
+impl Display for FailingStats<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let Self {
+            last_meta: _,
             best_meta: _,
             seen_mines,
             seen_destinations,
@@ -561,7 +572,7 @@ impl Display for FailingStats {
         writeln!(f, "\n=============\nFAILURE_STATS\n")?;
 
         writeln!(f, "- Seen Mines - ")?;
-        print_map(f, seen_mines)?;
+        print_map(f, &seen_mines.0)?;
 
         writeln!(f, "- Seen destinations - ")?;
         print_map(f, seen_destinations)?;
@@ -581,9 +592,51 @@ impl Display for FailingStats {
     }
 }
 
-#[repr(transparent)]
-#[derive(PartialEq, PartialOrd)]
-pub struct FailingSequence(usize);
+mod _hidden_sequence {
+    use crate::navigator::mine_executor::{ExecutionRoute, FailingMeta};
+
+    #[repr(transparent)]
+    #[derive(PartialEq, PartialOrd)]
+    pub struct FailingSequence(usize);
+
+    impl FailingSequence {
+        pub(super) fn new(v: usize) -> Self {
+            Self(v)
+        }
+
+        pub fn get_sequence_route<'plan_mine, 'meta>(
+            &self,
+            meta: &'meta FailingMeta<'plan_mine>,
+        ) -> &'meta ExecutionRoute<'plan_mine> {
+            meta.sequence.routes().get(self.0).unwrap()
+        }
+
+        pub fn split_at<'t, T>(&self, input: &'t [T]) -> (&'t [T], &'t [T]) {
+            input.split_at(self.0)
+        }
+    }
+}
+pub use _hidden_sequence::FailingSequence;
+
+pub struct SeenMines<'plan_mine>(HashMap<&'plan_mine MineLocation, usize>);
+
+impl<'plan_mine> SeenMines<'plan_mine> {
+    pub fn least_known(&self) -> &'plan_mine MineLocation {
+        self.0.iter().min_by_key(|(_, count)| *count).unwrap().0
+    }
+
+    pub fn mines(&self) -> impl Iterator<Item = &'plan_mine MineLocation> {
+        self.0.keys().map(|v| *v)
+    }
+
+    pub fn counts(&self) -> std::collections::hash_map::Values<'_, &MineLocation, usize> {
+        self.0.values()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
 
 #[derive(PartialEq)]
 pub enum ExecuteFlags {

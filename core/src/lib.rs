@@ -4,6 +4,7 @@
 #![feature(new_range_api)]
 #![feature(iter_advance_by)]
 #![feature(int_roundings)]
+#![feature(iter_collect_into)]
 //
 // lints
 //
@@ -29,7 +30,7 @@
 use crate::state::machine_v1::new_v1_machine;
 use crate::surface::pixel::generate_lookup_image;
 use facto_loop_miner_common::duration::BasicWatch;
-use facto_loop_miner_common::{log_init_trace, log_init_trace_no_main_treads};
+use facto_loop_miner_common::log_init_trace_no_main_treads;
 use kiddo::float;
 use std::path::Path;
 use tracing::info;
@@ -52,7 +53,7 @@ type PixelKdTree = float::kdtree::KdTree<f32, usize, 2usize, 32, u32>;
 // TODO: REmove now duplicated
 pub const TILES_PER_CHUNK: usize = 32;
 pub fn inner_main() {
-    /// By default, disable main threads due to multithreaded mine executor
+    // By default, disable main threads due to multithreaded mine executor
     log_init_trace_no_main_treads();
 
     tracing::debug!("hello");

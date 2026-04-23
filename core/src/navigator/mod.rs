@@ -11,4 +11,5 @@ mod circleify;
 pub mod planners;
 // mod threaded_search;
 
+pub use base_source::{BaseSourceEighth, IntraLevel};
 pub use mori_cost::MoriCostMode;

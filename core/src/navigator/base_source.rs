@@ -1,11 +1,12 @@
 use crate::navigator::planners::PathingTunables;
-use crate::state::tuneables::{PathCommonTunables, Tunables};
-use crate::surfacev::mine::MinePath;
+use crate::state::tuneables::PathCommonTunables;
+use crate::surfacev::mine::{MineDestination, MinePath};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::rc::Rc;
 use tracing::{error, warn};
@@ -96,9 +97,23 @@ impl BaseSourceEighth {
         }
     }
 
+    pub fn intra_level_at_index(&self, level: u8) -> IntraLevel {
+        IntraLevel {
+            step_size: self.tunables.base_source_intra_step,
+            level,
+            direction: self.origin.direction(),
+        }
+    }
+
+    pub fn all_intra_levels(&self) -> impl Iterator<Item = IntraLevel> {
+        (0..self.tunables.base_source_intra_rails)
+            .into_iter()
+            .map(|i| self.intra_level_at_index(i))
+    }
+
     fn get_for_index(&self, index: i32) -> BaseSourceEntry {
         // tracing::trace!("get for index {index}");
-        let section_move = (index / self.tunables.base_source_intra_rails)
+        let section_move = (index / self.tunables.base_source_intra_rails as i32)
             * self.tunables.base_source_section_step;
         let section_pos = self
             .origin
@@ -106,15 +121,13 @@ impl BaseSourceEighth {
             .move_direction_sideways_int(self.origin.direction(), section_move);
         section_pos.assert_step_rail();
 
-        let applied_intra = IntraLevel {
-            step_size: self.tunables.base_source_intra_step,
-            level: u8::try_from(index % self.tunables.base_source_intra_rails).unwrap(),
-            direction: *self.origin.direction(),
-        };
+        let applied_intra = self.intra_level_at_index(
+            u8::try_from(index % self.tunables.base_source_intra_rails as i32).unwrap(),
+        );
         let intra_pos = applied_intra.apply(section_pos);
 
         BaseSourceEntry {
-            origin: VPointDirectionQ(intra_pos, *self.origin.direction()),
+            origin: VPointDirectionQ(intra_pos, self.origin.direction()),
             applied_intra,
         }
     }
@@ -123,7 +136,7 @@ impl BaseSourceEighth {
         self.get_for_index(self.next)
     }
 
-    pub fn peek_at(&self, index: usize) -> BaseSourceEntry {
+    pub fn peek_after(&self, index: usize) -> BaseSourceEntry {
         self.get_for_index(self.next + i32::try_from(index).unwrap())
     }
 
@@ -205,37 +218,32 @@ pub struct BaseSourceEntry {
 }
 
 impl BaseSourceEntry {
-    pub fn segment_for_mine(
-        &self,
-        VPointDirectionQ(pos, direction): &VPointDirectionQ,
-    ) -> VSegment {
-        let test_origin = self.applied_intra.undo(*self.origin.point());
+    pub fn segment_for_mine(&self, destination: VPointDirectionQ) -> VSegment {
+        let orig_origin = self.applied_intra.undo(self.origin.point());
         assert_eq!(
-            test_origin.test_step_rail(),
+            orig_origin.test_step_rail(),
             None,
             "Origin not step rail - pos_raw {} step {}",
             self.origin,
-            test_origin
+            orig_origin
         );
 
+        let orig_pos = self.applied_intra.undo(destination.point());
         assert_eq!(
-            pos.test_step_rail(),
+            orig_pos.test_step_rail(),
             None,
-            "Destination not step rail - pos_raw {}",
-            pos,
+            "Destination not step rail - pos {} orig_pause {orig_pos}",
+            destination.point()
         );
-
-        let new_pos = self.applied_intra.apply(*pos);
-        // trace!("adjusted {pos} to {new_pos} diff {}", new_pos - *pos);
 
         VSegment {
             start: self.origin,
-            end: VPointDirectionQ(new_pos, *direction),
+            end: destination,
         }
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct IntraLevel {
     level: u8,
     step_size: i32,

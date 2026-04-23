@@ -320,6 +320,18 @@ impl<'s> Plug<'s> {
         }
         metrics.log_final();
     }
+
+    pub fn surface_copy(&self) -> PlugCopy {
+        PlugCopy {
+            pixels: self.pixels.clone(),
+        }
+    }
+}
+
+//
+
+pub struct PlugCopy {
+    pub(super) pixels: VEntityMap<VPixel>,
 }
 
 //

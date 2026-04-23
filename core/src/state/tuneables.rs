@@ -86,7 +86,8 @@ pub struct PathCommonTunables {
     pub base_source_section_step: i32,
     pub base_source_intra_step: i32,
     /// number of rails per intra
-    pub base_source_intra_rails: i32,
+    pub base_source_intra_rails: u8,
+    pub mine_further_attempts: u8,
 }
 
 impl PathCommonTunables {
@@ -96,6 +97,7 @@ impl PathCommonTunables {
             base_source_section_step: SECTION_POINTS_I32,
             base_source_intra_step: 6,
             base_source_intra_rails: 4,
+            mine_further_attempts: 2,
         }
     }
 }
