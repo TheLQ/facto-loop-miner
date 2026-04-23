@@ -8,7 +8,7 @@ use crate::navigator::mine_selector::{MineSelectBatch, group_nearby_patches};
 use crate::navigator::planners::PathingTunables;
 use crate::navigator::planners::common_debug::{Debugger, draw_prep_mines};
 use crate::surface::pixel::Pixel;
-use crate::surfacev::mine::MineLocation;
+use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::{
     VSurfaceNavMut, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
     VSurfaceRail, VSurfaceRailAsVs, VSurfaceRailAsVsMut,
@@ -258,26 +258,19 @@ impl<'t, 'sr, 's, 'plan_mine> Quester<'t, 'sr, 's, 'plan_mine> {
                             /// theory: for the least used mine, find the closest rail, undo to it, then only path to that mine
                             let lucky_mine = stats.seen_mines.least_known();
 
-                            let nearest_path_index =
-                                detect_nearby_rails_as_index(self.surface.rails(), lucky_mine);
-                            let total_paths = self.surface.rails().get_mine_paths().len();
-
-                            let mut i = 0;
-                            while self.surface.rails().get_mine_paths().len() > nearest_path_index {
-                                self.surface
-                                    .rails_mut()
-                                    .remove_mine_path_pop()
-                                    .expect("removed too many mines?");
-
-                                trace!("[rollback] pop {i}");
-                                i += 1;
-                            }
-
-                            assert_eq!(
-                                i,
-                                total_paths - nearest_path_index,
-                                "total_paths {total_paths} nearest_path_index {nearest_path_index}"
+                            let nearest_mine =
+                                detect_nearby_rails_as_mine_index(self.surface.rails(), lucky_mine);
+                            // let total_paths = self.surface.rails().get_mine_paths().len();
+                            self.base_source_positive.undo_mine_path_until_index(
+                                &mut self.surface.rails_mut(),
+                                nearest_mine,
                             );
+
+                            // assert_eq!(
+                            //     i,
+                            //     total_paths - nearest_path_index,
+                            //     "total_paths {total_paths} nearest_path_index {nearest_path_index}"
+                            // );
 
                             *state = ScannerMode::Mandatory(vec![lucky_mine]);
                             is_break = false;
@@ -346,16 +339,17 @@ impl<'t, 'sr, 's, 'plan_mine> Quester<'t, 'sr, 's, 'plan_mine> {
         let total = self.tunables.altare().queue_redo;
         for i in 0..total {
             trace!("🠋🠋🠋🠋🠋 queuing {i}/{} redo mine", total.saturating_sub(i));
-            if let Some((mine, removed_points)) = self.surface.rails_mut().remove_mine_path_pop() {
+
+            if let Some((mine, removed_points, source)) = self
+                .base_source_positive
+                .undo_mine_path(&mut self.surface.rails_mut())
+            {
                 MineLocation::restore_area_buffered(
                     &[&mine.location],
                     &mut self.surface.pixels_mut(),
                     removed_points,
                 );
-
                 mines.push(self.scanner.mines().find(|v| **v == mine.location).unwrap());
-                let last_entry = self.base_source_positive.undo_one();
-                assert_eq!(last_entry.origin, mine.segment.start);
             } else {
                 trace!("🠉🠉🠉🠉🠉🠉 queuing done");
             }
@@ -550,7 +544,10 @@ enum PlanContinue<'plan_mine> {
 
 //
 
-fn detect_nearby_rails_as_index(surface: VSurfaceRail, mine_location: &MineLocation) -> usize {
+fn detect_nearby_rails_as_mine_index<'surface>(
+    surface: VSurfaceRail<'surface>,
+    mine_location: &MineLocation,
+) -> usize {
     let origin = mine_location
         .area_min()
         .point_center()
@@ -580,11 +577,11 @@ fn detect_nearby_rails_as_index(surface: VSurfaceRail, mine_location: &MineLocat
                 Pixel::Rail => {
                     closest_rail = match closest_rail {
                         None => {
-                            trace!("found rail at {distance}");
+                            // trace!("found rail at {distance}");
                             Some((cursor, distance))
                         }
                         Some((prev_cursor, prev_distance)) if distance < prev_distance => {
-                            trace!("found rail at {distance} better than {prev_distance}");
+                            // trace!("found rail at {distance} better than {prev_distance}");
                             Some((cursor, distance))
                         }
                         Some(good) => Some(good),
@@ -606,6 +603,7 @@ fn detect_nearby_rails_as_index(surface: VSurfaceRail, mine_location: &MineLocat
         }
     }
     let (closest_rail, _) = closest_rail.unwrap();
+    trace!("closest rail at {closest_rail}");
 
     surface
         .get_mine_paths()

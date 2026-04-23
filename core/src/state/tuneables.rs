@@ -101,7 +101,7 @@ impl PathCommonTunables {
                 // make positive
                 + 1
                 // rails
-                + (RAIL_STRAIGHT_DIAMETER_I32 * 1),
+                + (RAIL_STRAIGHT_DIAMETER_I32 * 3),
             base_source_intra_sideways: 6,
             base_source_intra_rails: 4,
             mine_further_attempts: 2,

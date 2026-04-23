@@ -13,6 +13,7 @@ use crate::surfacev::vsurface::{
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_THREE, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use itertools::Itertools;
 use std::borrow::Borrow;
 use std::collections::HashMap;
@@ -244,7 +245,7 @@ pub(super) fn draw_prep_mines<'plan_mine>(
     // stop routes going backwards right behind the start
     let radius = surface.pixels().get_radius_i32();
 
-    let anti_backside_x = base_sources.peek_single().origin.point().x() - 1;
+    let anti_backside_x = base_sources.peek_single().origin.point().x() - (SECTION_POINTS_I32 / 2);
     let anti_backside_points = (-(radius - 1)..radius)
         .map(|i| VPoint::new(anti_backside_x, i))
         .collect_vec();

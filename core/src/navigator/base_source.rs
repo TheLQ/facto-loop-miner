@@ -1,6 +1,7 @@
 use crate::navigator::planners::PathingTunables;
 use crate::state::tuneables::PathCommonTunables;
 use crate::surfacev::mine::{MineDestination, MinePath};
+use crate::surfacev::vsurface::{VSurfaceRailAsVs, VSurfaceRailMut};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::{VPointDirectionQ, VSegment};
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
@@ -9,7 +10,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::rc::Rc;
-use tracing::{error, warn};
+use tracing::{error, trace, warn};
 
 pub struct BaseSource {
     positive: BaseSourceEighth,
@@ -20,6 +21,7 @@ impl BaseSource {
     pub fn from_central_base(tunables: &PathingTunables) -> Self {
         let mut offset_x_from_base = tunables.base_chunks().as_tiles_i32();
         offset_x_from_base -= offset_x_from_base % SECTION_POINTS_I32;
+        offset_x_from_base += SECTION_POINTS_I32;
         BaseSource::new(
             VPointDirectionQ(
                 VPoint::new(offset_x_from_base, 0),
@@ -161,13 +163,39 @@ impl BaseSourceEighth {
         self.origin
     }
 
-    pub fn undo_one(&mut self) -> BaseSourceEntry {
+    fn _undo_one(&mut self) -> BaseSourceEntry {
         tracing::trace!("undoing {}", self.next);
         self.next -= 1;
         // this value was last given, and will be repeated
         let current = self.get_for_index(self.next);
         assert!(self.next >= 1);
         current
+    }
+
+    pub fn undo_mine_path(
+        &mut self,
+        surface: &mut VSurfaceRailMut,
+    ) -> Option<(MinePath, Vec<VPoint>, BaseSourceEntry)> {
+        let Some((path, points)) = surface.remove_mine_path_pop() else {
+            return None;
+        };
+        let undo = self._undo_one();
+        assert_eq!(path.segment.start, undo.origin);
+
+        Some((path, points, undo))
+    }
+
+    pub fn undo_mine_path_until_index(
+        &mut self,
+        surface: &mut VSurfaceRailMut,
+        remove_until: usize,
+    ) {
+        let mut i = 0;
+        while surface.rails().get_mine_paths().len() > remove_until {
+            self.undo_mine_path(surface).unwrap();
+            trace!("[rollback] pop {i}");
+            i += 1;
+        }
     }
 
     pub fn into_rc_refcell(self) -> Rc<RefCell<Self>> {
@@ -181,7 +209,7 @@ impl BaseSourceEighth {
             match input.iter().position(|v| v.segment.start == next.origin) {
                 Some(actual_i) => sorted.push(input.remove(actual_i)),
                 None => {
-                    warn!("not found i {i} origin {}", next.origin);
+                    panic!("not found i {i} origin {}", next.origin);
                     // ignore
                 }
             }
@@ -270,11 +298,10 @@ impl IntraLevel {
 
 #[cfg(test)]
 mod test {
-    use crate::navigator::base_source::{
-        BaseSourceEighth, BaseSourceEntry, IntraLevel, SMALLEST_RAIL_SQUARE,
-    };
-    use crate::surfacev::mine::MinePath;
-    use crate::surfacev::vsurface::{VSurfacePixelAsVsMut, VSurfaceRailAsVs, VSurfaceRailAsVsMut};
+    use crate::navigator::base_source::{BaseSourceEighth, BaseSourceEntry, IntraLevel};
+    use crate::navigator::planners::PathingTunables;
+    use crate::state::tuneables::{PathCommonTunables, Tunables};
+    use crate::surfacev::vsurface::{VSurfaceRailAsVs, VSurfaceRailAsVsMut};
     use facto_loop_miner_common::log_init_trace;
     use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
     use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
@@ -285,10 +312,16 @@ mod test {
     #[test]
     fn test_nexts() {
         log_init_trace();
+
+        let tunables = Tunables::new();
+
         info!("test_nexts");
 
-        let mut source =
-            BaseSourceEighth::new(VPointDirectionQ(VPOINT_ZERO, FacDirectionQuarter::East), 1);
+        let mut source = BaseSourceEighth::new(
+            VPointDirectionQ(VPOINT_ZERO, FacDirectionQuarter::East),
+            1,
+            tunables.path_common.clone(),
+        );
         struct StepIntra(usize, usize);
         let expected_plan = [
             (0, 1),
@@ -313,7 +346,6 @@ mod test {
                 ),
                 applied_intra: IntraLevel {
                     direction: FacDirectionQuarter::East,
-                    pixels: intra,
                     level: intras.try_into().unwrap(),
                 },
             };
