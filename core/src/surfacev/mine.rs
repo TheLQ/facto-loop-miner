@@ -410,43 +410,48 @@ impl MineDestination {
                 }
 
                 // we just gathered conflicts
+                if true {
+                    // ignore?
+                    warn!("Failing mine after {} attempts", attempts.len());
+                    continue 'destinations;
+                } else {
+                    let mut debug_surface = surface.surface_copy();
+                    for bad in conflict_links {
+                        debug_surface
+                            .pixels_mut()
+                            .change_pixels(bad.area_vec())
+                            .find_empty_into(Pixel::Highlighter);
+                    }
 
-                let mut debug_surface = surface.surface_copy();
-                for bad in conflict_links {
+                    for (i, endpoint) in attempts.iter().enumerate() {
+                        debug_surface.pixels_mut().draw_text_at(
+                            *endpoint,
+                            &format!("d{i}"),
+                            TextSize::small(),
+                            Pixel::EdgeWall,
+                        );
+                    }
+
+                    // mega highlighter
                     debug_surface
                         .pixels_mut()
-                        .change_pixels(bad.area_vec())
-                        .find_empty_into(Pixel::Highlighter);
+                        // .change_square(&VArea::from_radius(attempts[0], 200))
+                        .change_square(area_min)
+                        .find_empty_into(Pixel::SteelChest);
+
+                    attempts.push(area_min.point_center());
+                    debug_surface
+                        .pixels_mut()
+                        .change_pixels(attempts)
+                        .stomp(Pixel::Water);
+
+                    debug_surface
+                        .pixels()
+                        .paint_pixel_colored_entire()
+                        .save_to_oculante();
+
+                    panic!("the further away pos doesn't work either?")
                 }
-
-                for (i, endpoint) in attempts.iter().enumerate() {
-                    debug_surface.pixels_mut().draw_text_at(
-                        *endpoint,
-                        &format!("d{i}"),
-                        TextSize::small(),
-                        Pixel::EdgeWall,
-                    );
-                }
-
-                // mega highlighter
-                debug_surface
-                    .pixels_mut()
-                    // .change_square(&VArea::from_radius(attempts[0], 200))
-                    .change_square(area_min)
-                    .find_empty_into(Pixel::SteelChest);
-
-                attempts.push(area_min.point_center());
-                debug_surface
-                    .pixels_mut()
-                    .change_pixels(attempts)
-                    .stomp(Pixel::Water);
-
-                debug_surface
-                    .pixels()
-                    .paint_pixel_colored_entire()
-                    .save_to_oculante();
-
-                panic!("the further away pos doesn't work either?")
             }
             assert!(!level_map.is_empty());
 

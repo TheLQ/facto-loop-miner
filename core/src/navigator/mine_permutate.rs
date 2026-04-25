@@ -4,8 +4,9 @@ use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surfacev::mine::{MineDestination, MineLocation};
 use crate::surfacev::vsurface::VSurfacePixel;
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use itertools::Itertools;
 use tracing::warn;
 

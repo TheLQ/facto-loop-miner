@@ -10,7 +10,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::rc::Rc;
-use tracing::{error, trace, warn};
+use tracing::{error, trace};
 
 pub struct BaseSource {
     positive: BaseSourceEighth,

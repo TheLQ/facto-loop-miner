@@ -109,7 +109,7 @@ impl<'s> Plug<'s> {
         self.rails
     }
 
-    pub fn surface_copy(surface: VSurfacePixel) -> PlugCopy {
+    pub fn surface_copy_no_rails(surface: VSurfacePixel) -> PlugCopy {
         PlugCopy {
             pixels: surface.pixels.clone(),
             rails: Vec::new(),

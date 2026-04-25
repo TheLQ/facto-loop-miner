@@ -1,5 +1,5 @@
+use crate::navigator::BaseSourceEighth;
 use crate::navigator::mori::{MoriResult, mori2_start};
-use crate::navigator::{BaseSourceEighth, IntraLevel};
 use crate::state::tuneables::MoriTunables;
 use crate::surfacev::mine::{MineDestination, MineLocation, MinePath};
 use crate::surfacev::vsurface::{
@@ -324,7 +324,7 @@ fn execute_sequence<'plan_mine>(
     }
 
     // let watch = BasicWatch::start();
-    let mut surface_copy = VSurfaceRail::surface_copy(surface);
+    let mut surface_copy = VSurfaceRail::surface_copy_no_rails(surface);
     let surface = &mut surface_copy.rails_mut();
     // info!("Cloned surface in {}", watch);
 

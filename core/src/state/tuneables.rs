@@ -120,8 +120,8 @@ impl AltareTunables {
     fn new() -> Self {
         Self {
             step_size: 120 * 3,
-            queue_redo: 2,
-            queue_scan: 2,
+            queue_redo: 3,
+            queue_scan: 1,
         }
     }
 }

@@ -480,6 +480,7 @@ impl<E> Display for VEntityMap<E> {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
+#[repr(transparent)]
 pub struct VPixel {
     pub(super) pixel: Pixel,
 }

@@ -48,17 +48,18 @@ impl Display for BasicWatchResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let secs = self.0.as_secs();
         let millis = self.0.as_millis();
-        if secs < 60 {
-            f.pad(&format!("{}ms", millis.to_formatted_string(&LOCALE)))
+        let message = if secs < 60 {
+            format!("{}ms", millis.to_formatted_string(&LOCALE))
         } else {
             let mins = secs / 60;
             let secs = secs % 60;
-            f.pad(&format!(
+            format!(
                 "{}ms={}min{}s",
                 millis.to_formatted_string(&LOCALE),
                 mins.to_formatted_string(&LOCALE),
                 secs.to_formatted_string(&LOCALE)
-            ))
-        }
+            )
+        };
+        f.pad(&message)
     }
 }

@@ -309,6 +309,10 @@ impl<'s> Plug<'s> {
         self.pixels.is_point_out_of_bounds(point)
     }
 
+    pub fn is_points_out_bounds_slice(&self, point: impl IntoIterator<Item = VPoint>) -> bool {
+        point.into_iter().any(|v| self.is_point_out_of_bounds(&v))
+    }
+
     pub fn is_points_free_unchecked(&self, points: &[VPoint]) -> bool {
         self.pixels.is_points_free_unchecked_iter(points)
     }
