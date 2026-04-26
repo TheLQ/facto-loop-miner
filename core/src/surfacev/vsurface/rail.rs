@@ -35,15 +35,15 @@ impl<'s> PlugMut<'s> {
         self.rails.push(mine_path);
     }
 
-    pub fn test_add_soda(&mut self, links: &[HopeSodaLink]) {
-        let mut new_points: Vec<VPoint> = Vec::new();
-        for link in links {
-            link.area(&mut new_points);
-        }
-        self.pixels_mut()
-            .change_pixels(new_points)
-            .require_empty_into(Pixel::Rail);
-    }
+    // pub fn test_add_soda(&mut self, links: &[HopeSodaLink]) {
+    //     let mut new_points: Vec<VPoint> = Vec::new();
+    //     for link in links {
+    //         link.area(&mut new_points);
+    //     }
+    //     self.pixels_mut()
+    //         .change_pixels(new_points)
+    //         .require_empty_into(Pixel::Rail);
+    // }
 
     pub fn remove_mine_path_at(&mut self, index: usize) -> Option<(MinePath, Vec<VPoint>)> {
         let mine_path = self.rails.remove(index);

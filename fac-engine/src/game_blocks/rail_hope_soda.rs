@@ -1,10 +1,12 @@
 use crate::common::vpoint::VPoint;
 use crate::common::vpoint_direction::VPointDirectionQ;
-use crate::game_blocks::rail_hope::RailHopeLink;
+use crate::game_blocks::rail_hope::{RailHopeLink, SUPERFAST_POINTS_SIZE};
 use crate::game_blocks::rail_hope_single::{HopeFactoRail, HopeLink, HopeLinkType, RailHopeSingle};
 use crate::game_entities::direction::FacDirectionQuarter;
+use crate::util::slice_pusher::ArrayPusher;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
+use std::mem::MaybeUninit;
 
 /// Rail Dual v2 "Irys💎 Soda"
 ///
@@ -172,9 +174,22 @@ impl HopeSodaLink {
     pub fn my_q(&self) -> VPointDirectionQ {
         VPointDirectionQ(self.center, self.source_direction)
     }
+
+    pub fn soda_area(&self) -> [VPoint; SUPERFAST_POINTS_SIZE] {
+        let mut points = unsafe {
+            // MaybeUninit::uninit().assume_init()
+            MaybeUninit::zeroed().assume_init()
+        };
+        let mut pusher = ArrayPusher::new(&mut points);
+        self.area(&mut pusher);
+        assert_eq!(pusher.into_validate(), SUPERFAST_POINTS_SIZE);
+        points
+    }
 }
 
 impl RailHopeLink for HopeSodaLink {
+    type AreaInput<'a> = ArrayPusher<'a, VPoint, SUPERFAST_POINTS_SIZE>;
+
     fn add_straight(&self, _length: usize) -> Self {
         todo!()
     }
@@ -219,9 +234,9 @@ impl RailHopeLink for HopeSodaLink {
         self.center
     }
 
-    fn area(&self, output: &mut Vec<VPoint>) {
+    fn area(&self, output: &mut Self::AreaInput<'_>) {
         for link in self.links_for_soda() {
-            link.area(output);
+            link.area(output)
         }
     }
 }
@@ -251,11 +266,14 @@ pub fn sodas_to_rails(
 #[cfg(test)]
 mod test {
     use crate::blueprint::output::FacItemOutput;
-    use crate::common::vpoint::VPOINT_TEN;
-    use crate::game_blocks::rail_hope::RailHopeLink;
-    use crate::game_blocks::rail_hope_soda::{HopeSodaLink, sodas_to_rails};
+    use crate::common::vpoint::{VPOINT_TEN, VPoint};
+    use crate::game_blocks::rail_hope::{RailHopeLink, SUPERFAST_POINTS_SIZE};
+    use crate::game_blocks::rail_hope_single::HopeLink;
+    use crate::game_blocks::rail_hope_soda::{HopeSodaLink, create_turn_link_from, sodas_to_rails};
     use crate::game_entities::direction::FacDirectionQuarter;
+    use crate::util::slice_pusher::ArrayPusher;
     use itertools::Itertools;
+    use std::mem::MaybeUninit;
 
     #[test]
     fn straight_chain() {
@@ -315,16 +333,33 @@ mod test {
         const MAGIC: usize = 104;
 
         let straight = source.add_straight_section();
-        assert_eq!(straight.area_vec().len(), MAGIC);
+        assert_eq!(straight.soda_area().len(), MAGIC);
 
         let turn_left = source.add_turn90(false);
-        assert_eq!(turn_left.area_vec().len(), MAGIC);
+        assert_eq!(turn_left.soda_area().len(), MAGIC);
 
         let turn_right = source.add_turn90(true);
-        assert_eq!(turn_right.area_vec().len(), MAGIC);
+        assert_eq!(turn_right.soda_area().len(), MAGIC);
 
-        assert_ne!(straight.area_vec(), turn_left.area_vec());
-        assert_ne!(straight.area_vec(), turn_right.area_vec());
-        assert_ne!(turn_left.area_vec(), turn_right.area_vec());
+        assert_ne!(straight.soda_area(), turn_left.soda_area());
+        assert_ne!(straight.soda_area(), turn_right.soda_area());
+        assert_ne!(turn_left.soda_area(), turn_right.soda_area());
+    }
+
+    #[test]
+    fn area_test() {
+        let source = HopeLink::new_single(VPOINT_TEN, FacDirectionQuarter::East);
+
+        let turns = create_turn_link_from(&source, false);
+        for turn in turns {
+            let mut area: [VPoint; SUPERFAST_POINTS_SIZE] = unsafe {
+                // MaybeUninit::uninit().assume_init()
+                MaybeUninit::zeroed().assume_init()
+            };
+            let mut pusher = ArrayPusher::new(area.as_mut_array().unwrap());
+            turn.area(&mut pusher);
+            println!("{:?}", pusher.into_validate());
+        }
+        panic!()
     }
 }

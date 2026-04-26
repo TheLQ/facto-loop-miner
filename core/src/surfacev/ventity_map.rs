@@ -5,6 +5,7 @@ use crate::surfacev::fast_metrics::{FastMetric, FastMetrics};
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::SUPERFAST_POINTS_SIZE;
 use facto_loop_miner_io::varray::{EMPTY_XY_INDEX, VArray};
 use facto_loop_miner_io::{get_mebibytes_of_slice_usize, write_entire_file};
 use num_format::ToFormattedString;
@@ -114,17 +115,11 @@ impl<E> VEntityMap<E>
         points.into_iter().any(|p| self.is_point_out_of_bounds(p))
     }
 
-    pub fn is_points_free_safe(&self, points: &[VPoint]) -> bool {
+    pub fn is_points_free_slice(&self, points: &[VPoint]) -> bool {
         let xy_lookup = self.xy_to_entity.as_slice();
-
-        points.iter().all(|v| {
-            if self.is_point_out_of_bounds(v) {
-                // silent
-                true
-            } else {
-                xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX
-            }
-        })
+        points
+            .iter()
+            .all(|v| xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX)
 
         // let mut is_out_of_bounds = false;
         // for point in points {
@@ -144,58 +139,51 @@ impl<E> VEntityMap<E>
         // !not_free
     }
 
+    /// This is an extremely hot function. Attempt SIMD
+    /// todo: holy magic wtf
     // #[inline(never)]
-    pub fn is_points_free_unchecked_iter(&self, points: &[VPoint]) -> bool {
+    pub fn is_points_free_superfast(&self, points: &[VPoint; SUPERFAST_POINTS_SIZE]) -> bool {
         let xy_lookup = self.xy_to_entity.as_slice();
 
-        // This is an extremely hot function. Attempt SIMD
-        if false {
-            points
-                .iter()
-                .all(|v| xy_lookup[self.xy_to_index_unchecked(v.x(), v.y())] == EMPTY_XY_INDEX)
-        } else {
-            // todo: holy magic wtf
-            const MAGIC_TOTAL: usize = 104;
-            assert_eq!(points.len(), MAGIC_TOTAL);
-            const POINTS_SIZE: usize = 8;
-            static_assertions::const_assert!(MAGIC_TOTAL.is_multiple_of(POINTS_SIZE));
+        const POINTS_SIZE: usize = 8;
+        static_assertions::const_assert!(SUPERFAST_POINTS_SIZE.is_multiple_of(POINTS_SIZE));
 
-            let radius = Simd::splat(self.radius as i32);
-            let diameter = Simd::splat(self.diameter() as i32);
-            let xy_lookup_len = Simd::splat(xy_lookup.len());
-            const EMPTY_INDEXES: Simd<usize, POINTS_SIZE> = Simd::splat(EMPTY_XY_INDEX);
+        let radius = Simd::splat(self.radius as i32);
+        let diameter = Simd::splat(self.diameter() as i32);
+        let xy_lookup_len = Simd::splat(xy_lookup.len());
+        const EMPTY_INDEXES: Simd<usize, POINTS_SIZE> = Simd::splat(EMPTY_XY_INDEX);
 
-            // magic lets us use pure SIMD ignoring remainder
-            let (chunks, _remainder) = points.as_chunks::<POINTS_SIZE>();
+        // magic lets us use pure SIMD ignoring remainder
+        let (chunks, _remainder) = points.as_chunks::<POINTS_SIZE>();
 
-            for chunk in chunks {
-                let mut as_x: Simd<i32, POINTS_SIZE> = Simd::splat(0);
-                let mut as_y: Simd<i32, POINTS_SIZE> = Simd::splat(0);
-                for i in 0..POINTS_SIZE {
-                    as_x[i] = chunk[i].x();
-                    as_y[i] = chunk[i].y();
-                }
-
-                let indexes = diameter * (as_y + radius) + (as_x + radius);
-                let indexes_usize: Simd<usize, POINTS_SIZE> = indexes.cast();
-
-                assert!(indexes_usize.simd_lt(xy_lookup_len).all());
-                // dummy empty indexes
-                let resu = unsafe {
-                    Simd::gather_select_unchecked(
-                        xy_lookup,
-                        Mask::splat(true),
-                        indexes.cast(),
-                        EMPTY_INDEXES,
-                    )
-                };
-                if resu != EMPTY_INDEXES {
-                    return false;
-                }
+        for chunk in chunks {
+            let mut as_x: Simd<i32, POINTS_SIZE> = Simd::splat(0);
+            let mut as_y: Simd<i32, POINTS_SIZE> = Simd::splat(0);
+            for i in 0..POINTS_SIZE {
+                as_x[i] = chunk[i].x();
+                as_y[i] = chunk[i].y();
             }
-            true
+
+            let indexes = diameter * (as_y + radius) + (as_x + radius);
+            let indexes_usize: Simd<usize, POINTS_SIZE> = indexes.cast();
+
+            assert!(indexes_usize.simd_lt(xy_lookup_len).all());
+            // dummy empty indexes
+            let resu = unsafe {
+                Simd::gather_select_unchecked(
+                    xy_lookup,
+                    Mask::splat(true),
+                    indexes.cast(),
+                    EMPTY_INDEXES,
+                )
+            };
+            if resu != EMPTY_INDEXES {
+                return false;
+            }
         }
+        true
     }
+
     //</editor-fold>
 
     #[must_use]

@@ -34,12 +34,10 @@ pub fn mori2_start(
     let start_link = HopeSodaLink::new_soda_straight_q(&endpoints.start);
     let end_link = HopeSodaLink::new_soda_straight_q(&endpoints.end);
 
-    let mut checked_link = end_link.area_vec();
-    if !surface.is_points_free_unchecked(&checked_link) {
-        checked_link.sort();
+    if into_buildable_link(surface, &finding_limiter, end_link.clone()).is_none() {
         warn!("waste of time {endpoints}");
         return MoriResult::FailingDebug {
-            cause: FailingCause::Wasted(checked_link),
+            cause: FailingCause::Wasted(end_link.soda_area().to_vec()),
         };
     }
 
@@ -137,48 +135,6 @@ pub fn mori2_start(
     }
 }
 
-// fn crude_dump_on_failure(
-//     surface: &mut VSurfacePixelMut,
-//     end_link: HopeSodaLink,
-//     endpoints: VSegment,
-// ) -> VSurface {
-//     todo!("clone doesn't work here");
-//     let mut new_surface = surface;
-//
-//     let links = sodas_to_links([
-//         end_link.add_turn90(true),
-//         HopeSodaLink::new_soda_straight_flipped(&end_link).add_turn90(true),
-//     ])
-//     .collect_vec();
-//
-//     let debug_free = links
-//         .iter()
-//         .map(|v| {
-//             let area = v.area_vec();
-//             if new_surface.pixels().is_points_free_truncating(&area) {
-//                 "free".into()
-//             } else {
-//                 let mut points = area
-//                     .into_iter()
-//                     .map(|v| new_surface.pixels().get_pixel(v))
-//                     .collect_vec();
-//                 points.sort();
-//                 points.dedup();
-//                 format!(
-//                     "({})",
-//                     points.into_iter().map(|v| v.as_ref().to_string()).join(",")
-//                 )
-//             }
-//         })
-//         .join(",");
-//     trace!("debug free {debug_free}");
-//
-//     new_surface
-//         .change_pixels(links.into_iter().flat_map(|v| v.area_vec()).collect())
-//         .stomp(Pixel::Highlighter);
-//     // debug_draw_segment(new_surface, endpoints);
-// }
-
 #[derive(Default)]
 struct WatchData {
     nexts: Duration,
@@ -271,9 +227,8 @@ fn into_buildable_link(
         return None;
     }
     // new_link.pos_start().assert_step_rail();
-    let area = new_link.area_vec();
-    assert_eq!(area.len(), 104);
-    if surface.is_points_free_unchecked(&area) {
+    let area = new_link.soda_area();
+    if surface.is_points_free_superfast(&area) {
         Some(new_link)
     } else {
         // for point in area {

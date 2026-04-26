@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+use std::mem::MaybeUninit;
 use std::rc::Rc;
 use strum::AsRefStr;
 use tracing::trace;
@@ -9,11 +10,12 @@ use crate::blueprint::bpitem::BlueprintItem;
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
 use crate::common::entity::FacEntity;
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
-use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
-use crate::game_blocks::rail_hope_soda::{SODA_RAILS_NUM, SODA_SIZE};
+use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink, SUPERFAST_POINTS_SIZE};
+use crate::game_blocks::rail_hope_soda::{HopeSodaLink, SODA_RAILS_NUM, SODA_SIZE};
 use crate::game_entities::direction::{FacDirectionEighth, FacDirectionQuarter};
 use crate::game_entities::rail_curved::FacEntRailCurved;
 use crate::game_entities::rail_straight::{FacEntRailStraight, RAIL_STRAIGHT_DIAMETER};
+use crate::util::slice_pusher::ArrayPusher;
 
 /// Rail Pathing v10.999?, "Irys💎 Hope"
 ///
@@ -133,6 +135,8 @@ impl RailHopeAppender for RailHopeSingle {
 }
 
 impl RailHopeLink for HopeLink {
+    type AreaInput<'a> = ArrayPusher<'a, VPoint, SUPERFAST_POINTS_SIZE>;
+
     fn add_straight(&self, length: usize) -> HopeLink {
         let new_origin = self.pos_next();
         // trace!("writing direction {}", self.next_direction);
@@ -380,14 +384,14 @@ impl RailHopeLink for HopeLink {
         }
     }
 
-    fn area(&self, output: &mut Vec<VPoint>) {
+    fn area(&self, output: &mut Self::AreaInput<'_>) {
         match &self.rtype {
             HopeLinkType::Straight { length } => {
                 for i in 0..*length {
                     let rail = self
                         .start
                         .move_direction_usz(self.next_direction, i * RAIL_STRAIGHT_DIAMETER);
-                    output.extend(rail.area_2x2());
+                    output.push_array(rail.area_2x2());
                 }
 
                 // let size = area.len();
@@ -396,7 +400,7 @@ impl RailHopeLink for HopeLink {
                 // }
             }
             HopeLinkType::Turn90 { clockwise } => {
-                // todo: hack just goes at an angle. Probably fine?
+                // todo: basic actual 90 degree turn. game uses a curve
                 let unrotated = if *clockwise {
                     self.next_direction.rotate_opposite()
                 } else {
@@ -405,11 +409,11 @@ impl RailHopeLink for HopeLink {
 
                 let mut rail = self.start;
                 for _ in 0..5 {
-                    output.extend(rail.area_2x2());
+                    output.push_array(rail.area_2x2());
                     rail = rail.move_direction_usz(unrotated, RAIL_STRAIGHT_DIAMETER);
                 }
                 for _ in 0..6 {
-                    output.extend(rail.area_2x2());
+                    output.push_array(rail.area_2x2());
                     rail = rail.move_direction_usz(self.next_direction, RAIL_STRAIGHT_DIAMETER);
                 }
 
@@ -426,6 +430,19 @@ impl RailHopeLink for HopeLink {
 }
 
 impl HopeLink {
+    pub fn link_area_slow(&self) -> Vec<VPoint> {
+        let mut points = unsafe {
+            // MaybeUninit::uninit().assume_init()
+            MaybeUninit::zeroed().assume_init()
+        };
+        let len = {
+            let mut pusher = ArrayPusher::new(&mut points);
+            self.area(&mut pusher);
+            pusher.into_validate()
+        };
+        points[0..len].to_vec()
+    }
+
     // pub fn area_spooky(&self, output: &mut [VPoint; 52]) {
     //     let (output_chunks, remainder) = output.as_chunks_mut::<4>();
     //     assert_eq!(remainder.len(), 0);
@@ -557,12 +574,15 @@ mod test {
     use crate::blueprint::bpfac::position::FacBpPosition;
     use crate::blueprint::contents::BlueprintContents;
     use crate::common::vpoint::VPOINT_TEN;
+    use crate::game_blocks::rail_hope::RailHopeLink;
+    use crate::util::slice_pusher::ArrayPusher;
     use crate::{
         blueprint::output::FacItemOutput, common::vpoint::VPOINT_ZERO,
         game_blocks::rail_hope::RailHopeAppender, game_entities::direction::FacDirectionQuarter,
     };
     use itertools::Itertools;
     use std::borrow::Borrow;
+    use std::mem::MaybeUninit;
 
     #[test]
     fn test_straight_chain() {
@@ -785,4 +805,27 @@ mod test {
     //     rail.pos_next().assert_step_rail();
     //     // rail.pos_start().assert_step_rail();
     // }
+
+    #[test]
+    fn area_test() {
+        let source = HopeLink::new_single(VPOINT_ZERO, FacDirectionQuarter::East);
+        let link = source.add_straight_section();
+        let turn_link = source.add_turn90(true);
+
+        let mut points = unsafe {
+            // MaybeUninit::uninit().assume_init()
+            MaybeUninit::zeroed().assume_init()
+        };
+        let mut pusher = ArrayPusher::new(&mut points);
+        link.area(&mut pusher);
+
+        let mut turn_points = unsafe {
+            // MaybeUninit::uninit().assume_init()
+            MaybeUninit::zeroed().assume_init()
+        };
+        let mut turn_pusher = ArrayPusher::new(&mut turn_points);
+        turn_link.area(&mut turn_pusher);
+
+        assert_eq!(pusher.into_validate(), turn_pusher.into_validate());
+    }
 }

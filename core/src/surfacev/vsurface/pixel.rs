@@ -9,6 +9,7 @@ use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ONE, VPoint};
+use facto_loop_miner_fac_engine::game_blocks::rail_hope::SUPERFAST_POINTS_SIZE;
 use facto_loop_miner_fac_engine::opencv_re::core::{CV_8U, Mat, MatTrait, Point, Scalar};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
@@ -313,8 +314,12 @@ impl<'s> Plug<'s> {
         point.into_iter().any(|v| self.is_point_out_of_bounds(&v))
     }
 
-    pub fn is_points_free_unchecked(&self, points: &[VPoint]) -> bool {
-        self.pixels.is_points_free_unchecked_iter(points)
+    pub fn is_points_free_superfast(&self, points: &[VPoint; SUPERFAST_POINTS_SIZE]) -> bool {
+        self.pixels.is_points_free_superfast(points)
+    }
+
+    pub fn is_points_free_slice(&self, points: &[VPoint]) -> bool {
+        self.pixels.is_points_free_slice(points)
     }
 
     pub fn log_pixel_stats(&self, debug_message: &str) {

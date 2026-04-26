@@ -1,6 +1,6 @@
 use crate::blueprint::output::{ContextLevel, FacItemOutput};
 use crate::common::vpoint::{VPOINT_ONE, VPoint};
-use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink};
+use crate::game_blocks::rail_hope::{RailHopeAppender, RailHopeLink, SUPERFAST_POINTS_SIZE};
 use crate::game_blocks::rail_hope_single::{HopeLink, HopeLinkType, RailHopeSingle};
 use crate::game_entities::direction::FacDirectionQuarter;
 use crate::game_entities::electric_large::{FacEntElectricLarge, FacEntElectricLargeType};
@@ -152,6 +152,8 @@ impl RailHopeAppender for RailHopeDual {
 }
 
 impl RailHopeLink for HopeDualLink {
+    type AreaInput<'a> = &'a mut Vec<VPoint>;
+
     fn add_straight(&self, length: usize) -> HopeDualLink {
         let singles = self
             .dual_appendable_links()
@@ -251,7 +253,8 @@ impl RailHopeLink for HopeDualLink {
         self.end
     }
 
-    fn area(&self, output: &mut Vec<VPoint>) {
+    fn area(&self, output: &mut Self::AreaInput<'_>) {
+        /*
         // self.links.iter().flat_map(|v| match v {
         //     BackingLink::Straight(link) => [link],
         //     BackingLink::Turn90(links) => (links),
@@ -267,6 +270,8 @@ impl RailHopeLink for HopeDualLink {
                 }
             }
         }
+        */
+        todo!()
     }
 }
 

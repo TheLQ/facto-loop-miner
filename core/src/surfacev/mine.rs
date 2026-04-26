@@ -47,7 +47,9 @@ impl MinePath {
     pub fn total_area(&self) -> Vec<VPoint> {
         let mut new_points: Vec<VPoint> = Vec::new();
         for link in &self.links {
-            link.area(&mut new_points);
+            // link.area(&mut new_points);
+            let link_area = link.link_area_slow();
+            new_points.extend(link_area);
         }
 
         let old_len = new_points.len();
@@ -350,11 +352,11 @@ impl MineDestination {
                 (true, link_backwards.add_turn90(true)),
                 (true, link_backwards.add_turn90(false)),
             ] {
-                let points = link.area_vec();
+                let points = link.soda_area();
                 if points.iter().any(|v| surface.is_point_out_of_bounds(v)) {
                     return None;
                 } else {
-                    let is_free = surface.is_points_free_unchecked(&points);
+                    let is_free = surface.is_points_free_slice(&points);
                     if !is_free {
                         conflict_links.push(link);
                     }
@@ -419,7 +421,7 @@ impl MineDestination {
                     for bad in conflict_links {
                         debug_surface
                             .pixels_mut()
-                            .change_pixels(bad.area_vec())
+                            .change_pixels(bad.soda_area())
                             .find_empty_into(Pixel::Highlighter);
                     }
 
