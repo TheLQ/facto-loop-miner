@@ -244,11 +244,11 @@ impl MineLocation {
                         point + VPOINT_TEN,
                     ))
                     .stomp(Pixel::Highlighter);
-                surface
-                    .pixels()
-                    .paint_pixel_colored_entire()
-                    .save_to_oculante();
-                panic!("for {point} is {pixel:?}")
+                // surface
+                //     .pixels()
+                //     .paint_pixel_colored_entire()
+                //     .save_to_oculante();
+                error!("[sanity] for {point} is {pixel:?}")
             }
         }
 

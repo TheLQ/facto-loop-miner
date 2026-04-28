@@ -176,9 +176,7 @@ impl BaseSourceEighth {
         &mut self,
         surface: &mut VSurfaceRailMut,
     ) -> Option<(MinePath, Vec<VPoint>, BaseSourceEntry)> {
-        let Some((path, points)) = surface.remove_mine_path_pop() else {
-            return None;
-        };
+        let (path, points) = surface.remove_mine_path_pop()?;
         let undo = self._undo_one();
         assert_eq!(path.segment.start, undo.origin);
 
