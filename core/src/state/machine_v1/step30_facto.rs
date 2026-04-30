@@ -2,7 +2,8 @@ use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::vsurface::{
-    VSurface, VSurfacePatch, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs, VSurfaceRailAsVs,
+    VSurface, VSurfaceMineAsVs, VSurfacePatch, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs,
+    VSurfaceRailAsVs,
 };
 use facto_loop_miner_common::err_bt::PrettyUnwrapMyBacktrace;
 use facto_loop_miner_fac_engine::admiral::err::AdmiralResult;
@@ -41,7 +42,7 @@ impl Step for Step30 {
 
         let output = connect_admiral().pretty_unwrap();
 
-        let needle_path = &surface_raw.rails().get_mine_paths()[13];
+        let needle_path = &surface_raw.rails().get_paths()[13];
         plotter(surface_raw.patches(), output.clone(), &needle_path).unwrap();
 
         output.flush();
@@ -64,30 +65,26 @@ fn plotter(
     // destroy_mine_area(&needle_path.mine_base, 20, &output)?;
     destroy_everything(surface.pixels(), &output)?;
 
+    let mine = needle_path.location.get_mine(surface.mines());
+
     let actual_area = VArea::from_arbitrary_points(
-        needle_path
-            .location
-            .patches_for_mine(&surface)
+        mine.patches_for_mine(&surface)
             .flat_map(|v| &v.pixel_indexes),
     );
     info!(
         "DIFF start {}",
-        actual_area.point_top_left() - needle_path.location.area_min().point_top_left()
+        actual_area.point_top_left() - mine.area_min().point_top_left()
     );
     info!(
         "DIFF end   {}",
-        actual_area.point_bottom_right() - needle_path.location.area_min().point_bottom_right()
+        actual_area.point_bottom_right() - mine.area_min().point_bottom_right()
     );
 
     // output.writei(
     //     FacEntChest::new(FacEntChestType::Wood),
     //     needle_path.mine_base.area_min().point_center(),
     // );
-    let patch = needle_path
-        .location
-        .patches_for_mine(&surface)
-        .next()
-        .unwrap();
+    let patch = mine.patches_for_mine(&surface).next().unwrap();
     output.writei(
         FacEntInfinityPower::new(),
         patch.area.point_top_left() + VPoint::new(0, 20),
@@ -121,8 +118,7 @@ fn plotter(
         drill_modules: [None, None, None],
         belt: FacEntBeltType::Basic,
         inserter: FacEntInserterType::Basic,
-        mines: needle_path
-            .location
+        mines: mine
             .patches_for_mine(&surface)
             .map(|v| v.pixel_indexes.clone())
             .collect(),

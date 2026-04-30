@@ -3,8 +3,8 @@ use crate::navigator::mori::{MoriResult, mori2_start};
 use crate::state::tuneables::MoriTunables;
 use crate::surfacev::mine::{MineDestination, MineLocation, MinePath};
 use crate::surfacev::vsurface::{
-    VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRail,
-    VSurfaceRailAsVsMut,
+    MineRef, VSurfaceMineAsVs, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
+    VSurfacePixelMut, VSurfaceRail, VSurfaceRailAsVsMut,
 };
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::{EXECUTOR_TAG, LOCALE};
@@ -109,7 +109,8 @@ pub fn execute_route_batch<'plan_mine>(
     let execute_watch = BasicWatch::start();
 
     static WRAPPING_POOL: LazyLock<ThreadPool> = LazyLock::new(|| {
-        let default_threads = 32; // todo: numa rayon::current_num_threads();
+        // let default_threads = 32; // todo: numa rayon::current_num_threads();
+        let default_threads = 24; // todo: numa rayon::current_num_threads();
         const THREAD_OVERSUBSCRIBE_PERCENT: f32 = 1.0;
         let num_threads = (default_threads as f32 * THREAD_OVERSUBSCRIBE_PERCENT) as usize;
         info!(
@@ -365,7 +366,7 @@ fn execute_sequence<'plan_mine>(
                     links: path,
                     sodas,
                     cost,
-                    location: route.location.actually_clone(),
+                    location: route.location_ref,
                     segment,
                 };
                 surface.add_mine_path(path);
@@ -393,6 +394,7 @@ fn execute_sequence<'plan_mine>(
 
 pub struct ExecutionRoute<'plan_mine> {
     pub location: &'plan_mine MineLocation,
+    pub location_ref: MineRef,
     pub destination: &'plan_mine MineDestination,
     pub finding_limiter: VArea,
 }

@@ -5,7 +5,8 @@ use crate::navigator::planners::common_debug::{PathingTunables, draw_prep};
 use crate::state::tuneables::MoriTunables;
 use crate::surface::metric::Metrics;
 use crate::surfacev::vsurface::{
-    VSurfaceNavMut, VSurfacePatchAsVs, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfaceRailAsVsMut,
+    VSurface, VSurfaceNavAsVsMut, VSurfaceNavMut, VSurfacePatchAsVs, VSurfacePatchAsVsMut,
+    VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfaceRailAsVsMut,
 };
 use tracing::{error, info, trace};
 
@@ -14,7 +15,7 @@ const RUZE_MAXIMUM_MINE_COUNT_PER_BATCH: usize = 3;
 /// Planner v1 "Crimzon Ruze 💢"
 ///
 /// Super parallel batch based planner
-pub fn start_ruze_planner(tunables: &PathingTunables, surface: &mut VSurfaceNavMut) {
+pub fn start_ruze_planner(tunables: &PathingTunables, surface: &mut VSurface) {
     let select_batches = select_mines_and_sources(
         tunables,
         surface.patches(),
@@ -30,11 +31,11 @@ pub fn start_ruze_planner(tunables: &PathingTunables, surface: &mut VSurfaceNavM
     }
     num_mines_metrics.log_final();
 
-    draw_prep(&mut surface.pixels_mut(), &select_batches, todo!());
+    draw_prep(&mut surface.patches_mut(), &select_batches, todo!());
 
     for (batch_index, batch) in select_batches.into_iter().enumerate() {
         // for (batch_index, batch) in [select_batches.into_iter().enumerate().last().unwrap()] {
-        let found = process_batch(tunables.mori(), surface, batch, batch_index);
+        let found = process_batch(tunables.mori(), &mut surface.nav_mut(), batch, batch_index);
         if !found {
             error!("KILLING EARLY index {batch_index}");
             break;
@@ -56,7 +57,7 @@ fn process_batch(
     trace!("---");
     let num_mines = batch.mines.len();
 
-    for mine in &batch.mines {
+    for (_, mine) in &batch.mines {
         mine.draw_area_buffered_to_no_touch(&mut surface.pixels_mut());
     }
     let complete_plan = get_possible_routes_for_batch(surface.pixels(), batch);

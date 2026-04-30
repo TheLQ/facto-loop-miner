@@ -1,10 +1,9 @@
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::MinePath;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
+use crate::surfacev::vsurface::MineRef;
 use crate::surfacev::vsurface::{VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut};
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
 use std::collections::HashMap;
 use tracing::{error, trace};
 
@@ -99,14 +98,27 @@ impl<'s> PlugMut<'s> {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Plug<'s> {
     pub(super) rails: &'s [MinePath],
     pub(super) pixels: &'s VEntityMap<VPixel>,
 }
 
 impl<'s> Plug<'s> {
-    pub fn get_mine_paths(&self) -> &'s [MinePath] {
+    pub fn get_paths(&self) -> &'s [MinePath] {
         self.rails
+    }
+
+    // pub fn get_paths_mine(&self) -> impl Iterator<Item = &'s MineLocation> {
+    //     self.rails.iter().map(|v| v.location.get_mine(*self))
+    // }
+
+    pub fn get_paths_mine_refs(&self) -> impl Iterator<Item = MineRef> {
+        self.rails
+            .iter()
+            // .enumerate()
+            // .map(|(i, v)| (MineRef(i), &v.location))
+            .map(|v| v.location.clone())
     }
 
     pub fn surface_copy_no_rails(surface: VSurfacePixel) -> PlugCopy {

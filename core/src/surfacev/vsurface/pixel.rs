@@ -28,7 +28,8 @@ pub struct PlugMut<'s> {
 
 impl<'s> PlugMut<'s> {
     pub fn load_clone_prep(&mut self) -> VResult<()> {
-        self.pixels.load_clone_prep(&path_pixel_xy_indexes_clone())
+        self.pixels
+            .prep_fast_cloning(&path_pixel_xy_indexes_clone())
     }
 
     pub fn crop(&mut self, new_radius: u32) {
@@ -449,12 +450,12 @@ mod test {
             hope.into_links().into_iter().next().unwrap()
         };
         surface
-            .change_pixels(dummy_link.area_vec())
+            .change_pixels(dummy_link.link_area_slow())
             .stomp(Pixel::Rail);
 
         // test overwrite
         surface
-            .change_pixels(dummy_link.area_vec())
+            .change_pixels(dummy_link.link_area_slow())
             .stomp(Pixel::EdgeWall);
 
         // let test_output_dir = Path::new("work/test-output");

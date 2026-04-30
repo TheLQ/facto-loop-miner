@@ -2,7 +2,7 @@ use crate::state::machine::StepParams;
 use crate::state::tuneables::Tunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::err::{CoreConvertPathResult, VResult};
-use crate::surfacev::mine::MinePath;
+use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::pixel::AsVs;
@@ -18,15 +18,22 @@ use std::thread;
 use std::thread::JoinHandle;
 use tracing::{debug, info, trace};
 
-/// A map of background pixels (eg resources, water) and the large entities on top
+/// A map of background pixels (eg resources, water) and metadata on what's on top
 ///
 /// Entity Position is i32 relative to top left (3x3 entity has start=0,0) for simpler math.
 /// Converted from Factorio style of f32 relative to center (3x3 entity has start=1.5,1.5).
+///
+/// # Plug/PlutMut API
+///
+/// Functions split into mut reference structs in this module.
+/// Reduces pathfinding clone overhead and makes this file smaller.
 #[derive(Serialize, Deserialize)]
 pub struct VSurface {
     pub(crate) pixels: VEntityMap<VPixel>,
     // entities: VEntityMap<VEntity>,
     pub(crate) patches: Vec<VPatch>,
+    #[serde(default)]
+    pub(crate) mines: Vec<MineLocation>,
     #[serde(default)]
     pub(crate) rails: Vec<MinePath>,
     #[serde(skip, default = "Tunables::new")]
@@ -41,6 +48,7 @@ impl VSurface {
             pixels: VEntityMap::new(radius),
             // entities: VEntityMap::new(radius),
             patches: Vec::new(),
+            mines: Vec::new(),
             rails: Vec::new(),
             tunables: Tunables::new(),
         }

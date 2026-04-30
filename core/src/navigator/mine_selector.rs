@@ -4,12 +4,12 @@ use crate::navigator::planners::PathingTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::iter_remain_util::RemainIter;
 use crate::surfacev::mine::MineLocation;
-use crate::surfacev::vsurface::{PatchRef, VSurfacePatch};
+use crate::surfacev::vsurface::{MineRef, PatchRef, VSurfacePatch};
 use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
 
 pub struct MineSelectBatch<'plan_mine> {
-    pub mines: Vec<&'plan_mine MineLocation>,
+    pub mines: Vec<(MineRef, &'plan_mine MineLocation)>,
 }
 
 pub enum MineSelectBatchResult<'plan_mine> {
@@ -25,13 +25,6 @@ impl<'plan_mine> MineSelectBatchResult<'plan_mine> {
             MineSelectBatchResult::Success { batches } => Some(batches),
             MineSelectBatchResult::EmptyBatch => None,
         }
-    }
-}
-
-impl<'plan_mine> MineSelectBatch<'plan_mine> {
-    pub fn only_mine(&self) -> &'plan_mine MineLocation {
-        assert_eq!(self.mines.len(), 1);
-        &self.mines[0]
     }
 }
 
@@ -132,7 +125,7 @@ pub fn group_nearby_patches(surface: VSurfacePatch) -> Vec<Vec<PatchRef>> {
 
         let mut new_group = Vec::new();
         new_group.push(patch_i.clone());
-        recursive_near_patches(patch_i, &all_patches, &mut new_group, &surface);
+        recursive_near_patches(patch_i, &all_patches, &mut new_group, surface);
         for patch_j in &new_group {
             processed_patches.push(patch_j.clone());
         }
@@ -155,7 +148,7 @@ fn recursive_near_patches<'a>(
     needle: &PatchRef,
     remaining_patches: &[PatchRef],
     result: &mut Vec<PatchRef>,
-    surface: &VSurfacePatch,
+    surface: VSurfacePatch,
 ) {
     for other in remaining_patches {
         // assert_ne!(other, needle);
@@ -163,14 +156,14 @@ fn recursive_near_patches<'a>(
             continue;
         }
 
-        let needle_patch = needle.get_patch(&surface);
-        let other_patch = other.get_patch(&surface);
+        let needle_patch = needle.get_patch(surface);
+        let other_patch = other.get_patch(surface);
 
         if needle_patch
             .area
             .point_center()
             .distance_bird(&other_patch.area.point_center())
-            < TILES_PER_CHUNK as f32 * 5.0
+            < TILES_PER_CHUNK as f32 * 3.0
         {
             result.push((*other).clone());
             // recursive_near_patches(other, &remaining_patches[1..], result, surface);

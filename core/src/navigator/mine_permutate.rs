@@ -2,7 +2,7 @@ use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::mine_executor::{ExecutionRoute, ExecutionSequence};
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surfacev::mine::{MineDestination, MineLocation};
-use crate::surfacev::vsurface::VSurfacePixel;
+use crate::surfacev::vsurface::{MineRef, VSurfacePixel};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
@@ -47,7 +47,9 @@ pub fn get_possible_routes_for_batch<'plan_mine>(
     // todo: autogen this somewhere
     let fixed_radius = surface.get_radius_i32();
     let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
-        VPoint::new(0, -fixed_radius),
+        // VPoint::new(0, -fixed_radius),
+        // VPOINT_ZERO,
+        VPoint::new(-SECTION_POINTS_I32, -SECTION_POINTS_I32),
         // Must give spacing from Edge, because hope_link.area() can extend past it.
         // range checks are disabled for theoretical performance
         VPoint::new(fixed_radius, fixed_radius),
@@ -78,6 +80,7 @@ pub struct CompletePlan<'plan_mine> {
 #[derive(PartialOrd, Ord, PartialEq, Eq, Clone)]
 struct PartialEntry<'plan_mine> {
     location: &'plan_mine MineLocation,
+    location_ref: MineRef,
     destination: &'plan_mine MineDestination,
 }
 
@@ -87,18 +90,19 @@ struct PartialEntry<'plan_mine> {
 /// Start with a list of mines with 4x possible positions.
 /// Create combinations of `[a1, b1, c2, ...]`
 fn find_all_combinations<'plan_mine>(
-    mines: Vec<&'plan_mine MineLocation>,
+    mines: Vec<(MineRef, &'plan_mine MineLocation)>,
 ) -> Vec<Vec<PartialEntry<'plan_mine>>> {
     fn recurse<'m>(
         path: Vec<PartialEntry<'m>>,
-        remain: &[&'m MineLocation],
+        remain: &[(MineRef, &'m MineLocation)],
         output: &mut Vec<Vec<PartialEntry<'m>>>,
     ) {
-        if let Some(mine) = remain.first() {
+        if let Some((mine_ref, mine)) = remain.first() {
             for destination in mine.destinations() {
                 let mut next_path = path.clone();
                 next_path.push(PartialEntry {
                     destination,
+                    location_ref: *mine_ref,
                     location: mine,
                 });
                 recurse(next_path, &remain[1..], output);
@@ -136,8 +140,9 @@ fn build_routes_from_destinations<'plan_mine>(
         for (
             i,
             PartialEntry {
-                destination,
                 location,
+                location_ref,
+                destination,
             },
         ) in combination.into_iter().enumerate()
         {
@@ -148,8 +153,9 @@ fn build_routes_from_destinations<'plan_mine>(
             //     continue 'combinations;
             // }
             sequence.push(ExecutionRoute {
-                destination,
                 location,
+                location_ref,
+                destination,
                 finding_limiter: fixed_finding_limiter.clone(),
             })
         }

@@ -5,7 +5,7 @@ use crate::state::tuneables::PathCommonTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::{
-    PatchRef, VSurfacePatch, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
+    MineRef, PatchRef, VSurfacePatch, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
     VSurfacePixelMut,
 };
 use facto_loop_miner_common::LOCALE;
@@ -27,7 +27,7 @@ use tracing::{error, warn};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct MinePath {
-    pub location: MineLocation,
+    pub location: MineRef,
     pub links: Vec<HopeLink>,
     pub sodas: Vec<HopeSodaLink>,
     pub segment: VSegment,
@@ -77,7 +77,7 @@ impl MineLocation {
         let area_min = VArea::from_arbitrary_points(
             patch_indexes
                 .iter()
-                .flat_map(|v| v.get_patch(&surface).area.get_corner_points()),
+                .flat_map(|v| v.get_patch(surface).area.get_corner_points()),
         );
 
         let area_no_touch = area_min

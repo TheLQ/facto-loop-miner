@@ -187,13 +187,16 @@ impl BaseSourceEighth {
         &mut self,
         surface: &mut VSurfaceRailMut,
         remove_until: usize,
-    ) {
+    ) -> Vec<MinePath> {
+        let mut res = Vec::new();
         let mut i = 0;
-        while surface.rails().get_mine_paths().len() > remove_until {
-            self.undo_mine_path(surface).unwrap();
+        while surface.rails().get_paths().len() > remove_until {
+            let (path, _, _) = self.undo_mine_path(surface).unwrap();
             trace!("[rollback] pop {i}");
             i += 1;
+            res.push(path);
         }
+        res
     }
 
     pub fn into_rc_refcell(self) -> Rc<RefCell<Self>> {

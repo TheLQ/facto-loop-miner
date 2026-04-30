@@ -141,7 +141,7 @@ impl<E> VEntityMap<E>
 
     /// This is an extremely hot function. Attempt SIMD
     /// todo: holy magic wtf
-    // #[inline(never)]
+    #[inline(never)]
     pub fn is_points_free_superfast(&self, points: &[VPoint; SUPERFAST_POINTS_SIZE]) -> bool {
         let xy_lookup = self.xy_to_entity.as_slice();
 
@@ -327,15 +327,14 @@ impl<E> VEntityMap<E>
         self.xy_to_entity = other.xy_to_entity;
     }
 
-    pub fn load_clone_prep(&mut self, clone_prep_file: &Path) -> VResult<()> {
+    pub fn prep_fast_cloning(&mut self, clone_prep_file: &Path) -> VResult<()> {
         if self.xy_to_entity.is_dirty_for_clone() {
             // Can't write mmap's data back to itself apparently. Failed with "Bad Address"
             match remove_file(clone_prep_file).convert(clone_prep_file) {
                 Err(VError::IoError { err, .. }) if err.kind() == ErrorKind::NotFound => {
                     // do nothing
                 }
-                Err(e) => return Err(e),
-                Ok(()) => {}
+                r => r?,
             };
 
             self.save_xy_file(clone_prep_file)?;

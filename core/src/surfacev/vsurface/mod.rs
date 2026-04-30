@@ -1,11 +1,27 @@
 mod convert;
 mod core;
+// mod core_plugs;
+mod mine;
 mod nav;
 mod patch;
 mod pixel;
 mod rail;
 
 pub use core::VSurface;
+// pub use core_plugs::{
+//     //
+//     AsVs as VSurfaceCoreAsVs,
+//     AsVsMut as VSurfaceCoreAsVsMut,
+//     Plug as VSurfaceCore,
+//     PlugMut as VSurfaceCoreMut,
+// };
+pub use mine::{
+    //
+    AsVs as VSurfaceMineAsVs,
+    AsVsMut as VSurfaceMineAsVsMut,
+    Plug as VSurfaceMine,
+    PlugMut as VSurfaceMineMut,
+};
 pub use nav::{
     //
     AsVs as VSurfaceNavAsVs,
@@ -35,4 +51,5 @@ pub use rail::{
     PlugMut as VSurfaceRailMut,
 };
 
+pub use mine::MineRef;
 pub use patch::PatchRef;

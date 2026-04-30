@@ -27,8 +27,8 @@ impl Step for Step20 {
         // surface.validate();
 
         match 2 {
-            1 => start_ruze_planner(&tunables, &mut surface.nav_mut()),
-            2 => start_altare_planner(&tunables, &mut surface.nav_mut()),
+            1 => start_ruze_planner(&tunables, &mut surface),
+            2 => start_altare_planner(&tunables, &mut surface),
             9 => start_debug_planner(&tunables, &mut surface.patches_mut()),
             _ => unimplemented!(),
         }
