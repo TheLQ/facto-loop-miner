@@ -322,7 +322,7 @@ impl<'t, 's> Quester<'t, 's>
                 } else {
                     match state {
                         ScannerMode::Normal => {
-                            /// theory: for the least used mine, find the closest rail, undo to it, then only path to that mine
+                            // theory: for the least used mine, find the closest rail, undo to it, then only path to that mine
                             let lucky_mine_ref = stats.seen_mines.least_known();
 
                             let nearest_mine = detect_nearby_rails_as_mine_index(
@@ -420,7 +420,7 @@ impl<'t, 's> Quester<'t, 's>
             //     });
             //     mines.push(mine.location);
             // } else {
-            if let Some((path, removed_points, source)) = self
+            if let Some((path, _removed_points, _source)) = self
                 .surface
                 .rails_mut_old_fn(|s| self.base_source.undo_mine_path(s))
             {

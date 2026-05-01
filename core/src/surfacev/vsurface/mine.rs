@@ -1,6 +1,6 @@
 use crate::surfacev::mine::{MineDestination, MineDraw, MineLocation};
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
-use crate::surfacev::vsurface::{VSurfaceMine, VSurfacePixelAsVs};
+use crate::surfacev::vsurface::VSurfaceMine;
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
 

@@ -20,8 +20,6 @@ use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
-use std::borrow::Borrow;
-use std::collections::HashSet;
 use tracing::{error, warn};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -145,57 +143,6 @@ impl MineLocation {
         }
     }
 
-    // fn is_surface_points_free_excluding_self_area(
-    //     &self,
-    //     surface: VSurfacePixel,
-    //     points: impl IntoIterator<Item = impl Borrow<VPoint>>,
-    //     debug_prefix: &Arguments,
-    // ) -> bool {
-    //     let mut pixels: Vec<Pixel> = points
-    //         .into_iter()
-    //         .filter_map(|p| {
-    //             let p = p.borrow();
-    //             if surface.is_point_out_of_bounds(p) {
-    //                 panic!("we already checked this?");
-    //             }
-    //             let pixel = surface.get_pixel(p);
-    //             if pixel == Pixel::MineNoTouch && self.area_buffered.contains_point(p) {
-    //                 // exclude self
-    //                 None
-    //             } else {
-    //                 Some(pixel)
-    //             }
-    //         })
-    //         .collect_vec();
-    //     pixels.sort();
-    //     pixels.dedup();
-    //     let pixels_debug = pixels.iter().map(|v| v.as_ref()).join(",");
-    //
-    //     if pixels.iter().all(|p| *p == Pixel::Empty) {
-    //         // good all empty!
-    //         true
-    //     } else if pixels
-    //         .iter()
-    //         .all(|p| matches!(*p, Pixel::Empty | Pixel::MineNoTouch))
-    //     {
-    //         trace!(
-    //             "{debug_prefix} is not in mine touch, maybe touching another?, remain {}",
-    //             self.endpoints.len() - 1
-    //         );
-    //         false
-    //     } else if pixels
-    //         .iter()
-    //         .all(|p| Pixel::is_resource(p) || matches!(*p, Pixel::Empty | Pixel::MineNoTouch))
-    //     {
-    //         // todo: do this ever happen?
-    //         trace!("{debug_prefix} hit another mine");
-    //         false
-    //     } else {
-    //         // panic!("{debug_prefix} is {pixels_debug}");
-    //         panic!("{debug_prefix} is {pixels_debug}");
-    //     }
-    // }
-
     pub fn area_min(&self) -> &VArea {
         &self.area_min
     }
@@ -207,47 +154,6 @@ impl MineLocation {
     pub fn area_buffered(&self) -> &VArea {
         &self.area_buffered
     }
-
-    pub fn draw_area_buffered(&self, surface: &mut VSurfacePixelMut) {}
-
-    pub fn draw_area_buffered_to_no_touch(&self, surface: &mut VSurfacePixelMut) {
-        // let needle = self.area_buffered.point_top_left();
-        // let existing_pixel = surface.get_pixel(needle);
-        // assert_eq!(existing_pixel, Pixel::MineNoTouch, "at {needle}");
-    }
-
-    pub fn draw_area_buffered_highlight_pixel(&self, mut surface: VSurfacePixelMut, pixel: Pixel) {
-        surface
-            .change_pixels(self.area_buffered.get_points())
-            .find_into(Pixel::MineNoTouch, pixel)
-    }
-
-    pub fn restore_area_buffered(
-        mines: &[impl Borrow<Self>],
-        surface: &mut VSurfacePixelMut,
-        removed_rail: Vec<VPoint>,
-    ) {
-        let mut intersected_mines = HashSet::new();
-        for point in removed_rail {
-            for mine in mines {
-                let mine = mine.borrow();
-                if mine.area_buffered().contains_point(&point) {
-                    intersected_mines.insert(mine);
-                    break;
-                }
-            }
-        }
-
-        for mine in intersected_mines {
-            surface
-                .change_pixels(mine.area_buffered().get_points())
-                .find_empty_into(Pixel::MineNoTouch)
-        }
-    }
-
-    // pub fn endpoints(&self) -> &[VPoint] {
-    //     &self.endpoints
-    // }
 
     pub fn destinations(&self) -> &[MineDestination] {
         self.destinations.as_slice()

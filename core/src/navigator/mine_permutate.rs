@@ -111,7 +111,7 @@ fn build_routes_from_destinations(
     fixed_finding_limiter: VArea,
 ) -> Vec<ExecutionSequence> {
     let mut sequences: Vec<ExecutionSequence> = Vec::new();
-    'combinations: for combination in input_combinations {
+    for combination in input_combinations {
         let mut sequence: Vec<ExecutionRoute> = Vec::new();
         for (i, destination) in combination.into_iter().enumerate() {
             sequence.push(ExecutionRoute {

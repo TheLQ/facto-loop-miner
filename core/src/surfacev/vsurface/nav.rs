@@ -1,8 +1,6 @@
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::MineRef;
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 
 pub struct PlugMut<'s> {
     pub(super) pixels: &'s mut VEntityMap<VPixel>,
@@ -11,20 +9,7 @@ pub struct PlugMut<'s> {
     pub(super) rails: &'s mut Vec<MinePath>,
 }
 
-impl PlugMut<'_> {
-    pub fn restore_mine_area_buffered(&mut self, mine_ref: MineRef, removed_points: Vec<VPoint>) {
-        let mine = &self.mines[mine_ref.0];
-        MineLocation::restore_area_buffered(
-            &[mine],
-            &mut super::pixel::PlugMut {
-                pixels: self.pixels,
-            },
-            removed_points,
-        )
-
-        // self.pixels_mut(|s| MineLocation::restore_area_buffered(&[mine], s, removed_points))
-    }
-}
+impl PlugMut<'_> {}
 
 #[derive(Clone, Copy)]
 pub struct Plug<'s> {
