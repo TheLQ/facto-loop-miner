@@ -17,13 +17,9 @@ impl PlugMut<'_> {
     }
 
     pub fn draw_mine(&mut self, input: MineRef, mode: MineDraw) {
-        mode.draw_mine(
-            &mut self.pixels_mut_ref(),
-            &self.mines[input.0], // input.resolve_mine_surface(Plug {
-                                  //     pixels: &*self.pixels,
-                                  //     mines: &*self.mines,
-                                  // }),
-        )
+        let pixels = &mut self.pixels;
+        let mine = &self.mines[input.0];
+        mode.draw_mine(&mut super::pixel::PlugMut { pixels }, mine);
     }
 }
 
