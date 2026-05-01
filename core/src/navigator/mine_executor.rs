@@ -344,7 +344,7 @@ fn execute_sequence(
                 route
                     .destination
                     .mine_ref()
-                    .resolve_mine_lookup(&mine_resolver),
+                    .resolve_mine_lookup(mine_resolver),
             );
 
             if i != 0 {
@@ -353,7 +353,7 @@ fn execute_sequence(
                     sequence.routes()[i - 1]
                         .destination
                         .mine_ref()
-                        .resolve_mine_lookup(&mine_resolver),
+                        .resolve_mine_lookup(mine_resolver),
                 );
             }
         }
@@ -369,7 +369,7 @@ fn execute_sequence(
         // );
         let source = base_source.peek_after(i);
         let segment =
-            route.segment_for_source(&source, MineLocationResolver::Lookup(&mine_resolver));
+            route.segment_for_source(&source, MineLocationResolver::Lookup(mine_resolver));
         let route_result = mori2_start(
             tuneables,
             surface.pixels(),
@@ -387,7 +387,7 @@ fn execute_sequence(
                     destination: route.destination,
                     segment,
                 };
-                surface.rails_mut_ref().add_mine_path(path);
+                surface.rails_mut_ref().add_mine_path(path, "mori success");
             }
             MoriResult::FailingDebug { cause } => {
                 FAIL_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -628,7 +628,7 @@ impl Display for FailingStats {
         print_map(f, wasted_per_len)?;
 
         writeln!(f, "- Wasted blocks - ")?;
-        for (_, count) in wasteds {
+        for count in wasteds.values() {
             writeln!(f, "block used {count:>4}")?;
         }
 
@@ -666,13 +666,11 @@ pub use _hidden_sequence::FailingSequence;
 pub struct SeenMines(HashMap<MineRef, usize>);
 
 impl SeenMines {
-    pub fn least_known(&self) -> MineRef {
+    pub fn least_known(&self) -> Option<MineRef> {
         self.0
             .iter()
             .min_by_key(|(_, count)| *count)
-            .unwrap()
-            .0
-            .clone()
+            .map(|(mine, _)| *mine)
     }
 
     pub fn mines(&self) -> impl Iterator<Item = MineRef> {

@@ -2,6 +2,7 @@
 name = "facto-loop-miner"
 version.workspace = true
 edition.workspace = true
+default-run = "main"
 
 [dependencies]
 facto-loop-miner-common = { path = "../common" }

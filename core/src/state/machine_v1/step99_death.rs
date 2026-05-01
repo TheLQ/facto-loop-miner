@@ -1,5 +1,5 @@
 use crate::state::err::XMachineResult;
-use crate::state::machine::{Step, StepParams, DEATH_STEP_NAME};
+use crate::state::machine::{DEATH_STEP_NAME, Step, StepParams};
 
 pub struct Step99Death {}
 

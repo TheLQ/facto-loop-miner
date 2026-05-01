@@ -159,6 +159,10 @@ impl MineLocation {
         self.destinations.as_slice()
     }
 
+    pub fn destination_refs_iter(&self, mine: MineRef) -> impl Iterator<Item = MineDestinationRef> {
+        (0..self.destinations.len()).map(move |i| MineDestinationRef(mine, i))
+    }
+
     pub fn destinations_with_refs(
         &self,
         self_ref: MineRef,
@@ -220,7 +224,7 @@ impl MineDraw {
                     )
                     .remove();
             }
-            MineDraw::ChangeBuffered => {}
+            MineDraw::ChangeBuffered => Self::draw_buffered_with(surface, mine, Pixel::MineNoTouch),
             MineDraw::HighlightBufferedMain => {
                 Self::draw_buffered_with(surface, mine, Pixel::Stone)
             }

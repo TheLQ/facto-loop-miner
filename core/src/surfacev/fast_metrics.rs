@@ -1,7 +1,7 @@
 use crate::surface::pixel::Pixel;
 use enum_map::EnumMap;
-use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::LOCALE;
+use facto_loop_miner_common::duration::BasicWatch;
 use num_format::ToFormattedString;
 use std::fmt::Display;
 

@@ -1,4 +1,4 @@
-use std::alloc::{alloc, Layout};
+use std::alloc::{Layout, alloc};
 use std::mem;
 
 /// TODO: New Macbook's are 16k?

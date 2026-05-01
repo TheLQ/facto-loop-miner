@@ -1,7 +1,6 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 #![feature(iter_array_chunks)]
-#![feature(test)]
 #![feature(error_generic_member_access)]
 #![allow(clippy::new_without_default)]
 

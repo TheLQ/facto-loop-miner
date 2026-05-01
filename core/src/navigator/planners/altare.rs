@@ -118,7 +118,7 @@ impl<'t, 's> Quester<'t, 's>
 
         let mut total_iterations = 0;
         loop {
-            info!("iteration {}", total_iterations);
+            info!("🠋🠋🠋🠋🠋🠋 iteration {}", total_iterations);
             if total_iterations == 500 {
                 info!("enough");
                 break;
@@ -130,6 +130,7 @@ impl<'t, 's> Quester<'t, 's>
                 ControlFlow::Break(()) => break,
                 ControlFlow::Continue(v) => v,
             };
+            assert!(mines.len() > 1);
 
             if limiter_counter >= 99999 {
                 self.debug_iteration(limiter_counter);
@@ -148,42 +149,51 @@ impl<'t, 's> Quester<'t, 's>
     }
 
     fn get_mines(&mut self, state: &mut ScannerMode) -> ControlFlow<(), Vec<MineRef>> {
-        let mut mines: Vec<MineRef> = match state {
+        let mut selected_mines: Vec<MineRef> = Vec::new();
+        self.queue_redo(&mut selected_mines);
+
+        match state {
             state @ ScannerMode::Normal
             //| state @ ScannerMode::Recovering(_)
             => {
-                let scanned: QuesterScannerResult = self.scanner.scan(PointAt::Normal, self.surface.mines());
-                match scanned {
-                    QuesterScannerResult::NoneFound => {
-                        self.scanner.increment(self.surface.pixels())?;
-                    }
-                    QuesterScannerResult::NewPatchesInScanArea { selected_mines } => {
-                        trace!(
-                            "scanner {} selected for state {state}",
-                            selected_mines.len()
-                        );
-                        assert!(!selected_mines.is_empty());
-
-                        let mandatory = selected_mines
-                            .iter()
-                            .filter(|v| selected_mines.contains(v) && !self.scanner.banned_mines.contains(v))
-                            .take(self.tunables.altare().queue_scan)
-                            .cloned()
-                            .collect::<Vec<_>>();
-                        if mandatory.is_empty() {
-                            trace!("all patches found in scan area");
-                            self.scanner.increment(self.surface.pixels())?;
+                loop {
+                    let scanned: QuesterScannerResult = self.scanner.scan(PointAt::Normal, self.surface.mines());
+                    match scanned {
+                        QuesterScannerResult::NoneFound => {
+                            self.scanner.increment(self.surface.pixels(), "none-found")?;
                         }
-                        // self.queue_redo(&mut mines);
-                        return ControlFlow::Continue(mandatory);
+                        QuesterScannerResult::NewPatchesInScanArea { scanned_mines, scan_area } => {
+                            let scanned_len = scanned_mines.len();
+                            let needed_size = self.tunables.altare().queue_scan + self.tunables.altare().queue_redo;
+                            assert!(!scanned_mines.is_empty());
+
+                            let new = scanned_mines
+                                .iter()
+                                .filter(|v| !selected_mines.contains(v) && !self.scanner.banned_mines.contains(v) && !self.surface.rails().get_paths_mine_refs().contains(*v))
+                                .take(needed_size - selected_mines.len())
+                                .cloned()
+                                .collect_vec();
+                            if new.is_empty() {
+                                self.scanner.increment(self.surface.pixels(), format!("scan filtered {scanned_len} mines in {scan_area}"))?;
+                            } else {
+                                selected_mines.extend(new);
+                                trace!("[scanner] scan {scanned_len} total {} needed {needed_size} for state {state}", selected_mines.len());
+                                if selected_mines.len() >= needed_size {
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
-                return self.get_mines(state)
             }
-            ScannerMode::Mandatory(selected_mines) => {
-                assert!(!selected_mines.is_empty());
+            ScannerMode::Mandatory(mandatory_mines) => {
+                assert!(!mandatory_mines.is_empty());
+                mandatory_mines.retain(|mine| {
+                    !selected_mines.contains(mine)
+                });
+
                 let mut banned_mine = None;
-                for (i, mine) in selected_mines.iter().enumerate() {
+                for (i, mine) in mandatory_mines.iter().enumerate() {
                     if self.maybe_ban_mines.contains(mine) {
                         // was previously mandatory
                         warn!("Banning mine {mine:?}");
@@ -196,7 +206,7 @@ impl<'t, 's> Quester<'t, 's>
                     }
                 }
                 if let Some(i) = banned_mine {
-                    selected_mines.remove(i);
+                    mandatory_mines.remove(i);
                 }
                 self.scanner.reset();
 
@@ -204,20 +214,19 @@ impl<'t, 's> Quester<'t, 's>
                 // trace!("scanner {} mandatory", mines.len());
                 // self.queue_redo(&mut mines);
                 // mines
-                std::mem::take(selected_mines)
+                let mines = std::mem::take(mandatory_mines);
+                trace!("[scanner] mandatory made {} mines", mines.len());
+                selected_mines.extend(mines);
             }
-
         };
 
-        self.queue_redo(&mut mines);
-        trace!("scanner and redo made {} mines", mines.len());
+        let pre_len = selected_mines.len();
+        selected_mines.sort();
+        selected_mines.dedup();
+        assert_eq!(selected_mines.len(), pre_len, "dedupe detected for mines");
 
-        let prev_len = mines.len();
-        mines.dedup();
-        if mines.len() != prev_len {
-            panic!("dedupe detected for mines");
-        }
-        ControlFlow::Continue(mines)
+        assert!(pre_len > 1, "actual mines_len {pre_len}");
+        ControlFlow::Continue(selected_mines)
     }
 
     fn execute(&mut self, state: ScannerMode, mines: Vec<MineRef>) -> ControlFlow<(), ScannerMode> {
@@ -231,7 +240,7 @@ impl<'t, 's> Quester<'t, 's>
                 .mines(mines_bak, &self.base_source);
             return ControlFlow::Break(());
         }
-        info!("batch has {} sequences", possible_routes.sequences.len());
+        // info!("batch has {} sequences", possible_routes.sequences.len());
 
         let limit_area = possible_routes.sequences[0].routes()[0]
             .finding_limiter
@@ -309,8 +318,13 @@ impl<'t, 's> Quester<'t, 's>
                     error!("failed on first iteration, stopping");
                     apply_debug(&mut self.surface, stats, "first-iteration");
                     ControlFlow::Break(())
-                } else if stats.seen_mines.counts().all_equal()
-                    && stats.seen_mines.counts().next().unwrap() == 0
+                } else if {
+                    if let Some(first) = stats.seen_mines.counts().next() {
+                        first == 0
+                    } else {
+                        true
+                    }
+                } && stats.seen_mines.counts().all_equal()
                 {
                     error!("Potential deadlock, 0 mines found",);
                     apply_debug(&mut self.surface, stats, "potential-deadlock");
@@ -323,7 +337,7 @@ impl<'t, 's> Quester<'t, 's>
                     match state {
                         ScannerMode::Normal => {
                             // theory: for the least used mine, find the closest rail, undo to it, then only path to that mine
-                            let lucky_mine_ref = stats.seen_mines.least_known();
+                            let lucky_mine_ref = stats.seen_mines.least_known().unwrap();
 
                             let nearest_mine = detect_nearby_rails_as_mine_index(
                                 self.surface.rails(),
@@ -405,33 +419,34 @@ impl<'t, 's> Quester<'t, 's>
         //     .save_to_oculante();
     }
 
+    fn undo_one(&mut self, message: impl std::fmt::Display) -> Option<MineRef> {
+        if let Some((path, _removed_points, _source)) = self
+            .surface
+            .rails_mut_old_fn(|s| self.base_source.undo_mine_path(s, message))
+        {
+            self.surface
+                .mines_mut_ref()
+                .draw_mine(path.destination.mine_ref(), MineDraw::ChangeBuffered);
+
+            Some(path.destination.mine_ref())
+        } else {
+            None
+        }
+    }
+
     fn queue_redo(&mut self, mines: &mut Vec<MineRef>) {
         let total = self.tunables.altare().queue_redo;
         for i in 0..total {
-            trace!("🠋🠋🠋🠋🠋 queuing {i}/{} redo mine", total.saturating_sub(i));
-
-            // if let Some((mine, removed_points, source)) = {
-            //     self.surface
-            //         .rails_mut(|s| self.base_source.undo_mine_path(s))
-            // } {
-            //     let undo_mine = vec![mine.location.get_mine(self.surface.mines())];
-            //     self.surface.pixels_mut(|s| {
-            //         MineLocation::restore_area_buffered(&undo_mine, s, removed_points)
-            //     });
-            //     mines.push(mine.location);
-            // } else {
-            if let Some((path, _removed_points, _source)) = self
-                .surface
-                .rails_mut_old_fn(|s| self.base_source.undo_mine_path(s))
+            if let Some(mine) =
+                self.undo_one(format!("queuing {i}/{} redo mine", total.saturating_sub(i)))
             {
-                self.surface
-                    .mines_mut_ref()
-                    .draw_mine(path.destination.mine_ref(), MineDraw::ChangeBuffered);
-                mines.push(path.destination.mine_ref());
+                mines.push(mine);
             } else {
-                trace!("🠉🠉🠉🠉🠉🠉 queuing done");
+                trace!("queue empty");
+                break;
             }
         }
+        // trace!("🠉🠉🠉🠉🠉🠉 queuing done");
     }
 
     fn execute_plan(&mut self, possible_routes: CompletePlan) -> PlanContinue {
@@ -457,12 +472,10 @@ impl<'t, 's> Quester<'t, 's>
             &[ExecuteFlags::ShrinkBases],
         ) {
             ExecutorResult::Success { paths, sequence: _ } => {
-                let base_index_pre = self.base_source.get_i();
                 let sorted_paths = self.base_source.advance_sorting(paths);
-                trace!("[TMP] {base_index_pre} to {}", self.base_source.get_i());
                 self.surface.rails_mut_fn(|mut s| {
                     for path in sorted_paths {
-                        s.add_mine_path(path);
+                        s.add_mine_path(path, "best-batch-sequence");
                     }
                 });
 
@@ -476,11 +489,6 @@ impl<'t, 's> Quester<'t, 's>
     }
 
     fn new_plan(&self, mut mines: Vec<MineRef>) -> CompletePlan {
-        let pre_len = mines.len();
-        mines.sort();
-        mines.dedup();
-        assert_eq!(mines.len(), pre_len, "dedupe detected");
-
         // Limit pathing to the entire right half of the map
         let fixed_radius = self.surface.pixels().get_radius_i32();
         let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
@@ -554,9 +562,13 @@ impl QuesterScanner {
         self.scanning_i = 0;
     }
 
-    fn increment(&mut self, surface: VSurfacePixel) -> ControlFlow<()> {
+    fn increment(
+        &mut self,
+        surface: VSurfacePixel,
+        cause: impl std::fmt::Display,
+    ) -> ControlFlow<()> {
         trace!(
-            "incrementing {} and {} reset {}",
+            "incrementing {} and {} reset {} - {cause}",
             self.advance_i, self.scanning_i, self.reset_scanning
         );
         if self.scanning_i == self.reset_scanning {
@@ -586,7 +598,6 @@ impl QuesterScanner {
             .filter(|v| scan_area.contains_point(&v.area_min().point_center()))
             .collect();
         if new_mines_in_scan_area.is_empty() {
-            warn!("scan found no mines in {}", scan_area);
             return QuesterScannerResult::NoneFound;
         }
         new_mines_in_scan_area.sort_by_key(|mine| {
@@ -604,20 +615,23 @@ impl QuesterScanner {
             scanning_axis_score + advancing_axis_score
         });
         new_mines_in_scan_area.reverse();
-        info!(
-            "discovered {} mines in {scan_area}",
-            new_mines_in_scan_area.len()
-        );
 
+        let scanned_mines = surface
+            .get_mines_ref_for(new_mines_in_scan_area)
+            .collect_vec();
         QuesterScannerResult::NewPatchesInScanArea {
-            selected_mines: surface.get_mines_ref_for(new_mines_in_scan_area).collect(),
+            scanned_mines,
+            scan_area,
         }
     }
 }
 
 enum QuesterScannerResult {
     NoneFound,
-    NewPatchesInScanArea { selected_mines: Vec<MineRef> },
+    NewPatchesInScanArea {
+        scanned_mines: Vec<MineRef>,
+        scan_area: VArea,
+    },
 }
 
 #[derive(Clone, Copy)]

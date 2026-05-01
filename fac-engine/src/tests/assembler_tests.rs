@@ -16,11 +16,15 @@ use crate::{
 
 pub fn make_assembler_thru(output: Rc<FacItemOutput>) {
     let farm = FacBlkAssemblerThru {
-        assembler: FacEntAssembler::new(FacTier::Tier3, FacEntityName::CopperCable, [
-            Some(FacModule::Speed(FacTier::Tier3)),
-            Some(FacModule::Speed(FacTier::Tier3)),
-            Some(FacModule::Speed(FacTier::Tier3)),
-        ]),
+        assembler: FacEntAssembler::new(
+            FacTier::Tier3,
+            FacEntityName::CopperCable,
+            [
+                Some(FacModule::Speed(FacTier::Tier3)),
+                Some(FacModule::Speed(FacTier::Tier3)),
+                Some(FacModule::Speed(FacTier::Tier3)),
+            ],
+        ),
         belt_type: FacEntBeltType::Fast,
         inserter_input: FacEntInserterType::Fast,
         inserter_output: FacEntInserterType::Basic,

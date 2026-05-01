@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::fs::{read_to_string, File};
+use std::fs::{File, read_to_string};
 use std::io::{BufWriter, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;

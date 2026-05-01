@@ -151,7 +151,7 @@ fn detector(surface_meta: VSurfacePixel, out_dir: &Path) -> Vec<VPatch> {
     let mut patches: Vec<VPatch> = Vec::new();
     for pixel in Pixel::iter_resource() {
         let detected_patches = detect_pixel(surface_meta, out_dir, pixel);
-        patches.extend(detected_patches.into_iter());
+        patches.extend(detected_patches);
     }
     patches
 }

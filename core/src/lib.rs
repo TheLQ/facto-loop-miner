@@ -1,6 +1,7 @@
 #![feature(iter_array_chunks)]
 #![feature(portable_simd)]
 #![feature(error_generic_member_access)]
+#![feature(iter_collect_into)]
 //
 // lints
 //

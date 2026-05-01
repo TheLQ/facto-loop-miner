@@ -33,23 +33,30 @@ impl<'s> PlugMut<'s> {
     //     })
     // }
 
-    pub fn add_mine_path(&mut self, mine_path: MinePath) {
-        self.add_mine_path_with_pixel(mine_path, Pixel::Rail)
+    pub fn add_mine_path(&mut self, mine_path: MinePath, message: impl std::fmt::Display) {
+        self.add_mine_path_with_pixel(mine_path, Pixel::Rail, message)
     }
 
-    pub fn add_mine_path_with_pixel(&mut self, mine_path: MinePath, pixel: Pixel) {
+    pub fn add_mine_path_with_pixel(
+        &mut self,
+        mine_path: MinePath,
+        pixel: Pixel,
+        message: impl std::fmt::Display,
+    ) {
         trace!(
-            "{} {}",
+            "{} {} - {message}",
             nu_ansi_term::Color::Red.paint("mine add"),
             mine_path.segment
         );
         let new_points = mine_path.total_area();
         self.pixels_mut_fn(|mut surface| surface.change_pixels(new_points).stomp(pixel));
 
-        // todo
-        // // add markers for start points
-        // let start_points: Vec<VPoint> = mine_path.links.iter().map(|v| v.start).collect_vec();
-        // self.set_pixels(Pixel::EdgeWall, start_points)?;
+        assert!(
+            !self
+                .rails
+                .iter()
+                .any(|v| v.destination.mine_ref() == mine_path.destination.mine_ref())
+        );
 
         self.rails.push(mine_path);
     }
@@ -64,10 +71,14 @@ impl<'s> PlugMut<'s> {
     //         .require_empty_into(Pixel::Rail);
     // }
 
-    pub fn remove_mine_path_at(&mut self, index: usize) -> Option<(MinePath, Vec<VPoint>)> {
+    pub fn remove_mine_path_at(
+        &mut self,
+        index: usize,
+        message: impl std::fmt::Display,
+    ) -> Option<(MinePath, Vec<VPoint>)> {
         let mine_path = self.rails.remove(index);
         trace!(
-            "{} at {index} total {} - {}",
+            "{} at {index} total {} - {} - {message}",
             nu_ansi_term::Color::Red.paint("mine remove"),
             self.rails.len(),
             mine_path.segment,
@@ -77,9 +88,12 @@ impl<'s> PlugMut<'s> {
         Some((mine_path, removed_points))
     }
 
-    pub fn remove_mine_path_pop(&mut self) -> Option<(MinePath, Vec<VPoint>)> {
+    pub fn remove_mine_path_pop(
+        &mut self,
+        message: impl std::fmt::Display,
+    ) -> Option<(MinePath, Vec<VPoint>)> {
         trace!(
-            "{} pop total {}",
+            "{} pop total {} - {message}",
             nu_ansi_term::Color::Red.paint("mine remove"),
             self.rails.len()
         );

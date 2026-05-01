@@ -4,7 +4,8 @@ use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::{MineDestinationRef, MineRef, VSurfaceMine};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use itertools::Itertools;
-use tracing::warn;
+use simd_json::prelude::ArrayTrait;
+use tracing::{info, warn};
 
 /// Input
 ///  - Single batch of mines to be routed together
@@ -15,11 +16,18 @@ use tracing::warn;
 ///  - Combinations each can be permutated generating n! combinations
 pub fn get_possible_routes_for_batch(
     surface: VSurfaceMine,
-    MineSelectBatch { mines }: MineSelectBatch,
+    MineSelectBatch { mut mines }: MineSelectBatch,
     fixed_finding_limiter: VArea,
 ) -> CompletePlan {
     let mines_len = mines.len();
-    // let mines_destinations_len: usize = mines.iter().map(|v| v.destinations().len()).sum();
+    mines.sort();
+    mines.dedup();
+    assert_eq!(mines_len, mines.len());
+
+    let mines_destinations_len: usize = mines
+        .iter()
+        .map(|v| v.resolve_mine_surface(surface).destinations().len())
+        .sum();
     // info!(
     //     "Expanded {} mines with {} destinations to...",
     //     mines_len, mines_destinations_len,
@@ -30,30 +38,27 @@ pub fn get_possible_routes_for_batch(
 
     let mine_combinations = find_all_combinations(&resolved_mines);
     assert!(!mine_combinations.is_empty(), "nope");
-    // let total_combinations_base = mine_combinations.len();
+    let total_combinations_base = mine_combinations.len();
     let mine_combinations = find_all_permutations(mine_combinations);
-    // let total_combinations_permut = mine_combinations.len();
+    let total_combinations_permut = mine_combinations.len();
 
-    // info!(
-    //     "Expanded {} mines with {} destinations to {} combinations then {} permutated",
-    //     mines_len,
-    //     mines_destinations_len,
-    //     total_combinations_base,
-    //     total_combinations_permut
-    // );
+    info!(
+        "Expanded {} mines with {} destinations to {} combinations then {} permutated",
+        mines_len, mines_destinations_len, total_combinations_base, total_combinations_permut
+    );
 
     // Did we actually generate unique steps?
-    // let mut dedupe_test = mine_combinations.iter().collect_vec();
-    // dedupe_test.sort();
-    // dedupe_test.dedup();
-    // let dedupe_len = dedupe_test.len();
-    // assert_eq!(total_combinations_permut, dedupe_len);
+    let mut dedupe_test = mine_combinations.iter().collect_vec();
+    dedupe_test.sort();
+    dedupe_test.dedup();
+    let dedupe_len = dedupe_test.len();
+    assert_eq!(total_combinations_permut, dedupe_len);
 
     let sequences = build_routes_from_destinations(mine_combinations, fixed_finding_limiter);
-    // assert!(
-    //     !sequences.is_empty(),
-    //     "no sequences found from {mines_len} input mines"
-    // );
+    assert!(
+        !sequences.is_empty(),
+        "no sequences found from {mines_len} input mines"
+    );
     if sequences.is_empty() {
         warn!("no sequences found from {mines_len} input mines");
     }
@@ -76,19 +81,20 @@ fn find_all_combinations(mines: &[(MineRef, &MineLocation)]) -> Vec<Vec<MineDest
         output: &mut Vec<Vec<MineDestinationRef>>,
     ) {
         if let Some((mine_ref, mine)) = remain.first() {
-            for (dest_ref, destination) in mine.destinations_with_refs(*mine_ref) {
+            for destination_ref in mine.destination_refs_iter(*mine_ref) {
                 let mut next_path = path.clone();
-                next_path.push(dest_ref);
+                next_path.push(destination_ref);
                 recurse(next_path, &remain[1..], output);
             }
         } else {
+            // tracing::trace!("found path {path:?}");
             output.push(path);
         }
     }
 
-    let mut routes: Vec<Vec<MineDestinationRef>> = Vec::new();
-    recurse(Vec::new(), mines, &mut routes);
-    routes
+    let mut sequences: Vec<Vec<MineDestinationRef>> = Vec::new();
+    recurse(Vec::new(), mines, &mut sequences);
+    sequences
 }
 
 /// Find all re-ordered permutations of `[a,b,c,...] = n!`
@@ -112,13 +118,13 @@ fn build_routes_from_destinations(
 ) -> Vec<ExecutionSequence> {
     let mut sequences: Vec<ExecutionSequence> = Vec::new();
     for combination in input_combinations {
-        let mut sequence: Vec<ExecutionRoute> = Vec::new();
-        for (i, destination) in combination.into_iter().enumerate() {
-            sequence.push(ExecutionRoute {
+        let sequence = combination
+            .into_iter()
+            .map(|destination| ExecutionRoute {
                 destination,
                 finding_limiter: fixed_finding_limiter.clone(),
             })
-        }
+            .collect();
         sequences.push(ExecutionSequence::new(sequence));
     }
     sequences

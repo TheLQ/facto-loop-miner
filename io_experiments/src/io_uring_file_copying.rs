@@ -15,11 +15,11 @@ use uring_sys2::{
     io_uring_wait_cqe,
 };
 
+use crate::LOCALE;
 use crate::err::{UringError, VIoResult};
 use crate::io::USIZE_BYTES;
 use crate::io_uring::IoUring;
-use crate::io_uring_common::{allocate_page_size_aligned, PAGE_SIZE};
-use crate::LOCALE;
+use crate::io_uring_common::{PAGE_SIZE, allocate_page_size_aligned};
 
 pub const BUF_RING_COUNT: usize = 32;
 // const BUF_RING_ENTRY_SIZE: usize = PAGE_SIZE * 256; // 1 MibiByte
@@ -203,8 +203,7 @@ impl IoUringFileCopying {
         self.backing_buf_ring_data[buf_index].backing_result_cursor = self.result_cursor;
         trace!(
             "sqe create {}\tcursor_status {}",
-            buf_index,
-            self.result_cursor
+            buf_index, self.result_cursor
         );
 
         self.result_cursor += 1;

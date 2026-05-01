@@ -109,9 +109,7 @@ impl BaseSourceEighth {
     }
 
     pub fn all_intra_levels(&self) -> impl Iterator<Item = IntraLevel> {
-        (0..self.tunables.base_source_intra_rails)
-            .into_iter()
-            .map(|i| self.intra_level_at_index(i))
+        (0..self.tunables.base_source_intra_rails).map(|i| self.intra_level_at_index(i))
     }
 
     fn get_for_index(&self, index: i32) -> BaseSourceEntry {
@@ -164,7 +162,6 @@ impl BaseSourceEighth {
     }
 
     fn _undo_one(&mut self) -> BaseSourceEntry {
-        tracing::trace!("undoing {}", self.next);
         self.next -= 1;
         // this value was last given, and will be repeated
         let current = self.get_for_index(self.next);
@@ -175,8 +172,10 @@ impl BaseSourceEighth {
     pub fn undo_mine_path(
         &mut self,
         surface: &mut VSurfaceRailMut,
+        cause: impl std::fmt::Display,
     ) -> Option<(MinePath, Vec<VPoint>, BaseSourceEntry)> {
-        let (path, points) = surface.remove_mine_path_pop()?;
+        let (path, points) =
+            surface.remove_mine_path_pop(format!("undoing {} - {cause}", self.next))?;
         let undo = self._undo_one();
         assert_eq!(path.segment.start, undo.origin);
 
@@ -191,8 +190,9 @@ impl BaseSourceEighth {
         let mut res = Vec::new();
         let mut i = 0;
         while { surface.rails().get_paths().len() } > remove_until {
-            let (path, _, _) = self.undo_mine_path(surface).unwrap();
-            trace!("[rollback] pop {i}");
+            let (path, _, _) = self
+                .undo_mine_path(surface, format!("[rollback] pop {i}"))
+                .unwrap();
             i += 1;
             res.push(path);
         }

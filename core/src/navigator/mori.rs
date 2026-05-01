@@ -34,7 +34,7 @@ pub fn mori2_start(
     let start_link = HopeSodaLink::new_soda_straight_q(&endpoints.start);
     let end_link = HopeSodaLink::new_soda_straight_q(&endpoints.end);
 
-    if into_buildable_link(surface, &finding_limiter, end_link.clone()).is_none() {
+    if into_buildable_link(surface, finding_limiter, end_link.clone()).is_none() {
         warn!("waste of time {endpoints}");
         return MoriResult::FailingDebug {
             cause: FailingCause::Wasted(end_link.soda_area().to_vec()),

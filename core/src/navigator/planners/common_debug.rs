@@ -7,8 +7,8 @@ use crate::state::tuneables::{
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::{MineDraw, MineLocation, MineLocationResolver};
 use crate::surfacev::vsurface::{
-    MineRef, VSurfaceMineAsVs, VSurfaceMineAsVsMut, VSurfaceMineMut, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut,
-    VSurfaceRailAsVsMut,
+    MineRef, VSurfaceMineAsVs, VSurfaceMineAsVsMut, VSurfaceMineMut, VSurfacePixelAsVs,
+    VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRailAsVsMut,
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_THREE, VPoint};
@@ -182,7 +182,7 @@ impl<'s, S: VSurfacePixelAsVsMut + VSurfaceRailAsVsMut + VSurfaceMineAsVsMut> De
         );
         self.0.rails_mut_fn(|mut s| {
             for found_path in found_paths {
-                s.add_mine_path_with_pixel(found_path, Pixel::Water);
+                s.add_mine_path_with_pixel(found_path, Pixel::Water, "debug-fails");
             }
         });
 
@@ -235,10 +235,7 @@ fn debug_draw_segment(surface: &mut VSurfacePixelMut, segment: VSegment) {
 //     draw_prep_mines(surface, base_sources)
 // }
 
-pub(super) fn draw_prep_mines<'plan_mine>(
-    mut surface: VSurfaceMineMut,
-    base_sources: &BaseSourceEighth,
-) {
+pub(super) fn draw_prep_mines(mut surface: VSurfaceMineMut, base_sources: &BaseSourceEighth) {
     for mine in surface.mines().all_mines_refs_iter() {
         surface.draw_mine(mine, MineDraw::ChangeBuffered);
     }

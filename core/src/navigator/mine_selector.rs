@@ -113,7 +113,7 @@ pub fn group_nearby_patches(surface: VSurfacePatch) -> Vec<Vec<PatchRef>> {
 
     let mut groups: Vec<Vec<PatchRef>> = Vec::new();
     for patch_i in &all_patches {
-        if processed_patches.contains(&patch_i) {
+        if processed_patches.contains(patch_i) {
             // already in a group
             continue;
         }
@@ -139,7 +139,7 @@ pub fn group_nearby_patches(surface: VSurfacePatch) -> Vec<Vec<PatchRef>> {
     groups
 }
 
-fn recursive_near_patches<'a>(
+fn recursive_near_patches(
     needle: &PatchRef,
     remaining_patches: &[PatchRef],
     result: &mut Vec<PatchRef>,
