@@ -3,8 +3,7 @@ macro_rules! vs_narrow_type_to_for {
     (pixel $target_mod:ident) => {
         vs_narrow_type_to_for!(@plug_impl
             pixel => $target_mod,
-            pixels_mut => pixels,
-            // $( $life, )+ => pixels,
+            pixels_mut_fn => pixels_mut_ref => pixels,
             pixels,
         );
     };
@@ -12,8 +11,8 @@ macro_rules! vs_narrow_type_to_for {
     (patch $target_mod:ident) => {
         vs_narrow_type_to_for!(@plug_impl
             patch => $target_mod,
-            patches_mut => patches,
-            patches, pixels, mines,
+            patches_mut_fn => patches_mut_ref => patches,
+            pixels, patches,
         );
     };
 
@@ -21,30 +20,30 @@ macro_rules! vs_narrow_type_to_for {
     (mine $target_mod:ident) => {
         vs_narrow_type_to_for!(@plug_impl
             mine => $target_mod,
-            mines_mut => mines,
-            mines,
+            mines_mut_fn => mines_mut_ref => mines,
+            pixels, mines,
         );
     };
 
     (rails $target_mod:ident) => {
         vs_narrow_type_to_for!(@plug_impl
             rail => $target_mod,
-            rails_mut => rails,
-            rails, pixels,
+            rails_mut_fn => rails_mut_ref => rails,
+            pixels, rails,
         );
     };
 
     (nav $target_mod:ident) => {
         vs_narrow_type_to_for!(@plug_impl
             patch => $target_mod,
-            patches_mut => patches,
+            patches_mut_fn => patches_mut_ref => patches,
             pixels, patches, mines, rails,
         );
     };
 
     (@plug_impl
         $trait_mod:ident => $target_mod:ident,
-        $fn_mut:ident => $fn_ref:ident,
+        $fn_mut_fn:ident => $fn_mut_ref:ident => $fn_ref:ident,
         // $( $life:ident, )+ => $( $field:ident, )+
         $( $field:ident, )+
     ) => {
@@ -65,7 +64,12 @@ macro_rules! vs_narrow_type_to_for {
         // }
 
         impl super::$trait_mod::AsVsMut for super::$target_mod::PlugMut<'_> {
-            fn $fn_mut(&mut self) -> super::$trait_mod::PlugMut<'_ > {
+            fn $fn_mut_fn<R>(&mut self, work: impl FnOnce(super::$trait_mod::PlugMut<'_>) -> R) -> R {
+                let Self { $( $field, )+ .. } = self;
+                work(super::$trait_mod::PlugMut { $( $field, )+ })
+            }
+
+            fn $fn_mut_ref(&mut self) -> super::$trait_mod::PlugMut<'_> {
                 let Self { $( $field, )+ .. } = self;
                 super::$trait_mod::PlugMut { $( $field, )+ }
             }
@@ -88,13 +92,13 @@ macro_rules! vs_narrow_type_to_for {
     };
 }
 vs_narrow_type_to_for!(pixel patch);
+vs_narrow_type_to_for!(pixel mine);
 vs_narrow_type_to_for!(pixel rail);
 vs_narrow_type_to_for!(pixel nav);
 //
 vs_narrow_type_to_for!(patch nav);
 //
 vs_narrow_type_to_for!(mine nav);
-vs_narrow_type_to_for!(mine patch);
 //
 vs_narrow_type_to_for!(rails nav);
 // vs_narrow_type_to_for!(rails core_plugs);
@@ -115,8 +119,9 @@ macro_rules! vs_plug_mut_to_plug {
     }
 }
 vs_plug_mut_to_plug!(pixel, pixels, pixels,);
-vs_plug_mut_to_plug!(patch, patches, patches, pixels, mines,);
-vs_plug_mut_to_plug!(rail, rails, rails, pixels,);
+vs_plug_mut_to_plug!(patch, patches, pixels, patches,);
+vs_plug_mut_to_plug!(mine, mines, pixels, mines,);
+vs_plug_mut_to_plug!(rail, rails, pixels, rails,);
 //
 // // impl<'s> super::pixel::AsVs<'s> for super::pixel::PlugMut<'s> {
 // //     fn pixels(&self) -> super::pixel::Plug<'s> {
@@ -133,11 +138,16 @@ macro_rules! vs_actual_structs {
     (
         $for_struct:path,
         $trait_mod:tt,
-        $fn_mut:ident => $fn_ref:ident,
+        $fn_mut_fn:ident => $fn_mut_ref:ident => $fn_ref:ident,
         $( $field:ident, )+
     ) => {
         impl super::$trait_mod::AsVsMut for $for_struct  {
-            fn $fn_mut(&mut self) -> super::$trait_mod::PlugMut {
+            fn $fn_mut_fn<R>(&mut self, work: impl FnOnce(super::$trait_mod::PlugMut) -> R) -> R {
+                let Self { $( $field, )+ .. } = self;
+                work(super::$trait_mod::PlugMut { $( $field, )+ })
+            }
+
+            fn $fn_mut_ref(&mut self) -> super::$trait_mod::PlugMut<'_> {
                 let Self { $( $field, )+ .. } = self;
                 super::$trait_mod::PlugMut { $( $field, )+ }
             }
@@ -166,49 +176,43 @@ macro_rules! vs_actual_structs {
 vs_actual_structs!(
     super::core::VSurface,
     pixel,
-    pixels_mut => pixels,
+    pixels_mut_fn => pixels_mut_ref => pixels,
     pixels,
 );
 vs_actual_structs!(
     super::core::VSurface,
     patch,
-    patches_mut => patches,
-    patches, pixels, mines,
+    patches_mut_fn => patches_mut_ref => patches,
+    patches, pixels,
 );
 vs_actual_structs!(
     super::core::VSurface,
     rail,
-    rails_mut => rails,
+    rails_mut_fn => rails_mut_ref => rails,
     rails, pixels,
 );
 vs_actual_structs!(
     super::core::VSurface,
     nav,
-    nav_mut => nav,
+    nav_mut_fn => nav_mut_ref => nav,
     rails, patches, pixels, mines,
 );
-// vs_actual_structs!(
-//     super::core::VSurface,
-//     core_plugs,
-//     core_mut => core,
-//     rails, patches, pixels, mines,
-// );
+//
 vs_actual_structs!(
     super::pixel::PlugCopy,
     pixel,
-    pixels_mut => pixels,
+    pixels_mut_fn => pixels_mut_ref => pixels,
     pixels,
 );
-
 vs_actual_structs!(
     super::rail::PlugCopy,
     rail,
-    rails_mut => rails,
+    rails_mut_fn => rails_mut_ref => rails,
     rails, pixels,
 );
 vs_actual_structs!(
     super::rail::PlugCopy,
     pixel,
-    pixels_mut => pixels,
+    pixels_mut_fn => pixels_mut_ref => pixels,
     pixels,
 );

@@ -13,6 +13,26 @@ pub struct PlugMut<'s> {
 }
 
 impl<'s> PlugMut<'s> {
+    // pub fn re_mut<'this>(&'this mut self) -> PlugMut<'this>
+    // where
+    //     'this: 's,
+    // {
+    //     Self {
+    //         rails: self.rails,
+    //         pixels: self.pixels,
+    //     }
+    // }
+    //
+    // // pub fn re_mut_fn<'work, 'this, R>(&'this mut self, work: impl FnOnce(PlugMut<'work>) -> R) -> R
+    // // where
+    // //     'work: 's + 'this,
+    // pub fn re_mut_fn<R>(&mut self, work: impl FnOnce(PlugMut<'_>) -> R) -> R {
+    //     work(Self {
+    //         rails: &mut self.rails,
+    //         pixels: &mut self.pixels,
+    //     })
+    // }
+
     pub fn add_mine_path(&mut self, mine_path: MinePath) {
         self.add_mine_path_with_pixel(mine_path, Pixel::Rail)
     }
@@ -24,7 +44,7 @@ impl<'s> PlugMut<'s> {
             mine_path.segment
         );
         let new_points = mine_path.total_area();
-        self.pixels_mut().change_pixels(new_points).stomp(pixel);
+        self.pixels_mut_fn(|mut surface| surface.change_pixels(new_points).stomp(pixel));
 
         // todo
         // // add markers for start points
@@ -96,6 +116,10 @@ impl<'s> PlugMut<'s> {
         self.pixels.change(removed_points.clone()).remove();
         removed_points
     }
+
+    pub fn take_all_rails(&mut self) -> Vec<MinePath> {
+        std::mem::take(self.rails)
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -118,7 +142,7 @@ impl<'s> Plug<'s> {
             .iter()
             // .enumerate()
             // .map(|(i, v)| (MineRef(i), &v.location))
-            .map(|v| v.location.clone())
+            .map(|v| v.destination.mine_ref())
     }
 
     pub fn surface_copy_no_rails(surface: VSurfacePixel) -> PlugCopy {
@@ -143,7 +167,13 @@ impl PlugCopy {
 //
 
 pub trait AsVsMut: AsVs {
-    fn rails_mut(&mut self) -> PlugMut<'_>;
+    fn rails_mut_fn<R>(&mut self, work: impl FnOnce(PlugMut<'_>) -> R) -> R;
+
+    fn rails_mut_old_fn<R>(&mut self, work: impl FnOnce(&mut PlugMut<'_>) -> R) -> R {
+        self.rails_mut_fn(|mut s| work(&mut s))
+    }
+
+    fn rails_mut_ref(&mut self) -> PlugMut<'_>;
 }
 
 pub trait AsVs {

@@ -1,12 +1,9 @@
-use crate::navigator::planners::altare::start_altare_planner;
-// use crate::navigator::planners::altare::start_altare_planner;
 use crate::navigator::planners::PathingTunables;
-use crate::navigator::planners::debugplan::start_debug_planner;
-use crate::navigator::planners::ruze::start_ruze_planner;
+use crate::navigator::planners::altare::start_altare_planner;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::vsurface::VSurface;
-use crate::surfacev::vsurface::{VSurfaceNavAsVsMut, VSurfacePatchAsVsMut};
+use crate::surfacev::vsurface::VSurfacePatchAsVsMut;
 
 pub(crate) struct Step20;
 
@@ -27,9 +24,9 @@ impl Step for Step20 {
         // surface.validate();
 
         match 2 {
-            1 => start_ruze_planner(&tunables, &mut surface),
+            // 1 => start_ruze_planner(&tunables, &mut surface),
             2 => start_altare_planner(&tunables, &mut surface),
-            9 => start_debug_planner(&tunables, &mut surface.patches_mut()),
+            // 9 => surface.patches_mut_fn(|s| start_debug_planner(&tunables, s)),
             _ => unimplemented!(),
         }
 

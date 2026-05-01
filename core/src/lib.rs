@@ -1,7 +1,6 @@
 #![feature(iter_array_chunks)]
 #![feature(portable_simd)]
 #![feature(error_generic_member_access)]
-#![feature(new_range_api)]
 #![feature(iter_advance_by)]
 #![feature(int_roundings)]
 #![feature(iter_collect_into)]

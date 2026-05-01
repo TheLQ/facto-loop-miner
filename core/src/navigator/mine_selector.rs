@@ -8,19 +8,17 @@ use crate::surfacev::vsurface::{MineRef, PatchRef, VSurfacePatch};
 use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
 
-pub struct MineSelectBatch<'plan_mine> {
-    pub mines: Vec<(MineRef, &'plan_mine MineLocation)>,
+pub struct MineSelectBatch {
+    pub mines: Vec<MineRef>,
 }
 
-pub enum MineSelectBatchResult<'plan_mine> {
-    Success {
-        batches: Vec<MineSelectBatch<'plan_mine>>,
-    },
+pub enum MineSelectBatchResult {
+    Success { batches: Vec<MineSelectBatch> },
     EmptyBatch,
 }
 
-impl<'plan_mine> MineSelectBatchResult<'plan_mine> {
-    pub fn into_success(self) -> Option<Vec<MineSelectBatch<'plan_mine>>> {
+impl MineSelectBatchResult {
+    pub fn into_success(self) -> Option<Vec<MineSelectBatch>> {
         match self {
             MineSelectBatchResult::Success { batches } => Some(batches),
             MineSelectBatchResult::EmptyBatch => None,
@@ -36,11 +34,11 @@ impl<'plan_mine> MineSelectBatchResult<'plan_mine> {
 ///  - Order patch groups starting from center
 ///  - Assign base sources
 ///  - Split groups if needed because too huge creates too many possibilities later
-pub fn select_mines_and_sources<'plan_mine>(
+pub fn select_mines_and_sources(
     _tunables: &PathingTunables,
     _surface: VSurfacePatch,
     _maximum_mine_count_per_batch: usize,
-) -> MineSelectBatchResult<'plan_mine> {
+) -> MineSelectBatchResult {
     todo!()
     /*
     let base_source = BaseSource::from_central_base(tunables).into_positive();

@@ -65,7 +65,10 @@ fn plotter(
     // destroy_mine_area(&needle_path.mine_base, 20, &output)?;
     destroy_everything(surface.pixels(), &output)?;
 
-    let mine = needle_path.location.get_mine(surface.mines());
+    let mine = needle_path
+        .destination
+        .mine_ref()
+        .resolve_mine_surface(surface.mines());
 
     let actual_area = VArea::from_arbitrary_points(
         mine.patches_for_mine(&surface)

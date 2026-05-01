@@ -2,7 +2,9 @@ use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::mine_executor::{ExecutionRoute, ExecutionSequence};
 use crate::navigator::mine_selector::MineSelectBatch;
 use crate::surfacev::mine::{MineDestination, MineLocation};
-use crate::surfacev::vsurface::{MineRef, VSurfacePixel};
+use crate::surfacev::vsurface::{
+    MineDestinationRef, MineRef, VSurfaceMine, VSurfaceMineAsVs, VSurfacePatch, VSurfacePixel,
+};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
 use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
@@ -18,9 +20,10 @@ use tracing::warn;
 ///  - Therefore batch has 4^n possible combinations
 ///  - Combinations each can be permutated generating n! combinations
 pub fn get_possible_routes_for_batch<'plan_mine>(
-    surface: VSurfacePixel,
-    MineSelectBatch { mines }: MineSelectBatch<'plan_mine>,
-) -> CompletePlan<'plan_mine> {
+    surface: VSurfaceMine,
+    MineSelectBatch { mines }: MineSelectBatch,
+    fixed_finding_limiter: VArea,
+) -> CompletePlan {
     let mines_len = mines.len();
     // let mines_destinations_len: usize = mines.iter().map(|v| v.destinations().len()).sum();
     // info!(
@@ -29,7 +32,9 @@ pub fn get_possible_routes_for_batch<'plan_mine>(
     // );
     assert!(!mines.is_empty(), "nope");
 
-    let mine_combinations = find_all_combinations(mines);
+    let resolved_mines = surface.resolve_mines_with_refs(mines).collect_vec();
+
+    let mine_combinations = find_all_combinations(&resolved_mines);
     assert!(!mine_combinations.is_empty(), "nope");
     // let total_combinations_base = mine_combinations.len();
     let mine_combinations = find_all_permutations(mine_combinations);
@@ -42,18 +47,6 @@ pub fn get_possible_routes_for_batch<'plan_mine>(
     //     total_combinations_base,
     //     total_combinations_permut
     // );
-
-    // Limit pathing to the entire right half of the map
-    // todo: autogen this somewhere
-    let fixed_radius = surface.get_radius_i32();
-    let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
-        // VPoint::new(0, -fixed_radius),
-        // VPOINT_ZERO,
-        VPoint::new(-SECTION_POINTS_I32, -SECTION_POINTS_I32),
-        // Must give spacing from Edge, because hope_link.area() can extend past it.
-        // range checks are disabled for theoretical performance
-        VPoint::new(fixed_radius, fixed_radius),
-    );
 
     // Did we actually generate unique steps?
     // let mut dedupe_test = mine_combinations.iter().collect_vec();
@@ -73,15 +66,8 @@ pub fn get_possible_routes_for_batch<'plan_mine>(
     CompletePlan { sequences }
 }
 
-pub struct CompletePlan<'plan_mine> {
-    pub sequences: Vec<ExecutionSequence<'plan_mine>>,
-}
-
-#[derive(PartialOrd, Ord, PartialEq, Eq, Clone)]
-struct PartialEntry<'plan_mine> {
-    location: &'plan_mine MineLocation,
-    location_ref: MineRef,
-    destination: &'plan_mine MineDestination,
+pub struct CompletePlan {
+    pub sequences: Vec<ExecutionSequence>,
 }
 
 /// Find all combinations of `a[1,2,3,4], b[1,2,3,4], ... = [a1, b1], [a2, b2], ...`
@@ -89,22 +75,16 @@ struct PartialEntry<'plan_mine> {
 ///
 /// Start with a list of mines with 4x possible positions.
 /// Create combinations of `[a1, b1, c2, ...]`
-fn find_all_combinations<'plan_mine>(
-    mines: Vec<(MineRef, &'plan_mine MineLocation)>,
-) -> Vec<Vec<PartialEntry<'plan_mine>>> {
-    fn recurse<'m>(
-        path: Vec<PartialEntry<'m>>,
-        remain: &[(MineRef, &'m MineLocation)],
-        output: &mut Vec<Vec<PartialEntry<'m>>>,
+fn find_all_combinations(mines: &[(MineRef, &MineLocation)]) -> Vec<Vec<MineDestinationRef>> {
+    fn recurse(
+        path: Vec<MineDestinationRef>,
+        remain: &[(MineRef, &MineLocation)],
+        output: &mut Vec<Vec<MineDestinationRef>>,
     ) {
         if let Some((mine_ref, mine)) = remain.first() {
-            for destination in mine.destinations() {
+            for (dest_ref, destination) in mine.destinations_with_refs(*mine_ref) {
                 let mut next_path = path.clone();
-                next_path.push(PartialEntry {
-                    destination,
-                    location_ref: *mine_ref,
-                    location: mine,
-                });
+                next_path.push(dest_ref);
                 recurse(next_path, &remain[1..], output);
             }
         } else {
@@ -112,14 +92,16 @@ fn find_all_combinations<'plan_mine>(
         }
     }
 
-    let mut routes: Vec<Vec<PartialEntry>> = Vec::new();
-    recurse(Vec::new(), &mines, &mut routes);
+    let mut routes: Vec<Vec<MineDestinationRef>> = Vec::new();
+    recurse(Vec::new(), mines, &mut routes);
     routes
 }
 
 /// Find all re-ordered permutations of `[a,b,c,...] = n!`
 /// This is huge
-fn find_all_permutations(input_combinations: Vec<Vec<PartialEntry>>) -> Vec<Vec<PartialEntry>> {
+fn find_all_permutations(
+    input_combinations: Vec<Vec<MineDestinationRef>>,
+) -> Vec<Vec<MineDestinationRef>> {
     input_combinations
         .into_iter()
         .flat_map(|combination| {
@@ -130,31 +112,15 @@ fn find_all_permutations(input_combinations: Vec<Vec<PartialEntry>>) -> Vec<Vec<
 }
 
 /// Add the base source rail going to the destination, in order
-fn build_routes_from_destinations<'plan_mine>(
-    input_combinations: Vec<Vec<PartialEntry<'plan_mine>>>,
+fn build_routes_from_destinations(
+    input_combinations: Vec<Vec<MineDestinationRef>>,
     fixed_finding_limiter: VArea,
-) -> Vec<ExecutionSequence<'plan_mine>> {
+) -> Vec<ExecutionSequence> {
     let mut sequences: Vec<ExecutionSequence> = Vec::new();
     'combinations: for combination in input_combinations {
         let mut sequence: Vec<ExecutionRoute> = Vec::new();
-        for (
-            i,
-            PartialEntry {
-                location,
-                location_ref,
-                destination,
-            },
-        ) in combination.into_iter().enumerate()
-        {
-            // let source = base_source.peek_after(i);
-            // let segment = source.segment_for_mine(destination.for_level(&source.applied_intra));
-            // if !segment.is_within_area(&fixed_finding_limiter) {
-            //     warn!("segment out of bounds {}", segment);
-            //     continue 'combinations;
-            // }
+        for (i, destination) in combination.into_iter().enumerate() {
             sequence.push(ExecutionRoute {
-                location,
-                location_ref,
                 destination,
                 finding_limiter: fixed_finding_limiter.clone(),
             })

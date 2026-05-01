@@ -1,17 +1,17 @@
 use crate::navigator::planners::PathingTunables;
 use crate::surfacev::vsurface::VSurfacePatchMut;
 
-pub fn start_debug_planner(_tunables: &PathingTunables, _surface_mut: &mut VSurfacePatchMut) {
-    panic!("todo")
-    // let select_batches = get_batches(tunables, surface_mut.patches());
-    // paint_result(&mut surface_mut.pixels_mut(), select_batches);
-    // if let Err(()) = debug_conflict_no_touching(surface, &select_batches) {
-    //     error!("no touching");
-    //     return;
-    // } else {
-    //     error!("good touching");
-    // }
-}
+// pub fn start_debug_planner(_tunables: &PathingTunables, _surface_mut: &mut VSurfacePatchMut) {
+//     panic!("todo")
+//     // let select_batches = get_batches(tunables, surface_mut.patches());
+//     // paint_result(&mut surface_mut.pixels_mut(), select_batches);
+//     // if let Err(()) = debug_conflict_no_touching(surface, &select_batches) {
+//     //     error!("no touching");
+//     //     return;
+//     // } else {
+//     //     error!("good touching");
+//     // }
+// }
 
 // fn get_batches(tunables: &PathingTunables, surface: VSurfacePatch) -> Vec<MineSelectBatch> {
 //     let select_batches = select_mines_and_sources(tunables, surface, 5)

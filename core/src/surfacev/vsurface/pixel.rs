@@ -27,6 +27,15 @@ pub struct PlugMut<'s> {
 }
 
 impl<'s> PlugMut<'s> {
+    pub fn re_mut<'this>(&'this mut self) -> PlugMut<'this>
+    where
+        'this: 's,
+    {
+        Self {
+            pixels: self.pixels,
+        }
+    }
+
     pub fn load_clone_prep(&mut self) -> VResult<()> {
         self.pixels
             .prep_fast_cloning(&path_pixel_xy_indexes_clone())
@@ -347,7 +356,13 @@ pub struct PlugCopy {
 //
 
 pub trait AsVsMut: AsVs {
-    fn pixels_mut(&mut self) -> PlugMut<'_>;
+    fn pixels_mut_fn<R>(&mut self, work: impl FnOnce(PlugMut) -> R) -> R;
+
+    fn pixels_mut_old_fn<R>(&mut self, work: impl FnOnce(&mut PlugMut<'_>) -> R) -> R {
+        self.pixels_mut_fn(|mut s| work(&mut s))
+    }
+
+    fn pixels_mut_ref(&mut self) -> PlugMut<'_>;
 }
 
 pub trait AsVs {
@@ -438,7 +453,7 @@ mod test {
     fn test_basic_surface() {
         log_init_trace();
         let mut surface_raw = VSurface::new(50);
-        let surface = &mut surface_raw.pixels_mut();
+        let surface = &mut surface_raw.pixels_mut_ref();
 
         let dummy_link: HopeLink = {
             let mut hope = RailHopeSingle::new(

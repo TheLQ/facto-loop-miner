@@ -31,7 +31,7 @@ impl Step for Step00 {
         let convert_watch = BasicWatch::start();
         let radius = find_radius(&lua_tiles) as u32;
         let mut surface = VSurface::new(radius);
-        translate_entities_to_image(&lua_tiles, &mut surface.pixels_mut(), &params);
+        surface.pixels_mut_fn(|s| translate_entities_to_image(&lua_tiles, s, &params));
         info!("Converted in {}", convert_watch);
 
         // let center = surface.get_pixel(VPoint::new(0, 0));
@@ -86,7 +86,7 @@ fn find_radius_max<T: LuaThing>(
 
 fn translate_entities_to_image<E>(
     entities: &[E],
-    surface: &mut VSurfacePixelMut,
+    mut surface: VSurfacePixelMut,
     params: &StepParams,
 ) where
     E: LuaThing,

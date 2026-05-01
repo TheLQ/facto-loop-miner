@@ -47,7 +47,7 @@ impl Step for Step04 {
         let mut surface = VSurface::load_from_last_step(&params)?;
 
         let disk_patches = detector(surface.pixels(), &params.step_out_dir);
-        surface.patches_mut().add_patches(disk_patches);
+        surface.patches_mut_fn(|mut s| s.add_patches(disk_patches));
 
         // if WRITE_DEBUG_IMAGE {
         //     write_surface_with_all_patches_wrapped(&mut surface);

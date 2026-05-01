@@ -6,10 +6,11 @@ use crate::state::tuneables::{
     AltareTunables, ChunkValue, MoriTunables, PathCommonTunables, Tunables,
 };
 use crate::surface::pixel::Pixel;
-use crate::surfacev::mine::MineLocation;
+use crate::surfacev::mine::{MineDraw, MineLocation, MineLocationResolver};
 use crate::surfacev::vsurface::{
-    MineRef, VSurfaceMineAsVs, VSurfacePatchAsVs, VSurfacePatchMut, VSurfacePixelAsVs,
-    VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRailAsVs, VSurfaceRailAsVsMut,
+    MineRef, VSurfaceMineAsVs, VSurfaceMineAsVsMut, VSurfaceMineMut, VSurfacePatchAsVs,
+    VSurfacePatchMut, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRailAsVs,
+    VSurfaceRailAsVsMut,
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_THREE, VPoint};
@@ -77,7 +78,7 @@ pub(super) fn debug_draw_base_sources(
 
 pub struct Debugger<'s, S>(pub &'s mut S, pub &'static str);
 
-impl<'s, S: VSurfacePixelAsVsMut> Debugger<'s, S> {
+impl<'s, S: VSurfacePixelAsVsMut + VSurfaceMineAsVs> Debugger<'s, S> {
     pub fn sequences(
         &mut self,
         sequences: Vec<ExecutionSequence>,
@@ -88,45 +89,35 @@ impl<'s, S: VSurfacePixelAsVsMut> Debugger<'s, S> {
         for sequence in sequences {
             for (i, route) in sequence.routes().iter().enumerate() {
                 let source = base_source.peek_after(i);
-                let VSegment { start, end } = route.segment_for_source(&source);
+                let VSegment { start, end } = route
+                    .segment_for_source(&source, MineLocationResolver::Surface(self.0.mines()));
                 pixels.push(start.point());
                 pixels.push(end.point());
             }
         }
         self.0
-            .pixels_mut()
-            .change_pixels(pixels)
-            .stomp(Pixel::Highlighter);
+            .pixels_mut_fn(|mut s| s.change_pixels(pixels).stomp(Pixel::Highlighter));
         self
     }
 
     pub fn starts_numbered(&mut self, start_points: &BaseSourceEighth, amount: usize) -> &mut Self {
+        let surface = &mut self.0.pixels_mut_ref();
         let mut pixels = Vec::new();
         for (i, base_source) in (0..amount).map(|v| start_points.peek_after(v)).enumerate() {
             let point = base_source.origin.point();
-            self.0.pixels_mut().draw_text_at(
-                point,
-                &i.to_string(),
-                TextSize::small(),
-                Pixel::SteelChest,
-            );
+            surface.draw_text_at(point, &i.to_string(), TextSize::small(), Pixel::SteelChest);
             pixels.push(point);
         }
-        self.0
-            .pixels_mut()
-            .change_pixels(pixels)
-            .stomp(Pixel::Highlighter);
+        surface.change_pixels(pixels).stomp(Pixel::Highlighter);
         self
     }
 
     pub fn wasteds(&mut self, wasteds: HashMap<Vec<VPoint>, usize>) -> &mut Self {
+        let surface = &mut self.0.pixels_mut_ref();
         for (wasted, count) in wasteds {
             let center = VArea::from_arbitrary_points(&wasted).point_center();
-            self.0
-                .pixels_mut()
-                .change_pixels(wasted)
-                .stomp(Pixel::Highlighter);
-            self.0.pixels_mut().draw_text_at(
+            surface.change_pixels(wasted).stomp(Pixel::Highlighter);
+            surface.draw_text_at(
                 center,
                 &count.to_string(),
                 TextSize::small(),
@@ -146,19 +137,21 @@ impl<'s, S: VSurfaceMineAsVs + VSurfacePixelAsVsMut> Debugger<'s, S> {
         let mut seen_mines: Vec<VArea> = Vec::new();
         let mut destinations = Vec::new();
         for mine in mines {
-            let mine = mine.get_mine(self.0.mines());
-            // let mine = mine.into();
-            let mine_area = mine.area_buffered().clone();
-            if seen_mines.contains(&mine_area) {
-                continue;
-            }
+            let mine_area = {
+                let mine = mine.resolve_mine_surface(self.0.mines());
+                let mine_area = mine.area_buffered().clone();
+                if seen_mines.contains(&mine_area) {
+                    continue;
+                }
+                mine_area
+            };
             self.0
-                .pixels_mut()
+                .pixels_mut_ref()
                 .change_square(&mine_area)
                 .find_into(Pixel::MineNoTouch, Pixel::Highlighter);
             seen_mines.push(mine_area);
 
-            for destination in mine.destinations() {
+            for destination in mine.resolve_mine_surface(self.0.mines()).destinations() {
                 tracing::trace!("destination {:?}", destination);
                 // destinations.push(destination.0)
                 let endpoint = destination.for_level(&base_source.intra_level_at_index(0));
@@ -166,14 +159,14 @@ impl<'s, S: VSurfaceMineAsVs + VSurfacePixelAsVsMut> Debugger<'s, S> {
             }
         }
         self.0
-            .pixels_mut()
+            .pixels_mut_ref()
             .change_pixels(destinations)
             .stomp(Pixel::EdgeWall);
         self
     }
 }
 
-impl<'s, S: VSurfacePixelAsVsMut + VSurfaceRailAsVsMut> Debugger<'s, S> {
+impl<'s, S: VSurfacePixelAsVsMut + VSurfaceRailAsVsMut + VSurfaceMineAsVsMut> Debugger<'s, S> {
     pub fn fail_mine_color_and_best_routes(
         &mut self,
         FailingMeta {
@@ -189,25 +182,36 @@ impl<'s, S: VSurfacePixelAsVsMut + VSurfaceRailAsVsMut> Debugger<'s, S> {
             "failed to pathfind but writing {} paths anyway",
             found_paths.len()
         );
-        for found_path in found_paths {
-            self.0
-                .rails_mut()
-                .add_mine_path_with_pixel(found_path, Pixel::Water);
-        }
+        self.0.rails_mut_fn(|mut s| {
+            for found_path in found_paths {
+                s.add_mine_path_with_pixel(found_path, Pixel::Water);
+            }
+        });
 
         let ExecutionSequenceParts { pass, fail } = sequence.split_routes_from(failing_sequence);
         warn!("pass {} fail {}", pass.len(), fail.len());
         for route in pass {
-            warn!("pass at {:?}", route.location.area_buffered());
-            route
-                .location
-                .draw_area_buffered_highlight_pixel(&mut self.0.pixels_mut(), Pixel::Stone);
+            self.0.mines_mut_ref().draw_mine(
+                route.destination.mine_ref(),
+                MineDraw::HighlightBufferedMain,
+            );
+
+            let mine = route
+                .destination
+                .mine_ref()
+                .resolve_mine_surface(self.0.mines());
+            warn!("pass at {:?}", mine.area_buffered());
         }
         for route in fail {
-            warn!("fail at {:?}", route.location.area_buffered());
-            route
-                .location
-                .draw_area_buffered_highlight_pixel(&mut self.0.pixels_mut(), Pixel::SteelChest);
+            self.0
+                .mines_mut_ref()
+                .draw_mine(route.destination.mine_ref(), MineDraw::HighlightBufferedAlt);
+
+            let mine = route
+                .destination
+                .mine_ref()
+                .resolve_mine_surface(self.0.mines());
+            warn!("fail at {:?}", mine.area_buffered());
         }
         self
     }
@@ -224,23 +228,21 @@ fn debug_draw_segment(surface: &mut VSurfacePixelMut, segment: VSegment) {
     surface.change_pixels(positions).stomp(Pixel::Highlighter);
 }
 
-pub(super) fn draw_prep(
-    surface: &mut VSurfacePatchMut,
-    batches: &[MineSelectBatch],
-    base_sources: &BaseSourceEighth,
-) {
-    todo!("batches?");
-    draw_prep_mines(surface, base_sources)
-}
+// pub(super) fn draw_prep(
+//     surface: &mut VSurfacePatchMut,
+//     batches: &[MineSelectBatch],
+//     base_sources: &BaseSourceEighth,
+// ) {
+//     todo!("batches?");
+//     draw_prep_mines(surface, base_sources)
+// }
 
 pub(super) fn draw_prep_mines<'plan_mine>(
-    surface: &mut VSurfacePatchMut,
+    mut surface: VSurfaceMineMut,
     base_sources: &BaseSourceEighth,
 ) {
-    let mines = surface.patches().get_mines();
-    for mine in mines {
-        mine.draw_area_buffered(&mut surface.pixels_mut());
-        // mine.borrow().draw_area_buffered_to_no_touch(surface);
+    for mine in surface.mines().all_mines_refs_iter() {
+        surface.draw_mine(mine, MineDraw::ChangeBuffered);
     }
 
     // stop routes going backwards right behind the start
@@ -250,10 +252,10 @@ pub(super) fn draw_prep_mines<'plan_mine>(
     let anti_backside_points = (-(radius - 1)..radius)
         .map(|i| VPoint::new(anti_backside_x, i))
         .collect_vec();
-    surface
-        .pixels_mut()
-        .change_pixels(anti_backside_points)
-        .stomp(Pixel::MineNoTouch)
+    surface.pixels_mut_fn(|mut s| {
+        s.change_pixels(anti_backside_points)
+            .stomp(Pixel::MineNoTouch)
+    })
 }
 
 pub fn debug_draw_mine_index_labels(

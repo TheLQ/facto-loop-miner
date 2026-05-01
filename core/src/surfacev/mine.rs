@@ -5,8 +5,8 @@ use crate::state::tuneables::PathCommonTunables;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::{
-    MineRef, PatchRef, VSurfacePatch, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
-    VSurfacePixelMut,
+    MineDestinationRef, MineRef, PatchRef, VSurfaceMine, VSurfaceMineMut, VSurfacePatch,
+    VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut,
 };
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -27,7 +27,7 @@ use tracing::{error, warn};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct MinePath {
-    pub location: MineRef,
+    pub destination: MineDestinationRef,
     pub links: Vec<HopeLink>,
     pub sodas: Vec<HopeSodaLink>,
     pub segment: VSegment,
@@ -209,60 +209,15 @@ impl MineLocation {
         &self.area_buffered
     }
 
-    pub fn draw_area_buffered(&self, surface: &mut VSurfacePixelMut) {
-        self.draw_area_buffered_with(surface, Pixel::MineNoTouch)
-    }
-
-    pub fn draw_area_buffered_with(&self, surface: &mut VSurfacePixelMut, pixel: Pixel) {
-        surface
-            .change_pixels(self.area_buffered.get_points())
-            .find_empty_into(pixel)
-    }
+    pub fn draw_area_buffered(&self, surface: &mut VSurfacePixelMut) {}
 
     pub fn draw_area_buffered_to_no_touch(&self, surface: &mut VSurfacePixelMut) {
         // let needle = self.area_buffered.point_top_left();
         // let existing_pixel = surface.get_pixel(needle);
         // assert_eq!(existing_pixel, Pixel::MineNoTouch, "at {needle}");
-
-        // --sanity--
-        for point in self
-            .area_buffered
-            .get_points()
-            .into_iter()
-            .filter(|v| !self.area_no_touch.contains_point(v))
-        {
-            // assert_eq!(surface.get_pixel(point), Pixel::MineNoTouch);
-            let pixel = surface.pixels().get_pixel(point);
-            if !matches!(pixel, Pixel::MineNoTouch | Pixel::Empty | Pixel::Rail) {
-                surface
-                    .change_pixels(self.area_buffered.get_points())
-                    .stomp(Pixel::Highlighter);
-
-                surface
-                    .change_square(&VArea::from_arbitrary_points_pair(
-                        point,
-                        point + VPOINT_TEN,
-                    ))
-                    .stomp(Pixel::Highlighter);
-                // surface
-                //     .pixels()
-                //     .paint_pixel_colored_entire()
-                //     .save_to_oculante();
-                error!("[sanity] for {point} is {pixel:?}")
-            }
-        }
-
-        surface
-            .change_pixels(
-                self.area_buffered
-                    .get_points()
-                    .into_iter()
-                    .filter(|v| !self.area_no_touch.contains_point(v)),
-            )
-            .remove();
     }
 
-    pub fn draw_area_buffered_highlight_pixel(&self, surface: &mut VSurfacePixelMut, pixel: Pixel) {
+    pub fn draw_area_buffered_highlight_pixel(&self, mut surface: VSurfacePixelMut, pixel: Pixel) {
         surface
             .change_pixels(self.area_buffered.get_points())
             .find_into(Pixel::MineNoTouch, pixel)
@@ -299,11 +254,101 @@ impl MineLocation {
         self.destinations.as_slice()
     }
 
-    pub fn patches_for_mine<'s>(
+    pub fn destinations_with_refs(
         &self,
-        surface: &'s VSurfacePatch,
-    ) -> impl Iterator<Item = &'s VPatch> {
-        self.patch_indexes.iter().map(move |i| surface.patch_at(i))
+        self_ref: MineRef,
+    ) -> impl Iterator<Item = (MineDestinationRef, &MineDestination)> {
+        self.destinations
+            .iter()
+            .enumerate()
+            .map(move |(i, dest)| (MineDestinationRef(self_ref, i), dest))
+    }
+}
+
+pub enum MineDraw {
+    InitBuffered,
+    ChangeNoTouch,
+    ChangeBuffered,
+    HighlightBufferedMain,
+    HighlightBufferedAlt,
+}
+
+impl MineDraw {
+    pub fn draw_mine(&self, surface: &mut VSurfacePixelMut, mine: &MineLocation) {
+        match self {
+            MineDraw::InitBuffered => Self::draw_buffered_with(surface, mine, Pixel::MineNoTouch),
+            MineDraw::ChangeNoTouch => {
+                // --sanity--
+                for point in mine
+                    .area_buffered
+                    .get_points()
+                    .into_iter()
+                    .filter(|v| !mine.area_no_touch.contains_point(v))
+                {
+                    // assert_eq!(surface.get_pixel(point), Pixel::MineNoTouch);
+                    let pixel = surface.pixels().get_pixel(point);
+                    if !matches!(pixel, Pixel::MineNoTouch | Pixel::Empty | Pixel::Rail) {
+                        surface
+                            .change_pixels(mine.area_buffered.get_points())
+                            .stomp(Pixel::Highlighter);
+
+                        surface
+                            .change_square(&VArea::from_arbitrary_points_pair(
+                                point,
+                                point + VPOINT_TEN,
+                            ))
+                            .stomp(Pixel::Highlighter);
+                        // surface
+                        //     .pixels()
+                        //     .paint_pixel_colored_entire()
+                        //     .save_to_oculante();
+                        error!("[sanity] for {point} is {pixel:?}")
+                    }
+                }
+
+                surface
+                    .change_pixels(
+                        mine.area_buffered
+                            .get_points()
+                            .into_iter()
+                            .filter(|v| !mine.area_no_touch.contains_point(v)),
+                    )
+                    .remove();
+            }
+            MineDraw::ChangeBuffered => {}
+            MineDraw::HighlightBufferedMain => {
+                Self::draw_buffered_with(surface, mine, Pixel::Stone)
+            }
+            MineDraw::HighlightBufferedAlt => {
+                Self::draw_buffered_with(surface, mine, Pixel::SteelChest)
+            }
+        }
+    }
+
+    fn draw_buffered_with(surface: &mut VSurfacePixelMut, mine: &MineLocation, pixel: Pixel) {
+        surface
+            .change_pixels(mine.area_buffered.get_points())
+            .find_empty_into(pixel)
+    }
+}
+
+pub enum MineLocationResolver<'l, 'plan_mine> {
+    Lookup(&'l [(MineRef, &'plan_mine MineLocation)]),
+    Surface(VSurfaceMine<'plan_mine>),
+}
+
+impl<'plan_mine> MineLocationResolver<'_, 'plan_mine> {
+    pub fn resolve_mine(&self, mine_ref: MineRef) -> &'plan_mine MineLocation {
+        match self {
+            Self::Lookup(lookup) => mine_ref.resolve_mine_lookup(lookup),
+            Self::Surface(surface) => mine_ref.resolve_mine_surface(*surface),
+        }
+    }
+    pub fn resolve_destination(&self, mine_ref: MineDestinationRef) -> &'plan_mine MineDestination {
+        match self {
+            Self::Lookup(lookup) => mine_ref.resolve_destination_lookup(lookup),
+            Self::Surface(surface) => mine_ref.resolve_destination_surface(*surface),
+        }
     }
 }
 
@@ -418,39 +463,33 @@ impl MineDestination {
                     continue 'destinations;
                 } else {
                     let mut debug_surface = surface.surface_copy();
-                    for bad in conflict_links {
-                        debug_surface
-                            .pixels_mut()
-                            .change_pixels(bad.soda_area())
-                            .find_empty_into(Pixel::Highlighter);
-                    }
-
-                    for (i, endpoint) in attempts.iter().enumerate() {
-                        debug_surface.pixels_mut().draw_text_at(
-                            *endpoint,
-                            &format!("d{i}"),
-                            TextSize::small(),
-                            Pixel::EdgeWall,
-                        );
-                    }
 
                     // mega highlighter
-                    debug_surface
-                        .pixels_mut()
-                        // .change_square(&VArea::from_radius(attempts[0], 200))
-                        .change_square(area_min)
-                        .find_empty_into(Pixel::SteelChest);
+                    debug_surface.pixels_mut_fn(|mut s| {
+                        for bad in conflict_links {
+                            s.change_pixels(bad.soda_area())
+                                .find_empty_into(Pixel::Highlighter);
+                        }
 
-                    attempts.push(area_min.point_center());
-                    debug_surface
-                        .pixels_mut()
-                        .change_pixels(attempts)
-                        .stomp(Pixel::Water);
+                        for (i, endpoint) in attempts.iter().enumerate() {
+                            s.draw_text_at(
+                                *endpoint,
+                                &format!("d{i}"),
+                                TextSize::small(),
+                                Pixel::EdgeWall,
+                            );
+                        }
 
-                    debug_surface
-                        .pixels()
-                        .paint_pixel_colored_entire()
-                        .save_to_oculante();
+                        s
+                            // .change_square(&VArea::from_radius(attempts[0], 200))
+                            .change_square(area_min)
+                            .find_empty_into(Pixel::SteelChest);
+
+                        attempts.push(area_min.point_center());
+                        s.change_pixels(attempts).stomp(Pixel::Water);
+
+                        s.pixels().paint_pixel_colored_entire().save_to_oculante();
+                    });
 
                     panic!("the further away pos doesn't work either?")
                 }

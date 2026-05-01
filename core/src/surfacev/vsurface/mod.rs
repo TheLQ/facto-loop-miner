@@ -51,5 +51,5 @@ pub use rail::{
     PlugMut as VSurfaceRailMut,
 };
 
-pub use mine::MineRef;
+pub use mine::{MineDestinationRef, MineRef};
 pub use patch::PatchRef;

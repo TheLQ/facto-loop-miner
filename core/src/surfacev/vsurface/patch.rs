@@ -1,7 +1,7 @@
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::{VSurfacePatch, VSurfacePatchMut};
+use crate::surfacev::vsurface::VSurfacePatch;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
@@ -11,7 +11,6 @@ use tracing::{debug, info};
 pub struct PlugMut<'s> {
     pub(super) pixels: &'s mut VEntityMap<VPixel>,
     pub(super) patches: &'s mut Vec<VPatch>,
-    pub(super) mines: &'s mut Vec<MineLocation>,
 }
 
 impl<'s> PlugMut<'s> {
@@ -68,17 +67,12 @@ impl<'s> PlugMut<'s> {
     pub fn add_patches(&mut self, patches: impl IntoIterator<Item = VPatch>) {
         self.patches.extend(patches)
     }
-
-    pub fn set_mines(&mut self, mines: Vec<MineLocation>) {
-        *self.mines = mines;
-    }
 }
 
 #[derive(Clone, Copy)]
 pub struct Plug<'s> {
     pub(super) pixels: &'s VEntityMap<VPixel>,
     pub(super) patches: &'s Vec<VPatch>,
-    pub(super) mines: &'s Vec<MineLocation>,
 }
 
 impl<'s> Plug<'s> {
@@ -141,14 +135,6 @@ impl<'s> Plug<'s> {
     //         .position(|surface_patch| patch == surface_patch)
     //         .unwrap()
     // }
-
-    pub fn get_mines(&self) -> &'s [MineLocation] {
-        self.mines
-    }
-
-    pub fn mines_iter(&self) -> impl Iterator<Item = &'s MineLocation> {
-        self.mines.iter()
-    }
 }
 
 //
@@ -167,7 +153,13 @@ impl PatchRef {
 //
 
 pub trait AsVsMut {
-    fn patches_mut(&mut self) -> PlugMut<'_>;
+    fn patches_mut_fn<R>(&mut self, work: impl FnOnce(PlugMut<'_>) -> R) -> R;
+
+    fn patches_mut_old_fn<R>(&mut self, work: impl FnOnce(&mut PlugMut<'_>) -> R) -> R {
+        self.patches_mut_fn(|mut s| work(&mut s))
+    }
+
+    fn patches_mut_ref(&mut self) -> PlugMut<'_>;
 }
 
 pub trait AsVs {

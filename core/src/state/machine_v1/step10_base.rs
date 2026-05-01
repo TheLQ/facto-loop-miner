@@ -27,23 +27,23 @@ impl Step for Step10 {
         let tunables = &surface.tunables().base.clone();
 
         const REMOVE_RADIUS: bool = false;
-        if REMOVE_RADIUS {
-            surface
-                .patches_mut()
-                .remove_patches_within_radius(tunables.resource_clear_chunks.as_tiles_u32());
-        } else {
-            surface
-                .patches_mut()
-                .remove_patches_in_column(tunables.resource_clear_chunks.as_tiles_u32());
-        }
-        draw_mega_box(&mut surface.pixels_mut(), tunables);
+        surface.patches_mut_fn(|mut s| {
+            if REMOVE_RADIUS {
+                s.remove_patches_within_radius(tunables.resource_clear_chunks.as_tiles_u32());
+            } else {
+                s.remove_patches_in_column(tunables.resource_clear_chunks.as_tiles_u32());
+            }
+            s.pixels_mut_fn(|s| {
+                draw_mega_box(s, tunables);
+            });
+        });
 
         surface.save(&params.step_out_dir)?;
         Ok(())
     }
 }
 
-fn draw_mega_box(surface: &mut VSurfacePixelMut, tunables: &BaseTunables) {
+fn draw_mega_box(mut surface: VSurfacePixelMut, tunables: &BaseTunables) {
     let base_tiles = tunables.base_chunks.as_tiles_u32();
     let box_points = points_in_centered_box(base_tiles, VPOINT_ZERO)
         .into_iter()
