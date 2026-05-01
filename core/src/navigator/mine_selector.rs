@@ -1,9 +1,6 @@
 use crate::TILES_PER_CHUNK;
-use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::planners::PathingTunables;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::iter_remain_util::RemainIter;
-use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::{MineRef, PatchRef, VSurfacePatch};
 use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;

@@ -1,4 +1,3 @@
-use crate::surfacev::mine::MineLocation;
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::VSurfacePatch;

@@ -1,12 +1,10 @@
 use crate::navigator::BaseSourceEighth;
 use crate::navigator::mori::{MoriResult, mori2_start};
 use crate::state::tuneables::MoriTunables;
-use crate::surfacev::mine::{
-    MineDestination, MineDraw, MineLocation, MineLocationResolver, MinePath,
-};
+use crate::surfacev::mine::{MineDraw, MineLocation, MineLocationResolver, MinePath};
 use crate::surfacev::vsurface::{
-    MineDestinationRef, MineRef, VSurfaceMineAsVs, VSurfacePixel, VSurfacePixelAsVs,
-    VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRail, VSurfaceRailAsVsMut, VSurfaceRailMut,
+    MineDestinationRef, MineRef, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut,
+    VSurfacePixelMut, VSurfaceRail, VSurfaceRailAsVsMut,
 };
 use facto_loop_miner_common::duration::BasicWatch;
 use facto_loop_miner_common::{EXECUTOR_TAG, LOCALE};

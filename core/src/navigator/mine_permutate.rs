@@ -1,14 +1,8 @@
-use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::mine_executor::{ExecutionRoute, ExecutionSequence};
 use crate::navigator::mine_selector::MineSelectBatch;
-use crate::surfacev::mine::{MineDestination, MineLocation};
-use crate::surfacev::vsurface::{
-    MineDestinationRef, MineRef, VSurfaceMine, VSurfaceMineAsVs, VSurfacePatch, VSurfacePixel,
-};
+use crate::surfacev::mine::MineLocation;
+use crate::surfacev::vsurface::{MineDestinationRef, MineRef, VSurfaceMine};
 use facto_loop_miner_fac_engine::common::varea::VArea;
-use facto_loop_miner_fac_engine::common::vpoint::{VPOINT_ZERO, VPoint};
-use facto_loop_miner_fac_engine::common::vpoint_direction::VPointDirectionQ;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use itertools::Itertools;
 use tracing::warn;
 
@@ -19,7 +13,7 @@ use tracing::warn;
 ///  - Each mine has 4 destinations
 ///  - Therefore batch has 4^n possible combinations
 ///  - Combinations each can be permutated generating n! combinations
-pub fn get_possible_routes_for_batch<'plan_mine>(
+pub fn get_possible_routes_for_batch(
     surface: VSurfaceMine,
     MineSelectBatch { mines }: MineSelectBatch,
     fixed_finding_limiter: VArea,

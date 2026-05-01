@@ -3,10 +3,9 @@ use crate::navigator::{BaseSourceEighth, IntraLevel};
 use crate::opencv::TextSize;
 use crate::state::tuneables::PathCommonTunables;
 use crate::surface::pixel::Pixel;
-use crate::surfacev::vpatch::VPatch;
 use crate::surfacev::vsurface::{
-    MineDestinationRef, MineRef, PatchRef, VSurfaceMine, VSurfaceMineMut, VSurfacePatch,
-    VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut,
+    MineDestinationRef, MineRef, PatchRef, VSurfaceMine, VSurfacePatch, VSurfacePixel,
+    VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut,
 };
 use facto_loop_miner_common::LOCALE;
 use facto_loop_miner_fac_engine::common::varea::VArea;

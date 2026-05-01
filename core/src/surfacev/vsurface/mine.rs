@@ -1,10 +1,8 @@
 use crate::surfacev::mine::{MineDestination, MineDraw, MineLocation};
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
-use crate::surfacev::vsurface::{VSurfaceMine, VSurfacePixelAsVs, VSurfacePixelAsVsMut};
-use facto_loop_miner_fac_engine::common::vpoint::VPoint;
+use crate::surfacev::vsurface::{VSurfaceMine, VSurfacePixelAsVs};
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
-use std::borrow::Borrow;
 
 pub struct PlugMut<'s> {
     pub(super) pixels: &'s mut VEntityMap<VPixel>,

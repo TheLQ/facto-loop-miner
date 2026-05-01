@@ -1,6 +1,5 @@
 use crate::navigator::base_source::BaseSourceEighth;
 use crate::navigator::mine_executor::{ExecutionSequence, ExecutionSequenceParts, FailingMeta};
-use crate::navigator::mine_selector::MineSelectBatch;
 use crate::opencv::TextSize;
 use crate::state::tuneables::{
     AltareTunables, ChunkValue, MoriTunables, PathCommonTunables, Tunables,
@@ -8,8 +7,7 @@ use crate::state::tuneables::{
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::{MineDraw, MineLocation, MineLocationResolver};
 use crate::surfacev::vsurface::{
-    MineRef, VSurfaceMineAsVs, VSurfaceMineAsVsMut, VSurfaceMineMut, VSurfacePatchAsVs,
-    VSurfacePatchMut, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut, VSurfaceRailAsVs,
+    MineRef, VSurfaceMineAsVs, VSurfaceMineAsVsMut, VSurfaceMineMut, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfacePixelMut,
     VSurfaceRailAsVsMut,
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;

@@ -3,7 +3,6 @@ use crate::navigator::planners::altare::start_altare_planner;
 use crate::state::err::XMachineResult;
 use crate::state::machine::{Step, StepParams};
 use crate::surfacev::vsurface::VSurface;
-use crate::surfacev::vsurface::VSurfacePatchAsVsMut;
 
 pub(crate) struct Step20;
 

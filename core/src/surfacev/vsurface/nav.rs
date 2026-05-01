@@ -1,7 +1,7 @@
 use crate::surfacev::mine::{MineLocation, MinePath};
 use crate::surfacev::ventity_map::{VEntityMap, VPixel};
 use crate::surfacev::vpatch::VPatch;
-use crate::surfacev::vsurface::{MineRef, VSurfacePixelAsVsMut, VSurfacePixelMut};
+use crate::surfacev::vsurface::MineRef;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 
 pub struct PlugMut<'s> {

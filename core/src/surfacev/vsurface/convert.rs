@@ -154,7 +154,7 @@ macro_rules! vs_actual_structs {
         }
 
         impl super::$trait_mod::AsVs for $for_struct {
-            fn $fn_ref(&self) -> super::$trait_mod::Plug {
+            fn $fn_ref(&self) -> super::$trait_mod::Plug<'_> {
                 // let Self { $( $field, )+ .. } = self;
                 // super::$trait_mod::Plug { $( $field: &*$field, )+ }
                 super::$trait_mod::Plug { $( $field: &self.$field, )+ }

@@ -1,7 +1,6 @@
 #![feature(portable_simd)]
 
 use std::hint::black_box;
-use std::mem::MaybeUninit;
 use std::simd::prelude::{SimdInt, SimdPartialOrd};
 use std::simd::{Mask, Simd};
 

@@ -1,7 +1,7 @@
 use crate::navigator::base_source::{BaseSource, BaseSourceEighth};
 use crate::navigator::circleify::draw_circle_around;
 use crate::navigator::mine_executor::{
-    ExecuteFlags, ExecutorResult, FailingStats, execute_route_batch, execute_route_batch_clone_prep,
+    ExecuteFlags, ExecutorResult, FailingStats, execute_route_batch,
 };
 use crate::navigator::mine_permutate::{CompletePlan, get_possible_routes_for_batch};
 use crate::navigator::mine_selector::{MineSelectBatch, group_nearby_patches};
@@ -10,10 +10,9 @@ use crate::navigator::planners::common_debug::{Debugger, draw_prep_mines};
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::{MineDraw, MineLocation};
 use crate::surfacev::vsurface::{
-    MineRef, VSurface, VSurfaceMine, VSurfaceMineAsVs, VSurfaceMineAsVsMut, VSurfaceMineMut,
-    VSurfaceNavAsVsMut, VSurfaceNavMut, VSurfacePatch, VSurfacePatchAsVs, VSurfacePatchAsVsMut,
-    VSurfacePatchMut, VSurfacePixel, VSurfacePixelAsVs, VSurfacePixelAsVsMut, VSurfaceRail,
-    VSurfaceRailAsVs, VSurfaceRailAsVsMut,
+    MineRef, VSurface, VSurfaceMine, VSurfaceMineAsVs, VSurfaceMineAsVsMut, VSurfaceNavAsVsMut,
+    VSurfaceNavMut, VSurfacePatch, VSurfacePatchAsVs, VSurfacePixel, VSurfacePixelAsVs,
+    VSurfacePixelAsVsMut, VSurfaceRail, VSurfaceRailAsVs, VSurfaceRailAsVsMut,
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
