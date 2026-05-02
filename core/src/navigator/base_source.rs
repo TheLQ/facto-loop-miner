@@ -39,6 +39,10 @@ impl BaseSource {
         }
     }
 
+    pub fn into_negative(self) -> BaseSourceEighth {
+        self.negative
+    }
+
     pub fn into_positive(self) -> BaseSourceEighth {
         self.positive
     }
@@ -114,7 +118,8 @@ impl BaseSourceEighth {
 
     fn get_for_index(&self, index: i32) -> BaseSourceEntry {
         // tracing::trace!("get for index {index}");
-        let section_move = (index / self.tunables.base_source_intra_rails as i32)
+        let section_move = self.sign
+            * (index / self.tunables.base_source_intra_rails as i32)
             * self.tunables.base_source_section_step;
         let section_pos = self
             .origin

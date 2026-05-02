@@ -4,9 +4,11 @@ use crate::navigator::mine_executor::{
     ExecuteFlags, ExecutorResult, FailingStats, execute_route_batch,
 };
 use crate::navigator::mine_permutate::{CompletePlan, get_possible_routes_for_batch};
-use crate::navigator::mine_selector::{MineSelectBatch, group_nearby_patches};
 use crate::navigator::planners::PathingTunables;
 use crate::navigator::planners::common_debug::{Debugger, draw_prep_mines};
+use crate::navigator::scanners::common::MineSelectBatch;
+use crate::navigator::scanners::hakka::{Hakka, HakkaBase, HakkaResult, PointAt};
+use crate::navigator::scanners::patch_grouper::group_nearby_patches;
 use crate::surface::pixel::Pixel;
 use crate::surfacev::mine::{MineDraw, MineLocation};
 use crate::surfacev::vsurface::{
@@ -40,12 +42,9 @@ pub fn start_altare_planner(
     // surface: &mut VSurfaceNavMut
     surface: &mut VSurface,
 ) {
-    let base_source = BaseSource::from_central_base(tunables);
-    let base_source_positive = base_source.into_positive();
+    let base_source_gen = BaseSource::from_central_base(tunables);
 
-    surface.nav_mut_old_fn(|s| find_mines(s, &base_source_positive, tunables));
-
-    surface.nav_mut_fn(|s| Quester::init(tunables, s, base_source_positive).start())
+    surface.nav_mut_fn(|s| Quester::init(tunables, s, base_source_gen, false).start())
 }
 
 fn find_mines(
@@ -71,30 +70,53 @@ fn find_mines(
 struct Quester<'t, 's> {
     surface: VSurfaceNavMut<'s>,
     base_source: BaseSourceEighth,
-    scanner: QuesterScanner,
+    scanner: Hakka,
     tunables: &'t PathingTunables,
     maybe_ban_mines: Vec<MineRef>,
+    fixed_finding_limiter: VArea,
 }
 
-impl<'t, 's> Quester<'t, 's>
-// where
-//     'sr: 's,
-{
+impl<'t, 's> Quester<'t, 's> {
     fn init(
         tunables: &'t PathingTunables,
         mut surface: VSurfaceNavMut<'s>,
-        // scanner: &'plan_mine mut QuesterScanner,
-        base_source: BaseSourceEighth,
+        base_source_gen: BaseSource,
+        is_base_positive: bool,
     ) -> Self {
+        let base_source = if is_base_positive {
+            base_source_gen.into_positive()
+        } else {
+            base_source_gen.into_negative()
+        };
+
+        find_mines(&mut surface, &base_source, tunables);
         surface.mines_mut_fn(|s| {
             draw_prep_mines(s, &base_source);
         });
 
-        let scanner = QuesterScanner::new(
-            QuesterScannerBase {
+        // Limit pathing to the entire right half of the map
+        let fixed_radius = surface.pixels().get_radius_i32();
+        let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
+            base_source.fixed_limiting_start(),
+            VPoint::new(
+                fixed_radius,
+                if is_base_positive {
+                    fixed_radius
+                } else {
+                    -fixed_radius
+                },
+            ),
+        );
+
+        let scanner = Hakka::new(
+            HakkaBase {
                 step_size: tunables.altare().step_size,
                 origin: VPoint::new(0, 0),
-                direction_advancing: FacDirectionQuarter::South,
+                direction_advancing: if is_base_positive {
+                    FacDirectionQuarter::North
+                } else {
+                    FacDirectionQuarter::South
+                },
                 direction_scanning: FacDirectionQuarter::East,
             },
             surface.patches(),
@@ -108,6 +130,7 @@ impl<'t, 's> Quester<'t, 's>
             scanner,
             tunables,
             maybe_ban_mines: Vec::new(),
+            fixed_finding_limiter,
         }
     }
 
@@ -156,12 +179,12 @@ impl<'t, 's> Quester<'t, 's>
             //| state @ ScannerMode::Recovering(_)
             => {
                 loop {
-                    let scanned: QuesterScannerResult = self.scanner.scan(PointAt::Normal, self.surface.mines());
+                    let scanned: HakkaResult = self.scanner.scan(PointAt::Normal, self.surface.mines());
                     match scanned {
-                        QuesterScannerResult::NoneFound => {
+                        HakkaResult::NoneFound => {
                             self.scanner.increment(self.surface.pixels(), "none-found")?;
                         }
-                        QuesterScannerResult::NewPatchesInScanArea { scanned_mines, scan_area } => {
+                        HakkaResult::NewPatchesInScanArea { scanned_mines, scan_area } => {
                             let scanned_len = scanned_mines.len();
                             let needed_size = self.tunables.altare().queue_scan + self.tunables.altare().queue_redo;
                             assert!(!scanned_mines.is_empty());
@@ -245,12 +268,10 @@ impl<'t, 's> Quester<'t, 's>
             .finding_limiter
             .clone();
         for mine in &mines_bak {
+            let mine_area = mine.resolve_mine_surface(self.surface.mines()).area_min();
             assert!(
-                limit_area.contains_points_all(
-                    mine.resolve_mine_surface(self.surface.mines())
-                        .area_min()
-                        .get_corner_points()
-                )
+                limit_area.contains_points_all(mine_area.get_corner_points(),),
+                "limit_area {limit_area} for {mine:?} at {mine_area}"
             )
         }
 
@@ -488,17 +509,10 @@ impl<'t, 's> Quester<'t, 's>
     }
 
     fn new_plan(&self, mines: Vec<MineRef>) -> CompletePlan {
-        // Limit pathing to the entire right half of the map
-        let fixed_radius = self.surface.pixels().get_radius_i32();
-        let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
-            self.base_source.fixed_limiting_start(),
-            VPoint::new(fixed_radius, fixed_radius),
-        );
-
         get_possible_routes_for_batch(
             self.surface.mines(),
             MineSelectBatch { mines },
-            fixed_finding_limiter,
+            &self.fixed_finding_limiter,
         )
     }
 
@@ -510,177 +524,6 @@ impl<'t, 's> Quester<'t, 's>
     //     self.patches().mines_iter()
     // }
     //
-}
-
-struct QuesterScannerBase {
-    step_size: usize,
-    origin: VPoint,
-    direction_advancing: FacDirectionQuarter,
-    direction_scanning: FacDirectionQuarter,
-}
-
-/// Concerned only with scanning the remaining mines
-struct QuesterScanner {
-    base: QuesterScannerBase,
-    advance_i: usize,
-    scanning_i: usize,
-    reset_scanning: usize,
-    banned_mines: Vec<MineRef>,
-}
-
-impl QuesterScanner {
-    fn new(base: QuesterScannerBase, surface: VSurfacePatch) -> Self {
-        let mut new = Self {
-            base,
-            advance_i: 0,
-            scanning_i: 0,
-            reset_scanning: 0,
-            banned_mines: Vec::new(),
-        };
-        while !surface
-            .pixels()
-            .is_points_out_bounds_slice(PointAt::Normal.area_at_init(&new).get_points())
-        {
-            new.reset_scanning += 1;
-            new.scanning_i += 1;
-            assert!(new.reset_scanning < 100);
-        }
-        new.scanning_i = 0;
-        // new.scanning_i -= 1;
-        // new.reset_scanning -= 1;
-        assert!(new.reset_scanning > 0);
-        new
-    }
-
-    pub fn reset(&mut self) {
-        self.advance_i = 0;
-        self.scanning_i = 0;
-    }
-
-    fn increment(
-        &mut self,
-        surface: VSurfacePixel,
-        cause: impl std::fmt::Display,
-    ) -> ControlFlow<()> {
-        trace!(
-            "incrementing {} and {} reset {} - {cause}",
-            self.advance_i, self.scanning_i, self.reset_scanning
-        );
-        if self.scanning_i == self.reset_scanning {
-            self.advance_i += 1;
-            self.scanning_i = 0;
-
-            let next = PointAt::Normal.area_at_init(self);
-            if surface.is_points_out_bounds_slice(next.get_corner_points()) {
-                trace!(
-                    "incrementing out of bounds for {} and {}",
-                    self.advance_i, self.scanning_i
-                );
-                return ControlFlow::Break(());
-            }
-        } else {
-            self.scanning_i += 1;
-        }
-        ControlFlow::Continue(())
-    }
-
-    fn scan(&self, end_at: PointAt, surface: VSurfaceMine) -> QuesterScannerResult {
-        // let scan_start = self.base.area_at(self.advance_i, self.scanning_i);
-        let scan_area = end_at.area_at(self);
-
-        let mut new_mines_in_scan_area: Vec<&MineLocation> = surface
-            .all_mines_iter()
-            .filter(|v| scan_area.contains_point(&v.area_min().point_center()))
-            .collect();
-        if new_mines_in_scan_area.is_empty() {
-            return QuesterScannerResult::NoneFound;
-        }
-        new_mines_in_scan_area.sort_by_key(|mine| {
-            let mine_pos = mine.area_min().point_center();
-            // v2 bias closer to scan_direction
-            let scanning =
-                |point: VPoint| -> i32 { point.axis_value(self.base.direction_scanning) };
-            let scanning_axis_score = scanning(mine_pos).abs_diff(scanning(self.base.origin));
-
-            let advancing =
-                |point: VPoint| -> i32 { point.axis_value(self.base.direction_advancing) };
-            let advancing_axis_score =
-                advancing(mine_pos).abs_diff(advancing(self.base.origin)) * 2;
-
-            scanning_axis_score + advancing_axis_score
-        });
-        new_mines_in_scan_area.reverse();
-
-        let scanned_mines = surface
-            .get_mines_ref_for(new_mines_in_scan_area)
-            .collect_vec();
-        QuesterScannerResult::NewPatchesInScanArea {
-            scanned_mines,
-            scan_area,
-        }
-    }
-}
-
-enum QuesterScannerResult {
-    NoneFound,
-    NewPatchesInScanArea {
-        scanned_mines: Vec<MineRef>,
-        scan_area: VArea,
-    },
-}
-
-#[derive(Clone, Copy)]
-enum PointAt {
-    Normal,
-    Reduced,
-}
-
-impl PointAt {
-    fn area_at_init(&self, scanner: &QuesterScanner) -> VArea {
-        self._area_at(scanner, true)
-    }
-
-    fn area_at(&self, scanner: &QuesterScanner) -> VArea {
-        self._area_at(scanner, false)
-    }
-
-    fn _area_at(
-        &self,
-        QuesterScanner {
-            base:
-                QuesterScannerBase {
-                    origin,
-                    direction_advancing,
-                    direction_scanning,
-                    step_size,
-                    ..
-                },
-            scanning_i,
-            advance_i,
-            reset_scanning,
-            ..
-        }: &QuesterScanner,
-        is_init: bool,
-    ) -> VArea {
-        let scanning = if is_init {
-            // during init we are still calculating
-            *scanning_i
-        } else {
-            reset_scanning.checked_sub(*scanning_i).unwrap()
-        };
-        let start = origin
-            .move_direction_usz(direction_advancing, step_size * advance_i)
-            .move_direction_usz(direction_scanning, step_size * scanning);
-        let end = match self {
-            PointAt::Normal => start
-                .move_direction_usz(direction_advancing, *step_size)
-                .move_direction_usz(direction_scanning, *step_size),
-            PointAt::Reduced => start
-                .move_direction_usz(direction_advancing, step_size / 2)
-                .move_direction_usz(direction_scanning, step_size / 2),
-        };
-        VArea::from_arbitrary_points_pair(&start, &end)
-    }
 }
 
 //

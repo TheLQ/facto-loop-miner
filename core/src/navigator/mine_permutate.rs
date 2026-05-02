@@ -1,5 +1,5 @@
 use crate::navigator::mine_executor::{ExecutionRoute, ExecutionSequence};
-use crate::navigator::mine_selector::MineSelectBatch;
+use crate::navigator::scanners::common::MineSelectBatch;
 use crate::surfacev::mine::MineLocation;
 use crate::surfacev::vsurface::{MineDestinationRef, MineRef, VSurfaceMine};
 use facto_loop_miner_fac_engine::common::varea::VArea;
@@ -17,7 +17,7 @@ use tracing::{info, warn};
 pub fn get_possible_routes_for_batch(
     surface: VSurfaceMine,
     MineSelectBatch { mut mines }: MineSelectBatch,
-    fixed_finding_limiter: VArea,
+    fixed_finding_limiter: &VArea,
 ) -> CompletePlan {
     let mines_len = mines.len();
     mines.sort();
@@ -114,7 +114,7 @@ fn find_all_permutations(
 /// Add the base source rail going to the destination, in order
 fn build_routes_from_destinations(
     input_combinations: Vec<Vec<MineDestinationRef>>,
-    fixed_finding_limiter: VArea,
+    fixed_finding_limiter: &VArea,
 ) -> Vec<ExecutionSequence> {
     let mut sequences: Vec<ExecutionSequence> = Vec::new();
     for combination in input_combinations {

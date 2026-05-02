@@ -256,8 +256,8 @@ pub fn count_link_origins(links: &[HopeSodaLink]) -> HashMap<VPoint, u32> {
     compressed
 }
 
-// pub type LinkByImpl = LinkByFull;
-pub type LinkByImpl = LinkByPoint;
+pub type LinkByImpl = LinkByFull;
+// pub type LinkByImpl = LinkByPoint;
 
 #[derive(Clone)]
 pub struct LinkByPoint(HopeSodaLink);
