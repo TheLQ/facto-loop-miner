@@ -10,6 +10,7 @@ use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope::RailHopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::HopeLink;
 use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::{HopeSodaLink, sodas_to_links};
+use itertools::Itertools;
 use num_format::ToFormattedString;
 use pathfinding::prelude::astar_mori;
 use std::collections::HashMap;
@@ -47,13 +48,13 @@ pub fn mori2_start(
     let mut successor_sum = Duration::default();
     let res_sum = Duration::default();
     let pathfind = astar_mori::<_, _, _, _, _, _, _, 5>(
-        start_link.clone(),
+        LinkByImpl::new(start_link.clone()),
         |head| {
             let watch = BasicWatch::start();
             let res = successors(
                 surface,
                 &endpoints,
-                head,
+                &head.0,
                 // processor,
                 finding_limiter,
                 tunables,
@@ -65,17 +66,17 @@ pub fn mori2_start(
         |_p| 0,
         |p| {
             // let watch = BasicWatch::start();
-            let res = p == &end_link;
+            let res = p.0 == end_link;
             // res_sum += watch.duration();
             res
             // p.start.distance_bird(&end_link.start) < 5.0
         },
         |path| {
             // sequential compare
-            path.sort_by_key(|v| v.pos_start());
+            path.sort_by_key(|v| v.0.pos_start());
             let mut i = 0;
             while i + 1 < path.len() {
-                if path[i].pos_start() == path[i + 1].pos_start() {
+                if path[i].0.pos_start() == path[i + 1].0.pos_start() {
                     return false;
                 }
                 i += 1;
@@ -114,18 +115,21 @@ pub fn mori2_start(
 
     match pathfind {
         Ok((path, cost)) => {
-            assert!(
-                path.first().unwrap() == &start_link,
+            assert_eq!(
+                path.first().unwrap().0,
+                start_link,
                 "path should start with start link"
             );
-            assert!(
-                path.last().unwrap() == &end_link,
+            assert_eq!(
+                path.last().unwrap().0,
+                end_link,
                 "path should ebd with start link"
             );
+            let sodas = path.iter().map(|v| v.0.clone()).collect_vec();
             MoriResult::Route {
                 // path: duals_into_single_vec(path),
-                path: sodas_to_links(&path).collect(),
-                sodas: path,
+                path: sodas_to_links(&sodas).collect(),
+                sodas,
                 cost,
             }
         }
@@ -171,7 +175,7 @@ fn successors(
     finding_limiter: &VArea,
     tune: &MoriTunables,
     watch_data: &mut WatchData,
-) -> Vec<(HopeSodaLink, u32)> {
+) -> Vec<(LinkByImpl, u32)> {
     watch_data.executions += 1;
 
     let watch = BasicWatch::start();
@@ -203,7 +207,7 @@ fn successors(
     let mut successors = Vec::with_capacity(3);
     for next in nexts.into_iter().flatten() {
         let cost = calculate_cost_for_link(&next, segment_points, tune);
-        successors.push((next, cost));
+        successors.push((LinkByImpl::new(next), cost));
     }
     watch_data.cost += watch.duration();
 
@@ -250,4 +254,39 @@ pub fn count_link_origins(links: &[HopeSodaLink]) -> HashMap<VPoint, u32> {
         *val += 1;
     }
     compressed
+}
+
+// pub type LinkByImpl = LinkByFull;
+pub type LinkByImpl = LinkByPoint;
+
+#[derive(Clone)]
+pub struct LinkByPoint(HopeSodaLink);
+
+impl LinkByPoint {
+    pub fn new(link: HopeSodaLink) -> Self {
+        Self(link)
+    }
+}
+
+impl PartialEq for LinkByPoint {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.soda_astar_point() == other.0.soda_astar_point()
+    }
+}
+
+impl Eq for LinkByPoint {}
+
+impl std::hash::Hash for LinkByPoint {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.soda_astar_point().hash(state)
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Clone)]
+pub struct LinkByFull(HopeSodaLink);
+
+impl LinkByFull {
+    pub fn new(link: HopeSodaLink) -> Self {
+        Self(link)
+    }
 }

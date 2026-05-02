@@ -10,7 +10,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::rc::Rc;
-use tracing::{error, trace};
+use tracing::error;
 
 pub struct BaseSource {
     positive: BaseSourceEighth,
@@ -159,6 +159,14 @@ impl BaseSourceEighth {
 
     pub fn origin(&self) -> VPointDirectionQ {
         self.origin
+    }
+
+    pub fn fixed_limiting_start(&self) -> VPoint {
+        let VPointDirectionQ(origin, direction) = self.origin;
+        // Must give spacing from Edge, because hope_link.area() can extend past it.
+        origin
+            .move_direction_int(direction, -SECTION_POINTS_I32)
+            .move_direction_sideways_int(direction, -SECTION_POINTS_I32)
     }
 
     fn _undo_one(&mut self) -> BaseSourceEntry {

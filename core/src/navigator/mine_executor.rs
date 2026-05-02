@@ -1,5 +1,5 @@
 use crate::navigator::BaseSourceEighth;
-use crate::navigator::mori::{MoriResult, mori2_start};
+use crate::navigator::mori::{LinkByImpl, MoriResult, mori2_start};
 use crate::state::tuneables::MoriTunables;
 use crate::surfacev::mine::{MineDraw, MineLocation, MineLocationResolver, MinePath};
 use crate::surfacev::vsurface::{
@@ -11,7 +11,6 @@ use facto_loop_miner_common::{EXECUTOR_TAG, LOCALE};
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
 use facto_loop_miner_fac_engine::common::vpoint_direction::VSegment;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_soda::HopeSodaLink;
 use itertools::Itertools;
 use num_format::ToFormattedString;
 use pathfinding::prelude::AStarErr;
@@ -495,7 +494,7 @@ pub struct FailingMeta {
 }
 
 pub enum FailingCause {
-    AStar(AStarErr<HopeSodaLink, u32>),
+    AStar(AStarErr<LinkByImpl, u32>),
     Wasted(Vec<VPoint>),
 }
 

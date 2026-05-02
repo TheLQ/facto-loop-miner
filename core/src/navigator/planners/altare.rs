@@ -16,7 +16,6 @@ use crate::surfacev::vsurface::{
 };
 use facto_loop_miner_fac_engine::common::varea::VArea;
 use facto_loop_miner_fac_engine::common::vpoint::VPoint;
-use facto_loop_miner_fac_engine::game_blocks::rail_hope_single::SECTION_POINTS_I32;
 use facto_loop_miner_fac_engine::game_entities::direction::FacDirectionQuarter;
 use itertools::Itertools;
 use simd_json::prelude::ArrayTrait;
@@ -488,15 +487,11 @@ impl<'t, 's> Quester<'t, 's>
         }
     }
 
-    fn new_plan(&self, mut mines: Vec<MineRef>) -> CompletePlan {
+    fn new_plan(&self, mines: Vec<MineRef>) -> CompletePlan {
         // Limit pathing to the entire right half of the map
         let fixed_radius = self.surface.pixels().get_radius_i32();
         let fixed_finding_limiter = VArea::from_arbitrary_points_pair(
-            // VPoint::new(0, -fixed_radius),
-            // VPOINT_ZERO,
-            VPoint::new(-SECTION_POINTS_I32, -SECTION_POINTS_I32),
-            // Must give spacing from Edge, because hope_link.area() can extend past it.
-            // range checks are disabled for theoretical performance
+            self.base_source.fixed_limiting_start(),
             VPoint::new(fixed_radius, fixed_radius),
         );
 
